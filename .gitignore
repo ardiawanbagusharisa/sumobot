@@ -1,0 +1,57 @@
+# Unity Generated
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uilds/
+[Bb]uild/
+[Ll]ogs/
+[Mm]emoryCaptures/
+[Uu]ser[Ss]ettings/
+
+# OS Specific
+.DS_Store
+Thumbs.db
+
+# IDE Specific
+.vs/
+*.sln
+*.csproj
+*.unityproj
+*.pidb
+*.suo
+*.userprefs
+*.user
+*.swp
+*.bak
+*.log
+*.psess
+*.vsp
+*.ncb
+*.opendb
+*.VC.db
+
+# Rider
+.idea/
+*.iml
+
+# JetBrains Rider
+/*.sln.DotSettings.user
+
+# Auto-generated
+*.apk
+*.aab
+*.exe
+*.dll
+*.pdb
+*.class
+*.jar
+*.java
+*.idx
+*.hprof
+
+# Build Artifacts
+/[Bb]uilds/
+
+# Ensure important Unity package files are included
+#!Packages/manifest.json
+#!Packages/packages-lock.json
