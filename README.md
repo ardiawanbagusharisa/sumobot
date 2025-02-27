@@ -17,23 +17,3 @@ Sumobot is a 2D, top-down sumo robot battle intended to encourage player to lear
 If you want to contribute to this project, go to our [Wiki page](https://github.com/ardiawanbagusharisa/sumobot/wiki).  
 
 ---
-
-#### How to clone
-1. Clone this repo to your local.
-2. Put it inside your local Unity project. 
-3. Open your Unity, it will rebuild the project. 
-
-This repo will only contains unity mandatory folders: 
-1. Assets/ – Your game assets (scripts, prefabs, scenes, textures, etc.).
-2. Packages/ – Manages package dependencies.
-3. ProjectSettings/ – Stores project configurations.
-
-These folders and files should be ignore to keep minimum size of the repo: 
-* Library/ – Auto-generated, contains local caches.
-* Logs/ – Debugging logs.
-* Temp/ – Temporary files.
-* Obj/ – Build artifacts.
-* UserSettings/ – Local user settings.
-* .vs, .sln, .csproj, .unityproj (if using Visual Studio) – Local IDE-specific files.
-* Builds/ – Your compiled game (upload to releases instead).
-* MemoryCaptures/ – Debugging snapshots. 
