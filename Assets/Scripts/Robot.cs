@@ -62,7 +62,7 @@ public class Robot : MonoBehaviour
             //[Todo] should modify the forward speed using current rb direction.
         }
         transform.Rotate(0, 0, rotation);
-        //[Todo] This makes the bounce logic wrong. 
+        //[Todo] This makes the bounce logic wrong. Check the time of last collision.
         if (rb.linearVelocity.magnitude >= moveSpeed) {
             rb.linearVelocity = rb.linearVelocity.magnitude * transform.up;
             Debug.Log(rb.linearVelocity.magnitude);
@@ -73,7 +73,7 @@ public class Robot : MonoBehaviour
         // Handle Robot movement and dash
         if (Input.GetKey(KeyCode.UpArrow)) 
         {
-            float speed = isDashing ? dashSpeed : moveSpeed;
+            float speed = isDashing ? dashSpeed : moveSpeed; //[Todo] This could be redundant with the Dash(). 
             rb.linearVelocity = transform.up * speed;
             hasInput = true;
         }
@@ -133,7 +133,7 @@ public class Robot : MonoBehaviour
     public void Bounce(Vector2 direction, float force)
     { 
         rb.linearVelocity = direction * force;
-        //[Todo] Need to handle after gethit from dashing enemy, uncontrollable for short time. 
+        //[Todo] Need to handle after get hit from dashing enemy, uncontrollable for short time. 
     }
 
     void HandleStopping()
@@ -141,7 +141,7 @@ public class Robot : MonoBehaviour
         if (Time.time > lastActTime + stopDelay)
         {
             // Gradually decrease linear and angular velocities 
-            rb.linearVelocity = Vector2.Lerp(rb.linearVelocity, Vector2.zero, slowDownRate * Time.deltaTime);
+            rb.linearVelocity = Vector2.Lerp(rb.linearVelocity, Vector2.zero, slowDownRate * Time.deltaTime); //[Todo] Need to just stop after it close to zero.
             rb.angularVelocity = Mathf.Lerp(rb.angularVelocity, 0, slowDownRate * Time.deltaTime);
         }
     }
