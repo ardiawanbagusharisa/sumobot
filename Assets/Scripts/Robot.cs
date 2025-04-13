@@ -1,5 +1,7 @@
 using System;
 using UnityEngine;
+using UnityEngine.InputSystem;
+using UnityEngine.PlayerLoop;
 
 public class Robot : MonoBehaviour
 {
@@ -24,11 +26,17 @@ public class Robot : MonoBehaviour
     private float lastActTime = 0.0f;        // Last input or collision time, excluding rotation. 
     #endregion
 
+
     void Start()
+    {
+        Initalize();
+    }
+
+    public void Initalize()
     {
         // Get RigidBody2D.
         rb = GetComponent<Rigidbody2D>();
-        
+
         // Ensure physics are handled manually. 
         rb.gravityScale = 0;        // Disable gravity for top-down movement
         rb.linearDamping = 0;       // No drag, we handle it manually
@@ -38,11 +46,29 @@ public class Robot : MonoBehaviour
         lastActTime = Time.time;
     }
 
-    void Update()
+    [SerializeField] private GameObject enemy;
+
+    void FixedUpdate()
     {
         HandleInput();
         UpdateDashState();
         HandleStopping();
+
+        CalcuateEnemyDistance();
+    }
+
+    public void CalcuateEnemyDistance()
+    {
+        if (enemy != null)
+        {
+            var dist = enemy.transform.position - transform.position;
+            Debug.Log("Your distance to enemy: " + dist.ToString());
+        }
+        else
+        {
+            Debug.Log("No Enemy!");
+        }
+
     }
 
     void HandleInput()
@@ -63,21 +89,24 @@ public class Robot : MonoBehaviour
         }
         transform.Rotate(0, 0, rotation);
         //[Todo] This makes the bounce logic wrong. Check the time of last collision.
-        if (rb.linearVelocity.magnitude >= moveSpeed) {
+        if (rb.linearVelocity.magnitude >= moveSpeed)
+        {
             rb.linearVelocity = rb.linearVelocity.magnitude * transform.up;
             Debug.Log(rb.linearVelocity.magnitude);
         }
         //
-        
+
 
         // Handle Robot movement and dash
-        if (Input.GetKey(KeyCode.UpArrow)) 
+        if (Input.GetKey(KeyCode.UpArrow))
         {
+            Debug.Log("UpArrow pressed");
             float speed = isDashing ? dashSpeed : moveSpeed; //[Todo] This could be redundant with the Dash(). 
             rb.linearVelocity = transform.up * speed;
             hasInput = true;
         }
-        if (Input.GetKeyDown(KeyCode.Space) && Time.time >= lastDashTime + dashCooldown) 
+
+        if (Input.GetKeyDown(KeyCode.Space) && Time.time >= lastDashTime + dashCooldown)
         {
             Dash();
             hasInput = true;
@@ -90,11 +119,12 @@ public class Robot : MonoBehaviour
         }
     }
 
-    void Dash()
-    { 
+    public Vector2 Dash()
+    {
         isDashing = true;
         lastDashTime = Time.time;
         rb.linearVelocity = transform.up * dashSpeed;
+        return rb.linearVelocity;
     }
 
     //[Todo] Change to UpdateState() to be more general. 
@@ -106,9 +136,10 @@ public class Robot : MonoBehaviour
         }
         lastVelocity = rb.linearVelocity;
         //[Debug]
-        if (isDashing && Input.GetKey(KeyCode.LeftArrow)) {
+        if (isDashing && Input.GetKey(KeyCode.LeftArrow))
+        {
             Debug.Log("IsDashing? " + isDashing);
-        } 
+        }
     }
 
     private void OnCollisionEnter2D(Collision2D collision)
@@ -116,13 +147,13 @@ public class Robot : MonoBehaviour
         GameObject otherObject = collision.gameObject;
 
         if (collision.gameObject.CompareTag("Robot"))
-        { 
+        {
             if (otherObject.TryGetComponent<Robot>(out Robot otherRobot))
-            { 
+            {
                 // Calculate bounce direction 
                 Vector2 collisionNormal = collision.contacts[0].normal; //[Todo] GetContact()
                 Vector2 bounceDirection = Vector2.Reflect(lastVelocity.normalized, collisionNormal);
-                
+
                 float impactForce = lastVelocity.magnitude;
                 otherRobot.Bounce(bounceDirection, impactForce);
                 lastActTime = Time.time;
@@ -131,7 +162,7 @@ public class Robot : MonoBehaviour
     }
 
     public void Bounce(Vector2 direction, float force)
-    { 
+    {
         rb.linearVelocity = direction * force;
         //[Todo] Need to handle after get hit from dashing enemy, uncontrollable for short time. 
     }
