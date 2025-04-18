@@ -26,7 +26,6 @@ namespace RobotCoreAction
 
         public bool isMoveDisabled = false;
 
-        public event Action<Collision2D> OnColisionEvents;
 
         // this is historical
         public Dictionary<ERobotActionType, float> ActionsTime = new Dictionary<ERobotActionType, float>();
@@ -53,11 +52,6 @@ namespace RobotCoreAction
                 ActionsTime[_lastRobotActionType] = Time.time;
                 _lastRobotActionType = value;
             }
-        }
-
-        void OnCollisionEnter2D(Collision2D collision)
-        {
-            OnColisionEvents?.Invoke(collision);
         }
 
         public void DisableMove()

@@ -6,16 +6,17 @@ namespace RobotCoreAction
 {
     public class BoostSkill : MonoBehaviour, ISkill
     {
+        #region Skill Stat
+        public ERobotSkillType SkillType => ERobotSkillType.Boost;
+        public float Duration => 5f;
+        public float Cooldown => 10f;
+        public float BoostMultiplier => 1.8f;
+        #endregion
+
         private RobotActionController robotActionController;
         private RobotStats robotStats;
         private RobotPhysicController robotPhysic;
 
-        public float Duration => 5f;
-        public float Cooldown => 10f;
-
-        public float BoostMultiplier => 1.8f;
-
-        public ERobotSkillType SkillType => ERobotSkillType.Boost;
 
         public void Execute(RobotActionController controller, RobotStats stats, RobotPhysicController physic)
         {
@@ -53,7 +54,6 @@ namespace RobotCoreAction
         {
             yield return new WaitForSeconds(Duration);
             Deactivate();
-            Debug.Log("[Skill][Boost] deactivated after duration!");
         }
 
         private void Deactivate()

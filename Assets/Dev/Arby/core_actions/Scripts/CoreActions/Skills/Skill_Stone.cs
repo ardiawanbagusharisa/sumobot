@@ -7,16 +7,18 @@ namespace RobotCoreAction
 {
     public class StoneSkill : MonoBehaviour, ISkill
     {
+        #region Skill Stat
+        public ERobotSkillType SkillType => ERobotSkillType.Stone;
+        public float Duration => 5f;
+        public float Cooldown => 10f;
+        public float BounceBackMultiplier => 1.2f;
+        #endregion
 
         private RobotActionController robotActionController;
         private RobotStats robotStats;
         private RobotPhysicController robotPhysic;
 
-        public float Duration => 5f;
-        public float Cooldown => 10f;
-        public float BounceBackMultiplier => 1.2f;
 
-        public ERobotSkillType SkillType => ERobotSkillType.Stone;
 
         public void Execute(RobotActionController controller, RobotStats stats, RobotPhysicController physic)
         {
@@ -45,7 +47,7 @@ namespace RobotCoreAction
         {
             robotPhysic.FreezeMovement();
             robotStats.DisableMove(); // Disable movement
-            robotStats.OnColisionEvents += OnCollision; // Subscribe to collision events
+            robotPhysic.OnColisionEvents += OnCollision; // Subscribe to collision events
             Debug.Log("[Skill][Stone] activated!");
 
             robotStats.StartCoroutine(DeactivateAfterDuration());
@@ -56,7 +58,6 @@ namespace RobotCoreAction
         {
             yield return new WaitForSeconds(Duration);
             Deactivate();
-            Debug.Log("[Skill][Stone] deactivated after duration!");
         }
 
         public void OnCollision(Collision2D collision)
@@ -78,7 +79,7 @@ namespace RobotCoreAction
             // Implement the logic to deactivate the skill
             Debug.Log("[Skill][Stone] deactivated!");
             robotPhysic.ResetFreezeMovement();
-            robotStats.OnColisionEvents -= OnCollision; // Unsubscribe from collision events
+            robotPhysic.OnColisionEvents -= OnCollision; // Unsubscribe from collision events
             robotStats.EnableMove(); // Enable movement
 
         }
