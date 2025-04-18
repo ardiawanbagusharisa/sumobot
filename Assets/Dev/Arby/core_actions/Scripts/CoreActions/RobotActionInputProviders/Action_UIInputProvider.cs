@@ -7,6 +7,17 @@ namespace RobotCoreAction
 
     public class UIInputProvider : MonoBehaviour, IInputProvider
     {
+        public bool IsEnabled { get; private set; }
+
+        private void OnEnable()
+        {
+            IsEnabled = true;
+        }
+        void OnDisable()
+        {
+            IsEnabled = false;
+        }
+        
         private Queue<ISumoAction> commandQueue = new Queue<ISumoAction>();
         public void OnAccelerateButtonPressed()
         {
@@ -24,7 +35,7 @@ namespace RobotCoreAction
 
         public void OnSkillsPressed(ISkill skill)
         {
-            commandQueue.Enqueue(new SkillAction());
+            commandQueue.Enqueue(new SkillAction(skill));
         }
 
         public List<ISumoAction> GetInput()

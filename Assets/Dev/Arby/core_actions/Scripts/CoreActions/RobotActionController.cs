@@ -5,26 +5,38 @@ namespace RobotCoreAction
     public class RobotActionController : MonoBehaviour
     {
         private RobotStats stats;
-        private RobotPhysicController robotController;
+        private RobotPhysicController physic;
         private Rigidbody2D _robotRigidBody;
 
         private void Awake()
         {
             stats = GetComponent<RobotStats>();
-            robotController = GetComponent<RobotPhysicController>();
+            physic = GetComponent<RobotPhysicController>();
             _robotRigidBody = GetComponent<Rigidbody2D>();
         }
 
         public void Accelerate()
         {
-            float speed = robotController.LastRobotActionType == ERobotActionType.Dash ? stats.DashSpeed : stats.MoveSpeed; //[Todo] This could be redundant with the Dash(). 
+            if (stats.isMoveDisabled)
+            {
+                Debug.Log("Move is disabled.");
+                return;
+            }
+
+            float speed = stats.LastRobotActionType == ERobotActionType.Dash ? stats.DashSpeed : stats.MoveSpeed; //[Todo] This could be redundant with the Dash(). 
             _robotRigidBody.linearVelocity = transform.up * speed;
 
         }
 
         public void Dash()
         {
-            robotController.LastRobotActionType = ERobotActionType.Dash;
+            if (stats.isMoveDisabled)
+            {
+                Debug.Log("Move is disabled.");
+                return;
+            }
+
+            stats.LastRobotActionType = ERobotActionType.Dash;
             _robotRigidBody.linearVelocity = transform.up * stats.DashSpeed;
         }
 
@@ -34,11 +46,9 @@ namespace RobotCoreAction
             transform.Rotate(0, 0, rotation);
         }
 
-        public void UseSkill()
+        public void UseSkill(ISkill skill)
         {
-            robotController.LastRobotActionType = ERobotActionType.Skill;
-
-            // Trigger skill logic
+            skill.Execute(this, stats, physic);
         }
     }
 }

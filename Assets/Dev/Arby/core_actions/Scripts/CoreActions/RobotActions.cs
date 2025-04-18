@@ -4,11 +4,6 @@ namespace RobotCoreAction
 {
     public class AccelerateAction : ISumoAction
     {
-        // public float Speed { get; }
-        // public AccelerateAction(float speed)
-        // {
-        //     Speed = speed;
-        // }
 
         public void Execute(RobotActionController robot, RobotStats stats)
         {
@@ -48,9 +43,16 @@ namespace RobotCoreAction
 
     public class SkillAction : ISumoAction
     {
+        public ISkill Skill { get; }
+
+        public SkillAction(ISkill skill)
+        {
+            Skill = skill;
+        }
+
         public void Execute(RobotActionController controller, RobotStats stats)
         {
-            controller.UseSkill();
+            controller.UseSkill(Skill);
         }
     }
 
