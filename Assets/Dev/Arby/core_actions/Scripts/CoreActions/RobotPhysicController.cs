@@ -8,9 +8,9 @@ namespace RobotCoreAction
     {
         private RobotStats stats;
         private float lastActTime = 0.0f;        // Last input or collision time, excluding rotation.
-        private ERobotActionType _lastRobotActionType = ERobotActionType.Idle;
         private Rigidbody2D rb;
 
+        public Vector2 LastVelocity { get; private set; } = Vector2.zero;
 
         private void Awake()
         {
@@ -21,17 +21,6 @@ namespace RobotCoreAction
             rb.angularDamping = 0;      // No automatic angular slow-down
         }
 
-        public ERobotActionType LastRobotActionType
-        {
-            get { return _lastRobotActionType; }
-            set
-            {
-                stats.ActionsTime[_lastRobotActionType] = Time.time;
-                _lastRobotActionType = value;
-                lastActTime = Time.time;
-            }
-        }
-
         private void Update()
         {
             UpdateDashState();
@@ -40,14 +29,15 @@ namespace RobotCoreAction
 
         private void FixedUpdate()
         {
-            HandleStopping();            
+            HandleStopping();
         }
 
         private void UpdateDashState()
         {
-            if (LastRobotActionType == ERobotActionType.Dash && Time.time >= lastActTime + stats.DashDuration)
+            LastVelocity = rb.linearVelocity;
+            if (stats.LastRobotActionType == ERobotActionType.Dash && Time.time >= lastActTime + stats.DashDuration)
             {
-                LastRobotActionType = ERobotActionType.Idle;
+                stats.LastRobotActionType = ERobotActionType.Idle;
             }
         }
 
@@ -59,6 +49,27 @@ namespace RobotCoreAction
                 rb.linearVelocity = Vector2.Lerp(rb.linearVelocity, Vector2.zero, stats.SlowDownRate * Time.deltaTime); //[Todo] Need to just stop after it close to zero.
                 rb.angularVelocity = Mathf.Lerp(rb.angularVelocity, 0, stats.SlowDownRate * Time.deltaTime);
             }
+        }
+
+        public void Bounce(Vector2 direction, float force)
+        {
+            rb.linearVelocity = direction * force;
+            //[Todo] Need to handle after get hit from dashing enemy, uncontrollable for short time. 
+        }
+
+        public void FreezeMovement()
+        {
+            rb.constraints = RigidbodyConstraints2D.FreezePosition;
+        }
+
+        public void ResetFreezeMovement()
+        {
+            rb.constraints = RigidbodyConstraints2D.None;
+        }
+
+        public void SetLastVelocity(Vector2 value)
+        {
+            LastVelocity = value;
         }
 
     }

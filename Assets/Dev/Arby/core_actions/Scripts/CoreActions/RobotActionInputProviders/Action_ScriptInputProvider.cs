@@ -6,6 +6,17 @@ namespace RobotCoreAction
 
     public class ScriptInputProvider : MonoBehaviour, IInputProvider
     {
+        public bool IsEnabled { get; private set; }
+
+        private void OnEnable()
+        {
+            IsEnabled = true;
+        }
+        void OnDisable()
+        {
+            IsEnabled = false;
+        }
+        
         private Queue<ISumoAction> commandQueue = new Queue<ISumoAction>();
 
         // This will be called in AI Submission / Live Command

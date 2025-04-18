@@ -10,11 +10,15 @@ namespace RobotCoreAction
 
     public interface IInputProvider
     {
+        bool IsEnabled { get; }
         List<ISumoAction> GetInput();
     }
 
     public interface ISkill
     {
-        //[Todo] Define skill properties and methods
+        ERobotSkillType SkillType { get; }
+        float Duration { get; }
+        float Cooldown { get; }
+        void Execute(RobotActionController controller, RobotStats stats, RobotPhysicController physic);
     }
 }

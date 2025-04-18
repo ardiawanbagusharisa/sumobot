@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -25,6 +26,8 @@ namespace RobotCoreAction
         {
             foreach (var provider in _providers)
             {
+                if (!provider.IsEnabled)
+                    continue;
                 var actions = provider.GetInput();
                 foreach (var action in actions)
                 {
