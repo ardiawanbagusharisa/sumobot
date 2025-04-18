@@ -13,9 +13,10 @@ namespace RobotCoreAction
     /// </summary>
     public class SkillCooldownUI : MonoBehaviour
     {
+        public static SkillCooldownUI Instance { get; private set; }
+
         public Dictionary<ERobotSkillType, string> runningSkill = new Dictionary<ERobotSkillType, string>();
 
-        public static SkillCooldownUI Instance { get; private set; }
         private void Awake()
         {
             // If there is an instance, and it's not me, delete myself.
@@ -31,8 +32,6 @@ namespace RobotCoreAction
         }
 
         [SerializeField] private TMP_Text textUI;
-        public static event Action Spawn;
-
 
         public void ShowSkillCooldown(ISkill skill)
         {

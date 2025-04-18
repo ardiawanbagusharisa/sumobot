@@ -6,13 +6,13 @@ namespace RobotCoreAction
     {
         private RobotStats stats;
         private RobotPhysicController physic;
-        private Rigidbody2D _robotRigidBody;
+        private Rigidbody2D robotRigidBody;
 
         private void Awake()
         {
             stats = GetComponent<RobotStats>();
             physic = GetComponent<RobotPhysicController>();
-            _robotRigidBody = GetComponent<Rigidbody2D>();
+            robotRigidBody = GetComponent<Rigidbody2D>();
         }
 
         public void Accelerate()
@@ -24,7 +24,7 @@ namespace RobotCoreAction
             }
 
             float speed = stats.LastRobotActionType == ERobotActionType.Dash ? stats.DashSpeed : stats.MoveSpeed; //[Todo] This could be redundant with the Dash(). 
-            _robotRigidBody.linearVelocity = transform.up * speed;
+            robotRigidBody.linearVelocity = transform.up * speed;
 
         }
 
@@ -37,7 +37,7 @@ namespace RobotCoreAction
             }
 
             stats.LastRobotActionType = ERobotActionType.Dash;
-            _robotRigidBody.linearVelocity = transform.up * stats.DashSpeed;
+            robotRigidBody.linearVelocity = transform.up * stats.DashSpeed;
         }
 
         public void Turn(bool isRight)
