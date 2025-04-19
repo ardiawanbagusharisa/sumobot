@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
-using RobotCoreAction.Inputs;
+using RobotCoreAction.Skills;
 
 namespace RobotCoreAction
 {
