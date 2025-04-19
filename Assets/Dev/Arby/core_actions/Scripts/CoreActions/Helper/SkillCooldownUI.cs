@@ -1,7 +1,5 @@
-using System;
 using System.Collections;
 using System.Collections.Generic;
-using RobotCoreAction;
 using TMPro;
 using UnityEngine;
 
@@ -63,7 +61,7 @@ namespace RobotCoreAction
                 var s = DisplayTime(cd, skill);
                 yield return new WaitForSeconds(1f);
                 cd -= 1;
-                if (s == 0)
+                if (s == 1)
                 {
                     runningSkill.Remove(skill.SkillType);
                 }

@@ -1,66 +1,71 @@
 
 using System.Collections;
+using RobotCoreAction.Controllers;
 using UnityEngine;
 
 namespace RobotCoreAction
 {
-    public class BoostSkill : MonoBehaviour, ISkill
+    namespace Skills
     {
-        #region Skill Stat
-        public ERobotSkillType SkillType => ERobotSkillType.Boost;
-        public float Duration => 5f;
-        public float Cooldown => 10f;
-        public float BoostMultiplier => 1.8f;
-        #endregion
 
-        private RobotActionController robotActionController;
-        private RobotStats robotStats;
-        private RobotPhysicController robotPhysic;
-
-
-        public void Execute(RobotActionController controller, RobotStats stats, RobotPhysicController physic)
+        public class BoostSkill : MonoBehaviour, ISkill
         {
+            #region Skill Stat
+            public ERobotSkillType SkillType => ERobotSkillType.Boost;
+            public float Duration => 5f;
+            public float Cooldown => 10f;
+            public float BoostMultiplier => 1.8f;
+            #endregion
 
-            robotActionController = controller;
-            robotStats = stats;
-            stats.SkillTime.TryGetValue(SkillType, out float lastSkillTime);
-            if (Time.time >= lastSkillTime + Cooldown)
+            private RobotActionController robotActionController;
+            private RobotStats robotStats;
+            private RobotPhysicController robotPhysic;
+
+
+            public void Execute(RobotActionController controller, RobotStats stats, RobotPhysicController physic)
             {
-                //Debug
-                SkillCooldownUI.Instance.ShowSkillCooldown(this);
 
-                Activate();
+                robotActionController = controller;
+                robotStats = stats;
+                stats.SkillTime.TryGetValue(SkillType, out float lastSkillTime);
+                if (Time.time >= lastSkillTime + Cooldown)
+                {
+                    //Debug
+                    SkillCooldownUI.Instance.ShowSkillCooldown(this);
 
-                stats.LastRobotActionType = ERobotActionType.Skill;
-                stats.SkillTime[SkillType] = Time.time; // Update the last skill time
+                    Activate();
+
+                    stats.LastRobotActionType = ERobotActionType.Skill;
+                    stats.SkillTime[SkillType] = Time.time; // Update the last skill time
+                }
+                else
+                {
+                    Debug.Log("[Skill][Boost] on cooldown.");
+                }
             }
-            else
+
+            private void Activate()
             {
-                Debug.Log("[Skill][Boost] on cooldown.");
+                Debug.Log("[Skill][Boost] activated!");
+                robotStats.EnableMove(); // Enable movement
+                robotStats.ChangeMoveSpeed(robotStats.MoveSpeed * BoostMultiplier);
+                robotStats.ChangeDashSpeed(robotStats.DashSpeed * BoostMultiplier);
+
+                robotStats.StartCoroutine(DeactivateAfterDuration());
             }
-        }
 
-        private void Activate()
-        {
-            Debug.Log("[Skill][Boost] activated!");
-            robotStats.EnableMove(); // Enable movement
-            robotStats.ChangeMoveSpeed(robotStats.MoveSpeed * BoostMultiplier);
-            robotStats.ChangeDashSpeed(robotStats.DashSpeed * BoostMultiplier);
+            public IEnumerator DeactivateAfterDuration()
+            {
+                yield return new WaitForSeconds(Duration);
+                Deactivate();
+            }
 
-            robotStats.StartCoroutine(DeactivateAfterDuration());
-        }
-
-        public IEnumerator DeactivateAfterDuration()
-        {
-            yield return new WaitForSeconds(Duration);
-            Deactivate();
-        }
-
-        private void Deactivate()
-        {
-            robotStats.ResetMoveSpeed();
-            robotStats.ResetDashSpeed();
-            Debug.Log("[Skill][Boost] deactivated!");
+            private void Deactivate()
+            {
+                robotStats.ResetMoveSpeed();
+                robotStats.ResetDashSpeed();
+                Debug.Log("[Skill][Boost] deactivated!");
+            }
         }
     }
 }

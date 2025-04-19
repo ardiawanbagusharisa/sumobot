@@ -1,7 +1,9 @@
 using UnityEngine;
+using RobotCoreAction.Controllers;
 
 namespace RobotCoreAction
 {
+
     public class AccelerateAction : ISumoAction
     {
 
@@ -64,4 +66,8 @@ namespace RobotCoreAction
         Idle,
     }
 
+    public interface ISumoAction
+    {
+        void Execute(RobotActionController controller, RobotStats stats);
+    }
 }
