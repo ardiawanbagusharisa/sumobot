@@ -8,6 +8,45 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/SampleScene.unity
     guid: 8c9cfa26abfee488c85f1582747f6a02
+  - enabled: 1
+    path: Assets/Dev/dev_cleo/game_ui/Scenes/homeScene.unity
+    guid: 52d617a94a91a4b4ca73d00ae0075b69
+  - enabled: 1
+    path: Assets/Dev/dev_cleo/game_ui/Scenes/campaignScene.unity
+    guid: e6232ba5dc03c084592de4601a29618e
+  - enabled: 1
+    path: Assets/Dev/dev_cleo/game_ui/Scenes/marketScene.unity
+    guid: 922791c3c7739224da94d0dba71b355f
+  - enabled: 1
+    path: Assets/Dev/dev_cleo/game_ui/Scenes/menuScene.unity
+    guid: 71c302490dfbd9a4c893c44b3a6e130e
+  - enabled: 1
+    path: Assets/Dev/dev_cleo/game_ui/Scenes/dailyneventScene.unity
+    guid: cff844af36a35534ca4234227170fe58
+  - enabled: 1
+    path: Assets/Dev/dev_cleo/game_ui/Scenes/inventoryScene.unity
+    guid: 018f436465517bf489a0e83566246588
+  - enabled: 1
+    path: Assets/Dev/dev_cleo/game_ui/Scenes/AIScriptScene.unity
+    guid: 5121350179704a442ba69ae2842e2f5f
+  - enabled: 1
+    path: Assets/Dev/dev_cleo/game_ui/Scenes/avatarScene.unity
+    guid: 9c80be9163176f443877731ea4870058
+  - enabled: 1
+    path: Assets/Dev/dev_cleo/game_ui/Scenes/loadoutScene.unity
+    guid: 524bb0aa3c3ae8c48bb7f8e0e63de28b
+  - enabled: 1
+    path: Assets/Dev/dev_cleo/game_ui/Scenes/profileScene.unity
+    guid: 677b5172fbdbab94da65dbcbcd509c3c
+  - enabled: 1
+    path: Assets/Dev/dev_cleo/game_ui/Scenes/settingsScene.unity
+    guid: c10b408d6d5268041b4736403f8115cd
+  - enabled: 1
+    path: Assets/Dev/dev_cleo/game_ui/Scenes/leaderboardScene.unity
+    guid: ddecb380f4897474eae3b91b852ff3d0
+  - enabled: 1
+    path: Assets/Dev/dev_cleo/game_ui/Scenes/multiScene.unity
+    guid: 2341f203a8322d34cadcba4cb85b3f38
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
   m_UseUCBPForAssetBundles: 0
