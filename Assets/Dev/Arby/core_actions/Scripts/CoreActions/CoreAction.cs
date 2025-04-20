@@ -1,6 +1,3 @@
-using UnityEngine;
-using RobotCoreAction.Controllers;
-using RobotCoreAction.Skills;
 
 namespace RobotCoreAction
 {
@@ -8,25 +5,17 @@ namespace RobotCoreAction
     public class AccelerateAction : ISumoAction
     {
 
-        public void Execute(RobotActionController robot, RobotStats stats)
+        public void Execute(CoreActionRobotController controller)
         {
-            robot.Accelerate();
+            controller.Accelerate();
         }
     }
 
     public class DashAction : ISumoAction
     {
-        public void Execute(RobotActionController robot, RobotStats stats)
+        public void Execute(CoreActionRobotController controller)
         {
-            stats.ActionsTime.TryGetValue(ERobotActionType.Dash, out float lastActTime);
-            if (Time.time >= lastActTime + stats.DashDuration)
-            {
-                robot.Dash();
-            }
-            else
-            {
-                Debug.Log("Dash is on cooldown.");
-            }
+            controller.Dash();
         }
     }
 
@@ -38,7 +27,8 @@ namespace RobotCoreAction
         {
             IsRight = isRight;
         }
-        public void Execute(RobotActionController controller, RobotStats stats)
+
+        public void Execute(CoreActionRobotController controller)
         {
             controller.Turn(IsRight);
         }
@@ -53,7 +43,8 @@ namespace RobotCoreAction
             Skill = skill;
         }
 
-        public void Execute(RobotActionController controller, RobotStats stats)
+
+        public void Execute(CoreActionRobotController controller)
         {
             controller.UseSkill(Skill);
         }
@@ -69,6 +60,6 @@ namespace RobotCoreAction
 
     public interface ISumoAction
     {
-        void Execute(RobotActionController controller, RobotStats stats);
+        void Execute(CoreActionRobotController controller);
     }
 }
