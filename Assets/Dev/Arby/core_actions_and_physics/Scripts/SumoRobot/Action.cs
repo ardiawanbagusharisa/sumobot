@@ -1,11 +1,11 @@
 
-namespace RobotCoreAction
+namespace CoreSumoRobot
 {
 
     public class AccelerateAction : ISumoAction
     {
 
-        public void Execute(CoreActionRobotController controller)
+        public void Execute(SumoRobotController controller)
         {
             controller.Accelerate();
         }
@@ -13,7 +13,7 @@ namespace RobotCoreAction
 
     public class DashAction : ISumoAction
     {
-        public void Execute(CoreActionRobotController controller)
+        public void Execute(SumoRobotController controller)
         {
             controller.Dash();
         }
@@ -28,7 +28,7 @@ namespace RobotCoreAction
             IsRight = isRight;
         }
 
-        public void Execute(CoreActionRobotController controller)
+        public void Execute(SumoRobotController controller)
         {
             controller.Turn(IsRight);
         }
@@ -44,7 +44,7 @@ namespace RobotCoreAction
         }
 
 
-        public void Execute(CoreActionRobotController controller)
+        public void Execute(SumoRobotController controller)
         {
             controller.UseSkill(Skill);
         }
@@ -60,6 +60,6 @@ namespace RobotCoreAction
 
     public interface ISumoAction
     {
-        void Execute(CoreActionRobotController controller);
+        void Execute(SumoRobotController controller);
     }
 }

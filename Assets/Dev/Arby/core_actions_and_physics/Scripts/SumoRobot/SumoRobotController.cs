@@ -1,28 +1,46 @@
 using System;
 using System.Collections.Generic;
+using UnityEditor.Rendering;
 using UnityEngine;
 
-namespace RobotCoreAction
+namespace CoreSumoRobot
 {
-    public class CoreActionRobotController : MonoBehaviour
+    public class SumoRobotController : MonoBehaviour
     {
         public Vector2 LastVelocity { get; private set; } = Vector2.zero;
-        public event Action<Collision2D> OnColisionEvents;
-        public bool isMoveDisabled = false;
         public bool isInputDisabled = false;
-        private CoreActionRobot sumoRobot;
+        public SpriteRenderer face;
+        public Transform StartPosition;
+        public event Action<int> OnOutOfArena;
+
+        private bool isMoveDisabled = false;
+        private SumoRobot sumoRobot;
         private float reservedMoveSpeed;
         private float reservedDashSpeed;
+        private float reserverdBounceResistance;
         private Rigidbody2D robotRigidBody;
         private IInputProvider provider;
+        private float moveLockTime = 0f;
+        private bool IsMovementLocked => moveLockTime > 0f;
+
+        private event Action<Collision2D> onEnterCollisions;
+        private event Action<Collider2D> onExitTriggers;
 
         private void Awake()
         {
-            sumoRobot = GetComponent<CoreActionRobot>();
+            sumoRobot = GetComponent<SumoRobot>();
             robotRigidBody = GetComponent<Rigidbody2D>();
             reservedMoveSpeed = sumoRobot.MoveSpeed;
             reservedDashSpeed = sumoRobot.DashSpeed;
+            reserverdBounceResistance = sumoRobot.BounceResistance;
+            SetRules(true);
         }
+
+        void OnDestroy()
+        {
+            SetRules(false);
+        }
+
         private void Update()
         {
             ReadInput();
@@ -32,7 +50,52 @@ namespace RobotCoreAction
         private void FixedUpdate()
         {
             HandleStopping();
+            if (moveLockTime > 0f)
+                moveLockTime -= Time.deltaTime;
         }
+        void OnCollisionEnter2D(Collision2D collision)
+        {
+            onEnterCollisions?.Invoke(collision);
+        }
+
+        void OnTriggerExit2D(Collider2D collision)
+        {
+            onExitTriggers?.Invoke(collision);
+        }
+
+
+        #region Robot State
+
+        public void IsInArena(Collider2D collider)
+        {
+            if (collider.tag == "Arena/Floor")
+            {
+                OnOutOfArena?.Invoke(sumoRobot.IdInt);
+            }
+        }
+
+        private void SetRules(bool isEnabled)
+        {
+            if (isEnabled)
+            {
+                onEnterCollisions += BounceRule;
+                onExitTriggers += IsInArena;
+            }
+            else
+            {
+                onEnterCollisions -= BounceRule;
+                onExitTriggers -= IsInArena;
+            }
+
+        }
+
+        public void Reset()
+        {
+            transform.position = StartPosition.position;
+            transform.rotation = StartPosition.rotation;
+            ResetActionData();
+        }
+        #endregion
 
 
         #region Robot Action Data
@@ -41,6 +104,23 @@ namespace RobotCoreAction
         public Dictionary<ERobotSkillType, float> SkillTime = new Dictionary<ERobotSkillType, float>();
 
         private ERobotActionType _lastRobotActionType = ERobotActionType.Idle;
+
+
+        private ERobotSkillType _lastRobotSkillType;
+        public ERobotSkillType LastRobotSkillType
+        {
+            get { return _lastRobotSkillType; }
+            set
+            {
+                _lastRobotSkillType = value;
+                _lastRobotActionType = ERobotActionType.Skill;
+
+                if (value != ERobotSkillType.None)
+                {
+                    SkillTime[value] = Time.time;
+                }
+            }
+        }
 
         public ERobotActionType LastRobotActionType
         {
@@ -51,13 +131,21 @@ namespace RobotCoreAction
                 _lastRobotActionType = value;
             }
         }
+
+        private void ResetActionData()
+        {
+            ActionsTime = new Dictionary<ERobotActionType, float>();
+            SkillTime = new Dictionary<ERobotSkillType, float>();
+            LastRobotActionType = ERobotActionType.Idle;
+            LastRobotSkillType = ERobotSkillType.None;
+        }
         #endregion
 
 
         #region Robot Action
         public void Accelerate()
         {
-            if (isMoveDisabled)
+            if (isMoveDisabled || IsMovementLocked)
             {
                 Debug.Log("Move is disabled.");
                 return;
@@ -104,16 +192,14 @@ namespace RobotCoreAction
 
 
         #region Robot Movement State
-        public void DisableMove()
+        public void SetMovementEnabled(bool value)
         {
-            isMoveDisabled = true;
+            isMoveDisabled = !value;
         }
-
-        public void EnableMove()
+        public void SetInputEnabled(bool value)
         {
-            isMoveDisabled = false;
+            isInputDisabled = !value;
         }
-
 
         public void ChangeMoveSpeed(float value)
         {
@@ -135,16 +221,28 @@ namespace RobotCoreAction
         {
             sumoRobot.DashSpeed = reservedDashSpeed;
         }
+
+        public void LockMovement(float duration)
+        {
+            moveLockTime = Mathf.Max(moveLockTime, duration);
+        }
         #endregion
 
         #region Robot Physics
-        void OnCollisionEnter2D(Collision2D collision)
+
+        void BounceRule(Collision2D collision)
         {
-            OnColisionEvents?.Invoke(collision);
+            var collNormal = collision.contacts[0].normal;
+
+            PhysicHelper.HandleBounce(this, collision.gameObject.GetComponent<SumoRobotController>(), collNormal);
         }
 
         public void Bounce(Vector2 direction, float force)
         {
+            float lockDuration = Mathf.Clamp(force * 0.5f, 1f, 2.5f);
+            Debug.Log("Bounce.LockDuration" + lockDuration);
+            LockMovement(lockDuration);
+
             robotRigidBody.linearVelocity = direction * force;
         }
 
@@ -161,6 +259,17 @@ namespace RobotCoreAction
         public void SetLastVelocity(Vector2 value)
         {
             LastVelocity = value;
+        }
+
+        public void SetBounceResistance(float value)
+        {
+            sumoRobot.BounceResistance = value;
+        }
+
+
+        public void ResetBounceResistance()
+        {
+            sumoRobot.BounceResistance = reserverdBounceResistance;
         }
 
         private void UpdateDashState()
@@ -200,6 +309,20 @@ namespace RobotCoreAction
             foreach (var action in actions)
             {
                 action.Execute(this);
+            }
+        }
+        #endregion
+
+        #region Robot Appearance
+        public void ChangeFaceColor(bool isLeftSide)
+        {
+            if (isLeftSide)
+            {
+                face.color = new Color(0, 255, 0);
+            }
+            else
+            {
+                face.color = new Color(255, 0, 0);
             }
         }
         #endregion

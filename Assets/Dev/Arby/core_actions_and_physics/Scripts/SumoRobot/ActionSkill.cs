@@ -1,7 +1,7 @@
 using System.Collections;
 using UnityEngine;
 
-namespace RobotCoreAction
+namespace CoreSumoRobot
 {
 
     public interface ISkill
@@ -9,12 +9,13 @@ namespace RobotCoreAction
         ERobotSkillType SkillType { get; }
         float Duration { get; }
         float Cooldown { get; }
-        void Execute(CoreActionRobotController controller, CoreActionRobot robot);
+        void Execute(SumoRobotController controller, SumoRobot robot);
     }
     public enum ERobotSkillType
     {
         Stone,
-        Boost
+        Boost,
+        None,
     }
 
     public class BoostSkill : ISkill
@@ -26,16 +27,16 @@ namespace RobotCoreAction
         public float BoostMultiplier => 1.8f;
         #endregion
 
-        private CoreActionRobot robot;
-        private CoreActionRobotController controller;
+        private SumoRobot robot;
+        private SumoRobotController controller;
 
 
-        public void Execute(CoreActionRobotController controllerParam, CoreActionRobot robotParam)
+        public void Execute(SumoRobotController controllerParam, SumoRobot robotParam)
         {
             OnExecute(controllerParam, robotParam);
         }
 
-        private void OnExecute(CoreActionRobotController controllerParam, CoreActionRobot robotParam)
+        private void OnExecute(SumoRobotController controllerParam, SumoRobot robotParam)
         {
             controller = controllerParam;
             robot = robotParam;
@@ -47,8 +48,7 @@ namespace RobotCoreAction
 
                 Activate();
 
-                controller.LastRobotActionType = ERobotActionType.Skill;
-                controller.SkillTime[SkillType] = Time.time; // Update the last skill time
+                controller.LastRobotSkillType = SkillType;
             }
             else
             {
@@ -59,10 +59,10 @@ namespace RobotCoreAction
         private void Activate()
         {
             Debug.Log("[Skill][Boost] activated!");
-            controller.EnableMove(); // Enable movement
+            controller.SetMovementEnabled(true);
             controller.ChangeMoveSpeed(robot.MoveSpeed * BoostMultiplier);
             controller.ChangeDashSpeed(robot.DashSpeed * BoostMultiplier);
-
+            controller.SetBounceResistance(1.1f);
             controller.StartCoroutine(DeactivateAfterDuration());
         }
 
@@ -76,6 +76,8 @@ namespace RobotCoreAction
         {
             controller.ResetMoveSpeed();
             controller.ResetDashSpeed();
+            controller.ResetBounceResistance();
+            controller.LastRobotSkillType = ERobotSkillType.None;
             Debug.Log("[Skill][Boost] deactivated!");
         }
     }
@@ -86,15 +88,15 @@ namespace RobotCoreAction
         public ERobotSkillType SkillType => ERobotSkillType.Stone;
         public float Duration => 5f;
         public float Cooldown => 10f;
-        public float BounceBackMultiplier => 1.2f;
+        public float BounceBackMultiplier => 2.0f;
         #endregion
 
-        private CoreActionRobot robot;
-        private CoreActionRobotController controller;
+        private SumoRobot robot;
+        private SumoRobotController controller;
 
 
 
-        public void Execute(CoreActionRobotController controllerParam, CoreActionRobot robotParam)
+        public void Execute(SumoRobotController controllerParam, SumoRobot robotParam)
         {
             robot = robotParam;
             controller = controllerParam;
@@ -107,8 +109,7 @@ namespace RobotCoreAction
 
                 Activate();
 
-                controller.LastRobotActionType = ERobotActionType.Skill;
-                controller.SkillTime[SkillType] = Time.time; // Update the last skill time
+                controller.LastRobotSkillType = SkillType;
             }
             else
             {
@@ -119,8 +120,8 @@ namespace RobotCoreAction
         private void Activate()
         {
             controller.FreezeMovement();
-            controller.DisableMove(); // Disable movement
-            controller.OnColisionEvents += OnCollision; // Subscribe to collision events
+            controller.SetMovementEnabled(false);
+            controller.SetBounceResistance(10f);
             Debug.Log("[Skill][Stone] activated!");
 
             controller.StartCoroutine(DeactivateAfterDuration());
@@ -133,27 +134,14 @@ namespace RobotCoreAction
             Deactivate();
         }
 
-        public void OnCollision(Collision2D collision)
-        {
-            // Implement the logic for what happens when the robot collides with something while the skill is active
-            Debug.Log("Collision detected on " + collision.gameObject.layer + " during stone skill!");
-
-            var enemyController = collision.gameObject.GetComponent<CoreActionRobotController>();
-
-            Vector2 collisionNormal = collision.contacts[0].normal; //[Todo] GetContact()
-            Vector2 bounceDirection = Vector2.Reflect(enemyController.LastVelocity.normalized, collisionNormal);
-
-            float impactForce = enemyController.LastVelocity.magnitude * BounceBackMultiplier;
-            enemyController.Bounce(bounceDirection, impactForce);
-        }
-
         private void Deactivate()
         {
             // Implement the logic to deactivate the skill
             Debug.Log("[Skill][Stone] deactivated!");
             controller.ResetFreezeMovement();
-            controller.OnColisionEvents -= OnCollision; // Unsubscribe from collision events
-            controller.EnableMove(); // Enable movement
+            controller.ResetBounceResistance();
+            controller.SetMovementEnabled(true);
+            controller.LastRobotSkillType = ERobotSkillType.None;
         }
 
     }

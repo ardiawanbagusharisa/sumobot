@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 
-namespace RobotCoreAction
+namespace CoreSumoRobot
 {
     /// <summary>
     /// This is just a simple game manager to handle the cooldown of the skills.
