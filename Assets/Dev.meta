@@ -1,5 +1,9 @@
 fileFormatVersion: 2
+<<<<<<< HEAD
 guid: 367309a3c32d949dab3e9fc969a08034
+=======
+guid: f8f4ffe613db1a642b49234979b8f7df
+>>>>>>> db56f84 (Initial commit at branch)
 folderAsset: yes
 DefaultImporter:
   externalObjects: {}
