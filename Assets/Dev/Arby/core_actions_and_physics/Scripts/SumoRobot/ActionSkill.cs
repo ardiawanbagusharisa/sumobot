@@ -88,7 +88,7 @@ namespace CoreSumoRobot
         public ERobotSkillType SkillType => ERobotSkillType.Stone;
         public float Duration => 5f;
         public float Cooldown => 10f;
-        public float BounceBackMultiplier => 2.0f;
+        public float BounceBackMultiplier => 10.0f;
         #endregion
 
         private SumoRobot robot;
@@ -121,7 +121,7 @@ namespace CoreSumoRobot
         {
             controller.FreezeMovement();
             controller.SetMovementEnabled(false);
-            controller.SetBounceResistance(10f);
+            controller.SetBounceResistance(BounceBackMultiplier);
             Debug.Log("[Skill][Stone] activated!");
 
             controller.StartCoroutine(DeactivateAfterDuration());
