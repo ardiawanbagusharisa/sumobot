@@ -106,7 +106,6 @@ namespace CoreSumoRobot
                 //Debug
                 SkillCooldownUI.Instance.ShowSkillCooldown(this);
 
-
                 Activate();
 
                 controller.LastRobotSkillType = SkillType;
