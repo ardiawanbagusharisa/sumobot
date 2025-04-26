@@ -1,5 +1,7 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
+using Unity.VisualScripting;
 using UnityEditor.Rendering;
 using UnityEngine;
 
@@ -143,7 +145,7 @@ namespace CoreSumoRobot
 
 
         #region Robot Action
-        public void Accelerate()
+        public void Accelerate(AccelerateActionType type, float time = float.NaN)
         {
             if (isMoveDisabled || IsMovementLocked)
             {
@@ -151,9 +153,16 @@ namespace CoreSumoRobot
                 return;
             }
 
-            float speed = LastRobotActionType == ERobotActionType.Dash ? sumoRobot.DashSpeed : sumoRobot.MoveSpeed; //[Todo] This could be redundant with the Dash(). 
-            robotRigidBody.linearVelocity = transform.up * speed;
-
+            switch (type)
+            {
+                case AccelerateActionType.Default:
+                    robotRigidBody.linearVelocity = transform.up * sumoRobot.MoveSpeed;
+                    break;
+                case AccelerateActionType.Time:
+                    if (time == float.NaN) throw new Exception("Angle can't be NaN when you are using [AccelerateActionType.Time] type");
+                    StartCoroutine(AccelerateOverTime(time));
+                    break;
+            }
         }
 
         public void Dash()
@@ -178,15 +187,69 @@ namespace CoreSumoRobot
 
         }
 
-        public void Turn(bool isRight)
+        public void Turn(TurnActionType type = TurnActionType.Angle, float angle = float.NaN)
         {
-            float rotation = (isRight ? -sumoRobot.RotateSpeed : sumoRobot.RotateSpeed) * Time.deltaTime;
-            transform.Rotate(0, 0, rotation);
+            switch (type)
+            {
+                case TurnActionType.Left:
+                    transform.Rotate(0, 0, sumoRobot.RotateSpeed * Time.deltaTime);
+                    break;
+                case TurnActionType.Right:
+                    transform.Rotate(0, 0, -sumoRobot.RotateSpeed * Time.deltaTime);
+                    break;
+                case TurnActionType.Angle:
+                    if (angle == float.NaN) throw new Exception("Angle can't be -1f when you are using [TurnActionInput.Angle] type");
+                    StartCoroutine(TurnOverAngle(angle, 0.5f));
+                    break;
+            }
+
         }
 
         public void UseSkill(ISkill skill)
         {
             skill.Execute(this, sumoRobot);
+        }
+
+        IEnumerator TurnOverAngle(float totalAngle, float duration)
+        {
+            float rotatedAngle = 0f;
+            float speed = totalAngle / duration; // degrees per second
+
+            while (Mathf.Abs(rotatedAngle) < Mathf.Abs(totalAngle))
+            {
+                float delta = speed * Time.deltaTime; // how much to rotate this frame
+
+                if (Mathf.Abs(rotatedAngle + delta) > Mathf.Abs(totalAngle))
+                {
+                    delta = totalAngle - rotatedAngle; // clamp to finish exactly
+                }
+
+                transform.Rotate(0, 0, delta); // rotate
+                rotatedAngle += delta; // track how much we've rotated
+
+                yield return null;
+            }
+        }
+
+        IEnumerator AccelerateOverTime(float time)
+        {
+            float elapsedTime = 0f;
+            float targetSpeed = sumoRobot.MoveSpeed;  // Final target speed
+
+            Vector2 initialVelocity = robotRigidBody.linearVelocity; // Start velocity
+
+            while (elapsedTime < time)
+            {
+                float t = elapsedTime / time; // 0 to 1 over time
+                float currentSpeed = Mathf.Lerp(initialVelocity.magnitude, targetSpeed, t); // Smoothly increase speed
+                robotRigidBody.linearVelocity = transform.up.normalized * currentSpeed; // Apply velocity
+
+                elapsedTime += Time.deltaTime;
+                yield return null; // Wait for next frame
+            }
+
+            // Ensure final speed is reached
+            robotRigidBody.linearVelocity = transform.up.normalized * targetSpeed;
         }
         #endregion
 

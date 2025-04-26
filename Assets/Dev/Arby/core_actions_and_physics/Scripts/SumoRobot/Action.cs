@@ -1,13 +1,42 @@
 
+using System;
+
 namespace CoreSumoRobot
 {
 
+    public enum TurnActionType
+    {
+        Left,
+        Right,
+        Angle,
+    }
+
+    public enum AccelerateActionType
+    {
+        Default,
+        Time,
+    }
+
     public class AccelerateAction : ISumoAction
     {
-
         public void Execute(SumoRobotController controller)
         {
-            controller.Accelerate();
+            controller.Accelerate(AccelerateActionType.Default);
+        }
+    }
+
+
+    public class AccelerateTimeAction : ISumoAction
+    {
+        public float Time { get; }
+
+        public AccelerateTimeAction(float time)
+        {
+            Time = time;
+        }
+        public void Execute(SumoRobotController controller)
+        {
+            controller.Accelerate(AccelerateActionType.Time, Time);
         }
     }
 
@@ -19,18 +48,38 @@ namespace CoreSumoRobot
         }
     }
 
-    public class TurnAction : ISumoAction
+    public class TurnLeftAction : ISumoAction
     {
-        public bool IsRight { get; }
 
-        public TurnAction(bool isRight)
+        public void Execute(SumoRobotController controller)
         {
-            IsRight = isRight;
+            controller.Turn(TurnActionType.Left);
+        }
+    }
+
+    public class TurnRightAction : ISumoAction
+    {
+        public string Description => "";
+
+        public void Execute(SumoRobotController controller)
+        {
+            controller.Turn(TurnActionType.Right);
+        }
+    }
+
+
+    public class TurnAngleAction : ISumoAction
+    {
+        public float AngleValue { get; }
+
+        public TurnAngleAction(float angle)
+        {
+            AngleValue = angle;
         }
 
         public void Execute(SumoRobotController controller)
         {
-            controller.Turn(IsRight);
+            controller.Turn(TurnActionType.Angle, AngleValue);
         }
     }
 
