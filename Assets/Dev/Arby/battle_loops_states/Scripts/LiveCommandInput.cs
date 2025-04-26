@@ -19,9 +19,9 @@ public class LiveCommandInput : MonoBehaviour
     {
         Debug.Log($"Example of executing {SumoRobotCommand.Id}");
         var script = (InputProvider)SumoRobotCommand.inputProvider;
-        script.EnqueueCommand(new AccelerateAction());
-        script.EnqueueCommand(new DashAction());
-        script.EnqueueCommand(new TurnLeftAction());
-        script.EnqueueCommand(new AccelerateAction());
+        script.EnqueueCommand(new AccelerateTimeAction(2f));
+        script.EnqueueCommand(new TurnAngleAction(4f));
+        script.EnqueueCommand(new SkillAction(new StoneSkill()));
+        script.EnqueueCommand(new SkillAction(new BoostSkill()));
     }
 }
