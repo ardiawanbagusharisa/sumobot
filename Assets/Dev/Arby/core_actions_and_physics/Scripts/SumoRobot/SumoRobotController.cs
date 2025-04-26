@@ -159,13 +159,13 @@ namespace CoreSumoRobot
                     robotRigidBody.linearVelocity = transform.up * sumoRobot.MoveSpeed;
                     break;
                 case AccelerateActionType.Time:
-                    if (time == float.NaN) throw new Exception("Angle can't be NaN when you are using [AccelerateActionType.Time] type");
+                    if (time == float.NaN) throw new Exception("Time can't be NaN when you are using [AccelerateActionType.Time] type");
                     StartCoroutine(AccelerateOverTime(time));
                     break;
             }
         }
 
-        public void Dash()
+        public void Dash(DashActionType type, float time = float.NaN)
         {
             if (isMoveDisabled)
             {
@@ -173,17 +173,28 @@ namespace CoreSumoRobot
                 return;
             }
 
-            ActionsTime.TryGetValue(ERobotActionType.Dash, out float lastActTime);
-            if (Time.time >= lastActTime + sumoRobot.DashDuration)
-            {
+            // ActionsTime.TryGetValue(ERobotActionType.Dash, out float lastActTime);
+            // if (Time.time >= lastActTime + sumoRobot.DashDuration)
+            // {
 
-                LastRobotActionType = ERobotActionType.Dash;
-                robotRigidBody.linearVelocity = transform.up * sumoRobot.DashSpeed;
-            }
-            else
+            switch (type)
             {
-                Debug.Log("Dash is on cooldown.");
+                case DashActionType.Default:
+                    LastRobotActionType = ERobotActionType.Dash;
+                    robotRigidBody.linearVelocity = transform.up * sumoRobot.DashSpeed;
+                    break;
+                case DashActionType.Time:
+                    if (time == float.NaN) throw new Exception("Time can't be NaN when you are using [DashActionType.Time] type");
+                    StartCoroutine(AccelerateOverTime(time, isDash: true));
+                    break;
             }
+
+
+            // }
+            // else
+            // {
+            //     Debug.Log("Dash is on cooldown.");
+            // }
 
         }
 
@@ -197,8 +208,18 @@ namespace CoreSumoRobot
                 case TurnActionType.Right:
                     transform.Rotate(0, 0, -sumoRobot.RotateSpeed * Time.deltaTime);
                     break;
+                case TurnActionType.LeftAngle:
+                    if (angle == float.NaN) throw new Exception("Left Angle can't be NaN when you are using [TurnActionInput.LeftAngle] type");
+                    if (angle < 0) throw new Exception("Left Angle can't be < 0 when you are using [TurnActionInput.LeftAngle] type");
+                    StartCoroutine(TurnOverAngle(angle * 1f, 0.5f));
+                    break;
+                case TurnActionType.RightAngle:
+                    if (angle == float.NaN) throw new Exception("Right Angle can't be NaN when you are using [TurnActionInput.RightAngle] type");
+                    if (angle < 0) throw new Exception("Right Angle can't be < 0 when you are using [TurnActionInput.RightAngle] type");
+                    StartCoroutine(TurnOverAngle(angle * -1f, 0.5f));
+                    break;
                 case TurnActionType.Angle:
-                    if (angle == float.NaN) throw new Exception("Angle can't be -1f when you are using [TurnActionInput.Angle] type");
+                    if (angle == float.NaN) throw new Exception("Angle can't be NaN when you are using [TurnActionInput.Angle] type");
                     StartCoroutine(TurnOverAngle(angle, 0.5f));
                     break;
             }
@@ -231,25 +252,27 @@ namespace CoreSumoRobot
             }
         }
 
-        IEnumerator AccelerateOverTime(float time)
+        IEnumerator AccelerateOverTime(float time, bool isDash = false)
         {
             float elapsedTime = 0f;
-            float targetSpeed = sumoRobot.MoveSpeed;  // Final target speed
+            float speed = isDash ? sumoRobot.DashSpeed : sumoRobot.MoveSpeed;
 
-            Vector2 initialVelocity = robotRigidBody.linearVelocity; // Start velocity
+            // lerping?, uncomment
+            // Vector2 initialVelocity = robotRigidBody.linearVelocity; 
 
             while (elapsedTime < time)
             {
-                float t = elapsedTime / time; // 0 to 1 over time
-                float currentSpeed = Mathf.Lerp(initialVelocity.magnitude, targetSpeed, t); // Smoothly increase speed
-                robotRigidBody.linearVelocity = transform.up.normalized * currentSpeed; // Apply velocity
+                // lerping?, uncomment
+                // float t = elapsedTime / time;
+                // float currentSpeed = Mathf.Lerp(initialVelocity.magnitude, targetSpeed, t);
+
+                robotRigidBody.linearVelocity = transform.up.normalized * speed;
 
                 elapsedTime += Time.deltaTime;
-                yield return null; // Wait for next frame
+                yield return null;
             }
 
-            // Ensure final speed is reached
-            robotRigidBody.linearVelocity = transform.up.normalized * targetSpeed;
+            robotRigidBody.linearVelocity = Vector2.Lerp(robotRigidBody.linearVelocity, Vector2.zero, sumoRobot.SlowDownRate * Time.deltaTime);
         }
         #endregion
 
