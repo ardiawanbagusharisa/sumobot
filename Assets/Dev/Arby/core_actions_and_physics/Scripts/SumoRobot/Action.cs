@@ -8,10 +8,18 @@ namespace CoreSumoRobot
     {
         Left,
         Right,
+        LeftAngle,
+        RightAngle,
         Angle,
     }
 
     public enum AccelerateActionType
+    {
+        Default,
+        Time,
+    }
+
+    public enum DashActionType
     {
         Default,
         Time,
@@ -44,7 +52,22 @@ namespace CoreSumoRobot
     {
         public void Execute(SumoRobotController controller)
         {
-            controller.Dash();
+            controller.Dash(DashActionType.Default);
+        }
+    }
+
+
+    public class DashTimeAction : ISumoAction
+    {
+        public float Time { get; }
+
+        public DashTimeAction(float time)
+        {
+            Time = time;
+        }
+        public void Execute(SumoRobotController controller)
+        {
+            controller.Dash(DashActionType.Time, Time);
         }
     }
 
@@ -57,6 +80,21 @@ namespace CoreSumoRobot
         }
     }
 
+    public class TurnLeftAngleAction : ISumoAction
+    {
+        public float AngleValue { get; }
+
+        public TurnLeftAngleAction(float angle)
+        {
+            AngleValue = angle;
+        }
+
+        public void Execute(SumoRobotController controller)
+        {
+            controller.Turn(TurnActionType.LeftAngle);
+        }
+    }
+
     public class TurnRightAction : ISumoAction
     {
         public string Description => "";
@@ -64,6 +102,21 @@ namespace CoreSumoRobot
         public void Execute(SumoRobotController controller)
         {
             controller.Turn(TurnActionType.Right);
+        }
+    }
+
+    public class TurnRightAngleAction : ISumoAction
+    {
+        public float AngleValue { get; }
+
+        public TurnRightAngleAction(float angle)
+        {
+            AngleValue = angle;
+        }
+
+        public void Execute(SumoRobotController controller)
+        {
+            controller.Turn(TurnActionType.RightAngle);
         }
     }
 
