@@ -172,29 +172,25 @@ namespace CoreSumoRobot
                 Debug.Log("Move is disabled.");
                 return;
             }
-
-            // ActionsTime.TryGetValue(ERobotActionType.Dash, out float lastActTime);
-            // if (Time.time >= lastActTime + sumoRobot.DashDuration)
-            // {
-
             switch (type)
             {
                 case DashActionType.Default:
-                    LastRobotActionType = ERobotActionType.Dash;
-                    robotRigidBody.linearVelocity = transform.up * sumoRobot.DashSpeed;
+                    ActionsTime.TryGetValue(ERobotActionType.Dash, out float lastActTime);
+                    if (Time.time >= lastActTime + sumoRobot.DashDuration)
+                    {
+                        LastRobotActionType = ERobotActionType.Dash;
+                        robotRigidBody.linearVelocity = transform.up * sumoRobot.DashSpeed;
+                    }
+                    else
+                    {
+                        Debug.Log("Dash is on cooldown.");
+                    }
                     break;
                 case DashActionType.Time:
                     if (time == float.NaN) throw new Exception("Time can't be NaN when you are using [DashActionType.Time] type");
                     StartCoroutine(AccelerateOverTime(time, isDash: true));
                     break;
             }
-
-
-            // }
-            // else
-            // {
-            //     Debug.Log("Dash is on cooldown.");
-            // }
 
         }
 

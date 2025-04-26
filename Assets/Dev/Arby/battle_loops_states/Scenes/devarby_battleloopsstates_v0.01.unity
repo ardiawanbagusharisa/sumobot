@@ -1673,6 +1673,7 @@ GameObject:
   - component: {fileID: 2130233540}
   - component: {fileID: 2130233542}
   - component: {fileID: 2130233543}
+  - component: {fileID: 2130233544}
   m_Layer: 0
   m_Name: BattleManager
   m_TagString: Untagged
@@ -1742,6 +1743,19 @@ MonoBehaviour:
   ButtonPrefab: {fileID: 8499096808045842975, guid: 861639ec919e34d93b712d9166c55e9a, type: 3}
   LeftPanelArea: {fileID: 158706379}
   RightPanelArea: {fileID: 728913079}
+--- !u!114 &2130233544
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2130233538}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 19e9a833cba2445a5b735aac7cd49c8d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  textUI: {fileID: 1667218897}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
