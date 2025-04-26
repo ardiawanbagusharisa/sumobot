@@ -3,19 +3,19 @@ using UnityEngine;
 
 namespace BattleLoop
 {
-    public class BattleLoopUIManager : MonoBehaviour
+    public class BattleUIManager : MonoBehaviour
     {
         public TMP_Text IndicatorBattle;
         public TMP_Text IndicatorBattleCountDownTimer;
 
         void Awake()
         {
-            BattleLoopManager.Instance.OnPostStateChanged += OnStateChanged;
+            BattleManager.Instance.OnPostStateChanged += OnStateChanged;
         }
 
         void OnDestroy()
         {
-            BattleLoopManager.Instance.OnPostStateChanged -= OnStateChanged;
+            BattleManager.Instance.OnPostStateChanged -= OnStateChanged;
         }
 
         private void OnStateChanged(BattleState state)
@@ -25,11 +25,11 @@ namespace BattleLoop
             switch (state)
             {
                 case BattleState.Countdown:
-                    BattleLoopManager.Instance.OnCountdownChanged += OnCountdownChanged;
+                    BattleManager.Instance.OnCountdownChanged += OnCountdownChanged;
                     break;
                 case BattleState.Battle:
                     IndicatorBattleCountDownTimer.SetText("");
-                    BattleLoopManager.Instance.OnCountdownChanged -= OnCountdownChanged;
+                    BattleManager.Instance.OnCountdownChanged -= OnCountdownChanged;
                     break;
             }
         }

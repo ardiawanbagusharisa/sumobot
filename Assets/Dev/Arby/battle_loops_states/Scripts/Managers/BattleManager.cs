@@ -1,10 +1,8 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using CoreSumoRobot;
 using UnityEngine;
-using UnityEngine.Assertions.Must;
 
 namespace BattleLoop
 {
@@ -17,17 +15,16 @@ namespace BattleLoop
         Reset
     }
 
-    public class BattleLoopManager : MonoBehaviour
+    public class BattleManager : MonoBehaviour
     {
-        public static BattleLoopManager Instance { get; private set; }
+        public static BattleManager Instance { get; private set; }
 
-        public RobotInputType RobotInputType = RobotInputType.Keyboard;
+        public BattleInputType RobotInputType = BattleInputType.Keyboard;
         public BattleState CurrentState { get; private set; } = BattleState.Preparing;
         public event Action<BattleState> OnPostStateChanged;
         public event Action<float> OnCountdownChanged;
         public GameObject SumoPrefab;
         public List<Transform> StartPositions = new List<Transform>();
-        public CommandInputManager commmandInputHandler;
 
 
         private List<GameObject> players = new List<GameObject>();
@@ -47,7 +44,7 @@ namespace BattleLoop
         void OnDestroy()
         {
             onPlayerAdded -= OnPlayerAdded;
-            players.ForEach(p => p.gameObject.GetComponent<SumoRobotController>().OnOutOfArena -= OnPlayerOutOfArena);
+            // players.ForEach(p => p.gameObject.GetComponent<SumoRobotController>().OnOutOfArena -= OnPlayerOutOfArena);
         }
 
         private void Start()
@@ -99,20 +96,8 @@ namespace BattleLoop
                 player.GetComponent<SumoRobotController>().ChangeFaceColor(isLeftSide);
                 player.GetComponent<SumoRobotController>().OnOutOfArena += OnPlayerOutOfArena;
 
-                switch (RobotInputType)
-                {
-                    case RobotInputType.Keyboard:
-                        // Keyboard Left Side is for even index, 
-                        // odd index using Right Side Keyboard
-                        player.GetComponent<SumoRobotController>().UseInput(new KeyboardInputProvider(isLeftSide));
-                        break;
-                    case RobotInputType.UI:
-                        player.GetComponent<SumoRobotController>().UseInput(new UIInputProvider());
-                        break;
-                    case RobotInputType.Script:
-                        commmandInputHandler.RegisterWith(playerIdx, player.GetComponent<SumoRobotController>());
-                        break;
-                }
+                GetComponent<InputManager>().RegisterInput(playerIdx, player.GetComponent<SumoRobotController>(), RobotInputType);
+
                 players.Add(player);
                 onPlayerAdded.Invoke(playerIdx);
             }
