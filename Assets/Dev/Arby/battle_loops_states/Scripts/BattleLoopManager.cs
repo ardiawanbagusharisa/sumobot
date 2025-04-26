@@ -8,8 +8,6 @@ using UnityEngine.Assertions.Must;
 
 namespace BattleLoop
 {
-
-
     public enum BattleState
     {
         Preparing,
@@ -29,6 +27,9 @@ namespace BattleLoop
         public event Action<float> OnCountdownChanged;
         public GameObject SumoPrefab;
         public List<Transform> StartPositions = new List<Transform>();
+        public CommandInputManager commmandInputHandler;
+
+
         private List<GameObject> players = new List<GameObject>();
         private float countdownTime = 3f;
         private event Action<int> onPlayerAdded;
@@ -64,6 +65,8 @@ namespace BattleLoop
 
         private void OnPlayerAdded(int index)
         {
+            Debug.Log($"Player registered: {index}");
+
             players[index].GetComponent<SumoRobotController>().SetMovementEnabled(false);
             // Auto-start when 2 players registered
             if (players.Count == 2 && CurrentState == BattleState.Preparing)
@@ -83,34 +86,34 @@ namespace BattleLoop
 
         private void InitializePlayerByPosition(Transform playerPosition)
         {
+
             var player = Instantiate(SumoPrefab, playerPosition.position, playerPosition.rotation);
-            var playerIdx = players.Count;
-            var isLeftSide = playerIdx % 2 == 0;
-
-            switch (RobotInputType)
-            {
-                case RobotInputType.Keyboard:
-                    // Keyboard Left Side is for even index, 
-                    // odd index using Right Side Keyboard
-                    player.GetComponent<SumoRobotController>().UseInput(new KeyboardInputProvider(isLeftSide));
-                    break;
-                case RobotInputType.UI:
-                    player.GetComponent<SumoRobotController>().UseInput(new UIInputProvider());
-                    break;
-                case RobotInputType.Script:
-                    player.GetComponent<SumoRobotController>().UseInput(new ScriptInputProvider());
-                    break;
-            }
-
-            player.GetComponent<SumoRobot>().IdInt = playerIdx;
-            player.GetComponent<SumoRobotController>().StartPosition = playerPosition;
-            player.GetComponent<SumoRobotController>().ChangeFaceColor(isLeftSide);
-
             if (!players.Contains(player))
             {
-                players.Add(player);
+                var playerIdx = players.Count;
+                var isLeftSide = playerIdx % 2 == 0;
+
+                // [Todo]: Wrap with a function
+                player.GetComponent<SumoRobot>().IdInt = playerIdx;
+                player.GetComponent<SumoRobotController>().StartPosition = playerPosition;
+                player.GetComponent<SumoRobotController>().ChangeFaceColor(isLeftSide);
                 player.GetComponent<SumoRobotController>().OnOutOfArena += OnPlayerOutOfArena;
-                Debug.Log($"Player registered: {player.name}");
+
+                switch (RobotInputType)
+                {
+                    case RobotInputType.Keyboard:
+                        // Keyboard Left Side is for even index, 
+                        // odd index using Right Side Keyboard
+                        player.GetComponent<SumoRobotController>().UseInput(new KeyboardInputProvider(isLeftSide));
+                        break;
+                    case RobotInputType.UI:
+                        player.GetComponent<SumoRobotController>().UseInput(new UIInputProvider());
+                        break;
+                    case RobotInputType.Script:
+                        commmandInputHandler.RegisterWith(playerIdx, player.GetComponent<SumoRobotController>());
+                        break;
+                }
+                players.Add(player);
                 onPlayerAdded.Invoke(playerIdx);
             }
         }
