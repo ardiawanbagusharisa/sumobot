@@ -35,7 +35,7 @@ namespace BattleLoop
         private float countdownTime = 3f;
         private event Action<int> onPlayerAdded;
         private Coroutine battleTimerCoroutine;
-        private Dictionary<string, BattleInfo> battleInfos;
+        private Dictionary<int, BattleInfo> battleInfos;
 
         private void Awake()
         {
@@ -55,7 +55,7 @@ namespace BattleLoop
 
         private void Start()
         {
-            battleInfos = new Dictionary<string, BattleInfo>();
+            battleInfos = new Dictionary<int, BattleInfo>();
             BattleInfo = new BattleInfo();
 
             onPlayerAdded += OnPlayerAdded;
@@ -238,6 +238,7 @@ namespace BattleLoop
                     players.ForEach((p) => p.GetComponent<SumoRobotController>().SetMovementEnabled(true));
                     break;
                 case BattleState.BattleEnded:
+                    battleInfos[BattleInfo.Rounds] = BattleInfo;
                     StopCoroutine(battleTimerCoroutine);
                     players.ForEach((p) => p.GetComponent<SumoRobotController>().SetMovementEnabled(false));
                     break;
@@ -257,7 +258,7 @@ namespace BattleLoop
         #endregion
 
         #region Battle Info Getters
-        public Dictionary<string, BattleInfo> GetLog()
+        public Dictionary<int, BattleInfo> GetLog()
         {
             return battleInfos;
         }

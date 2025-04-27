@@ -60,7 +60,7 @@ public class LiveCommandInput : MonoBehaviour
 
     public void GetLog()
     {
-        Dictionary<string, BattleInfo> infos = BattleManager.Instance.GetLog();
+        Dictionary<int, BattleInfo> infos = BattleManager.Instance.GetLog();
     }
     #endregion
 }
