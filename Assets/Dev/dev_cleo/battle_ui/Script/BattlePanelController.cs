@@ -1,6 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
-using TMPro; // Jika pakai TextMeshPro
+using TMPro;
 using System.Collections;
 
 public class BattlePanelController : MonoBehaviour
@@ -9,14 +9,15 @@ public class BattlePanelController : MonoBehaviour
     public GameObject battlePanel;
     public GameObject postBattlePanel;
 
+    public GameObject battleEnvironment; // Tambahan: Battle Environment 2D kamu
+
     public Button startBattleButton;
     public Button finishBattleButton;
     public Button outBattleButton;
 
     public float fadeDuration = 0.5f;
 
-    public TextMeshProUGUI timerText; // Drag dari Inspector
-    // public Text timerText; // Kalau pakai UI.Text biasa
+    public TextMeshProUGUI timerText;
     public SupporterSpawner supporterSpawner;
 
     private float battleTime = 0f;
@@ -28,11 +29,17 @@ public class BattlePanelController : MonoBehaviour
         InitCanvasGroup(battlePanel, false);
         InitCanvasGroup(postBattlePanel, false);
 
+        if (battleEnvironment != null)
+            battleEnvironment.SetActive(false); // Battle environment mati dulu
+
         if (startBattleButton != null)
             startBattleButton.onClick.AddListener(() =>
             {
                 battleTime = 0f;
                 isBattleRunning = true;
+                supporterSpawner?.SpawnSupporters();
+                if (battleEnvironment != null)
+                    battleEnvironment.SetActive(true); // Battle environment nyala waktu start battle
                 StartCoroutine(SwitchPanel(preBattlePanel, battlePanel));
             });
 
@@ -40,6 +47,8 @@ public class BattlePanelController : MonoBehaviour
             finishBattleButton.onClick.AddListener(() =>
             {
                 isBattleRunning = false;
+                if (battleEnvironment != null)
+                    battleEnvironment.SetActive(false); // Matikan environment saat battle selesai
                 StartCoroutine(SwitchPanel(battlePanel, postBattlePanel));
             });
 
@@ -47,6 +56,8 @@ public class BattlePanelController : MonoBehaviour
             outBattleButton.onClick.AddListener(() =>
             {
                 isBattleRunning = false;
+                if (battleEnvironment != null)
+                    battleEnvironment.SetActive(false); // Matikan environment saat keluar
                 StartCoroutine(SwitchPanel(battlePanel, preBattlePanel));
             });
     }
@@ -74,7 +85,7 @@ public class BattlePanelController : MonoBehaviour
         cg.alpha = active ? 1f : 0f;
         cg.interactable = active;
         cg.blocksRaycasts = active;
-        panel.SetActive(true); // semua panel aktif, tapi yang tidak dipakai transparan dan non-interaktif
+        panel.SetActive(true);
     }
 
     IEnumerator SwitchPanel(GameObject fromPanel, GameObject toPanel)
@@ -118,14 +129,5 @@ public class BattlePanelController : MonoBehaviour
         }
 
         fromPanel.SetActive(false);
-
-        if (startBattleButton != null)
-            startBattleButton.onClick.AddListener(() =>
-            {
-                battleTime = 0f;
-                isBattleRunning = true;
-                supporterSpawner?.SpawnSupporters();
-                StartCoroutine(SwitchPanel(preBattlePanel, battlePanel));
-            });
     }
 }

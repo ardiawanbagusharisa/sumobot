@@ -9,7 +9,7 @@ TagManager:
   - Default
   - TransparentFX
   - Ignore Raycast
-  - 
+  - Battle Emvironment
   - Water
   - UI
   - 
@@ -41,6 +41,9 @@ TagManager:
   m_SortingLayers:
   - name: Default
     uniqueID: 0
+    locked: 0
+  - name: BattleEnvironment
+    uniqueID: 3381120271
     locked: 0
   m_RenderingLayers:
   - Default
