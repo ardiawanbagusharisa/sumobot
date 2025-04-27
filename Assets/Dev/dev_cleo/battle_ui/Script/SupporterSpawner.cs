@@ -1,23 +1,39 @@
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.UI;
 
 public class SupporterSpawner : MonoBehaviour
 {
     [Header("Setup Area")]
-    public RectTransform spawnArea;             // Panel UI tempat gambar akan muncul
-    public GameObject[] supporterPrefabs;       // Prefab gambar (misal 60x60 UI Image)
-    public int spawnCount = 10;                 // Jumlah gambar yang ingin di-spawn
+    public Transform spawnAreaObject;           // Objek kotak biasa (bisa punya Collider atau ukurannya manual)
+    public GameObject[] supporterPrefabs;       // Prefab supporter
+    public int spawnCount = 10;                  // Berapa banyak supporter yang muncul
 
     [Header("Spacing")]
-    public float minDistanceBetween = 70f;      // Jarak minimum antar gambar (lebih besar dari 60)
+    public float minDistanceBetween = 1f;        // Jarak minimum antar supporter
 
     private List<GameObject> currentSupporters = new List<GameObject>();
-    private List<Vector2> usedPositions = new List<Vector2>();
+    private List<Vector3> usedPositions = new List<Vector3>();
+    private Bounds spawnBounds;
 
     void Start()
     {
-        SpawnSupporters(); // Spawn otomatis saat Start
+        // Dapatkan bounds dari objek
+        CalculateBounds();
+        SpawnSupporters();
+    }
+
+    private void CalculateBounds()
+    {
+        Collider2D col = spawnAreaObject.GetComponent<Collider2D>();
+        if (col != null)
+        {
+            spawnBounds = col.bounds;
+        }
+        else
+        {
+            // Kalau nggak ada collider, pakai ukuran manual
+            spawnBounds = new Bounds(spawnAreaObject.position, new Vector3(5f, 5f, 0f)); // <-- EDIT ukuran default kalau mau
+        }
     }
 
     public void SpawnSupporters()
@@ -27,43 +43,38 @@ public class SupporterSpawner : MonoBehaviour
 
         for (int i = 0; i < spawnCount; i++)
         {
-            Vector2 pos = GetRandomNonOverlappingPosition();
+            Vector3 pos = GetRandomNonOverlappingPosition();
             GameObject prefab = supporterPrefabs[Random.Range(0, supporterPrefabs.Length)];
-            GameObject supporter = Instantiate(prefab, spawnArea);
 
-            RectTransform rt = supporter.GetComponent<RectTransform>();
-            if (rt != null)
-            {
-                rt.sizeDelta = new Vector2(60f, 60f);
-                rt.anchoredPosition = pos;
-                rt.localScale = Vector3.one;
-            }
+            GameObject supporter = Instantiate(prefab, pos, Quaternion.identity);
+            supporter.transform.SetParent(spawnAreaObject, true); // true supaya mempertahankan local transform
 
-            // Tambahkan skrip gerakan
+            // Tidak mengubah localScale apapun lagi!
+            // supporter.transform.localScale = supporterSize; --> ini DILANGKAHI
+
             FloatingSupporter mover = supporter.AddComponent<FloatingSupporter>();
-            mover.Init(spawnArea, minDistanceBetween);
+            mover.Init(spawnAreaObject, spawnBounds.size, minDistanceBetween);
+
 
             currentSupporters.Add(supporter);
-            usedPositions.Add(pos);
+            usedPositions.Add(supporter.transform.position);
         }
     }
 
-    private Vector2 GetRandomNonOverlappingPosition()
-    {
-        Vector2 size = spawnArea.rect.size;
-        Vector2 candidate;
-        int maxAttempts = 100;
 
+    private Vector3 GetRandomNonOverlappingPosition()
+    {
+        int maxAttempts = 100;
         for (int attempt = 0; attempt < maxAttempts; attempt++)
         {
-            float x = Random.Range(-size.x / 2f + 30f, size.x / 2f - 30f);
-            float y = Random.Range(-size.y / 2f + 30f, size.y / 2f - 30f);
-            candidate = new Vector2(x, y);
+            float x = Random.Range(spawnBounds.min.x, spawnBounds.max.x);
+            float y = Random.Range(spawnBounds.min.y, spawnBounds.max.y);
+            Vector3 candidate = new Vector3(x, y, spawnAreaObject.position.z);
 
             bool tooClose = false;
-            foreach (Vector2 pos in usedPositions)
+            foreach (Vector3 pos in usedPositions)
             {
-                if (Vector2.Distance(candidate, pos) < minDistanceBetween)
+                if (Vector3.Distance(candidate, pos) < minDistanceBetween)
                 {
                     tooClose = true;
                     break;
@@ -75,9 +86,10 @@ public class SupporterSpawner : MonoBehaviour
         }
 
         // Fallback
-        return new Vector2(
-            Random.Range(-size.x / 2f + 30f, size.x / 2f - 30f),
-            Random.Range(-size.y / 2f + 30f, size.y / 2f - 30f)
+        return new Vector3(
+            Random.Range(spawnBounds.min.x, spawnBounds.max.x),
+            Random.Range(spawnBounds.min.y, spawnBounds.max.y),
+            spawnAreaObject.position.z
         );
     }
 

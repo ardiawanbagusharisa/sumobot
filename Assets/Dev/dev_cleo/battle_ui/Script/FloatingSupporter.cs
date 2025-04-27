@@ -2,29 +2,32 @@ using UnityEngine;
 
 public class FloatingSupporter : MonoBehaviour
 {
-    private RectTransform rect;
-    private RectTransform panelBounds;
-    private Vector2 targetPos;
-    private float spacing = 70f;
+    private Transform trans;
+    private Transform areaTransform;
+    private Vector3 areaSize;
+    private Vector3 targetPos;
+    private float spacing = 1f;
 
-    public float speed = 30f;
+    public float speed = 0.5f;
 
-    public void Init(RectTransform bounds, float minSpacing)
+    public void Init(Transform areaTrans, Vector3 areaWorldSize, float minSpacing)
     {
-        rect = GetComponent<RectTransform>();
-        panelBounds = bounds;
+        trans = GetComponent<Transform>();
+        areaTransform = areaTrans;
+        areaSize = areaWorldSize;
         spacing = minSpacing;
+
         PickNewTarget();
     }
 
     void Update()
     {
-        if (rect == null || panelBounds == null)
+        if (trans == null || areaTransform == null)
             return;
 
-        rect.anchoredPosition = Vector2.MoveTowards(rect.anchoredPosition, targetPos, speed * Time.deltaTime);
+        trans.position = Vector3.MoveTowards(trans.position, targetPos, speed * Time.deltaTime);
 
-        if (Vector2.Distance(rect.anchoredPosition, targetPos) < 1f)
+        if (Vector3.Distance(trans.position, targetPos) < 0.1f)
         {
             PickNewTarget();
         }
@@ -32,9 +35,14 @@ public class FloatingSupporter : MonoBehaviour
 
     private void PickNewTarget()
     {
-        Vector2 size = panelBounds.rect.size;
-        float x = Random.Range(-size.x / 2f + 30f, size.x / 2f - 30f);
-        float y = Random.Range(-size.y / 2f + 30f, size.y / 2f - 30f);
-        targetPos = new Vector2(x, y);
+        if (areaTransform == null) return;
+
+        float halfX = areaSize.x / 2f;
+        float halfY = areaSize.y / 2f;
+
+        float x = Random.Range(areaTransform.position.x - halfX + spacing, areaTransform.position.x + halfX - spacing);
+        float y = Random.Range(areaTransform.position.y - halfY + spacing, areaTransform.position.y + halfY - spacing);
+
+        targetPos = new Vector3(x, y, trans.position.z);
     }
 }
