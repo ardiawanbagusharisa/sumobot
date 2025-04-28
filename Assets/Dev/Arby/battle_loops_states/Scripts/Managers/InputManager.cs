@@ -18,17 +18,30 @@ public class InputManager : MonoBehaviour
     private BattleInputType battleInputType;
     private Dictionary<int, SumoRobotInput> InputPlayers { get; set; } = new Dictionary<int, SumoRobotInput>();
 
-    public void RegisterInput(int playerIdx, SumoRobotController sumoRobotController, BattleInputType inputType)
+    public void RegisterInput(GameObject player, BattleInputType inputType)
     {
         battleInputType = inputType;
 
-        var sumoCommand = new SumoRobotInput();
+        var playerIdx = player.GetComponent<SumoRobot>().IdInt;
+        var input = new SumoRobotInput();
 
-        sumoCommand.Id = playerIdx;
-        sumoCommand.sumo = sumoRobotController;
-        InputPlayers[playerIdx] = sumoCommand;
+        input.Id = playerIdx;
+        input.sumo = player.GetComponent<SumoRobotController>();
+        InputPlayers[playerIdx] = input;
 
         PrepareInput(playerIdx);
+    }
+    public void UnregisterInput(GameObject player, BattleInputType inputType)
+    {
+        var playerIdx = player.GetComponent<SumoRobot>().IdInt;
+        battleInputType = inputType;
+
+        InputPlayers.TryGetValue(playerIdx, out SumoRobotInput sumoInput);
+        if (sumoInput != null)
+        {
+            Destroy(sumoInput.spawnedUIInput);
+            InputPlayers.Remove(playerIdx);
+        }
     }
 
     private void PrepareInput(int playerIdx)
@@ -57,6 +70,8 @@ public class InputManager : MonoBehaviour
             spawnedLiveCommand.transform.SetParent(LeftPanelArea.transform, false);
 
             //Necessary
+            InputPlayers[playerIdx].spawnedUIInput = spawnedLiveCommand;
+
             spawnedLiveCommand.AddComponent<InputProvider>();
             var inputProvider = spawnedLiveCommand.GetComponent<InputProvider>();
             inputProvider.IsLeftSide = true;
@@ -74,6 +89,8 @@ public class InputManager : MonoBehaviour
             spawnedLiveCommand.transform.SetParent(RightPanelArea.transform, false);
 
             //Necessary
+            InputPlayers[playerIdx].spawnedUIInput = spawnedLiveCommand;
+
             spawnedLiveCommand.AddComponent<InputProvider>();
             var inputProvider = spawnedLiveCommand.GetComponent<InputProvider>();
             inputProvider.IsLeftSide = false;
@@ -93,6 +110,7 @@ public class InputManager : MonoBehaviour
         {
             var spawnedLeftButtons = Instantiate(ButtonPrefab, LeftPanelArea.transform);
             UIHelper.StretchButtonToParent(spawnedLeftButtons);
+            InputPlayers[playerIdx].spawnedUIInput = spawnedLeftButtons;
             var inputProvider = spawnedLeftButtons.GetComponent<InputProvider>();
             inputProvider.IsLeftSide = true;
             inputProvider.IncludeKeyboard = true;
@@ -104,6 +122,8 @@ public class InputManager : MonoBehaviour
         {
             var spawnedRightButtons = Instantiate(ButtonPrefab, RightPanelArea.transform);
             UIHelper.StretchButtonToParent(spawnedRightButtons);
+
+            InputPlayers[playerIdx].spawnedUIInput = spawnedRightButtons;
             var inputProvider = spawnedRightButtons.GetComponent<InputProvider>();
             inputProvider.IsLeftSide = false;
             inputProvider.IncludeKeyboard = true;
@@ -122,4 +142,5 @@ public class SumoRobotInput
     public int Id;
     public SumoRobotController sumo;
     public IInputProvider inputProvider;
+    public GameObject spawnedUIInput;
 }

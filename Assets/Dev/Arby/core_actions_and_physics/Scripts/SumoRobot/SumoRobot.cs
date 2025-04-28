@@ -22,6 +22,8 @@ namespace CoreSumoRobot
         public float StopDelay = 0.5f;           // Time before robot stops.
         public float SlowDownRate = 2.0f;        // Robot's slowdown rate (velocity and rotation decay). 
         public float BounceResistance = 1f;
+
+        public bool IsLeftSide => IdInt == 0;
         #endregion
     }
 }
