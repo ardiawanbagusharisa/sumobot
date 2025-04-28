@@ -1,7 +1,10 @@
 {
     "version": "0.2.0",
     "configurations": [
+<<<<<<< HEAD
         
+=======
+>>>>>>> sample_arby_cleo
         {
             "name": "Attach to Unity",
             "type": "vstuc",

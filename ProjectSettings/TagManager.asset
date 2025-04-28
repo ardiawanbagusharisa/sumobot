@@ -10,7 +10,11 @@ TagManager:
   - Default
   - TransparentFX
   - Ignore Raycast
+<<<<<<< HEAD
   - Enemy
+=======
+  - Battle Emvironment
+>>>>>>> sample_arby_cleo
   - Water
   - UI
   - Environtment
@@ -42,6 +46,9 @@ TagManager:
   m_SortingLayers:
   - name: Default
     uniqueID: 0
+    locked: 0
+  - name: BattleEnvironment
+    uniqueID: 3381120271
     locked: 0
   m_RenderingLayers:
   - Default
