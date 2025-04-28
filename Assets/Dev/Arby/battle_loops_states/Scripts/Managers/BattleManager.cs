@@ -30,6 +30,7 @@ namespace BattleLoop
         public event Action<BattleInfo> OnBattleInfoChanged;
         public GameObject SumoPrefab;
         public List<Transform> StartPositions = new List<Transform>();
+        public List<GameObject> UIFlow = new List<GameObject>();
 
         private List<GameObject> players = new List<GameObject>();
         private float countdownTime = 3f;
@@ -311,7 +312,7 @@ public class BattleInfo
 public class BattlePlayerInfo
 {
     public int Id;
+    public int Score = 0;
     public SumoRobot Sumo;
     public SumoRobotController SumoRobotController;
-    public int Score = 0;
 }
