@@ -56,5 +56,5 @@
         "temp/": true,
         "Temp/": true
     },
-    "dotnet.defaultSolution": "Sumobot.sln"
+    "dotnet.defaultSolution": "sumobot.sln"
 }
