@@ -27,6 +27,7 @@ namespace CoreSumoRobot
 
         private event Action<Collision2D> onEnterCollisions;
         private event Action<Collider2D> onExitTriggers;
+        private bool hasOnOutOfArenaInvoked = false;
 
         private void Awake()
         {
@@ -70,9 +71,10 @@ namespace CoreSumoRobot
 
         public void IsInArena(Collider2D collider)
         {
-            if (collider.tag == "Arena/Floor")
+            if (collider.tag == "Arena/Floor" && !hasOnOutOfArenaInvoked)
             {
                 OnOutOfArena?.Invoke(sumoRobot.IdInt);
+                hasOnOutOfArenaInvoked = true;
             }
         }
 
@@ -91,10 +93,11 @@ namespace CoreSumoRobot
 
         }
 
-        public void Reset()
+        public void ResetForNewBattle()
         {
             transform.position = StartPosition.position;
             transform.rotation = StartPosition.rotation;
+            hasOnOutOfArenaInvoked = false;
             ResetActionData();
         }
         #endregion

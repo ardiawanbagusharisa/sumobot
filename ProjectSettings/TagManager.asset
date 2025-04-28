@@ -6,18 +6,17 @@ TagManager:
   tags:
   - Robot
   - Arena/Floor
+  - BattleState/Pre
+  - BattleState/Ongoing
+  - BattleState/Post
   layers:
   - Default
   - TransparentFX
   - Ignore Raycast
-<<<<<<< HEAD
-  - Enemy
-=======
-  - Battle Emvironment
->>>>>>> sample_arby_cleo
+  - Environtment
   - Water
   - UI
-  - Environtment
+  - 
   - 
   - 
   - 
@@ -47,8 +46,11 @@ TagManager:
   - name: Default
     uniqueID: 0
     locked: 0
-  - name: BattleEnvironment
-    uniqueID: 3381120271
+  - name: Background
+    uniqueID: 533600045
+    locked: 0
+  - name: Foreground
+    uniqueID: 3941910537
     locked: 0
   m_RenderingLayers:
   - Default
