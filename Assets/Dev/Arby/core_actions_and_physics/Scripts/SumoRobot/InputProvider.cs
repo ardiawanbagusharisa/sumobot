@@ -11,18 +11,13 @@ namespace CoreSumoRobot
         Script
     }
 
-    public interface IInputProvider
-    {
-        List<ISumoAction> GetInput();
-    }
 
-
-    public class InputProvider : MonoBehaviour, IInputProvider
+    public class InputProvider : MonoBehaviour
     {
         public bool IncludeKeyboard;
         public bool IsLeftSide;
 
-        private Queue<ISumoAction> CommandQueue;
+        private Queue<ISumoAction> CommandQueue = new Queue<ISumoAction>();
 
         public InputProvider(bool isLeftSide, bool includeKeyboard = false)
         {

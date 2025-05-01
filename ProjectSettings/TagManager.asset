@@ -9,6 +9,12 @@ TagManager:
   - BattleState/Pre
   - BattleState/Ongoing
   - BattleState/Post
+  - Button/Accelerate
+  - Button/TurnLeft
+  - Button/TurnRight
+  - Button/Dash
+  - Button/Stone
+  - Button/Boost
   layers:
   - Default
   - TransparentFX

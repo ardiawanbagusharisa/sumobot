@@ -1,8 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using Unity.VisualScripting;
-using UnityEditor.Rendering;
+using BattleLoop;
 using UnityEngine;
 
 namespace CoreSumoRobot
@@ -16,12 +15,13 @@ namespace CoreSumoRobot
         public event Action<int> OnOutOfArena;
 
         private bool isMoveDisabled = false;
+        private bool isSkillDisabled = false;
         private SumoRobot sumoRobot;
         private float reservedMoveSpeed;
         private float reservedDashSpeed;
         private float reserverdBounceResistance;
         private Rigidbody2D robotRigidBody;
-        private IInputProvider provider;
+        private InputProvider provider;
         private float moveLockTime = 0f;
         private bool IsMovementLocked => moveLockTime > 0f;
 
@@ -122,7 +122,15 @@ namespace CoreSumoRobot
 
                 if (value != ERobotSkillType.None)
                 {
-                    SkillTime[value] = Time.time;
+                    try
+                    {
+                        SkillTime[value] = BattleManager.Instance.ElapsedTime;
+                    }
+                    catch (Exception)
+                    {
+                        Debug.Log($"[BattleManager.Instance] isn't found, switched to Time.time");
+                        SkillTime[value] = Time.time;
+                    }
                 }
             }
         }
@@ -227,6 +235,7 @@ namespace CoreSumoRobot
 
         public void UseSkill(ISkill skill)
         {
+            if (isSkillDisabled) return;
             skill.Execute(this, sumoRobot);
         }
 
@@ -276,10 +285,14 @@ namespace CoreSumoRobot
         #endregion
 
 
-        #region Robot Movement State
+        #region Robot Movement & Skill State
         public void SetMovementEnabled(bool value)
         {
             isMoveDisabled = !value;
+        }
+        public void SetSkillEnabled(bool value)
+        {
+            isSkillDisabled = !value;
         }
         public void SetInputEnabled(bool value)
         {
@@ -317,7 +330,7 @@ namespace CoreSumoRobot
 
         void BounceRule(Collision2D collision)
         {
-            var collNormal = collision.contacts[0].normal;
+            Vector2 collNormal = collision.contacts[0].normal;
 
             PhysicHelper.HandleBounce(this, collision.gameObject.GetComponent<SumoRobotController>(), collNormal);
         }
@@ -381,7 +394,7 @@ namespace CoreSumoRobot
 
         #region Robot Movement Input
 
-        public void UseInput(IInputProvider inputProvider)
+        public void UseInput(InputProvider inputProvider)
         {
             provider = inputProvider;
         }
@@ -390,8 +403,8 @@ namespace CoreSumoRobot
             if (provider == null) return;
             if (isInputDisabled) return;
 
-            var actions = provider.GetInput();
-            foreach (var action in actions)
+            List<ISumoAction> actions = provider.GetInput();
+            foreach (ISumoAction action in actions)
             {
                 action.Execute(this);
             }
@@ -399,9 +412,9 @@ namespace CoreSumoRobot
         #endregion
 
         #region Robot Appearance
-        public void ChangeFaceColor(bool isLeftSide)
+        public void UpdateFaceColor()
         {
-            if (isLeftSide)
+            if (sumoRobot.IsLeftSide)
             {
                 face.color = new Color(0, 255, 0);
             }
