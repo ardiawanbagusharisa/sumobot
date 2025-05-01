@@ -10,7 +10,6 @@ GameObject:
   m_Component:
   - component: {fileID: 6870383528986695784}
   - component: {fileID: 4434073688719581616}
-  - component: {fileID: 4078978535852198280}
   - component: {fileID: 6788579830988052802}
   m_Layer: 0
   m_Name: LeftSupporter
@@ -89,19 +88,6 @@ SpriteRenderer:
   m_WasSpriteAssigned: 1
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
---- !u!114 &4078978535852198280
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8346653985191700079}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f156a094981a60a4884148b11161bf80, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  speed: 5
 --- !u!61 &6788579830988052802
 BoxCollider2D:
   m_ObjectHideFlags: 0

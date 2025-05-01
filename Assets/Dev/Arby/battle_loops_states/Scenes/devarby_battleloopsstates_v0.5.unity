@@ -1798,7 +1798,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 2.2061768, y: -85}
+  m_AnchoredPosition: {x: 2.2062988, y: -85}
   m_SizeDelta: {x: 862.3549, y: 87.9227}
   m_Pivot: {x: 0, y: 0.5}
 --- !u!114 &757482879
@@ -5634,6 +5634,7 @@ MonoBehaviour:
   StartPositions:
   - {fileID: 1987440270}
   - {fileID: 1757629781}
+  ElapsedTime: 0
 --- !u!114 &2130233542
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6555,21 +6556,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2570648344375988576}
   m_CullTransparentMesh: 1
---- !u!114 &949896863440072464
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6500385265466768870}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 70cc07445b444974c9303f269c0bc1db, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  dotImage: {fileID: 3502443223576644190}
-  inactiveOpacity: 0.3
-  fadeDuration: 0.25
 --- !u!1 &951912891109934716
 GameObject:
   m_ObjectHideFlags: 0
@@ -6960,21 +6946,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 5827433923294569141}
   m_CullTransparentMesh: 1
---- !u!114 &1188034917309094082
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5144246197366950452}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 70cc07445b444974c9303f269c0bc1db, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  dotImage: {fileID: 3299208688520199564}
-  inactiveOpacity: 0.3
-  fadeDuration: 0.25
 --- !u!1 &1236080923560282732
 GameObject:
   m_ObjectHideFlags: 0
@@ -7397,7 +7368,6 @@ GameObject:
   - component: {fileID: 1670407522429768638}
   - component: {fileID: 5555177430238605150}
   - component: {fileID: 9084008624942756707}
-  - component: {fileID: 4874436394251245101}
   m_Layer: 5
   m_Name: ScoreDot3
   m_TagString: Untagged
@@ -9087,7 +9057,6 @@ GameObject:
   - component: {fileID: 2335641804392027998}
   - component: {fileID: 8813636153357134782}
   - component: {fileID: 5284770363023816579}
-  - component: {fileID: 8422537250211041997}
   m_Layer: 5
   m_Name: ScoreDot1E
   m_TagString: Untagged
@@ -9256,21 +9225,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &2723318820667727249
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8274128286549217127}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 70cc07445b444974c9303f269c0bc1db, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  dotImage: {fileID: 1765050061421672671}
-  inactiveOpacity: 0.3
-  fadeDuration: 0.25
 --- !u!114 &2753715673979111503
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -9679,7 +9633,6 @@ GameObject:
   - component: {fileID: 6547619822319896836}
   - component: {fileID: 5602614977990938207}
   - component: {fileID: 4613990792382661338}
-  - component: {fileID: 4759243147489098909}
   - component: {fileID: 6547619822319896837}
   m_Layer: 3
   m_Name: LeftCrowd
@@ -11771,21 +11724,6 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
---- !u!114 &4256872818429056772
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7785532542277699058}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 70cc07445b444974c9303f269c0bc1db, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  dotImage: {fileID: 479326468822938186}
-  inactiveOpacity: 0.3
-  fadeDuration: 0.25
 --- !u!114 &4268218452124642172
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -12548,28 +12486,6 @@ RectTransform:
   m_AnchoredPosition: {x: 77, y: -27}
   m_SizeDelta: {x: 70, y: 70}
   m_Pivot: {x: 0.5, y: 0.5}
---- !u!114 &4759243147489098909
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2893849365278808019}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 966232a9d1a87c343acc5ae62125102b, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  spawnAreaObject: {fileID: 6547619822319896836}
-  supporterPrefabs:
-  - {fileID: 4453867213989244115, guid: 2ed27d135d36a4a5cb21fce9a26aba29, type: 3}
-  spawnCount: 7
-  minDistanceBetween: 0.03
-  currentSupporters: []
-  usedPositions: []
-  spawnBounds:
-    m_Center: {x: 0, y: 0, z: 0}
-    m_Extent: {x: 0, y: 0, z: 0}
 --- !u!1 &4795058599865283633
 GameObject:
   m_ObjectHideFlags: 0
@@ -12626,21 +12542,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &4874436394251245101
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1494576928929793243}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 70cc07445b444974c9303f269c0bc1db, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  dotImage: {fileID: 9084008624942756707}
-  inactiveOpacity: 0.3
-  fadeDuration: 0.25
 --- !u!222 &4884147976489493449
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -13214,7 +13115,6 @@ GameObject:
   - component: {fileID: 4969651476360977745}
   - component: {fileID: 2219765636174668209}
   - component: {fileID: 3299208688520199564}
-  - component: {fileID: 1188034917309094082}
   m_Layer: 5
   m_Name: ScoreDot1
   m_TagString: Untagged
@@ -15500,7 +15400,6 @@ GameObject:
   - component: {fileID: 6459770397970639491}
   - component: {fileID: 260144767628547683}
   - component: {fileID: 3502443223576644190}
-  - component: {fileID: 949896863440072464}
   m_Layer: 5
   m_Name: ScoreDot2E
   m_TagString: Untagged
@@ -17127,7 +17026,6 @@ GameObject:
   - component: {fileID: 8041304264754008727}
   - component: {fileID: 3864648294547172983}
   - component: {fileID: 479326468822938186}
-  - component: {fileID: 4256872818429056772}
   m_Layer: 5
   m_Name: ScoreDot2
   m_TagString: Untagged
@@ -17617,7 +17515,6 @@ GameObject:
   - component: {fileID: 8160571798389053442}
   - component: {fileID: 3132713593208726754}
   - component: {fileID: 1765050061421672671}
-  - component: {fileID: 2723318820667727249}
   m_Layer: 5
   m_Name: ScoreDot3E
   m_TagString: Untagged
@@ -17764,21 +17661,6 @@ RectTransform:
   m_AnchoredPosition: {x: -325.954, y: 220}
   m_SizeDelta: {x: 90, y: 70}
   m_Pivot: {x: 0.5, y: 0.5}
---- !u!114 &8422537250211041997
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2592502039092985915}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 70cc07445b444974c9303f269c0bc1db, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  dotImage: {fileID: 5284770363023816579}
-  inactiveOpacity: 0.3
-  fadeDuration: 0.25
 --- !u!224 &8434982808339472397
 RectTransform:
   m_ObjectHideFlags: 0
