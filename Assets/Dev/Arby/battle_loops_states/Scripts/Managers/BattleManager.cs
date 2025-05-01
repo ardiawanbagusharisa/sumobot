@@ -220,6 +220,9 @@ namespace BattleLoop
                 Debug.Log(time);
                 CurrentRound.TimeLeft = time;
 
+                // In order to update UI for time left in realtime, we need to call [ChangeBattleInfo]
+                ChangeBattleInfo();
+
                 if (time <= 1)
                 {
                     // Draw isn't tested yet
