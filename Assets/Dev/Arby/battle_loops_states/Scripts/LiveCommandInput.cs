@@ -11,7 +11,6 @@ public class LiveCommandInput : MonoBehaviour
 {
     public SumoRobotInput SumoRobotCommand;
 
-
     public void Init(SumoRobotInput sumoRobotCommand)
     {
         SumoRobotCommand = sumoRobotCommand;
@@ -36,31 +35,31 @@ public class LiveCommandInput : MonoBehaviour
     #region Example of Gather Info
     public void GetGameplayInfo()
     {
-        var timer = BattleManager.Instance.BattleInfo.Time;
-        var rounds = BattleManager.Instance.BattleInfo.Rounds;
-        var lScore = BattleManager.Instance.BattleInfo.LeftPlayer.Score;
-        var rScore = BattleManager.Instance.BattleInfo.RightPlayer.Score;
-        BattleWinner winner = BattleManager.Instance.BattleInfo.GetWinner();
+        var timer = BattleManager.Instance.CurrentRound.TimeLeft;
+        var rounds = BattleManager.Instance.CurrentRound.RoundNumber;
+        var lScore = BattleManager.Instance.Battle.LeftPlayer.Score;
+        var rScore = BattleManager.Instance.Battle.RightPlayer.Score;
+        BattleWinner winner = BattleManager.Instance.Battle.GetBattleWinner();
 
         Debug.Log($"timer: {timer}, rounds: {rounds}, leftScore: {lScore}, rightScore: {rScore}, winner: {winner}");
     }
 
     public void GetRobotsInfo()
     {
-        Debug.Log($"LeftSpeed: {BattleManager.Instance.BattleInfo.LeftPlayer.Sumo.DashSpeed}");
-        Debug.Log($"ActionsTime: {BattleManager.Instance.BattleInfo.LeftPlayer.SumoRobotController.ActionsTime}");
-        Debug.Log($"ActionSkill: {BattleManager.Instance.BattleInfo.LeftPlayer.SumoRobotController.SkillTime}");
+        Debug.Log($"LeftSpeed: {BattleManager.Instance.Battle.LeftPlayer.Sumo.DashSpeed}");
+        Debug.Log($"ActionsTime: {BattleManager.Instance.Battle.LeftPlayer.SumoRobotController.ActionsTime}");
+        Debug.Log($"ActionSkill: {BattleManager.Instance.Battle.LeftPlayer.SumoRobotController.SkillTime}");
     }
 
     public void GetPlayerInfo()
     {
-        Debug.Log($"LeftSpeed: {BattleManager.Instance.BattleInfo.LeftPlayer.Id}");
-        Debug.Log($"LeftSpeed: {BattleManager.Instance.BattleInfo.LeftPlayer.Score}");
+        Debug.Log($"LeftSpeed: {BattleManager.Instance.Battle.LeftPlayer.Id}");
+        Debug.Log($"LeftSpeed: {BattleManager.Instance.Battle.LeftPlayer.Score}");
     }
 
     public void GetLog()
     {
-        Dictionary<int, BattleInfo> infos = BattleManager.Instance.GetLog();
+        Battle info = BattleManager.Instance.Battle;
     }
     #endregion
 }

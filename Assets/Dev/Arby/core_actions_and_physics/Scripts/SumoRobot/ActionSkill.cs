@@ -1,4 +1,5 @@
 using System.Collections;
+using BattleLoop;
 using UnityEngine;
 
 namespace CoreSumoRobot
@@ -41,7 +42,7 @@ namespace CoreSumoRobot
             controller = controllerParam;
             robot = robotParam;
             controller.SkillTime.TryGetValue(SkillType, out float lastSkillTime);
-            if (Time.time >= lastSkillTime + Cooldown)
+            if (BattleManager.Instance.ElapsedTime >= lastSkillTime + Cooldown)
             {
                 //Debug
                 SkillCooldownUI.Instance.ShowSkillCooldown(this);
@@ -101,13 +102,12 @@ namespace CoreSumoRobot
             robot = robotParam;
             controller = controllerParam;
             controller.SkillTime.TryGetValue(SkillType, out float lastSkillTime);
-            if (Time.time >= lastSkillTime + Cooldown)
+            if (BattleManager.Instance.ElapsedTime >= lastSkillTime + Cooldown)
             {
                 //Debug
                 SkillCooldownUI.Instance.ShowSkillCooldown(this);
 
                 Activate();
-
                 controller.LastRobotSkillType = SkillType;
             }
             else

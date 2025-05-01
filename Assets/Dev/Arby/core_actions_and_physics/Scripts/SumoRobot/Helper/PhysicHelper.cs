@@ -15,8 +15,8 @@ namespace CoreSumoRobot
             float bounceA = baseForce * (vB / total);  // robotA gets more bounce if B has more speed
             float bounceB = baseForce * (vA / total);  // robotB gets more bounce if A has more speed
 
-            var bounceImpactResistA = robotB.GetComponent<SumoRobot>().BounceResistance;
-            var bounceImpactResistB = robotA.GetComponent<SumoRobot>().BounceResistance;
+            float bounceImpactResistA = robotB.GetComponent<SumoRobot>().BounceResistance;
+            float bounceImpactResistB = robotA.GetComponent<SumoRobot>().BounceResistance;
 
             if (vA == 0 && robotB.LastRobotSkillType == ERobotSkillType.Stone)
             {
