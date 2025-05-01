@@ -127,6 +127,8 @@ namespace BattleLoop
         #region Core Logic 
         private void InitializePlayerByPosition(Transform playerPosition)
         {
+            // THis is used when rematch button pressed. 
+            // We don't need to reinitialize players, reset the players instead 
             if (players.Count == 2)
             {
                 players.ForEach(p => p.GetComponent<SumoRobotController>().ResetForNewBattle());
@@ -168,14 +170,13 @@ namespace BattleLoop
                 players.Add(player);
 
                 GetComponent<InputManager>().RegisterInput(player, RobotInputType);
-                Debug.Log($"Player registered: {playerIdx}");
 
+                Debug.Log($"Player registered: {playerIdx}");
                 // Auto-start when 2 players registered
                 if (players.Count == 2 && CurrentState == BattleState.Battle_Preparing)
                 {
                     StartCoroutine(AllPlayerAreReadyToPlay());
                 }
-
             }
         }
 
@@ -219,11 +220,11 @@ namespace BattleLoop
                 Debug.Log(time);
                 CurrentRound.TimeLeft = time;
 
-                ChangeBattleInfo();
-
                 if (time <= 1)
                 {
+                    // Draw isn't tested yet
                     Battle_End();
+
                     yield return new WaitForSeconds(1f);
                 }
 
@@ -248,7 +249,7 @@ namespace BattleLoop
         {
             Debug.Log("OnPlayerOutOfArena");
 
-            // Find player whos winner
+            // Find player who's winner
             GameObject winner = players.Find(p => p.GetComponent<SumoRobot>().IdInt != playerIdx);
 
             // check whether [winner] is LeftSide
@@ -273,6 +274,8 @@ namespace BattleLoop
                 // Prebatle
                 case BattleState.PreBatle_Preparing:
                     Battle = new Battle();
+                    Battle.RoundSystem = RoundSystem;
+
                     break;
                 // Prebatle
 
@@ -280,13 +283,11 @@ namespace BattleLoop
                 case BattleState.Battle_Preparing:
                     Battle.Clear();
 
-                    Battle.RoundSystem = RoundSystem;
-
                     CurrentRound = new Round();
-                    StartPositions.ForEach(x => InitializePlayerByPosition(x));
-
                     CurrentRound.RoundNumber = 1;
                     CurrentRound.TimeLeft = Mathf.CeilToInt(BattleTime);
+
+                    StartPositions.ForEach(x => InitializePlayerByPosition(x));
                     break;
                 case BattleState.Battle_Countdown:
                     ElapsedTime = 0;
@@ -304,7 +305,6 @@ namespace BattleLoop
                     StartCoroutine(ResetBattle());
                     break;
                 case BattleState.Battle_Reset:
-                    // Check whether the round is fit with Best of N
                     if (Battle.GetBattleWinner() != BattleWinner.None)
                     {
                         PostBattle_ShowResult();
@@ -330,8 +330,7 @@ namespace BattleLoop
                 case BattleState.PostBattle_ShowResult:
                     Deinitialize();
                     break;
-
-                    // Post Battle
+                // Post Battle
             }
 
             ChangeBattleInfo();
@@ -411,7 +410,7 @@ public class Battle
     {
         Debug.Log($"[Battle][GetBattleWinner] leftWinCount: {LeftWinCount}, rightWinCount: {RightWinCount}");
 
-        // Detect if one of sides has [treshold] more scores. e.g. in BestOf3, when the difference score: 2 - 0, Left Win.
+        // Calculate winner based on Best Of N rules.
         switch (RoundSystem)
         {
             case RoundSystem.BestOf1:
@@ -471,6 +470,9 @@ public class Battle
             return BattleWinner.Right;
         }
     }
+
+    // Detect if one of sides has [treshold] more scores. 
+    // e.g. in BestOf3 the treshold is 2, when the difference score is 2 - 0, Left is the Winner.
     private BattleWinner CheckWinnerByTreshold(int treshold)
     {
         if (Math.Abs(LeftWinCount - RightWinCount) == treshold)
@@ -500,16 +502,12 @@ public class Battle
 public class Round
 {
     public int Id;
-
-    // the countdown (seconds) until a battle end in integer
     public int TimeLeft;
-
     public int RoundNumber = 0;
     public BattleState BattleState;
     public BattleWinner RoundWinner;
 
-    // Not good, should create SetWinner to easily handle current round winner and total winner (best of N)
-
+    // [Todo]: add log for player actions
 }
 
 public class BattlePlayer
