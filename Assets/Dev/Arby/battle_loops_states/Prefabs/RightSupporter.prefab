@@ -10,7 +10,6 @@ GameObject:
   m_Component:
   - component: {fileID: 8796291716355460386}
   - component: {fileID: 4444909464008271188}
-  - component: {fileID: 9192658141964653936}
   - component: {fileID: 4599381914206422541}
   m_Layer: 0
   m_Name: RightSupporter
@@ -89,19 +88,6 @@ SpriteRenderer:
   m_WasSpriteAssigned: 1
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
---- !u!114 &9192658141964653936
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4453867213989244115}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f156a094981a60a4884148b11161bf80, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  speed: 5
 --- !u!61 &4599381914206422541
 BoxCollider2D:
   m_ObjectHideFlags: 0
