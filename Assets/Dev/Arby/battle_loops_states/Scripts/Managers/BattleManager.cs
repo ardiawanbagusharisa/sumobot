@@ -294,6 +294,7 @@ namespace BattleLoop
                 case BattleState.Battle_Preparing:
                     Battle.Clear();
 
+                    // Create first round
                     CurrentRound = new Round();
                     CurrentRound.RoundNumber = 1;
                     CurrentRound.TimeLeft = Mathf.CeilToInt(BattleTime);
@@ -324,6 +325,7 @@ namespace BattleLoop
                     {
                         int previousRound = Battle.CurrentRound.RoundNumber;
 
+                        // Create n+1 round
                         CurrentRound = new Round();
                         CurrentRound.TimeLeft = Mathf.CeilToInt(BattleTime);
                         CurrentRound.RoundNumber = previousRound + 1;
