@@ -1,17 +1,31 @@
 using System.Collections;
 using BattleLoop;
+using Unity.VisualScripting;
 using UnityEngine;
 
 namespace CoreSumoRobot
 {
 
-    public interface ISkill
+    public abstract class ISkill
     {
-        ERobotSkillType SkillType { get; }
-        float Duration { get; }
-        float Cooldown { get; }
-        void Execute(SumoRobotController controller, SumoRobot robot);
+        public abstract ERobotSkillType SkillType { get; }
+        public abstract float Duration { get; }
+        public abstract float Cooldown { get; }
+        public virtual void Activate(SumoRobotController controller, SumoRobot robot)
+        {
+            Debug.Log($"[Skill][{SkillType}] activated!");
+
+            BattleManager.Instance.CurrentRound.SetActionLog(robot.IsLeftSide, $"type=skill;robotId={robot.IdInt};skillType={SkillType};isActive=true");
+        }
+
+        public virtual void Deactivate(SumoRobotController controller, SumoRobot robot)
+        {
+            BattleManager.Instance.CurrentRound.SetActionLog(robot.IsLeftSide, $"type=skill;robotId={robot.IdInt};skillType={SkillType};isActive=false");
+
+            Debug.Log($"[Skill][{SkillType}] deactivated!");
+        }
     }
+
     public enum ERobotSkillType
     {
         Stone,
@@ -22,22 +36,16 @@ namespace CoreSumoRobot
     public class BoostSkill : ISkill
     {
         #region Boost Skill Stat
-        public ERobotSkillType SkillType => ERobotSkillType.Boost;
-        public float Duration => 5f;
-        public float Cooldown => 10f;
+        public override ERobotSkillType SkillType => ERobotSkillType.Boost;
+        public override float Duration => 5f;
+        public override float Cooldown => 10f;
         public float BoostMultiplier => 1.8f;
         #endregion
 
         private SumoRobot robot;
         private SumoRobotController controller;
 
-
-        public void Execute(SumoRobotController controllerParam, SumoRobot robotParam)
-        {
-            OnExecute(controllerParam, robotParam);
-        }
-
-        private void OnExecute(SumoRobotController controllerParam, SumoRobot robotParam)
+        public override void Activate(SumoRobotController controllerParam, SumoRobot robotParam)
         {
             controller = controllerParam;
             robot = robotParam;
@@ -47,8 +55,7 @@ namespace CoreSumoRobot
                 //Debug
                 SkillCooldownUI.Instance.ShowSkillCooldown(this);
 
-                Activate();
-
+                Boost();
                 controller.LastRobotSkillType = SkillType;
             }
             else
@@ -57,9 +64,9 @@ namespace CoreSumoRobot
             }
         }
 
-        private void Activate()
+        private void Boost()
         {
-            Debug.Log("[Skill][Boost] activated!");
+            base.Activate(controller, robot);
             controller.SetMovementEnabled(true);
             controller.ChangeMoveSpeed(robot.MoveSpeed * BoostMultiplier);
             controller.ChangeDashSpeed(robot.DashSpeed * BoostMultiplier);
@@ -70,34 +77,33 @@ namespace CoreSumoRobot
         public IEnumerator DeactivateAfterDuration()
         {
             yield return new WaitForSeconds(Duration);
-            Deactivate();
+            Deactivate(controller, robot);
         }
 
-        private void Deactivate()
+        public override void Deactivate(SumoRobotController controller, SumoRobot robot)
         {
             controller.ResetMoveSpeed();
             controller.ResetDashSpeed();
             controller.ResetBounceResistance();
             controller.LastRobotSkillType = ERobotSkillType.None;
-            Debug.Log("[Skill][Boost] deactivated!");
+
+            base.Deactivate(controller, robot);
         }
     }
 
     public class StoneSkill : ISkill
     {
         #region Stone Skill Stat
-        public ERobotSkillType SkillType => ERobotSkillType.Stone;
-        public float Duration => 5f;
-        public float Cooldown => 10f;
+        public override ERobotSkillType SkillType => ERobotSkillType.Stone;
+        public override float Duration => 5f;
+        public override float Cooldown => 10f;
         public float BounceBackMultiplier => 10.0f;
         #endregion
 
         private SumoRobot robot;
         private SumoRobotController controller;
 
-
-
-        public void Execute(SumoRobotController controllerParam, SumoRobot robotParam)
+        public override void Activate(SumoRobotController controllerParam, SumoRobot robotParam)
         {
             robot = robotParam;
             controller = controllerParam;
@@ -107,7 +113,7 @@ namespace CoreSumoRobot
                 //Debug
                 SkillCooldownUI.Instance.ShowSkillCooldown(this);
 
-                Activate();
+                Stone();
                 controller.LastRobotSkillType = SkillType;
             }
             else
@@ -116,13 +122,13 @@ namespace CoreSumoRobot
             }
         }
 
-        private void Activate()
+        private void Stone()
         {
+            base.Activate(controller, robot);
+
             controller.FreezeMovement();
             controller.SetMovementEnabled(false);
             controller.SetBounceResistance(BounceBackMultiplier);
-            Debug.Log("[Skill][Stone] activated!");
-
             controller.StartCoroutine(DeactivateAfterDuration());
 
         }
@@ -130,17 +136,17 @@ namespace CoreSumoRobot
         public IEnumerator DeactivateAfterDuration()
         {
             yield return new WaitForSeconds(Duration);
-            Deactivate();
+            Deactivate(controller, robot);
         }
 
-        private void Deactivate()
+        public override void Deactivate(SumoRobotController controller, SumoRobot robot)
         {
-            // Implement the logic to deactivate the skill
-            Debug.Log("[Skill][Stone] deactivated!");
             controller.ResetFreezeMovement();
             controller.ResetBounceResistance();
             controller.SetMovementEnabled(true);
             controller.LastRobotSkillType = ERobotSkillType.None;
+
+            base.Deactivate(controller, robot);
         }
 
     }

@@ -183,6 +183,9 @@ namespace CoreSumoRobot
                 Debug.Log("Move is disabled.");
                 return;
             }
+
+            BattleManager.Instance.CurrentRound.SetActionLog(sumoRobot.IsLeftSide, $"type=action;dash={type},{time};robotId={sumoRobot.IdInt}");
+
             switch (type)
             {
                 case DashActionType.Default:
@@ -207,6 +210,8 @@ namespace CoreSumoRobot
 
         public void Turn(TurnActionType type = TurnActionType.Angle, float angle = float.NaN)
         {
+            BattleManager.Instance.CurrentRound.SetActionLog(sumoRobot.IsLeftSide, $"type=action;turn={type},{angle};robotId={sumoRobot.IdInt}");
+
             switch (type)
             {
                 case TurnActionType.Left:
@@ -236,11 +241,13 @@ namespace CoreSumoRobot
         public void UseSkill(ISkill skill)
         {
             if (isSkillDisabled) return;
-            skill.Execute(this, sumoRobot);
+            skill.Activate(this, sumoRobot);
         }
 
         IEnumerator TurnOverAngle(float totalAngle, float duration)
         {
+            BattleManager.Instance.CurrentRound.SetActionLog(sumoRobot.IsLeftSide, $"type=action;turn_angle={totalAngle},{duration};robotId={sumoRobot.IdInt}");
+
             float rotatedAngle = 0f;
             float speed = totalAngle / duration; // degrees per second
 
@@ -262,6 +269,8 @@ namespace CoreSumoRobot
 
         IEnumerator AccelerateOverTime(float time, bool isDash = false)
         {
+            BattleManager.Instance.CurrentRound.SetActionLog(sumoRobot.IsLeftSide, $"type=action;accelerate_time={time},{isDash};robotId={sumoRobot.IdInt}");
+
             float elapsedTime = 0f;
             float speed = isDash ? sumoRobot.DashSpeed : sumoRobot.MoveSpeed;
 
@@ -330,9 +339,19 @@ namespace CoreSumoRobot
 
         void BounceRule(Collision2D collision)
         {
-            Vector2 collNormal = collision.contacts[0].normal;
+            var otherRobot = collision.gameObject.GetComponent<SumoRobotController>();
+            if (otherRobot == null) return;
 
-            PhysicHelper.HandleBounce(this, collision.gameObject.GetComponent<SumoRobotController>(), collNormal);
+            // Compare magnitudes
+            float mySpeed = LastVelocity.magnitude;
+            float otherSpeed = otherRobot.LastVelocity.magnitude;
+
+            // Only the faster one handles the bounce
+            if (mySpeed >= otherSpeed)
+            {
+                Vector2 collNormal = collision.contacts[0].normal;
+                PhysicHelper.HandleBounce(this, otherRobot, collNormal);
+            }
         }
 
         public void Bounce(Vector2 direction, float force)
