@@ -1798,7 +1798,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 2.2062988, y: -85}
+  m_AnchoredPosition: {x: 2.2062073, y: -85}
   m_SizeDelta: {x: 862.3549, y: 87.9227}
   m_Pivot: {x: 0, y: 0.5}
 --- !u!114 &757482879
@@ -5629,7 +5629,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   RobotInputType: 1
   BattleTime: 60
-  RoundSystem: 3
+  RoundSystem: 5
   SumoPrefab: {fileID: 1488574921577525681, guid: e48db3198e16346af866a9419a1964cc, type: 3}
   StartPositions:
   - {fileID: 1987440270}

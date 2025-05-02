@@ -264,6 +264,8 @@ namespace BattleLoop
             {
                 Battle.SetRoundWinner(BattleWinner.Right);
             }
+            ChangeBattleInfo();
+
             Battle_End();
         }
 
@@ -333,13 +335,13 @@ namespace BattleLoop
                 case BattleState.PostBattle_ShowResult:
                     Deinitialize();
                     break;
-                // Post Battle
+                    // Post Battle
             }
 
             ChangeBattleInfo();
         }
 
-
+        // Call this when we need to trigger OnBattleChanged immediately
         private void ChangeBattleInfo()
         {
 
@@ -390,6 +392,9 @@ public class Battle
 
     public int LeftWinCount;
     public int RightWinCount;
+
+    // [Todo]: Utilize of handling log for state & loop changes
+    public Dictionary<float, string> BattleLog;
 
     public void SetRoundWinner(BattleWinner winner)
     {
@@ -510,7 +515,43 @@ public class Round
     public BattleState BattleState;
     public BattleWinner RoundWinner;
 
-    // [Todo]: add log for player actions
+    // [Todo]: Logs should be wrapped in a separated class
+    // Handle logging actions given by left player & right player
+    public Dictionary<float, string> LeftPlayerActionLog { get; private set; } = new Dictionary<float, string>();
+    public Dictionary<float, string> RightPlayerActionsLog { get; private set; } = new Dictionary<float, string>();
+
+    // Handle logging for in-battle events per round
+    public Dictionary<float, string> EventLog { get; private set; } = new Dictionary<float, string>();
+
+    public void SetEventLog(string value)
+    {
+        EventLog[BattleManager.Instance.ElapsedTime] = value;
+
+        foreach (var Event in EventLog)
+        {
+            Debug.Log($"[Round][Log][Event] Time: {Event.Key}, Value: {Event.Value}");
+        }
+    }
+    public void SetActionLog(bool isLeftPlayer, string value)
+    {
+        if (isLeftPlayer)
+        {
+            LeftPlayerActionLog[BattleManager.Instance.ElapsedTime] = value;
+        }
+        else
+        {
+            RightPlayerActionsLog[BattleManager.Instance.ElapsedTime] = value;
+        }
+
+        foreach (var Event in LeftPlayerActionLog)
+        {
+            Debug.Log($"[Round][Log][Action][LeftPlayer] Time: {Event.Key}, Value: {Event.Value}");
+        }
+        foreach (var Event in RightPlayerActionsLog)
+        {
+            Debug.Log($"[Round][Log][Action][RightPlayer] Time: {Event.Key}, Value: {Event.Value}");
+        }
+    }
 }
 
 public class BattlePlayer
