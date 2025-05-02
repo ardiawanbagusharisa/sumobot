@@ -18,12 +18,13 @@ namespace BattleLoop
 
 
         // [BattleState.Preparing] is very initial state, 
-        // A battle state will not back at [BattleState.Preparing] unless a Rematch created
+        // A battle state will not back at [BattleState.Preparing] unless players decided a Rematch
         Battle_Preparing,
         Battle_Countdown,
         Battle_Ongoing,
         Battle_End,
-        // The next state of [BattleState.Reset] is [BattleState.Countdown] 
+        // If round still counting (Best of N), the next state of [BattleState.Reset] is [BattleState.Countdown] 
+        // Otherwise the next state is [Battle_Reset]
         Battle_Reset,
         // End of Sub-states of Battle
 
@@ -80,7 +81,7 @@ namespace BattleLoop
 
         #region PreBattle
 
-        // For now, only initializing. Battle wont be played until someone Call [Battle_Start()]
+        // For now, only initializing. Battle wont be played until [Battle_Start()] is called
         private void PreBattle_Prepare()
         {
             TransitionToState(BattleState.PreBatle_Preparing);
@@ -89,7 +90,7 @@ namespace BattleLoop
 
         #region Battle
 
-        // In order to start a battle, this function can be called from outside, e.g. "Start" or "Rematch" button
+        // In order to start a battle, this function must be called from outside, e.g. "Start" or "Rematch" button
         public void Battle_Start()
         {
             Battle_Prepare();
@@ -131,7 +132,11 @@ namespace BattleLoop
             // We don't need to reinitialize players, reset the players instead 
             if (players.Count == 2)
             {
-                players.ForEach(p => p.GetComponent<SumoRobotController>().ResetForNewBattle());
+                players.ForEach(p =>
+                {
+                    p.GetComponent<SumoRobotController>().ResetForNewBattle();
+                    GetComponent<InputManager>().RegisterInput(p, RobotInputType);
+                });
                 StartCoroutine(AllPlayerAreReadyToPlay());
                 return;
             }
@@ -180,9 +185,9 @@ namespace BattleLoop
             }
         }
 
-        // Delay state transition reaction
         IEnumerator AllPlayerAreReadyToPlay()
         {
+            // Delay state transition reaction
             yield return new WaitForSeconds(0.5f);
             Battle_Countdown();
         }
@@ -279,6 +284,7 @@ namespace BattleLoop
                 // Prebatle
                 case BattleState.PreBatle_Preparing:
                     Battle = new Battle();
+                    Battle.UUID = Guid.NewGuid().ToString();
                     Battle.RoundSystem = RoundSystem;
 
                     break;
@@ -360,6 +366,7 @@ namespace BattleLoop
 
 }
 
+// Maybe move these class to a new file
 public enum BattleWinner
 {
     Left,

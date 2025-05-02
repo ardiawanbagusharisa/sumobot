@@ -6,7 +6,6 @@ namespace CoreSumoRobot
     public class SumoRobot : MonoBehaviour
     {
         #region Basic Stats
-        public string Id => System.Guid.NewGuid().ToString();
         public int IdInt;
         public float MoveSpeed = 4.0f;
         public float RotateSpeed = 200.0f;
