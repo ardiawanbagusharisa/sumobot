@@ -28,8 +28,8 @@ public class LiveCommandInput : MonoBehaviour
         script.EnqueueCommand(new TurnRightAngleAction(90f));
 
         script.EnqueueCommand(new DashTimeAction(2f));
-        script.EnqueueCommand(new SkillAction(new StoneSkill()));
-        script.EnqueueCommand(new SkillAction(new BoostSkill()));
+        script.EnqueueCommand(new SkillAction(ERobotSkillType.Boost));
+        script.EnqueueCommand(new SkillAction(ERobotSkillType.Stone));
     }
 
     #region Example of Gather Info
@@ -48,7 +48,9 @@ public class LiveCommandInput : MonoBehaviour
     {
         Debug.Log($"LeftSpeed: {BattleManager.Instance.Battle.LeftPlayer.Sumo.DashSpeed}");
         Debug.Log($"ActionsTime: {BattleManager.Instance.Battle.LeftPlayer.SumoRobotController.ActionsTime}");
-        Debug.Log($"ActionSkill: {BattleManager.Instance.Battle.LeftPlayer.SumoRobotController.SkillTime}");
+
+        Debug.Log($"ActionSkill: {BattleManager.Instance.Battle.LeftPlayer.SumoRobotController.sumoSkill.GetCooldownInfo()}");
+        Debug.Log($"ActionSkill: {BattleManager.Instance.Battle.LeftPlayer.SumoRobotController.sumoSkill.IsSkillCooldown()}");
     }
 
     public void GetPlayerInfo()

@@ -13,10 +13,11 @@ namespace CoreSumoRobot
         public SpriteRenderer face;
         public Transform StartPosition;
         public event Action<int> OnOutOfArena;
+        public SumoSkill sumoSkill;
 
+        private SumoRobot sumoRobot;
         private bool isMoveDisabled = false;
         private bool isSkillDisabled = false;
-        private SumoRobot sumoRobot;
         private float reservedMoveSpeed;
         private float reservedDashSpeed;
         private float reserverdBounceResistance;
@@ -31,6 +32,7 @@ namespace CoreSumoRobot
 
         private void Awake()
         {
+            sumoSkill = new SumoSkill();
             sumoRobot = GetComponent<SumoRobot>();
             robotRigidBody = GetComponent<Rigidbody2D>();
             reservedMoveSpeed = sumoRobot.MoveSpeed;
@@ -106,34 +108,7 @@ namespace CoreSumoRobot
         #region Robot Action Data
         public Dictionary<ERobotActionType, float> ActionsTime = new Dictionary<ERobotActionType, float>();
 
-        public Dictionary<ERobotSkillType, float> SkillTime = new Dictionary<ERobotSkillType, float>();
-
         private ERobotActionType _lastRobotActionType = ERobotActionType.Idle;
-
-
-        private ERobotSkillType _lastRobotSkillType;
-        public ERobotSkillType LastRobotSkillType
-        {
-            get { return _lastRobotSkillType; }
-            set
-            {
-                _lastRobotSkillType = value;
-                _lastRobotActionType = ERobotActionType.Skill;
-
-                if (value != ERobotSkillType.None)
-                {
-                    try
-                    {
-                        SkillTime[value] = BattleManager.Instance.ElapsedTime;
-                    }
-                    catch (Exception)
-                    {
-                        Debug.Log($"[BattleManager.Instance] isn't found, switched to Time.time");
-                        SkillTime[value] = Time.time;
-                    }
-                }
-            }
-        }
 
         public ERobotActionType LastRobotActionType
         {
@@ -148,9 +123,9 @@ namespace CoreSumoRobot
         private void ResetActionData()
         {
             ActionsTime = new Dictionary<ERobotActionType, float>();
-            SkillTime = new Dictionary<ERobotSkillType, float>();
             LastRobotActionType = ERobotActionType.Idle;
-            LastRobotSkillType = ERobotSkillType.None;
+
+            sumoSkill.Reset();
         }
         #endregion
 
@@ -238,10 +213,12 @@ namespace CoreSumoRobot
 
         }
 
-        public void UseSkill(ISkill skill)
+        public void UseSkill(ERobotSkillType skillType)
         {
+            Debug.Log($"isSkillDisabled {isSkillDisabled}");
+            
             if (isSkillDisabled) return;
-            skill.Activate(this, sumoRobot);
+            sumoSkill.Activate(controllerParam: this, sumoParam: sumoRobot, skillTypeParam: skillType);
         }
 
         IEnumerator TurnOverAngle(float totalAngle, float duration)
