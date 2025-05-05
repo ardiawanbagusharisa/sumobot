@@ -22,12 +22,12 @@ namespace CoreSumoRobot
             float bounceImpactResistA = sumoB.BounceResistance;
             float bounceImpactResistB = sumoA.BounceResistance;
 
-            if (vA == 0 && robotB.LastRobotSkillType == ERobotSkillType.Stone)
+            if (vA == 0 && robotB.sumoSkill.CurrentSkillType == ERobotSkillType.Stone)
             {
                 bounceB = vB / total;
             }
 
-            if (vB == 0 && robotA.LastRobotSkillType == ERobotSkillType.Stone)
+            if (vB == 0 && robotA.sumoSkill.CurrentSkillType == ERobotSkillType.Stone)
             {
                 bounceA = vA / total;
             }

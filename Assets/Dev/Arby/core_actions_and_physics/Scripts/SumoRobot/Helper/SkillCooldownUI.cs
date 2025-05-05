@@ -31,9 +31,9 @@ namespace CoreSumoRobot
 
         [SerializeField] private TMP_Text textUI;
 
-        public void ShowSkillCooldown(ISkill skill)
+        public void ShowSkillCooldown(SumoSkill skill, ERobotSkillType type)
         {
-            StartCoroutine(SpawnTimer(skill));
+            StartCoroutine(SpawnTimer(skill, type));
         }
 
         void Update()
@@ -53,25 +53,26 @@ namespace CoreSumoRobot
             }
         }
 
-        private IEnumerator SpawnTimer(ISkill skill)
+        private IEnumerator SpawnTimer(SumoSkill skill, ERobotSkillType type)
         {
-            float cd = skill.Cooldown;
+            float cd = skill.GetCooldownInfo(type);
+
             while (cd > 0)
             {
-                var s = DisplayTime(cd, skill);
+                var s = DisplayTime(cd, type);
                 yield return new WaitForSeconds(1f);
                 cd -= 1;
-                if (s == 1)
+                if (s < 1)
                 {
-                    runningSkill.Remove(skill.SkillType);
+                    runningSkill.Remove(skill.CurrentSkillType);
                 }
             }
         }
 
-        int DisplayTime(float timeToDisplay, ISkill skill)
+        int DisplayTime(float timeToDisplay, ERobotSkillType type)
         {
             int seconds = Mathf.FloorToInt(timeToDisplay % 60);
-            runningSkill[skill.SkillType] = string.Format("Skill {0} is on cooldown in {1}", skill.SkillType.ToString(), seconds);
+            runningSkill[type] = $"Skill {type} is on cooldown in {seconds}"; ;
             return seconds;
         }
     }

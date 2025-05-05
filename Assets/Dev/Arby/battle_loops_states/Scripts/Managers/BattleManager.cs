@@ -152,6 +152,8 @@ namespace BattleLoop
                 player.GetComponent<SumoRobotController>().UpdateFaceColor();
                 player.GetComponent<SumoRobotController>().StartPosition = playerPosition;
                 player.GetComponent<SumoRobotController>().OnOutOfArena += OnPlayerOutOfArena;
+                player.GetComponent<SumoRobotController>().SetSkillEnabled(false);
+                player.GetComponent<SumoRobotController>().SetMovementEnabled(false);
 
 
                 // Initialize battleplayer participants
@@ -536,10 +538,10 @@ public class Round
     {
         EventLog[BattleManager.Instance.ElapsedTime] = value;
 
-        foreach (var Event in EventLog)
-        {
-            Debug.Log($"[Round][Log][Event] Time: {Event.Key}, Value: {Event.Value}");
-        }
+        // foreach (var Event in EventLog)
+        // {
+        //     Debug.Log($"[Round][Log][Event] Time: {Event.Key}, Value: {Event.Value}");
+        // }
     }
     public void SetActionLog(bool isLeftPlayer, string value)
     {
@@ -552,14 +554,14 @@ public class Round
             RightPlayerActionsLog[BattleManager.Instance.ElapsedTime] = value;
         }
 
-        foreach (var Event in LeftPlayerActionLog)
-        {
-            Debug.Log($"[Round][Log][Action][LeftPlayer] Time: {Event.Key}, Value: {Event.Value}");
-        }
-        foreach (var Event in RightPlayerActionsLog)
-        {
-            Debug.Log($"[Round][Log][Action][RightPlayer] Time: {Event.Key}, Value: {Event.Value}");
-        }
+        // foreach (var Event in LeftPlayerActionLog)
+        // {
+        //     Debug.Log($"[Round][Log][Action][LeftPlayer] Time: {Event.Key}, Value: {Event.Value}");
+        // }
+        // foreach (var Event in RightPlayerActionsLog)
+        // {
+        //     Debug.Log($"[Round][Log][Action][RightPlayer] Time: {Event.Key}, Value: {Event.Value}");
+        // }
     }
 }
 

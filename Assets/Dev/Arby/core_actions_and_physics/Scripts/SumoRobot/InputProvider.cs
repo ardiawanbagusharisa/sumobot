@@ -69,9 +69,9 @@ namespace CoreSumoRobot
                 if (Input.GetKey(KeyCode.A))
                     actions.Add(new TurnLeftAction());
                 if (Input.GetKeyUp(KeyCode.Q))
-                    actions.Add(new SkillAction(new StoneSkill()));
+                    actions.Add(new SkillAction(ERobotSkillType.Stone));
                 if (Input.GetKeyUp(KeyCode.E))
-                    actions.Add(new SkillAction(new BoostSkill()));
+                    actions.Add(new SkillAction(ERobotSkillType.Boost));
             }
             else
             {
@@ -84,9 +84,9 @@ namespace CoreSumoRobot
                 if (Input.GetKey(KeyCode.K))
                     actions.Add(new TurnLeftAction());
                 if (Input.GetKeyUp(KeyCode.I))
-                    actions.Add(new SkillAction(new StoneSkill()));
+                    actions.Add(new SkillAction(ERobotSkillType.Stone));
                 if (Input.GetKeyUp(KeyCode.P))
-                    actions.Add(new SkillAction(new BoostSkill()));
+                    actions.Add(new SkillAction(ERobotSkillType.Boost));
             }
             return actions;
         }
@@ -114,12 +114,12 @@ namespace CoreSumoRobot
 
         public void OnBoostSkill()
         {
-            CommandQueue.Enqueue(new SkillAction(new BoostSkill()));
+            CommandQueue.Enqueue(new SkillAction(ERobotSkillType.Boost));
         }
 
         public void OnStoneSkill()
         {
-            CommandQueue.Enqueue(new SkillAction(new StoneSkill()));
+            CommandQueue.Enqueue(new SkillAction(ERobotSkillType.Stone));
         }
         #endregion
     }

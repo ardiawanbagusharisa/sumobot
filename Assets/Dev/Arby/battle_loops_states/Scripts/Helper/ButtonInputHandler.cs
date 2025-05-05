@@ -9,8 +9,13 @@ using UnityEngine.UI;
 
 public class ButtonInputHandler : MonoBehaviour
 {
+    public ButtonPointerHandler Accelerate;
+    public ButtonPointerHandler TurnLeft;
+    public ButtonPointerHandler TurnRight;
+    public ButtonPointerHandler Dash;
+    public ButtonPointerHandler Stone;
+    public ButtonPointerHandler Boost;
 
-    private List<Button> buttons = new List<Button>();
 
     private InputProvider inputProvider;
 
@@ -18,66 +23,28 @@ public class ButtonInputHandler : MonoBehaviour
     {
 
         inputProvider = gameObject.GetComponent<InputProvider>();
-
-
-        buttons = GetComponentsInChildren<Button>().Where((s) => s.gameObject != gameObject).ToList();
         InitializeListener();
-
     }
 
     private void InitializeListener()
     {
-        foreach (var item in buttons)
-        {
-            switch (item.tag)
-            {
-                case "Button/Accelerate":
-                    item.AddComponent<ButtonPointerHandler>().OnHold += inputProvider.OnAccelerateButtonPressed;
-                    break;
-                case "Button/TurnLeft":
-                    item.AddComponent<ButtonPointerHandler>().OnHold += inputProvider.OnTurnLeft;
-                    break;
-                case "Button/TurnRight":
-                    item.AddComponent<ButtonPointerHandler>().OnHold += inputProvider.OnTurnRight;
-                    break;
-                case "Button/Dash":
-                    item.AddComponent<ButtonPointerHandler>().OnPress += inputProvider.OnDashButtonPressed;
-                    break;
-                case "Button/Stone":
-                    item.AddComponent<ButtonPointerHandler>().OnPress += inputProvider.OnStoneSkill;
-                    break;
-                case "Button/Boost":
-                    item.AddComponent<ButtonPointerHandler>().OnPress += inputProvider.OnBoostSkill;
-                    break;
-            }
-        }
+        Accelerate.OnHold += inputProvider.OnAccelerateButtonPressed;
+        TurnLeft.OnHold += inputProvider.OnTurnLeft;
+        TurnRight.OnHold += inputProvider.OnTurnRight;
+
+        Dash.OnPress += inputProvider.OnDashButtonPressed;
+        Stone.OnPress += inputProvider.OnStoneSkill;
+        Boost.OnPress += inputProvider.OnBoostSkill;
     }
 
     void OnDestroy()
     {
-        foreach (Button item in buttons)
-        {
-            switch (item.tag)
-            {
-                case "Button/Accelerate":
-                    item.AddComponent<ButtonPointerHandler>().OnHold -= inputProvider.OnAccelerateButtonPressed;
-                    break;
-                case "Button/TurnLeft":
-                    item.AddComponent<ButtonPointerHandler>().OnHold -= inputProvider.OnTurnLeft;
-                    break;
-                case "Button/TurnRight":
-                    item.AddComponent<ButtonPointerHandler>().OnHold -= inputProvider.OnTurnRight;
-                    break;
-                case "Button/Dash":
-                    item.AddComponent<ButtonPointerHandler>().OnPress -= inputProvider.OnDashButtonPressed;
-                    break;
-                case "Button/Stone":
-                    item.AddComponent<ButtonPointerHandler>().OnPress -= inputProvider.OnStoneSkill;
-                    break;
-                case "Button/Boost":
-                    item.AddComponent<ButtonPointerHandler>().OnPress -= inputProvider.OnBoostSkill;
-                    break;
-            }
-        }
+        Accelerate.OnHold -= inputProvider.OnAccelerateButtonPressed;
+        TurnLeft.OnHold -= inputProvider.OnTurnLeft;
+        TurnRight.OnHold -= inputProvider.OnTurnRight;
+
+        Dash.OnPress -= inputProvider.OnDashButtonPressed;
+        Stone.OnPress -= inputProvider.OnStoneSkill;
+        Boost.OnPress -= inputProvider.OnBoostSkill;
     }
 }
