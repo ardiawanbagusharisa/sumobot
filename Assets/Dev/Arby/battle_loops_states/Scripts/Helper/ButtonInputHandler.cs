@@ -29,22 +29,22 @@ public class ButtonInputHandler : MonoBehaviour
     private void InitializeListener()
     {
         Accelerate.OnHold += inputProvider.OnAccelerateButtonPressed;
-        TurnLeft.OnHold += inputProvider.OnTurnLeft;
-        TurnRight.OnHold += inputProvider.OnTurnRight;
+        TurnLeft.OnHold += inputProvider.OnTurnLeftButtonPressed;
+        TurnRight.OnHold += inputProvider.OnTurnRightButtonPressed;
 
         Dash.OnPress += inputProvider.OnDashButtonPressed;
-        Stone.OnPress += inputProvider.OnStoneSkill;
-        Boost.OnPress += inputProvider.OnBoostSkill;
+        Stone.OnPress += inputProvider.OnStoneSkillButtonPressed;
+        Boost.OnPress += inputProvider.OnBoostSkillButtonPressed;
     }
 
     void OnDestroy()
     {
         Accelerate.OnHold -= inputProvider.OnAccelerateButtonPressed;
-        TurnLeft.OnHold -= inputProvider.OnTurnLeft;
-        TurnRight.OnHold -= inputProvider.OnTurnRight;
+        TurnLeft.OnHold -= inputProvider.OnTurnLeftButtonPressed;
+        TurnRight.OnHold -= inputProvider.OnTurnRightButtonPressed;
 
         Dash.OnPress -= inputProvider.OnDashButtonPressed;
-        Stone.OnPress -= inputProvider.OnStoneSkill;
-        Boost.OnPress -= inputProvider.OnBoostSkill;
+        Stone.OnPress -= inputProvider.OnStoneSkillButtonPressed;
+        Boost.OnPress -= inputProvider.OnBoostSkillButtonPressed;
     }
 }
