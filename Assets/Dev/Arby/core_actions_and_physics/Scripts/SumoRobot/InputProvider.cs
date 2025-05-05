@@ -102,22 +102,22 @@ namespace CoreSumoRobot
             CommandQueue.Enqueue(new DashAction());
         }
 
-        public void OnTurnLeft()
+        public void OnTurnLeftButtonPressed()
         {
             CommandQueue.Enqueue(new TurnLeftAction());
         }
 
-        public void OnTurnRight()
+        public void OnTurnRightButtonPressed()
         {
             CommandQueue.Enqueue(new TurnRightAction());
         }
 
-        public void OnBoostSkill()
+        public void OnBoostSkillButtonPressed()
         {
             CommandQueue.Enqueue(new SkillAction(ERobotSkillType.Boost));
         }
 
-        public void OnStoneSkill()
+        public void OnStoneSkillButtonPressed()
         {
             CommandQueue.Enqueue(new SkillAction(ERobotSkillType.Stone));
         }
