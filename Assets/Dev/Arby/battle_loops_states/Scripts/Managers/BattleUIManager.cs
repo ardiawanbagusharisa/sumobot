@@ -53,6 +53,7 @@ namespace BattleLoop
             switch (round.BattleState)
             {
                 case BattleState.PreBatle_Preparing:
+                    Debug.Log("Called");
                     BattleStatePanel.Find((o) => o.CompareTag("BattleState/Pre")).SetActive(true);
 
                     BattleStatePanel.Find((o) => o.CompareTag("BattleState/Ongoing")).SetActive(false);

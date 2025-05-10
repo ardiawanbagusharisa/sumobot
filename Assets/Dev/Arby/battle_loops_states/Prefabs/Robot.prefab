@@ -99,7 +99,6 @@ GameObject:
   - component: {fileID: 934423392390313545}
   - component: {fileID: 1737808453494872349}
   - component: {fileID: 8581006012013900821}
-  - component: {fileID: 1009446215469483600}
   - component: {fileID: 5583292103176566768}
   m_Layer: 0
   m_Name: Robot
@@ -242,27 +241,6 @@ Rigidbody2D:
   m_SleepingMode: 1
   m_CollisionDetection: 1
   m_Constraints: 0
---- !u!114 &1009446215469483600
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1488574921577525681}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c4c3bab58b2f54ddf92da4976625ac9e, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  IdInt: 0
-  MoveSpeed: 4
-  RotateSpeed: 200
-  DashSpeed: 5
-  DashDuration: 0.5
-  DashCooldown: 1
-  StopDelay: 0.5
-  SlowDownRate: 2
-  BounceResistance: 1
 --- !u!114 &5583292103176566768
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -275,6 +253,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 90126e8039a69424aa6ef1402950cf1a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  IdInt: 0
+  MoveSpeed: 4
+  RotateSpeed: 200
+  DashSpeed: 5
+  DashDuration: 0.5
+  DashCooldown: 1
+  StopDelay: 0.5
+  SlowDownRate: 2
+  BounceResistance: 1
   isInputDisabled: 0
   face: {fileID: 4764707064835075653}
   StartPosition: {fileID: 0}

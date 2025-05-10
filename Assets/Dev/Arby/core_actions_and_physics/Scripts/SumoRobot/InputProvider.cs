@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace CoreSumoRobot
 {
@@ -8,20 +9,21 @@ namespace CoreSumoRobot
     {
         Keyboard,
         UI,
-        Script
+        LiveCommand,
+        Script,
     }
 
 
     public class InputProvider : MonoBehaviour
     {
         public bool IncludeKeyboard;
-        public bool IsLeftSide;
+        public PlayerSide PlayerSide;
 
         private Queue<ISumoAction> CommandQueue = new Queue<ISumoAction>();
 
-        public InputProvider(bool isLeftSide, bool includeKeyboard = false)
+        public InputProvider(PlayerSide side, bool includeKeyboard = false)
         {
-            IsLeftSide = isLeftSide;
+            PlayerSide = side;
             IncludeKeyboard = includeKeyboard;
         }
 
@@ -58,20 +60,32 @@ namespace CoreSumoRobot
         {
             var actions = new List<ISumoAction>();
 
-            if (IsLeftSide)
+            if (PlayerSide == PlayerSide.Left)
             {
                 if (Input.GetKey(KeyCode.W))
+                {
                     actions.Add(new AccelerateAction());
+                }
                 if (Input.GetKeyUp(KeyCode.LeftShift))
+                {
                     actions.Add(new DashAction());
+                }
                 if (Input.GetKey(KeyCode.D))
+                {
                     actions.Add(new TurnRightAction());
+                }
                 if (Input.GetKey(KeyCode.A))
+                {
                     actions.Add(new TurnLeftAction());
+                }
                 if (Input.GetKeyUp(KeyCode.Q))
+                {
                     actions.Add(new SkillAction(ERobotSkillType.Stone));
+                }
                 if (Input.GetKeyUp(KeyCode.E))
+                {
                     actions.Add(new SkillAction(ERobotSkillType.Boost));
+                }
             }
             else
             {
