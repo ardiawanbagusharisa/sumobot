@@ -18,8 +18,8 @@ public class LiveCommandInput : MonoBehaviour
 
     public void ExampleCommand()
     {
-        Debug.Log($"Example of executing {SumoRobotCommand.Id}");
-        var script = (InputProvider)SumoRobotCommand.inputProvider;
+        Debug.Log($"Example of executing {SumoRobotCommand.PlayerController.IdInt}");
+        var script = SumoRobotCommand.inputProvider;
         script.EnqueueCommand(new AccelerateTimeAction(2f));
         script.EnqueueCommand(new TurnAngleAction(180f));
         script.EnqueueCommand(new TurnAngleAction(-90f));
@@ -46,7 +46,7 @@ public class LiveCommandInput : MonoBehaviour
 
     public void GetRobotsInfo()
     {
-        Debug.Log($"LeftSpeed: {BattleManager.Instance.Battle.LeftPlayer.Sumo.DashSpeed}");
+        Debug.Log($"LeftSpeed: {BattleManager.Instance.Battle.LeftPlayer.SumoRobotController.DashSpeed}");
         Debug.Log($"ActionsTime: {BattleManager.Instance.Battle.LeftPlayer.SumoRobotController.ActionsTime}");
 
         Debug.Log($"ActionSkill: {BattleManager.Instance.Battle.LeftPlayer.SumoRobotController.sumoSkill.GetCooldownInfo()}");
@@ -55,7 +55,7 @@ public class LiveCommandInput : MonoBehaviour
 
     public void GetPlayerInfo()
     {
-        Debug.Log($"LeftSpeed: {BattleManager.Instance.Battle.LeftPlayer.Id}");
+        Debug.Log($"LeftSpeed: {BattleManager.Instance.Battle.LeftPlayer.SumoRobotController.IdInt}");
         Debug.Log($"LeftSpeed: {BattleManager.Instance.Battle.LeftPlayer.Score}");
     }
 

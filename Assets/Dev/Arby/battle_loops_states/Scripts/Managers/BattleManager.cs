@@ -1,14 +1,9 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using BattleLoop;
 using CoreSumoRobot;
-using JetBrains.Annotations;
-using Unity.VisualScripting;
 using UnityEngine;
-using UnityEngine.PlayerLoop;
-using UnityEngine.UI;
 
 namespace BattleLoop
 {
@@ -62,15 +57,18 @@ namespace BattleLoop
                 return;
             }
             Instance = this;
+
         }
         void OnDestroy()
         {
             // players.ForEach(p => p.gameObject.GetComponent<SumoRobotController>().OnOutOfArena -= OnPlayerOutOfArena);
         }
-        private void Start()
+
+        void Start()
         {
             PreBattle_Prepare();
         }
+
         void Update()
         {
             if (CurrentRound != null && CurrentRound.BattleState == BattleState.Battle_Ongoing)
@@ -148,24 +146,24 @@ namespace BattleLoop
                 bool isLeftSide = playerIdx == 0;
 
                 // Initialize player components
-                player.GetComponent<SumoRobot>().IdInt = playerIdx;
-                player.GetComponent<SumoRobotController>().UpdateFaceColor();
-                player.GetComponent<SumoRobotController>().StartPosition = playerPosition;
-                player.GetComponent<SumoRobotController>().OnOutOfArena += OnPlayerOutOfArena;
-                player.GetComponent<SumoRobotController>().SetSkillEnabled(false);
-                player.GetComponent<SumoRobotController>().SetMovementEnabled(false);
+                var playerController = player.GetComponent<SumoRobotController>();
+                playerController.IdInt = playerIdx;
+
+                playerController.UpdateFaceColor();
+                playerController.StartPosition = playerPosition;
+                playerController.OnOutOfArena += OnPlayerOutOfArena;
+                playerController.SetSkillEnabled(false);
+                playerController.SetMovementEnabled(false);
 
 
                 // Initialize battleplayer participants
                 BattlePlayer battlePlayerInfo = new BattlePlayer();
-                battlePlayerInfo.Id = playerIdx;
-                battlePlayerInfo.Sumo = player.GetComponent<SumoRobot>();
-                battlePlayerInfo.SumoRobotController = player.GetComponent<SumoRobotController>();
+                battlePlayerInfo.SumoRobotController = playerController;
                 battlePlayerInfo.Score = 0;
                 battlePlayerInfo.SumoRobotController.SetMovementEnabled(false);
 
                 // Check whether player left or right
-                if (battlePlayerInfo.Sumo.IsLeftSide)
+                if (playerController.Side == PlayerSide.Left)
                 {
                     Battle.LeftPlayer = battlePlayerInfo;
                 }
@@ -255,15 +253,15 @@ namespace BattleLoop
             yield return new WaitForSeconds(1f);
         }
 
-        private void OnPlayerOutOfArena(int playerIdx)
+        private void OnPlayerOutOfArena(PlayerSide side)
         {
             Debug.Log("OnPlayerOutOfArena");
 
             // Find player who's winner
-            GameObject winner = players.Find(p => p.GetComponent<SumoRobot>().IdInt != playerIdx);
+            SumoRobotController winner = players.Find(p => p.GetComponent<SumoRobotController>().Side != side).GetComponent<SumoRobotController>();
 
             // check whether [winner] is LeftSide
-            if (winner.GetComponent<SumoRobot>().IsLeftSide)
+            if (winner.Side == PlayerSide.Left)
             {
                 Battle.SetRoundWinner(BattleWinner.Left);
             }
@@ -288,7 +286,6 @@ namespace BattleLoop
                     Battle = new Battle();
                     Battle.UUID = Guid.NewGuid().ToString();
                     Battle.RoundSystem = RoundSystem;
-
                     break;
                 // Prebatle
 
@@ -362,6 +359,7 @@ namespace BattleLoop
                 Battle.CurrentRound = CurrentRound;
                 Battle.Rounds[CurrentRound.RoundNumber] = CurrentRound;
             }
+            Debug.Log($"OnBattleChanged {OnBattleChanged == null}");
             OnBattleChanged?.Invoke(Battle);
         }
         #endregion
@@ -543,9 +541,9 @@ public class Round
         //     Debug.Log($"[Round][Log][Event] Time: {Event.Key}, Value: {Event.Value}");
         // }
     }
-    public void SetActionLog(bool isLeftPlayer, string value)
+    public void SetActionLog(PlayerSide side, string value)
     {
-        if (isLeftPlayer)
+        if (side == PlayerSide.Left)
         {
             LeftPlayerActionLog[BattleManager.Instance.ElapsedTime] = value;
         }
@@ -567,8 +565,6 @@ public class Round
 
 public class BattlePlayer
 {
-    public int Id;
     public int Score = 0;
-    public SumoRobot Sumo;
     public SumoRobotController SumoRobotController;
 }
