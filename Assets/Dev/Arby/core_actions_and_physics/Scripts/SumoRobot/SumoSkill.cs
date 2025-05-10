@@ -13,7 +13,7 @@ namespace CoreSumoRobot
 
     public class SumoSkill
     {
-        public ERobotSkillType CurrentSkillType;
+        public ERobotSkillType CurrentSkillType = ERobotSkillType.None;
 
         #region Stone Stat
         public float StoneCooldown = 10f;
@@ -29,9 +29,12 @@ namespace CoreSumoRobot
 
         private float stoneLastTimeUsed;
         private float boostLastTimeUsed;
-
         private SumoRobotController controller;
-        private SumoRobot sumo;
+
+        public SumoSkill(SumoRobotController controller)
+        {
+            this.controller = controller;
+        }
 
         // This function provides flexibility of knowing the usage of skill cooldown
         // call SumoSkill.IsSkillCooldown() -> returns the skill cooldown of current skill
@@ -93,16 +96,14 @@ namespace CoreSumoRobot
             CurrentSkillType = ERobotSkillType.None;
         }
 
-        public void Activate(SumoRobotController controllerParam, SumoRobot sumoParam, ERobotSkillType skillTypeParam)
+        public void Activate(ERobotSkillType skillTypeParam)
         {
-            sumo = sumoParam;
-            controller = controllerParam;
             CurrentSkillType = skillTypeParam;
 
             if (IsSkillCooldown() == false)
             {
                 Debug.Log($"[Skill][{CurrentSkillType}] activated!");
-                BattleManager.Instance.CurrentRound.SetActionLog(sumoParam.IsLeftSide, $"type=skill;robotId={sumoParam.IdInt};skillType={CurrentSkillType};isActive=true");
+                BattleManager.Instance.CurrentRound.SetActionLog(controller.Side, $"type=skill;robotId={controller.IdInt};skillType={CurrentSkillType};isActive=true");
 
                 switch (CurrentSkillType)
                 {
@@ -130,9 +131,8 @@ namespace CoreSumoRobot
             boostLastTimeUsed = BattleManager.Instance.ElapsedTime;
 
             controller.SetMovementEnabled(true);
-            controller.ChangeMoveSpeed(sumo.MoveSpeed * BoostMultiplier);
-            controller.ChangeDashSpeed(sumo.DashSpeed * BoostMultiplier);
-
+            controller.ChangeMoveSpeed(controller.MoveSpeed * BoostMultiplier);
+            controller.ChangeDashSpeed(controller.DashSpeed * BoostMultiplier);
         }
 
         public void ActivateStone()
@@ -163,7 +163,7 @@ namespace CoreSumoRobot
                     break;
             }
 
-            BattleManager.Instance.CurrentRound.SetActionLog(sumo.IsLeftSide, $"type=skill;robotId={sumo.IdInt};skillType={CurrentSkillType};isActive=false");
+            BattleManager.Instance.CurrentRound.SetActionLog(controller.Side, $"type=skill;robotId={controller.IdInt};skillType={CurrentSkillType};isActive=false");
         }
 
         private IEnumerator OnAfterCooldown(ERobotSkillType type)

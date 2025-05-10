@@ -6,16 +6,41 @@ using UnityEngine;
 
 namespace CoreSumoRobot
 {
+    public enum PlayerSide
+    {
+        Left,
+        Right,
+    }
+
     public class SumoRobotController : MonoBehaviour
     {
+        #region Basic Stats
+        public int IdInt;
+        public float MoveSpeed = 4.0f;
+        public float RotateSpeed = 200.0f;
+        #endregion
+
+        #region Dash Stats
+        public float DashSpeed = 5.0f;
+        public float DashDuration = 0.5f;       // Dash duration. 
+        public float DashCooldown = 1.0f;       // Dash cooldown.
+        #endregion
+
+        #region Physics Stats
+        public float StopDelay = 0.5f;           // Time before robot stops.
+        public float SlowDownRate = 2.0f;        // Robot's slowdown rate (velocity and rotation decay). 
+        public float BounceResistance = 1f;
+
+        public PlayerSide Side => IdInt == 0 ? PlayerSide.Left : PlayerSide.Right;
+        #endregion
+
         public Vector2 LastVelocity { get; private set; } = Vector2.zero;
         public bool isInputDisabled = false;
         public SpriteRenderer face;
         public Transform StartPosition;
-        public event Action<int> OnOutOfArena;
+        public event Action<PlayerSide> OnOutOfArena;
         public SumoSkill sumoSkill;
 
-        private SumoRobot sumoRobot;
         private bool isMoveDisabled = false;
         private bool isSkillDisabled = false;
         private float reservedMoveSpeed;
@@ -32,12 +57,11 @@ namespace CoreSumoRobot
 
         private void Awake()
         {
-            sumoSkill = new SumoSkill();
-            sumoRobot = GetComponent<SumoRobot>();
+            sumoSkill = new SumoSkill(this);
             robotRigidBody = GetComponent<Rigidbody2D>();
-            reservedMoveSpeed = sumoRobot.MoveSpeed;
-            reservedDashSpeed = sumoRobot.DashSpeed;
-            reserverdBounceResistance = sumoRobot.BounceResistance;
+            reservedMoveSpeed = MoveSpeed;
+            reservedDashSpeed = DashSpeed;
+            reserverdBounceResistance = BounceResistance;
             SetRules(true);
         }
 
@@ -75,7 +99,7 @@ namespace CoreSumoRobot
         {
             if (collider.tag == "Arena/Floor" && !hasOnOutOfArenaInvoked)
             {
-                OnOutOfArena?.Invoke(sumoRobot.IdInt);
+                OnOutOfArena?.Invoke(Side);
                 hasOnOutOfArenaInvoked = true;
             }
         }
@@ -92,7 +116,6 @@ namespace CoreSumoRobot
                 onEnterCollisions -= BounceRule;
                 onExitTriggers -= IsInArena;
             }
-
         }
 
         public void ResetForNewBattle()
@@ -142,7 +165,7 @@ namespace CoreSumoRobot
             switch (type)
             {
                 case AccelerateActionType.Default:
-                    robotRigidBody.linearVelocity = transform.up * sumoRobot.MoveSpeed;
+                    robotRigidBody.linearVelocity = transform.up * MoveSpeed;
                     break;
                 case AccelerateActionType.Time:
                     if (time == float.NaN) throw new Exception("Time can't be NaN when you are using [AccelerateActionType.Time] type");
@@ -159,16 +182,16 @@ namespace CoreSumoRobot
                 return;
             }
 
-            BattleManager.Instance.CurrentRound.SetActionLog(sumoRobot.IsLeftSide, $"type=action;dash={type},{time};robotId={sumoRobot.IdInt}");
+            BattleManager.Instance.CurrentRound.SetActionLog(Side, $"type=action;dash={type},{time};robotId={IdInt}");
 
             switch (type)
             {
                 case DashActionType.Default:
                     ActionsTime.TryGetValue(ERobotActionType.Dash, out float lastActTime);
-                    if (Time.time >= lastActTime + sumoRobot.DashDuration)
+                    if (Time.time >= lastActTime + DashDuration)
                     {
                         LastRobotActionType = ERobotActionType.Dash;
-                        robotRigidBody.linearVelocity = transform.up * sumoRobot.DashSpeed;
+                        robotRigidBody.linearVelocity = transform.up * DashSpeed;
                     }
                     else
                     {
@@ -185,15 +208,15 @@ namespace CoreSumoRobot
 
         public void Turn(TurnActionType type = TurnActionType.Angle, float angle = float.NaN)
         {
-            BattleManager.Instance.CurrentRound.SetActionLog(sumoRobot.IsLeftSide, $"type=action;turn={type},{angle};robotId={sumoRobot.IdInt}");
+            BattleManager.Instance.CurrentRound.SetActionLog(Side, $"type=action;turn={type},{angle};robotId={IdInt}");
 
             switch (type)
             {
                 case TurnActionType.Left:
-                    transform.Rotate(0, 0, sumoRobot.RotateSpeed * Time.deltaTime);
+                    transform.Rotate(0, 0, RotateSpeed * Time.deltaTime);
                     break;
                 case TurnActionType.Right:
-                    transform.Rotate(0, 0, -sumoRobot.RotateSpeed * Time.deltaTime);
+                    transform.Rotate(0, 0, -RotateSpeed * Time.deltaTime);
                     break;
                 case TurnActionType.LeftAngle:
                     if (angle == float.NaN) throw new Exception("Left Angle can't be NaN when you are using [TurnActionInput.LeftAngle] type");
@@ -216,14 +239,14 @@ namespace CoreSumoRobot
         public void UseSkill(ERobotSkillType skillType)
         {
             Debug.Log($"isSkillDisabled {isSkillDisabled}");
-            
+
             if (isSkillDisabled) return;
-            sumoSkill.Activate(controllerParam: this, sumoParam: sumoRobot, skillTypeParam: skillType);
+            sumoSkill.Activate(skillType);
         }
 
         IEnumerator TurnOverAngle(float totalAngle, float duration)
         {
-            BattleManager.Instance.CurrentRound.SetActionLog(sumoRobot.IsLeftSide, $"type=action;turn_angle={totalAngle},{duration};robotId={sumoRobot.IdInt}");
+            BattleManager.Instance.CurrentRound.SetActionLog(Side, $"type=action;turn_angle={totalAngle},{duration};robotId={IdInt}");
 
             float rotatedAngle = 0f;
             float speed = totalAngle / duration; // degrees per second
@@ -246,10 +269,10 @@ namespace CoreSumoRobot
 
         IEnumerator AccelerateOverTime(float time, bool isDash = false)
         {
-            BattleManager.Instance.CurrentRound.SetActionLog(sumoRobot.IsLeftSide, $"type=action;accelerate_time={time},{isDash};robotId={sumoRobot.IdInt}");
+            BattleManager.Instance.CurrentRound.SetActionLog(Side, $"type=action;accelerate_time={time},{isDash};robotId={IdInt}");
 
             float elapsedTime = 0f;
-            float speed = isDash ? sumoRobot.DashSpeed : sumoRobot.MoveSpeed;
+            float speed = isDash ? DashSpeed : MoveSpeed;
 
             // lerping?, uncomment
             // Vector2 initialVelocity = robotRigidBody.linearVelocity; 
@@ -266,7 +289,7 @@ namespace CoreSumoRobot
                 yield return null;
             }
 
-            robotRigidBody.linearVelocity = Vector2.Lerp(robotRigidBody.linearVelocity, Vector2.zero, sumoRobot.SlowDownRate * Time.deltaTime);
+            robotRigidBody.linearVelocity = Vector2.Lerp(robotRigidBody.linearVelocity, Vector2.zero, SlowDownRate * Time.deltaTime);
         }
         #endregion
 
@@ -287,23 +310,22 @@ namespace CoreSumoRobot
 
         public void ChangeMoveSpeed(float value)
         {
-            sumoRobot.MoveSpeed = value;
+            MoveSpeed = value;
         }
-
 
         public void ChangeDashSpeed(float value)
         {
-            sumoRobot.DashSpeed = value;
+            DashSpeed = value;
         }
 
         public void ResetMoveSpeed()
         {
-            sumoRobot.MoveSpeed = reservedMoveSpeed;
+            MoveSpeed = reservedMoveSpeed;
         }
 
         public void ResetDashSpeed()
         {
-            sumoRobot.DashSpeed = reservedDashSpeed;
+            DashSpeed = reservedDashSpeed;
         }
 
         public void LockMovement(float duration)
@@ -357,20 +379,20 @@ namespace CoreSumoRobot
 
         public void SetBounceResistance(float value)
         {
-            sumoRobot.BounceResistance = value;
+            BounceResistance = value;
         }
 
 
         public void ResetBounceResistance()
         {
-            sumoRobot.BounceResistance = reserverdBounceResistance;
+            BounceResistance = reserverdBounceResistance;
         }
 
         private void UpdateDashState()
         {
             LastVelocity = robotRigidBody.linearVelocity;
             ActionsTime.TryGetValue(ERobotActionType.Dash, out float lastActTime);
-            if (LastRobotActionType == ERobotActionType.Dash && Time.time >= lastActTime + sumoRobot.DashDuration)
+            if (LastRobotActionType == ERobotActionType.Dash && Time.time >= lastActTime + DashDuration)
             {
                 LastRobotActionType = ERobotActionType.Idle;
             }
@@ -379,11 +401,11 @@ namespace CoreSumoRobot
         private void HandleStopping()
         {
             ActionsTime.TryGetValue(ERobotActionType.Dash, out float lastActTime);
-            if (Time.time > lastActTime + sumoRobot.StopDelay)
+            if (Time.time > lastActTime + StopDelay)
             {
                 // Gradually decrease linear and angular velocities 
-                robotRigidBody.linearVelocity = Vector2.Lerp(robotRigidBody.linearVelocity, Vector2.zero, sumoRobot.SlowDownRate * Time.deltaTime); //[Todo] Need to just stop after it close to zero.
-                robotRigidBody.angularVelocity = Mathf.Lerp(robotRigidBody.angularVelocity, 0, sumoRobot.SlowDownRate * Time.deltaTime);
+                robotRigidBody.linearVelocity = Vector2.Lerp(robotRigidBody.linearVelocity, Vector2.zero, SlowDownRate * Time.deltaTime); //[Todo] Need to just stop after it close to zero.
+                robotRigidBody.angularVelocity = Mathf.Lerp(robotRigidBody.angularVelocity, 0, SlowDownRate * Time.deltaTime);
             }
         }
         #endregion
@@ -410,7 +432,7 @@ namespace CoreSumoRobot
         #region Robot Appearance
         public void UpdateFaceColor()
         {
-            if (sumoRobot.IsLeftSide)
+            if (Side == PlayerSide.Left)
             {
                 face.color = new Color(0, 255, 0);
             }
