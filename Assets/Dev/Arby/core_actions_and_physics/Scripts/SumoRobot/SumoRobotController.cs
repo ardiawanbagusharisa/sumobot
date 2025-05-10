@@ -50,6 +50,7 @@ namespace CoreSumoRobot
         private InputProvider provider;
         private float moveLockTime = 0f;
         private bool IsMovementLocked => moveLockTime > 0f;
+        public int Score = 0;
 
         private event Action<Collision2D> onEnterCollisions;
         private event Action<Collider2D> onExitTriggers;
