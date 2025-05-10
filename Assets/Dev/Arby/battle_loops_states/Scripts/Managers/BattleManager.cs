@@ -9,46 +9,55 @@ namespace BattleLoop
 {
     public enum BattleState
     {
-        PreBatle_Preparing,
+        PreBatle_Preparing,     // Initial state in scene, used only once. 
+        Battle_Preparing,       // Initializes a new battle or a rematch, players are setup.
+        Battle_Countdown,       // Countdown before the round starts.
+        Battle_Ongoing,         // Main gameplay state.
+        Battle_End,             // Battle ends, players are disabled.
+        Battle_Reset,           // Prepares next round or ends match.
+        PostBattle_ShowResult,  // Final state to show results. 
+    }
 
+    public enum BattleWinner
+    {
+        Left,   // Left player wins
+        Right,  // Right player wins
+        Draw,   // Draw
+        None,   // No winner yet
+    }
 
-        // [BattleState.Preparing] is very initial state, 
-        // A battle state will not back at [BattleState.Preparing] unless players decided a Rematch
-        Battle_Preparing,
-        Battle_Countdown,
-        Battle_Ongoing,
-        Battle_End,
-        // If round still counting (Best of N), the next state of [BattleState.Reset] is [BattleState.Countdown] 
-        // Otherwise the next state is [Battle_Reset]
-        Battle_Reset,
-        // End of Sub-states of Battle
-
-
-        PostBattle_ShowResult,
+    public enum RoundSystem
+    {
+        BestOf1 = 1,
+        BestOf3 = 3,
+        BestOf5 = 5,
     }
 
     public class BattleManager : MonoBehaviour
     {
+        // Singleton 
         public static BattleManager Instance { get; private set; }
 
-        public BattleInputType RobotInputType = BattleInputType.Keyboard;
-        public BattleState CurrentState { get; private set; } = BattleState.PreBatle_Preparing;
-        public float BattleTime = 60f;
-        public RoundSystem RoundSystem = RoundSystem.BestOf3;
+        // Configuration 
+        public BattleInputType RobotInputType   = BattleInputType.Keyboard;
+        public RoundSystem RoundSystem          = RoundSystem.BestOf3;
+        public float BattleTime     = 60f;
+        private float countdownTime = 3f;
+        public List<Transform> StartPositions = new List<Transform>();
+        public GameObject SumoPrefab;
+
+        // State & Internal 
+        public BattleState CurrentState = BattleState.PreBatle_Preparing;
+        public float ElapsedTime = 0;
         public Battle Battle;
         public Round CurrentRound;
-        public GameObject SumoPrefab;
-        public List<Transform> StartPositions = new List<Transform>();
+        private List<GameObject> players = new List<GameObject>();
+
+        // Events 
         public event Action<float> OnCountdownChanged;
         public event Action<Battle> OnBattleChanged;
-        public float ElapsedTime = 0;
-
-
-        private List<GameObject> players = new List<GameObject>();
-        private float countdownTime = 3f;
         private Coroutine battleTimerCoroutine;
-
-
+        
         private void Awake()
         {
             if (Instance != null)
@@ -58,10 +67,6 @@ namespace BattleLoop
             }
             Instance = this;
 
-        }
-        void OnDestroy()
-        {
-            // players.ForEach(p => p.gameObject.GetComponent<SumoRobotController>().OnOutOfArena -= OnPlayerOutOfArena);
         }
 
         void Start()
@@ -79,7 +84,6 @@ namespace BattleLoop
 
         #region PreBattle
 
-        // For now, only initializing. Battle wont be played until [Battle_Start()] is called
         private void PreBattle_Prepare()
         {
             TransitionToState(BattleState.PreBatle_Preparing);
@@ -88,7 +92,7 @@ namespace BattleLoop
 
         #region Battle
 
-        // In order to start a battle, this function must be called from outside, e.g. "Start" or "Rematch" button
+        // In order to start a battle, this function must be called from outside, e.g. "Start" or "Rematch" button. 
         public void Battle_Start()
         {
             Battle_Prepare();
@@ -122,12 +126,9 @@ namespace BattleLoop
         }
         #endregion
 
-        // Mostly private
         #region Core Logic 
         private void InitializePlayerByPosition(Transform playerPosition)
         {
-            // THis is used when rematch button pressed. 
-            // We don't need to reinitialize players, reset the players instead 
             if (players.Count == 2)
             {
                 players.ForEach(p =>
@@ -146,30 +147,28 @@ namespace BattleLoop
                 bool isLeftSide = playerIdx == 0;
 
                 // Initialize player components
-                var playerController = player.GetComponent<SumoRobotController>();
-                playerController.IdInt = playerIdx;
+                SumoRobotController controller = player.GetComponent<SumoRobotController>();
+                controller.IdInt = playerIdx;
 
-                playerController.UpdateFaceColor();
-                playerController.StartPosition = playerPosition;
-                playerController.OnOutOfArena += OnPlayerOutOfArena;
-                playerController.SetSkillEnabled(false);
-                playerController.SetMovementEnabled(false);
-
+                controller.UpdateFaceColor();
+                controller.StartPosition = playerPosition;
+                controller.OnOutOfArena += OnPlayerOutOfArena;
+                controller.SetSkillEnabled(false);
+                controller.SetMovementEnabled(false);
 
                 // Initialize battleplayer participants
-                BattlePlayer battlePlayerInfo = new BattlePlayer();
-                battlePlayerInfo.SumoRobotController = playerController;
-                battlePlayerInfo.Score = 0;
-                battlePlayerInfo.SumoRobotController.SetMovementEnabled(false);
+                SumoRobotController robotController = controller;
+                robotController.Score = 0;
+                robotController.SetMovementEnabled(false);
 
                 // Check whether player left or right
-                if (playerController.Side == PlayerSide.Left)
+                if (controller.Side == PlayerSide.Left)
                 {
-                    Battle.LeftPlayer = battlePlayerInfo;
+                    Battle.LeftPlayer = robotController;
                 }
                 else
                 {
-                    Battle.RightPlayer = battlePlayerInfo;
+                    Battle.RightPlayer = robotController;
                 }
 
                 players.Add(player);
@@ -177,6 +176,7 @@ namespace BattleLoop
                 GetComponent<InputManager>().RegisterInput(player, RobotInputType);
 
                 Debug.Log($"Player registered: {playerIdx}");
+                
                 // Auto-start when 2 players registered
                 if (players.Count == 2 && CurrentState == BattleState.Battle_Preparing)
                 {
@@ -258,7 +258,25 @@ namespace BattleLoop
             Debug.Log("OnPlayerOutOfArena");
 
             // Find player who's winner
-            SumoRobotController winner = players.Find(p => p.GetComponent<SumoRobotController>().Side != side).GetComponent<SumoRobotController>();
+            //SumoRobotController winner = players.Find(p => p.GetComponent<SumoRobotController>().Side != side).GetComponent<SumoRobotController>();
+            // Find the surviving player safely
+            SumoRobotController winner = null;
+            foreach (var player in players)
+            {
+                if (player == null) continue; // object might be destroyed
+                var controller = player.GetComponent<SumoRobotController>();
+                if (controller != null && controller.Side != side)
+                {
+                    winner = controller;
+                    break;
+                }
+            }
+
+            if (winner == null)
+            {
+                Debug.LogWarning("Winner not found!");
+                return;
+            }
 
             // check whether [winner] is LeftSide
             if (winner.Side == PlayerSide.Left)
@@ -365,31 +383,15 @@ namespace BattleLoop
         #endregion
     }
 
-
 }
 
-// Maybe move these class to a new file
-public enum BattleWinner
-{
-    Left,
-    Right,
-    Draw,
-    None,
-}
-
-public enum RoundSystem
-{
-    BestOf1 = 1,
-    BestOf3 = 3,
-    BestOf5 = 5,
-}
-
+[Serializable]
 public class Battle
 {
     public string UUID;
     public RoundSystem RoundSystem;
-    public BattlePlayer LeftPlayer;
-    public BattlePlayer RightPlayer;
+    public SumoRobotController LeftPlayer;
+    public SumoRobotController RightPlayer;
     public Round CurrentRound;
 
     public Dictionary<int, BattleWinner> WinnerEachRound
@@ -516,6 +518,7 @@ public class Battle
     }
 }
 
+[Serializable]
 public class Round
 {
     public int Id;
@@ -561,10 +564,4 @@ public class Round
         //     Debug.Log($"[Round][Log][Action][RightPlayer] Time: {Event.Key}, Value: {Event.Value}");
         // }
     }
-}
-
-public class BattlePlayer
-{
-    public int Score = 0;
-    public SumoRobotController SumoRobotController;
 }

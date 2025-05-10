@@ -46,16 +46,16 @@ public class LiveCommandInput : MonoBehaviour
 
     public void GetRobotsInfo()
     {
-        Debug.Log($"LeftSpeed: {BattleManager.Instance.Battle.LeftPlayer.SumoRobotController.DashSpeed}");
-        Debug.Log($"ActionsTime: {BattleManager.Instance.Battle.LeftPlayer.SumoRobotController.ActionsTime}");
+        Debug.Log($"LeftSpeed: {BattleManager.Instance.Battle.LeftPlayer.DashSpeed}");
+        Debug.Log($"ActionsTime: {BattleManager.Instance.Battle.LeftPlayer.ActionsTime}");
 
-        Debug.Log($"ActionSkill: {BattleManager.Instance.Battle.LeftPlayer.SumoRobotController.sumoSkill.GetCooldownInfo()}");
-        Debug.Log($"ActionSkill: {BattleManager.Instance.Battle.LeftPlayer.SumoRobotController.sumoSkill.IsSkillCooldown()}");
+        Debug.Log($"ActionSkill: {BattleManager.Instance.Battle.LeftPlayer.sumoSkill.GetCooldownInfo()}");
+        Debug.Log($"ActionSkill: {BattleManager.Instance.Battle.LeftPlayer.sumoSkill.IsSkillCooldown()}");
     }
 
     public void GetPlayerInfo()
     {
-        Debug.Log($"LeftSpeed: {BattleManager.Instance.Battle.LeftPlayer.SumoRobotController.IdInt}");
+        Debug.Log($"LeftSpeed: {BattleManager.Instance.Battle.LeftPlayer.IdInt}");
         Debug.Log($"LeftSpeed: {BattleManager.Instance.Battle.LeftPlayer.Score}");
     }
 
