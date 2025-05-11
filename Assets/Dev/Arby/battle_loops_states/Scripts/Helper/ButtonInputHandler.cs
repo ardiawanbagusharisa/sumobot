@@ -1,11 +1,6 @@
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using CoreSumoRobot;
-using Unity.VisualScripting;
 using UnityEngine;
-using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 public class ButtonInputHandler : MonoBehaviour
@@ -16,6 +11,9 @@ public class ButtonInputHandler : MonoBehaviour
     public ButtonPointerHandler Dash;
     public ButtonPointerHandler Stone;
     public ButtonPointerHandler Boost;
+
+    public Color SelectedColor = Color.grey;
+    public Color NormalColor = Color.white;
 
 
     private InputProvider inputProvider;
@@ -31,31 +29,41 @@ public class ButtonInputHandler : MonoBehaviour
     {
         var actions = inputProvider.GetInput();
 
-        GameObject selected = null;
+        // Default to normal state
+        SetButtonState(Accelerate.gameObject, false);
+        SetButtonState(TurnLeft.gameObject, false);
+        SetButtonState(TurnRight.gameObject, false);
 
         foreach (var item in actions)
         {
             if (item is AccelerateAction)
-            {
-                selected = Accelerate.gameObject;
-            }
-            else if (item is TurnLeftAction)
-            {
-                selected = TurnLeft.gameObject;
-            }
-            else if (item is TurnRightAction)
-            {
-                selected = TurnRight.gameObject;
-            }
-
-            // Dash, Stone, And Boost are not implemented because it's a press approach,
-            // Would better if use cooldown
+                SetButtonState(Accelerate.gameObject, true);
+            if (item is TurnLeftAction)
+                SetButtonState(TurnLeft.gameObject, true);
+            if (item is TurnRightAction)
+                SetButtonState(TurnRight.gameObject, true);
         }
+    }
 
-        // Update the selected object (or null if nothing matched)
-        if (EventSystem.current.currentSelectedGameObject != selected)
+    void SetButtonState(GameObject button, bool active)
+    {
+        var targetColor = active ? SelectedColor : NormalColor;
+
+        // Directly change the image color (you can also play with the button's animator if preferred)
+        button.GetComponent<Button>().image.color = targetColor;
+    }
+
+    public void SetSkillAvailability(ERobotSkillType type)
+    {
+        if (type == ERobotSkillType.Boost)
         {
-            EventSystem.current.SetSelectedGameObject(selected);
+            Boost.gameObject.SetActive(true);
+            Stone.gameObject.SetActive(false);
+        }
+        else
+        {
+            Stone.gameObject.SetActive(true);
+            Boost.gameObject.SetActive(false);
         }
     }
 
