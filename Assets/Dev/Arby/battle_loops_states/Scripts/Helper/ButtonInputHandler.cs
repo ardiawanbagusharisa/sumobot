@@ -49,10 +49,10 @@ public class ButtonInputHandler : MonoBehaviour
     {
         var targetColor = active ? SelectedColor : NormalColor;
 
-        // Directly change the image color (you can also play with the button's animator if preferred)
         button.GetComponent<Button>().image.color = targetColor;
     }
 
+    // Set active to button about what's skill can be used for player
     public void SetSkillAvailability(ERobotSkillType type)
     {
         if (type == ERobotSkillType.Boost)

@@ -34,8 +34,6 @@ public class InputManager : MonoBehaviour
 
     private void PrepareInput(SumoRobotInput input)
     {
-        Debug.Log($"BattleManager.Instance.BattleInputType {BattleManager.Instance.BattleInputType}");
-        Debug.Log($"input.PlayerController.Skill.Type {input.PlayerController.Skill.Type}");
 
         // Assigning UI Object to players
         if (input.PlayerController.Side == PlayerSide.Left)
