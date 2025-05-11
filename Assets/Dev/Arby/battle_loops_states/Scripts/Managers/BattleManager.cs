@@ -97,7 +97,7 @@ namespace BattleLoop
             {
                 return;
             }
-            
+
             if (Battle.LeftPlayer == null && Battle.RightPlayer == null)
             {
                 return;
@@ -111,15 +111,15 @@ namespace BattleLoop
         {
             GameObject player = Instantiate(SumoPrefab, playerPosition.position, playerPosition.rotation);
 
-            // Detect if position is < 0 meaning LeftSide, otherwise it's RightSide
-            int playerIdx = playerPosition.position.x < 0 ? 0 : 1;
+            // Detect the position of position.x < 0: meaning LeftSide (0), otherwise it's RightSide (1)
+            PlayerSide side = playerPosition.position.x < 0 ? PlayerSide.Left : PlayerSide.Right;
 
             // Initialize player components
             SumoRobotController controller = player.GetComponent<SumoRobotController>();
-            controller.InitializeForBattle(playerIdx, playerPosition);
+            controller.InitializeForBattle(side, playerPosition);
             controller.OnOutOfArena += OnPlayerOutOfArena;
 
-            // Check whether player left or right
+            // Check whether player left or right, assign to Battle data
             if (controller.Side == PlayerSide.Left)
             {
                 Battle.LeftPlayer = controller;
@@ -129,7 +129,7 @@ namespace BattleLoop
                 Battle.RightPlayer = controller;
             }
 
-            Debug.Log($"Player registered: {playerIdx}");
+            Debug.Log($"Player registered: {side}");
         }
 
         IEnumerator AllPlayersReady()
@@ -214,7 +214,6 @@ namespace BattleLoop
                 return;
             }
 
-            // check whether [winner] is LeftSide
             Battle.SetRoundWinner(winner);
 
             TransitionToState(BattleState.Battle_End);
@@ -227,7 +226,7 @@ namespace BattleLoop
 
             switch (CurrentState)
             {
-                // Prebatle
+                // Prebattle
                 case BattleState.PreBatle_Preparing:
                     Battle = new Battle(Guid.NewGuid().ToString(), RoundSystem);
                     StartPositions.ForEach(x => InitializePlayerByPosition(x));
@@ -362,37 +361,13 @@ public class Battle
         Winners[CurrentRound.RoundNumber] = winner;
     }
 
-    public bool ReachMaxRound()
-    {
-        int maxRound = 0;
-
-        // Calculate winner based on Best Of N rules.
-        switch (RoundSystem)
-        {
-            case RoundSystem.BestOf1:
-                maxRound = 1;
-                break;
-            case RoundSystem.BestOf3:
-                maxRound = 3;
-                break;
-            case RoundSystem.BestOf5:
-                maxRound = 5;
-                break;
-        }
-        if (CurrentRound.RoundNumber == maxRound)
-        {
-            return true;
-        }
-        return false;
-    }
-
     public SumoRobotController GetBattleWinner()
     {
         Debug.Log($"[Battle][GetBattleWinner] leftWinCount: {LeftWinCount}, rightWinCount: {RightWinCount}");
 
+        // winningTreshold is a treshold to help of deciding who has more different score based on BestOfN
         int winningTreshold = 0;
 
-        // Calculate winner based on Best Of N rules.
         switch (RoundSystem)
         {
             case RoundSystem.BestOf1:
@@ -421,7 +396,8 @@ public class Battle
             }
         }
 
-        if (ReachMaxRound())
+        // Check whether current round reaches max round
+        if (CurrentRound.RoundNumber == (int)RoundSystem)
         {
             if (LeftWinCount == RightWinCount)
             {

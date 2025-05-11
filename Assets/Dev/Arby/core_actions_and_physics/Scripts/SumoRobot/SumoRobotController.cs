@@ -15,7 +15,7 @@ namespace CoreSumoRobot
     public class SumoRobotController : MonoBehaviour
     {
         #region Basic Stats
-        public int IdInt;
+        public int IdInt => Side == PlayerSide.Left ? 0 : 1;
         public float MoveSpeed = 4.0f;
         public float RotateSpeed = 200.0f;
         #endregion
@@ -31,7 +31,7 @@ namespace CoreSumoRobot
         public float SlowDownRate = 2.0f;        // Robot's slowdown rate (velocity and rotation decay). 
         public float BounceResistance = 1f;
 
-        public PlayerSide Side => IdInt == 0 ? PlayerSide.Left : PlayerSide.Right;
+        public PlayerSide Side;
         #endregion
 
         public Vector2 LastVelocity { get; private set; } = Vector2.zero;
@@ -93,9 +93,9 @@ namespace CoreSumoRobot
 
 
         #region Robot State
-        public void InitializeForBattle(int playerIndex, Transform startPosition)
+        public void InitializeForBattle(PlayerSide side, Transform startPosition)
         {
-            IdInt = playerIndex;
+            Side = side;
             StartPosition = startPosition;
 
             UpdateFaceColor();
