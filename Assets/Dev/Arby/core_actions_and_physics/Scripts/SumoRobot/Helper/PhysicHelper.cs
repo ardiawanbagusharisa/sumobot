@@ -34,8 +34,6 @@ namespace CoreSumoRobot
             robotB.Bounce(-collisionNormal, bounceB);      // away from A
 
             Debug.Log($"[PhysicHelper] vA=>{vA} vB=>{vB} skillA={robotA.sumoSkill.CurrentSkillType} skillB={robotB.sumoSkill.CurrentSkillType} impactA=>{bounceA} impactB=>{bounceB}");
-
-            BattleManager.Instance.CurrentRound.SetEventLog($"type=bounce;bouncerId={robotA.IdInt};receiverId={robotB.IdInt};bouncerImpact={bounceA};receiverImpact={bounceB}");
         }
     }
 }
