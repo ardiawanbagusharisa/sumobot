@@ -7,7 +7,6 @@ namespace CoreSumoRobot
 
     public enum BattleInputType
     {
-        Keyboard,
         UI,
         LiveCommand,
         Script,
@@ -18,6 +17,7 @@ namespace CoreSumoRobot
     {
         public bool IncludeKeyboard;
         public PlayerSide PlayerSide;
+        public ERobotSkillType SkillType;
 
         private Queue<ISumoAction> CommandQueue = new Queue<ISumoAction>();
 
@@ -27,7 +27,7 @@ namespace CoreSumoRobot
             IncludeKeyboard = includeKeyboard;
         }
 
-        void Start()
+        void OnEnable()
         {
             CommandQueue = new Queue<ISumoAction>();
         }
@@ -63,44 +63,32 @@ namespace CoreSumoRobot
             if (PlayerSide == PlayerSide.Left)
             {
                 if (Input.GetKey(KeyCode.W))
-                {
                     actions.Add(new AccelerateAction());
-                }
-                if (Input.GetKeyUp(KeyCode.LeftShift))
-                {
+                if (Input.GetKeyDown(KeyCode.LeftShift))
                     actions.Add(new DashAction());
-                }
                 if (Input.GetKey(KeyCode.D))
-                {
                     actions.Add(new TurnRightAction());
-                }
                 if (Input.GetKey(KeyCode.A))
-                {
                     actions.Add(new TurnLeftAction());
-                }
-                if (Input.GetKeyUp(KeyCode.Q))
+
+
+                if (Input.GetKeyDown(KeyCode.C))
                 {
-                    actions.Add(new SkillAction(ERobotSkillType.Stone));
-                }
-                if (Input.GetKeyUp(KeyCode.E))
-                {
-                    actions.Add(new SkillAction(ERobotSkillType.Boost));
+                    actions.Add(new SkillAction(SkillType));
                 }
             }
             else
             {
                 if (Input.GetKey(KeyCode.O))
                     actions.Add(new AccelerateAction());
-                if (Input.GetKeyUp(KeyCode.RightShift))
+                if (Input.GetKeyDown(KeyCode.RightShift))
                     actions.Add(new DashAction());
                 if (Input.GetKey(KeyCode.Semicolon))
                     actions.Add(new TurnRightAction());
                 if (Input.GetKey(KeyCode.K))
                     actions.Add(new TurnLeftAction());
-                if (Input.GetKeyUp(KeyCode.I))
-                    actions.Add(new SkillAction(ERobotSkillType.Stone));
-                if (Input.GetKeyUp(KeyCode.P))
-                    actions.Add(new SkillAction(ERobotSkillType.Boost));
+                if (Input.GetKeyDown(KeyCode.M))
+                    actions.Add(new SkillAction(SkillType));
             }
             return actions;
         }
@@ -128,11 +116,13 @@ namespace CoreSumoRobot
 
         public void OnBoostSkillButtonPressed()
         {
+            if (SkillType != ERobotSkillType.Boost) return;
             CommandQueue.Enqueue(new SkillAction(ERobotSkillType.Boost));
         }
 
         public void OnStoneSkillButtonPressed()
         {
+            if (SkillType != ERobotSkillType.Stone) return;
             CommandQueue.Enqueue(new SkillAction(ERobotSkillType.Stone));
         }
         #endregion

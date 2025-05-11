@@ -256,7 +256,7 @@ MonoBehaviour:
   IdInt: 0
   MoveSpeed: 4
   RotateSpeed: 200
-  DashSpeed: 5
+  DashSpeed: 8
   DashDuration: 0.5
   DashCooldown: 1
   StopDelay: 0.5
@@ -265,3 +265,12 @@ MonoBehaviour:
   isInputDisabled: 0
   face: {fileID: 4764707064835075653}
   StartPosition: {fileID: 0}
+  Skill:
+    Type: 0
+    IsActive: 0
+    StoneCooldown: 0
+    StoneDuration: 0
+    StoneBounceBackMultiplier: 0
+    BoostCooldown: 0
+    BoostDuration: 0
+    BoostMultiplier: 0

@@ -3,6 +3,8 @@ using System.Collections;
 using System.Collections.Generic;
 using BattleLoop;
 using CoreSumoRobot;
+using Unity.VisualScripting;
+using UnityEditor.Experimental.GraphView;
 using UnityEngine;
 
 namespace BattleLoop
@@ -18,14 +20,6 @@ namespace BattleLoop
         PostBattle_ShowResult,  // Final state to show results. 
     }
 
-    public enum BattleWinner
-    {
-        Left,   // Left player wins
-        Right,  // Right player wins
-        Draw,   // Draw
-        None,   // No winner yet
-    }
-
     public enum RoundSystem
     {
         BestOf1 = 1,    // Need 1 winning round
@@ -39,7 +33,7 @@ namespace BattleLoop
         public static BattleManager Instance { get; private set; }
 
         // Configuration 
-        public BattleInputType RobotInputType = BattleInputType.Keyboard;
+        public BattleInputType BattleInputType = BattleInputType.UI;
         public RoundSystem RoundSystem = RoundSystem.BestOf3;
         public float BattleTime = 60f;
         public float CountdownTime = 3f;
@@ -51,7 +45,7 @@ namespace BattleLoop
         public float ElapsedTime = 0;
         public Battle Battle;
         public Round CurrentRound;
-        private List<GameObject> players = new List<GameObject>();
+        // private List<GameObject> players = new List<GameObject>();
 
         // Events 
         public event Action<float> OnCountdownChanged;
@@ -84,12 +78,27 @@ namespace BattleLoop
             }
         }
 
+        public void SetLeftDefaultSkill(int type)
+        {
+            Battle.LeftPlayer.Skill.Type = type == 0 ? ERobotSkillType.Boost : ERobotSkillType.Stone;
+        }
+
+        public void SetRightDefaultSkill(int type)
+        {
+            Battle.RightPlayer.Skill.Type = type == 0 ? ERobotSkillType.Boost : ERobotSkillType.Stone;
+        }
+
         // Start a battle. Can also be called from UI.
         public void Battle_Start()
         {
-            if (CurrentState == BattleState.Battle_Preparing || 
-                CurrentState == BattleState.Battle_Countdown || 
+            if (CurrentState == BattleState.Battle_Preparing ||
+                CurrentState == BattleState.Battle_Countdown ||
                 CurrentState == BattleState.Battle_Ongoing)
+            {
+                return;
+            }
+            
+            if (Battle.LeftPlayer == null && Battle.RightPlayer == null)
             {
                 return;
             }
@@ -100,55 +109,30 @@ namespace BattleLoop
         #region Core Logic 
         private void InitializePlayerByPosition(Transform playerPosition)
         {
-            // [Todo] Can this be merged with the bottom part?
-            if (players.Count == 2)
-            {
-                players.ForEach(p =>
-                {
-                    p.GetComponent<SumoRobotController>().ResetForNewBattle();
-                    GetComponent<InputManager>().RegisterInput(p, RobotInputType);
-                });
-                StartCoroutine(AllPlayerAreReadyToPlay());
-                return;
-            }
-
             GameObject player = Instantiate(SumoPrefab, playerPosition.position, playerPosition.rotation);
-            // [Todo] If contained? 
-            if (!players.Contains(player))
+
+            // Detect if position is < 0 meaning LeftSide, otherwise it's RightSide
+            int playerIdx = playerPosition.position.x < 0 ? 0 : 1;
+
+            // Initialize player components
+            SumoRobotController controller = player.GetComponent<SumoRobotController>();
+            controller.InitializeForBattle(playerIdx, playerPosition);
+            controller.OnOutOfArena += OnPlayerOutOfArena;
+
+            // Check whether player left or right
+            if (controller.Side == PlayerSide.Left)
             {
-                int playerIdx = players.Count;
-                bool isLeftSide = playerIdx == 0;
-
-                // Initialize player components
-                SumoRobotController controller = player.GetComponent<SumoRobotController>();
-                controller.InitializeForBattle(playerIdx, playerPosition);
-                controller.OnOutOfArena += OnPlayerOutOfArena;
-
-                // Check whether player left or right
-                if (controller.Side == PlayerSide.Left)
-                {
-                    Battle.LeftPlayer = controller;
-                }
-                else
-                {
-                    Battle.RightPlayer = controller;
-                }
-
-                players.Add(player);
-
-                GetComponent<InputManager>().RegisterInput(player, RobotInputType);
-
-                Debug.Log($"Player registered: {playerIdx}");
-                
-                // Auto-start when 2 players registered
-                if (players.Count == 2 && CurrentState == BattleState.Battle_Preparing)
-                {
-                    StartCoroutine(AllPlayerAreReadyToPlay());
-                }
+                Battle.LeftPlayer = controller;
             }
+            else
+            {
+                Battle.RightPlayer = controller;
+            }
+
+            Debug.Log($"Player registered: {playerIdx}");
         }
 
-        IEnumerator AllPlayerAreReadyToPlay()
+        IEnumerator AllPlayersReady()
         {
             // Delay state transition reaction
             yield return new WaitForSeconds(0.5f);
@@ -157,10 +141,7 @@ namespace BattleLoop
 
         private void Deinitialize()
         {
-            players.ForEach(p =>
-            {
-                GetComponent<InputManager>().UnregisterInput(p, RobotInputType);
-            });
+            GetComponent<InputManager>().UnInitInput();
         }
 
         private IEnumerator StartCountdown()
@@ -176,63 +157,55 @@ namespace BattleLoop
                 yield return new WaitForSeconds(1f);
                 timer -= 1f;
             }
+
             TransitionToState(BattleState.Battle_Ongoing);
         }
 
         private IEnumerator StartBattleTimer()
         {
             float timer = BattleTime;
-            while (timer > 0 && CurrentState == BattleState.Battle_Ongoing)
+            while (timer >= 0 && CurrentState == BattleState.Battle_Ongoing)
             {
                 int time = Mathf.CeilToInt(timer);
                 Debug.Log(time);
                 CurrentRound.TimeLeft = time;
 
                 // In order to update UI for time left in realtime, we need to call [ChangeBattleInfo]
-                ChangeBattleInfo();
-
-                if (time <= 1)
-                {
-                    // Draw isn't tested yet
-                    TransitionToState(BattleState.Battle_End);
-
-                    yield return new WaitForSeconds(1f);
-                }
+                UpdateBattleData();
 
                 yield return new WaitForSeconds(1f);
                 timer -= 1f;
             }
+
+            TransitionToState(BattleState.Battle_End);
         }
 
 
         private IEnumerator ResetBattle()
         {
             yield return new WaitForSeconds(3f);
-            foreach (GameObject player in players)
-            {
-                player.GetComponent<SumoRobotController>().ResetForNewBattle();
-            }
+            Battle.LeftPlayer.GetComponent<SumoRobotController>().ResetForNewBattle();
+            Battle.RightPlayer.GetComponent<SumoRobotController>().ResetForNewBattle();
             TransitionToState(BattleState.Battle_Reset);
             yield return new WaitForSeconds(1f);
         }
 
         private void OnPlayerOutOfArena(PlayerSide side)
         {
+            if (CurrentState != BattleState.Battle_Ongoing) return;
+
             Debug.Log("OnPlayerOutOfArena");
 
             // Find player who's winner
-            //SumoRobotController winner = players.Find(p => p.GetComponent<SumoRobotController>().Side != side).GetComponent<SumoRobotController>();
-            // Find the surviving player safely
-            SumoRobotController winner = null;
-            foreach (var player in players)
+            SumoRobotController winner;
+
+            if (side == PlayerSide.Left)
             {
-                if (player == null) continue; // object might be destroyed
-                var controller = player.GetComponent<SumoRobotController>();
-                if (controller != null && controller.Side != side)
-                {
-                    winner = controller;
-                    break;
-                }
+                winner = Battle.RightPlayer;
+            }
+            else
+            {
+                winner = Battle.LeftPlayer;
             }
 
             if (winner == null)
@@ -242,15 +215,7 @@ namespace BattleLoop
             }
 
             // check whether [winner] is LeftSide
-            if (winner.Side == PlayerSide.Left)
-            {
-                Battle.SetRoundWinner(BattleWinner.Left);
-            }
-            else
-            {
-                Battle.SetRoundWinner(BattleWinner.Right);
-            }
-            ChangeBattleInfo();
+            Battle.SetRoundWinner(winner);
 
             TransitionToState(BattleState.Battle_End);
         }
@@ -264,14 +229,19 @@ namespace BattleLoop
             {
                 // Prebatle
                 case BattleState.PreBatle_Preparing:
-                    Battle = new Battle(Guid.NewGuid().ToString(), this.RoundSystem);
+                    Battle = new Battle(Guid.NewGuid().ToString(), RoundSystem);
+                    StartPositions.ForEach(x => InitializePlayerByPosition(x));
                     break;
 
                 // Battle
                 case BattleState.Battle_Preparing:
-                    Battle.Clear();
+                    Battle.ClearWinner();
                     CurrentRound = new Round(1, Mathf.CeilToInt(BattleTime));
-                    StartPositions.ForEach(x => InitializePlayerByPosition(x));
+
+                    Battle.LeftPlayer.ResetForNewBattle();
+                    Battle.RightPlayer.ResetForNewBattle();
+                    GetComponent<InputManager>().InitInput();
+                    StartCoroutine(AllPlayersReady());
                     break;
                 case BattleState.Battle_Countdown:
                     ElapsedTime = 0;
@@ -283,17 +253,23 @@ namespace BattleLoop
                     break;
                 case BattleState.Battle_Ongoing:
                     battleTimerCoroutine = StartCoroutine(StartBattleTimer());
-                    players.ForEach((p) => p.GetComponent<SumoRobotController>().SetSkillEnabled(true));
-                    players.ForEach((p) => p.GetComponent<SumoRobotController>().SetMovementEnabled(true));
+
+                    Battle.LeftPlayer.SetSkillEnabled(true);
+                    Battle.LeftPlayer.SetMovementEnabled(true);
+                    Battle.RightPlayer.SetSkillEnabled(true);
+                    Battle.RightPlayer.SetMovementEnabled(true);
                     break;
                 case BattleState.Battle_End:
                     StopCoroutine(battleTimerCoroutine);
-                    players.ForEach((p) => p.GetComponent<SumoRobotController>().SetSkillEnabled(false));
-                    players.ForEach((p) => p.GetComponent<SumoRobotController>().SetMovementEnabled(false));
+
+                    Battle.LeftPlayer.SetSkillEnabled(false);
+                    Battle.LeftPlayer.SetMovementEnabled(false);
+                    Battle.RightPlayer.SetSkillEnabled(false);
+                    Battle.RightPlayer.SetMovementEnabled(false);
                     StartCoroutine(ResetBattle());
                     break;
                 case BattleState.Battle_Reset:
-                    if (Battle.GetBattleWinner() != BattleWinner.None)
+                    if (Battle.GetBattleWinner() != null)
                     {
                         TransitionToState(BattleState.PostBattle_ShowResult);
                     }
@@ -303,7 +279,7 @@ namespace BattleLoop
 
                         // Create n+1 round
                         CurrentRound = new Round(previousRound + 1, Mathf.CeilToInt(BattleTime));
-                        
+
                         Debug.Log($"CurrentRound.RoundNumber {CurrentRound.RoundNumber}");
                         //Start a round again
                         TransitionToState(BattleState.Battle_Countdown);
@@ -320,11 +296,11 @@ namespace BattleLoop
                     // Post Battle
             }
 
-            ChangeBattleInfo();
+            UpdateBattleData();
         }
 
         // Call this when we need to trigger OnBattleChanged immediately
-        private void ChangeBattleInfo()
+        private void UpdateBattleData()
         {
 
             if (CurrentRound != null)
@@ -334,7 +310,7 @@ namespace BattleLoop
                 Battle.CurrentRound = CurrentRound;
                 Battle.Rounds[CurrentRound.RoundNumber] = CurrentRound;
             }
-            Debug.Log($"OnBattleChanged {OnBattleChanged == null}");
+
             OnBattleChanged?.Invoke(Battle);
         }
         #endregion
@@ -351,11 +327,12 @@ public class Battle
     public SumoRobotController RightPlayer;
     public Round CurrentRound;
 
-    public Dictionary<int, BattleWinner> WinnerEachRound
+    public Dictionary<int, SumoRobotController> Winners
     {
         get;
         private set;
-    } = new Dictionary<int, BattleWinner>();
+    } = new Dictionary<int, SumoRobotController>();
+
     public Dictionary<int, Round> Rounds = new Dictionary<int, Round>();
 
     public int LeftWinCount;
@@ -370,112 +347,105 @@ public class Battle
         RoundSystem = roundSystem;
     }
 
-    public void SetRoundWinner(BattleWinner winner)
+    public void SetRoundWinner(SumoRobotController winner)
     {
-        switch (winner)
+        if (winner.Side == PlayerSide.Left)
         {
-            case BattleWinner.Left:
-                LeftWinCount += 1;
-                break;
-            case BattleWinner.Right:
-                RightWinCount += 1;
-                break;
-            case BattleWinner.Draw:
-                break;
+            LeftWinCount += 1;
+        }
+        else
+        {
+            RightWinCount += 1;
         }
 
         CurrentRound.RoundWinner = winner;
-        WinnerEachRound[CurrentRound.RoundNumber] = winner;
+        Winners[CurrentRound.RoundNumber] = winner;
     }
 
-    public BattleWinner GetBattleWinner()
+    public bool ReachMaxRound()
     {
-        Debug.Log($"[Battle][GetBattleWinner] leftWinCount: {LeftWinCount}, rightWinCount: {RightWinCount}");
+        int maxRound = 0;
 
         // Calculate winner based on Best Of N rules.
         switch (RoundSystem)
         {
             case RoundSystem.BestOf1:
-                return CheckWinnerByDifference(includeDraw: true);
+                maxRound = 1;
+                break;
             case RoundSystem.BestOf3:
-                BattleWinner winner3 = CheckWinnerByTreshold(2);
-                if (winner3 != BattleWinner.None)
-                {
-                    return winner3;
-                }
-
-                if (CurrentRound.RoundNumber == 3)
-                {
-                    return CheckWinnerByDifference(includeDraw: true);
-                }
+                maxRound = 3;
                 break;
             case RoundSystem.BestOf5:
-                BattleWinner winner5 = CheckWinnerByTreshold(3);
-                if (winner5 != BattleWinner.None)
-                {
-                    return winner5;
-                }
-
-                if (CurrentRound.RoundNumber > 3)
-                {
-                    return CheckWinnerByDifference(includeDraw: false);
-                }
+                maxRound = 5;
                 break;
         }
-        return BattleWinner.None;
+        if (CurrentRound.RoundNumber == maxRound)
+        {
+            return true;
+        }
+        return false;
     }
 
-    private BattleWinner CheckWinnerByDifference(bool includeDraw)
+    public SumoRobotController GetBattleWinner()
     {
-        if (LeftWinCount == RightWinCount)
-        {
-            if (includeDraw)
-            {
-                Debug.Log($"[Battle][GetBattleWinner] Draw");
-                return BattleWinner.Draw;
-            }
-            else
-            {
-                Debug.Log($"[Battle][GetBattleWinner] None");
-                return BattleWinner.None;
-            }
+        Debug.Log($"[Battle][GetBattleWinner] leftWinCount: {LeftWinCount}, rightWinCount: {RightWinCount}");
 
-        }
-        else if (LeftWinCount > RightWinCount)
-        {
-            Debug.Log($"[Battle][GetBattleWinner] Left");
-            return BattleWinner.Left;
-        }
-        else
-        {
-            Debug.Log($"[Battle][GetBattleWinner] Right");
-            return BattleWinner.Right;
-        }
-    }
+        int winningTreshold = 0;
 
-    // Detect if one of sides has [treshold] more scores. 
-    // e.g. in BestOf3 the treshold is 2, when the difference score is 2 - 0, Left is the Winner.
-    private BattleWinner CheckWinnerByTreshold(int treshold)
-    {
-        if (Math.Abs(LeftWinCount - RightWinCount) == treshold)
+        // Calculate winner based on Best Of N rules.
+        switch (RoundSystem)
+        {
+            case RoundSystem.BestOf1:
+                winningTreshold = 1;
+                break;
+            case RoundSystem.BestOf3:
+                winningTreshold = 2;
+                break;
+            case RoundSystem.BestOf5:
+                winningTreshold = 3;
+                break;
+        }
+
+        int scoreDifference = Math.Abs(LeftWinCount - RightWinCount);
+        if (scoreDifference >= winningTreshold)
         {
             if (LeftWinCount > RightWinCount)
             {
-                Debug.Log($"[Battle][GetBattleWinner] Left Win");
-                return BattleWinner.Left;
+                Debug.Log($"[Battle][GetBattleWinner] Left!");
+                return LeftPlayer;
             }
             else
             {
-                Debug.Log($"[Battle][GetBattleWinner] Right Win");
-                return BattleWinner.Right;
+                Debug.Log($"[Battle][GetBattleWinner] Right!");
+                return RightPlayer;
             }
         }
-        return BattleWinner.None;
+
+        if (ReachMaxRound())
+        {
+            if (LeftWinCount == RightWinCount)
+            {
+                Debug.Log($"[Battle][GetBattleWinner] Draw!");
+            }
+            else if (LeftWinCount > RightWinCount)
+            {
+                Debug.Log($"[Battle][GetBattleWinner] Left!");
+                return LeftPlayer;
+            }
+            else
+            {
+                Debug.Log($"[Battle][GetBattleWinner] Right!");
+                return RightPlayer;
+            }
+        }
+
+        return null;
     }
 
-    public void Clear()
+
+    public void ClearWinner()
     {
-        WinnerEachRound.Clear();
+        Winners.Clear();
         LeftWinCount = 0;
         RightWinCount = 0;
     }
@@ -488,7 +458,7 @@ public class Round
     public int TimeLeft;
     public int RoundNumber = 0;
     public BattleState BattleState;
-    public BattleWinner RoundWinner;
+    public SumoRobotController RoundWinner;
 
     public Round(int roundNumber, int time)
     {

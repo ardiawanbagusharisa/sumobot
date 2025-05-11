@@ -1,103 +1,85 @@
+using BattleLoop;
 using CoreSumoRobot;
 using UnityEngine;
 
-
-
 public class InputManager : MonoBehaviour
 {
-
     public GameObject LeftButton;
     public GameObject RightButton;
 
     public GameObject LeftLiveCommand;
     public GameObject RightLiveCommand;
 
-    private BattleInputType battleInputType;
-
     private SumoRobotInput playerLeftInput;
     private SumoRobotInput playerRightInput;
 
-    public void RegisterInput(GameObject player, BattleInputType inputType)
+    public void InitInput()
     {
-        battleInputType = inputType;
 
-        SumoRobotInput input = new SumoRobotInput();
+        playerLeftInput = new SumoRobotInput(BattleManager.Instance.Battle.LeftPlayer);
+        playerRightInput = new SumoRobotInput(BattleManager.Instance.Battle.RightPlayer);
 
-        var playerController = player.GetComponent<SumoRobotController>();
-        input.PlayerController = playerController;
-
-        if (playerController.Side == PlayerSide.Left)
-        {
-            playerLeftInput = input;
-        }
-        else
-        {
-            playerRightInput = input;
-        }
-
-        PrepareInput(playerController);
+        PrepareInput(playerLeftInput);
+        PrepareInput(playerRightInput);
     }
 
-    public void UnregisterInput(GameObject player, BattleInputType inputType)
+    public void UnInitInput()
     {
-
-
-        if (player.GetComponent<SumoRobotController>().Side == PlayerSide.Left)
-        {
-            playerLeftInput = null;
-        }
-        else
-        {
-            playerRightInput = null;
-        }
+        playerLeftInput.PlayerController.UseInput(null);
+        playerLeftInput = null;
+        playerRightInput.PlayerController.UseInput(null);
+        playerRightInput = null;
 
     }
 
-    private void PrepareInput(SumoRobotController playerController)
+    private void PrepareInput(SumoRobotInput input)
     {
-        SumoRobotInput input;
+        Debug.Log($"BattleManager.Instance.BattleInputType {BattleManager.Instance.BattleInputType}");
+        Debug.Log($"input.PlayerController.Skill.Type {input.PlayerController.Skill.Type}");
 
         // Assigning UI Object to players
-        if (playerController.Side == PlayerSide.Left)
+        if (input.PlayerController.Side == PlayerSide.Left)
         {
-            switch (battleInputType)
+            switch (BattleManager.Instance.BattleInputType)
             {
                 case BattleInputType.UI:
+                    LeftButton.SetActive(true);
                     LeftLiveCommand.SetActive(false);
                     playerLeftInput.UIInputObject = LeftButton;
+                    playerLeftInput.UIInputObject.GetComponent<ButtonInputHandler>().SetSkillAvailability(input.PlayerController.Skill.Type);
                     break;
                 case BattleInputType.LiveCommand:
+                    LeftLiveCommand.SetActive(true);
                     LeftButton.SetActive(false);
                     playerLeftInput.UIInputObject = LeftLiveCommand;
                     break;
             }
-            input = playerLeftInput;
         }
         else
         {
-            switch (battleInputType)
+            switch (BattleManager.Instance.BattleInputType)
             {
                 case BattleInputType.UI:
+                    RightButton.SetActive(true);
                     RightLiveCommand.SetActive(false);
                     playerRightInput.UIInputObject = RightButton;
+                    playerRightInput.UIInputObject.GetComponent<ButtonInputHandler>().SetSkillAvailability(input.PlayerController.Skill.Type);
                     break;
                 case BattleInputType.LiveCommand:
+                    RightLiveCommand.SetActive(true);
                     RightButton.SetActive(false);
                     playerRightInput.UIInputObject = RightLiveCommand;
                     break;
             }
-            input = playerRightInput;
         }
 
-        // Declare that Robot uses an input method
+        // Declare that Robot uses an input type
         InputProvider inputProvider = input.UIInputObject.GetComponent<InputProvider>();
-        input.inputProvider = inputProvider;
+        input.InputProvider = inputProvider;
         input.PlayerController.UseInput(inputProvider);
-        input.UIInputObject.SetActive(true);
-
 
         // Additional initialization
-        switch (battleInputType)
+        switch (BattleManager.Instance.BattleInputType)
         {
             case BattleInputType.UI:
                 break;
@@ -114,6 +96,11 @@ public class InputManager : MonoBehaviour
 public class SumoRobotInput
 {
     public SumoRobotController PlayerController;
-    public InputProvider inputProvider;
+    public InputProvider InputProvider;
     public GameObject UIInputObject;
+
+    public SumoRobotInput(SumoRobotController controller)
+    {
+        PlayerController = controller;
+    }
 }

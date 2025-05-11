@@ -19,7 +19,7 @@ public class LiveCommandInput : MonoBehaviour
     public void ExampleCommand()
     {
         Debug.Log($"Example of executing {SumoRobotCommand.PlayerController.IdInt}");
-        var script = SumoRobotCommand.inputProvider;
+        var script = SumoRobotCommand.InputProvider;
         script.EnqueueCommand(new AccelerateTimeAction(2f));
         script.EnqueueCommand(new TurnAngleAction(180f));
         script.EnqueueCommand(new TurnAngleAction(-90f));
@@ -37,11 +37,11 @@ public class LiveCommandInput : MonoBehaviour
     {
         var timer = BattleManager.Instance.CurrentRound.TimeLeft;
         var rounds = BattleManager.Instance.CurrentRound.RoundNumber;
-        var lScore = BattleManager.Instance.Battle.LeftPlayer.Score;
-        var rScore = BattleManager.Instance.Battle.RightPlayer.Score;
-        BattleWinner winner = BattleManager.Instance.Battle.GetBattleWinner();
+        // var lScore = BattleManager.Instance.Battle.LeftPlayer.Score;
+        // var rScore = BattleManager.Instance.Battle.RightPlayer.Score;
+        SumoRobotController winner = BattleManager.Instance.Battle.GetBattleWinner();
 
-        Debug.Log($"timer: {timer}, rounds: {rounds}, leftScore: {lScore}, rightScore: {rScore}, winner: {winner}");
+        // Debug.Log($"timer: {timer}, rounds: {rounds}, leftScore: {lScore}, rightScore: {rScore}, winner: {winner}");
     }
 
     public void GetRobotsInfo()
@@ -49,14 +49,14 @@ public class LiveCommandInput : MonoBehaviour
         Debug.Log($"LeftSpeed: {BattleManager.Instance.Battle.LeftPlayer.DashSpeed}");
         Debug.Log($"ActionsTime: {BattleManager.Instance.Battle.LeftPlayer.ActionsTime}");
 
-        Debug.Log($"ActionSkill: {BattleManager.Instance.Battle.LeftPlayer.sumoSkill.GetCooldownInfo()}");
-        Debug.Log($"ActionSkill: {BattleManager.Instance.Battle.LeftPlayer.sumoSkill.IsSkillCooldown()}");
+        // Debug.Log($"ActionSkill: {BattleManager.Instance.Battle.LeftPlayer.Skill.GetCooldownInfo()}");
+        Debug.Log($"ActionSkill: {BattleManager.Instance.Battle.LeftPlayer.Skill.IsSkillCooldown()}");
     }
 
     public void GetPlayerInfo()
     {
         Debug.Log($"LeftSpeed: {BattleManager.Instance.Battle.LeftPlayer.IdInt}");
-        Debug.Log($"LeftSpeed: {BattleManager.Instance.Battle.LeftPlayer.Score}");
+        // Debug.Log($"LeftSpeed: {BattleManager.Instance.Battle.LeftPlayer.Score}");
     }
 
     public void GetLog()

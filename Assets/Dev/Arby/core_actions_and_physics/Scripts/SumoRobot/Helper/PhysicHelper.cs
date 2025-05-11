@@ -17,12 +17,12 @@ namespace CoreSumoRobot
             float bounceA = baseForce * (vB / total);  // robotA gets more bounce if B has more speed
             float bounceB = baseForce * (vA / total);  // robotB gets more bounce if A has more speed
 
-            if (robotA.sumoSkill.CurrentSkillType == ERobotSkillType.Stone)
+            if (robotA.Skill.Type == ERobotSkillType.Stone && robotA.Skill.IsActive)
             {
                 bounceB = vB / total;
             }
 
-            if (robotB.sumoSkill.CurrentSkillType == ERobotSkillType.Stone)
+            if (robotB.Skill.Type == ERobotSkillType.Stone && robotA.Skill.IsActive)
             {
                 bounceA = vA / total;
             }
@@ -33,7 +33,7 @@ namespace CoreSumoRobot
             robotA.Bounce(collisionNormal, bounceA);       // away from B
             robotB.Bounce(-collisionNormal, bounceB);      // away from A
 
-            Debug.Log($"[PhysicHelper] vA=>{vA} vB=>{vB} skillA={robotA.sumoSkill.CurrentSkillType} skillB={robotB.sumoSkill.CurrentSkillType} impactA=>{bounceA} impactB=>{bounceB}");
+            Debug.Log($"[PhysicHelper] vA=>{vA} vB=>{vB} skillA={robotA.Skill.Type} skillB={robotB.Skill.Type} impactA=>{bounceA} impactB=>{bounceB}");
         }
     }
 }

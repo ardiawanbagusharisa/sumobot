@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using CoreSumoRobot;
 using TMPro;
 using Unity.Collections;
 using UnityEngine;
@@ -11,6 +12,15 @@ namespace BattleLoop
 
     public class BattleUIManager : MonoBehaviour
     {
+        public static BattleUIManager Instance { get; private set; }
+
+        public List<GameObject> BattleStatePanel = new List<GameObject>();
+
+        // Pre-battle
+        public TMP_Dropdown PreLeftDefaultSkill;
+        public TMP_Dropdown PreRightDefaultSkill;
+
+        // Battle
         public TMP_Text IndicatorBattle;
         public TMP_Text IndicatorBattleCountDownTimer;
         public TMP_Text StageBestOf;
@@ -18,11 +28,19 @@ namespace BattleLoop
         public TMP_Text StageBattleTime;
         public GameObject LeftScore;
         public GameObject RightScore;
-
-        public List<GameObject> BattleStatePanel = new List<GameObject>();
-
         private List<Image> leftScoreDots = new List<Image>();
         private List<Image> rightScoreDots = new List<Image>();
+
+        private void Awake()
+        {
+            if (Instance != null)
+            {
+                Destroy(gameObject);
+                return;
+            }
+            Instance = this;
+
+        }
 
         void Start()
         {
@@ -53,11 +71,13 @@ namespace BattleLoop
             switch (round.BattleState)
             {
                 case BattleState.PreBatle_Preparing:
-                    Debug.Log("Called");
                     BattleStatePanel.Find((o) => o.CompareTag("BattleState/Pre")).SetActive(true);
 
                     BattleStatePanel.Find((o) => o.CompareTag("BattleState/Ongoing")).SetActive(false);
                     BattleStatePanel.Find((o) => o.CompareTag("BattleState/Post")).SetActive(false);
+
+                    PreLeftDefaultSkill.value = (int)BattleManager.Instance.Battle.LeftPlayer.Skill.Type;
+                    PreRightDefaultSkill.value = (int)BattleManager.Instance.Battle.LeftPlayer.Skill.Type;
                     break;
 
                 case BattleState.Battle_Preparing:
@@ -69,6 +89,7 @@ namespace BattleLoop
 
                     BattleStatePanel.Find((o) => o.CompareTag("BattleState/Pre")).SetActive(false);
                     BattleStatePanel.Find((o) => o.CompareTag("BattleState/Post")).SetActive(false);
+
                     // ClearScore();
                     break;
                 case BattleState.Battle_Countdown:
@@ -98,7 +119,7 @@ namespace BattleLoop
 
         private void UpdateScore(Battle battleInfo)
         {
-            if (battleInfo.WinnerEachRound.Count() == 0)
+            if (battleInfo.Winners.Count() == 0)
             {
                 ClearScore();
                 return;
@@ -108,11 +129,13 @@ namespace BattleLoop
             {
                 if (i <= battleInfo.LeftWinCount)
                 {
-                    leftScoreDots[i - 1].color = Color.green;
+                    if (!leftScoreDots[i - 1].IsDestroyed())
+                        leftScoreDots[i - 1].color = Color.green;
                 }
                 if (i <= battleInfo.RightWinCount)
                 {
-                    rightScoreDots[i - 1].color = Color.green;
+                    if (!leftScoreDots[i - 1].IsDestroyed())
+                        rightScoreDots[i - 1].color = Color.green;
                 }
             }
         }
