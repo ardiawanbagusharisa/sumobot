@@ -103,8 +103,7 @@ namespace CoreSumoRobot
             if (IsSkillCooldown() == false)
             {
                 Debug.Log($"[Skill][{CurrentSkillType}] activated!");
-                BattleManager.Instance.CurrentRound.SetActionLog(controller.Side, $"type=skill;robotId={controller.IdInt};skillType={CurrentSkillType};isActive=true");
-
+                
                 switch (CurrentSkillType)
                 {
                     case ERobotSkillType.Boost:
@@ -162,8 +161,6 @@ namespace CoreSumoRobot
                     controller.SetMovementEnabled(true);
                     break;
             }
-
-            BattleManager.Instance.CurrentRound.SetActionLog(controller.Side, $"type=skill;robotId={controller.IdInt};skillType={CurrentSkillType};isActive=false");
         }
 
         private IEnumerator OnAfterCooldown(ERobotSkillType type)

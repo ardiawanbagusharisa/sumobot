@@ -5673,13 +5673,34 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   RobotInputType: 1
+  RoundSystem: 3
   BattleTime: 60
-  RoundSystem: 1
-  SumoPrefab: {fileID: 1488574921577525681, guid: e48db3198e16346af866a9419a1964cc, type: 3}
+  CountdownTime: 3
   StartPositions:
   - {fileID: 1987440270}
   - {fileID: 1757629781}
+  SumoPrefab: {fileID: 1488574921577525681, guid: e48db3198e16346af866a9419a1964cc, type: 3}
+  CurrentState: 0
   ElapsedTime: 0
+  Battle:
+    BattleID: 
+    RoundSystem: 0
+    LeftPlayer: {fileID: 0}
+    RightPlayer: {fileID: 0}
+    CurrentRound:
+      Id: 0
+      TimeLeft: 0
+      RoundNumber: 0
+      BattleState: 0
+      RoundWinner: 0
+    LeftWinCount: 0
+    RightWinCount: 0
+  CurrentRound:
+    Id: 0
+    TimeLeft: 0
+    RoundNumber: 0
+    BattleState: 0
+    RoundWinner: 0
 --- !u!114 &2130233542
 MonoBehaviour:
   m_ObjectHideFlags: 0

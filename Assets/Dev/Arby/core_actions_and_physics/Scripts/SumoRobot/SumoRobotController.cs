@@ -95,6 +95,16 @@ namespace CoreSumoRobot
 
 
         #region Robot State
+        public void InitializeForBattle(int playerIndex, Transform startPosition)
+        {
+            IdInt = playerIndex;
+            StartPosition = startPosition;
+            Score = 0;
+
+            UpdateFaceColor();
+            SetSkillEnabled(false);
+            SetMovementEnabled(false);
+        }
 
         public void IsInArena(Collider2D collider)
         {
@@ -183,8 +193,6 @@ namespace CoreSumoRobot
                 return;
             }
 
-            BattleManager.Instance.CurrentRound.SetActionLog(Side, $"type=action;dash={type},{time};robotId={IdInt}");
-
             switch (type)
             {
                 case DashActionType.Default:
@@ -209,8 +217,6 @@ namespace CoreSumoRobot
 
         public void Turn(TurnActionType type = TurnActionType.Angle, float angle = float.NaN)
         {
-            BattleManager.Instance.CurrentRound.SetActionLog(Side, $"type=action;turn={type},{angle};robotId={IdInt}");
-
             switch (type)
             {
                 case TurnActionType.Left:
@@ -247,8 +253,6 @@ namespace CoreSumoRobot
 
         IEnumerator TurnOverAngle(float totalAngle, float duration)
         {
-            BattleManager.Instance.CurrentRound.SetActionLog(Side, $"type=action;turn_angle={totalAngle},{duration};robotId={IdInt}");
-
             float rotatedAngle = 0f;
             float speed = totalAngle / duration; // degrees per second
 
@@ -270,8 +274,6 @@ namespace CoreSumoRobot
 
         IEnumerator AccelerateOverTime(float time, bool isDash = false)
         {
-            BattleManager.Instance.CurrentRound.SetActionLog(Side, $"type=action;accelerate_time={time},{isDash};robotId={IdInt}");
-
             float elapsedTime = 0f;
             float speed = isDash ? DashSpeed : MoveSpeed;
 
