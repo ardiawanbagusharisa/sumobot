@@ -253,15 +253,26 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 90126e8039a69424aa6ef1402950cf1a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  IdInt: 0
   MoveSpeed: 4
   RotateSpeed: 200
-  DashSpeed: 5
+  DashSpeed: 7
   DashDuration: 0.5
   DashCooldown: 1
   StopDelay: 0.5
   SlowDownRate: 2
   BounceResistance: 1
+  CollisionBaseForce: 4
+  Side: 0
   isInputDisabled: 0
   face: {fileID: 4764707064835075653}
   StartPosition: {fileID: 0}
+  Skill:
+    Type: 0
+    IsActive: 0
+    StoneCooldown: 0
+    StoneDuration: 0
+    StoneBounceBackMultiplier: 0
+    BoostCooldown: 0
+    BoostDuration: 0
+    BoostMultiplier: 0
+  InputProvider: {fileID: 0}

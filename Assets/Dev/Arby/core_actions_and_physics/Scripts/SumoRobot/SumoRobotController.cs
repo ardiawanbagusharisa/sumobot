@@ -15,7 +15,7 @@ namespace CoreSumoRobot
     public class SumoRobotController : MonoBehaviour
     {
         #region Basic Stats
-        public int IdInt;
+        public int IdInt => Side == PlayerSide.Left ? 0 : 1;
         public float MoveSpeed = 4.0f;
         public float RotateSpeed = 200.0f;
         #endregion
@@ -30,8 +30,9 @@ namespace CoreSumoRobot
         public float StopDelay = 0.5f;           // Time before robot stops.
         public float SlowDownRate = 2.0f;        // Robot's slowdown rate (velocity and rotation decay). 
         public float BounceResistance = 1f;
+        public float CollisionBaseForce = 4f;
 
-        public PlayerSide Side => IdInt == 0 ? PlayerSide.Left : PlayerSide.Right;
+        public PlayerSide Side;
         #endregion
 
         public Vector2 LastVelocity { get; private set; } = Vector2.zero;
@@ -39,18 +40,19 @@ namespace CoreSumoRobot
         public SpriteRenderer face;
         public Transform StartPosition;
         public event Action<PlayerSide> OnOutOfArena;
-        public SumoSkill sumoSkill;
+        public SumoSkill Skill;
+        public InputProvider InputProvider;
 
-        private bool isMoveDisabled = false;
-        private bool isSkillDisabled = false;
+
+        private bool isMoveDisabled = true;
+        private bool isSkillDisabled = true;
         private float reservedMoveSpeed;
         private float reservedDashSpeed;
         private float reserverdBounceResistance;
         private Rigidbody2D robotRigidBody;
-        private InputProvider provider;
         private float moveLockTime = 0f;
+        private float lastDashTime;
         private bool IsMovementLocked => moveLockTime > 0f;
-        public int Score = 0;
 
         private event Action<Collision2D> onEnterCollisions;
         private event Action<Collider2D> onExitTriggers;
@@ -58,15 +60,19 @@ namespace CoreSumoRobot
 
         private void Awake()
         {
-            sumoSkill = new SumoSkill(this);
+            Skill = new SumoSkill(this);
             robotRigidBody = GetComponent<Rigidbody2D>();
             reservedMoveSpeed = MoveSpeed;
             reservedDashSpeed = DashSpeed;
             reserverdBounceResistance = BounceResistance;
+        }
+
+        void OnEnable()
+        {
             SetRules(true);
         }
 
-        void OnDestroy()
+        void OnDisable()
         {
             SetRules(false);
         }
@@ -95,11 +101,10 @@ namespace CoreSumoRobot
 
 
         #region Robot State
-        public void InitializeForBattle(int playerIndex, Transform startPosition)
+        public void InitializeForBattle(PlayerSide side, Transform startPosition)
         {
-            IdInt = playerIndex;
+            Side = side;
             StartPosition = startPosition;
-            Score = 0;
 
             UpdateFaceColor();
             SetSkillEnabled(false);
@@ -140,26 +145,12 @@ namespace CoreSumoRobot
 
 
         #region Robot Action Data
-        public Dictionary<ERobotActionType, float> ActionsTime = new Dictionary<ERobotActionType, float>();
-
-        private ERobotActionType _lastRobotActionType = ERobotActionType.Idle;
-
-        public ERobotActionType LastRobotActionType
-        {
-            get { return _lastRobotActionType; }
-            set
-            {
-                ActionsTime[_lastRobotActionType] = Time.time;
-                _lastRobotActionType = value;
-            }
-        }
 
         private void ResetActionData()
         {
-            ActionsTime = new Dictionary<ERobotActionType, float>();
-            LastRobotActionType = ERobotActionType.Idle;
+            lastDashTime = 0;
 
-            sumoSkill.Reset();
+            Skill.Reset();
         }
         #endregion
 
@@ -173,15 +164,18 @@ namespace CoreSumoRobot
                 return;
             }
 
-            switch (type)
+            if (Time.time >= lastDashTime + DashDuration)
             {
-                case AccelerateActionType.Default:
-                    robotRigidBody.linearVelocity = transform.up * MoveSpeed;
-                    break;
-                case AccelerateActionType.Time:
-                    if (time == float.NaN) throw new Exception("Time can't be NaN when you are using [AccelerateActionType.Time] type");
-                    StartCoroutine(AccelerateOverTime(time));
-                    break;
+                switch (type)
+                {
+                    case AccelerateActionType.Default:
+                        robotRigidBody.linearVelocity = transform.up * MoveSpeed;
+                        break;
+                    case AccelerateActionType.Time:
+                        if (time == float.NaN) throw new Exception("Time can't be NaN when you are using [AccelerateActionType.Time] type");
+                        StartCoroutine(AccelerateOverTime(time));
+                        break;
+                }
             }
         }
 
@@ -196,10 +190,9 @@ namespace CoreSumoRobot
             switch (type)
             {
                 case DashActionType.Default:
-                    ActionsTime.TryGetValue(ERobotActionType.Dash, out float lastActTime);
-                    if (Time.time >= lastActTime + DashDuration)
+                    if (Time.time >= lastDashTime + DashCooldown)
                     {
-                        LastRobotActionType = ERobotActionType.Dash;
+                        lastDashTime = Time.time;
                         robotRigidBody.linearVelocity = transform.up * DashSpeed;
                     }
                     else
@@ -248,7 +241,7 @@ namespace CoreSumoRobot
             Debug.Log($"isSkillDisabled {isSkillDisabled}");
 
             if (isSkillDisabled) return;
-            sumoSkill.Activate(skillType);
+            Skill.Activate(skillType);
         }
 
         IEnumerator TurnOverAngle(float totalAngle, float duration)
@@ -311,16 +304,6 @@ namespace CoreSumoRobot
             isInputDisabled = !value;
         }
 
-        public void ChangeMoveSpeed(float value)
-        {
-            MoveSpeed = value;
-        }
-
-        public void ChangeDashSpeed(float value)
-        {
-            DashSpeed = value;
-        }
-
         public void ResetMoveSpeed()
         {
             MoveSpeed = reservedMoveSpeed;
@@ -351,8 +334,35 @@ namespace CoreSumoRobot
             // Only the faster one handles the bounce
             if (mySpeed >= otherSpeed)
             {
-                Vector2 collNormal = collision.contacts[0].normal;
-                PhysicHelper.HandleBounce(this, otherRobot, collNormal);
+                Vector2 collisionNormal = collision.contacts[0].normal;
+                float senderVelocity = LastVelocity.magnitude;
+                float receiverVelocity = otherRobot.LastVelocity.magnitude;
+
+                float total = senderVelocity + receiverVelocity + 0.01f;
+
+                float senderImpact = CollisionBaseForce * (receiverVelocity / total);  // robotA gets more bounce if B has more speed
+                float receiverImpact = CollisionBaseForce * (senderVelocity / total);  // robotB gets more bounce if A has more speed
+
+                // Check if Sender using Stone, then calculate the Receiver impact
+                if (Skill.Type == ERobotSkillType.Stone && otherRobot.Skill.IsActive)
+                {
+                    receiverImpact = receiverVelocity / total;
+                }
+
+                // Check if Receiver using Stone, then calculate the Sender impact
+                if (otherRobot.Skill.Type == ERobotSkillType.Stone && otherRobot.Skill.IsActive)
+                {
+                    senderImpact = senderVelocity / total;
+                }
+
+                // Applying opposite bounce back multiplier
+                senderImpact *= otherRobot.BounceResistance;
+                receiverImpact *= BounceResistance;
+
+                Bounce(collisionNormal, senderImpact);       // away from B
+                otherRobot.Bounce(-collisionNormal, receiverImpact);      // away from A
+
+                Debug.Log($"[BounceRule]\nSender=>{Side}, Receiver=>{otherRobot.Side}\nSenderCurrentSkill={Skill.Type}, ReceiverCurrentSkill=>{otherRobot.Skill.Type}\nSenderImpact=>{senderImpact}, ReceiverImpact=>{receiverImpact}");
             }
         }
 
@@ -380,12 +390,6 @@ namespace CoreSumoRobot
             LastVelocity = value;
         }
 
-        public void SetBounceResistance(float value)
-        {
-            BounceResistance = value;
-        }
-
-
         public void ResetBounceResistance()
         {
             BounceResistance = reserverdBounceResistance;
@@ -394,17 +398,11 @@ namespace CoreSumoRobot
         private void UpdateDashState()
         {
             LastVelocity = robotRigidBody.linearVelocity;
-            ActionsTime.TryGetValue(ERobotActionType.Dash, out float lastActTime);
-            if (LastRobotActionType == ERobotActionType.Dash && Time.time >= lastActTime + DashDuration)
-            {
-                LastRobotActionType = ERobotActionType.Idle;
-            }
         }
 
         private void HandleStopping()
         {
-            ActionsTime.TryGetValue(ERobotActionType.Dash, out float lastActTime);
-            if (Time.time > lastActTime + StopDelay)
+            if (Time.time > lastDashTime + StopDelay)
             {
                 // Gradually decrease linear and angular velocities 
                 robotRigidBody.linearVelocity = Vector2.Lerp(robotRigidBody.linearVelocity, Vector2.zero, SlowDownRate * Time.deltaTime); //[Todo] Need to just stop after it close to zero.
@@ -415,16 +413,12 @@ namespace CoreSumoRobot
 
         #region Robot Movement Input
 
-        public void UseInput(InputProvider inputProvider)
-        {
-            provider = inputProvider;
-        }
         void ReadInput()
         {
-            if (provider == null) return;
+            if (InputProvider == null) return;
             if (isInputDisabled) return;
 
-            List<ISumoAction> actions = provider.GetInput();
+            List<ISumoAction> actions = InputProvider.GetInput();
             foreach (ISumoAction action in actions)
             {
                 action.Execute(this);
