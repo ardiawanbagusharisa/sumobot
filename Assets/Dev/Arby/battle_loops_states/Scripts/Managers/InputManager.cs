@@ -1,3 +1,4 @@
+using System;
 using BattleLoop;
 using CoreSumoRobot;
 using UnityEngine;
@@ -33,8 +34,7 @@ public class InputManager : MonoBehaviour
             {
                 case BattleInputType.UI:
                     LeftButton.SetActive(true);
-                    var skillText = LeftButton.GetComponent<ButtonInputHandler>().SetSkillAvailability(controller.Skill.Type);
-                    BattleUIManager.Instance.LeftSpecialSkill = skillText;
+                    LeftButton.GetComponent<ButtonInputHandler>().SetSkillAvailability(controller.Skill.Type);
                     selectedInputObject = LeftButton;
 
                     LeftLiveCommand.SetActive(false);
@@ -53,8 +53,7 @@ public class InputManager : MonoBehaviour
             {
                 case BattleInputType.UI:
                     RightButton.SetActive(true);
-                    var skillText = RightButton.GetComponent<ButtonInputHandler>().SetSkillAvailability(controller.Skill.Type);
-                    BattleUIManager.Instance.RightSpecialSkill = skillText;
+                    RightButton.GetComponent<ButtonInputHandler>().SetSkillAvailability(controller.Skill.Type);
                     selectedInputObject = RightButton;
 
                     RightLiveCommand.SetActive(false);
@@ -70,7 +69,7 @@ public class InputManager : MonoBehaviour
 
         if (selectedInputObject == null)
         {
-            throw new System.Exception("One of [BattleInputType]'s object must be used");
+            throw new Exception("One of [BattleInputType]'s object must be used");
         }
 
         // Declare that Robot driven by an input provider
@@ -87,6 +86,15 @@ public class InputManager : MonoBehaviour
                 LeftLiveCommand.GetComponent<LiveCommandInput>().Init(controller);
                 RightLiveCommand.GetComponent<LiveCommandInput>().Init(controller);
                 break;
+        }
+    }
+
+    public void ResetCooldownButton()
+    {
+        if (BattleManager.Instance.BattleInputType == BattleInputType.UI)
+        {
+            LeftButton.GetComponent<ButtonInputHandler>().ResetCooldown();
+            RightButton.GetComponent<ButtonInputHandler>().ResetCooldown();
         }
     }
 }

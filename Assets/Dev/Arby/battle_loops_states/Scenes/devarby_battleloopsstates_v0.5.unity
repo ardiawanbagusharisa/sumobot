@@ -8346,7 +8346,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   BattleInputType: 0
-  RoundSystem: 1
+  RoundSystem: 3
   BattleTime: 40
   CountdownTime: 3
   StartPositions:
@@ -8397,6 +8397,8 @@ MonoBehaviour:
   StageBattleTime: {fileID: 1506464103721430510}
   LeftScore: {fileID: 1995473052}
   RightScore: {fileID: 304621562}
+  LeftDash: {fileID: 8682156856159326934}
+  RightDash: {fileID: 1980094120}
   LeftSpecialSkill: {fileID: 0}
   RightSpecialSkill: {fileID: 0}
 --- !u!114 &2130233543

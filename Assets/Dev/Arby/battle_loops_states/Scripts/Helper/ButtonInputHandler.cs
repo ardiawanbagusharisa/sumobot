@@ -1,4 +1,5 @@
 
+using BattleLoop;
 using CoreSumoRobot;
 using TMPro;
 using UnityEngine;
@@ -15,7 +16,6 @@ public class ButtonInputHandler : MonoBehaviour
 
     public Color SelectedColor = Color.grey;
     public Color NormalColor = Color.white;
-
 
     private InputProvider inputProvider;
 
@@ -46,7 +46,7 @@ public class ButtonInputHandler : MonoBehaviour
         Boost.OnPress -= inputProvider.OnBoostSkillButtonPressed;
     }
 
-    void FixedUpdate()
+    void Update()
     {
         var actions = inputProvider.GetInput();
 
@@ -54,6 +54,12 @@ public class ButtonInputHandler : MonoBehaviour
         SetButtonState(Accelerate.gameObject, false);
         SetButtonState(TurnLeft.gameObject, false);
         SetButtonState(TurnRight.gameObject, false);
+        SetButtonState(Dash.gameObject, false);
+
+        if (Boost.gameObject.activeSelf)
+            SetButtonState(Boost.gameObject, false);
+        if (Stone.gameObject.activeSelf)
+            SetButtonState(Stone.gameObject, false);
 
         foreach (var item in actions)
         {
@@ -63,7 +69,106 @@ public class ButtonInputHandler : MonoBehaviour
                 SetButtonState(TurnLeft.gameObject, true);
             if (item is TurnRightAction)
                 SetButtonState(TurnRight.gameObject, true);
+
         }
+
+        if (BattleManager.Instance.CurrentState == BattleState.Battle_Ongoing)
+        {
+            UpdateSkillCooldown();
+            UpdateDashCooldown();
+        }
+    }
+
+    private void UpdateDashCooldown()
+    {
+        bool IsCooldown;
+        if (inputProvider.PlayerSide == PlayerSide.Left)
+        {
+            IsCooldown = BattleManager.Instance.Battle.LeftPlayer.IsDashCooldown;
+        }
+        else
+        {
+            IsCooldown = BattleManager.Instance.Battle.RightPlayer.IsDashCooldown;
+        }
+
+        if (IsCooldown)
+        {
+            Dash.GetComponentInChildren<Button>().interactable = false;
+        }
+        else
+        {
+            Dash.GetComponentInChildren<Button>().interactable = true;
+        }
+    }
+
+    private void UpdateSkillCooldown()
+    {
+        GameObject selectedSpecialSkillObj;
+        if (Stone.gameObject.activeSelf)
+        {
+            selectedSpecialSkillObj = Stone.gameObject;
+        }
+        else
+        {
+            selectedSpecialSkillObj = Boost.gameObject;
+        }
+
+        // GameObject maybe null when the engine detached
+        if (selectedSpecialSkillObj == null) return;
+
+        SumoRobotController player;
+        if (inputProvider.PlayerSide == PlayerSide.Left)
+        {
+            player = BattleManager.Instance.Battle.LeftPlayer;
+        }
+        else
+        {
+            player = BattleManager.Instance.Battle.RightPlayer;
+        }
+
+        if (player.Skill.IsSkillCooldown)
+        {
+            selectedSpecialSkillObj.GetComponentInChildren<Button>().interactable = false;
+            selectedSpecialSkillObj.GetComponentInChildren<TMP_Text>().SetText(Mathf.CeilToInt(player.Skill.SkillCooldown()).ToString());
+        }
+        else
+        {
+            selectedSpecialSkillObj.GetComponentInChildren<Button>().interactable = true;
+            selectedSpecialSkillObj.GetComponentInChildren<TMP_Text>().SetText(player.Skill.Type.ToString());
+        }
+    }
+
+    public void ResetCooldown()
+    {
+        // Special Skill
+        GameObject selectedSpecialSkillObj;
+        if (Stone.gameObject.activeSelf)
+        {
+            selectedSpecialSkillObj = Stone.gameObject;
+        }
+        else
+        {
+            selectedSpecialSkillObj = Boost.gameObject;
+        }
+
+        // GameObject maybe null when the engine detached
+        if (selectedSpecialSkillObj == null) return;
+
+        SumoRobotController player;
+        if (inputProvider.PlayerSide == PlayerSide.Left)
+        {
+            player = BattleManager.Instance.Battle.LeftPlayer;
+        }
+        else
+        {
+            player = BattleManager.Instance.Battle.RightPlayer;
+        }
+
+        selectedSpecialSkillObj.GetComponentInChildren<Button>().interactable = true;
+        selectedSpecialSkillObj.GetComponentInChildren<TMP_Text>().SetText(player.Skill.Type.ToString());
+
+        // Dash
+        Dash.GetComponentInChildren<Button>().interactable = true;
     }
 
     void SetButtonState(GameObject button, bool active)
@@ -74,14 +179,14 @@ public class ButtonInputHandler : MonoBehaviour
     }
 
     // Set active to button about what's skill can be used for player
-    public TMP_Text SetSkillAvailability(ERobotSkillType type)
+    public GameObject SetSkillAvailability(ERobotSkillType type)
     {
         if (type == ERobotSkillType.Boost)
         {
             Boost.gameObject.SetActive(true);
 
             Stone.gameObject.SetActive(false);
-            return Boost.gameObject.GetComponentInChildren<TMP_Text>();
+            return Boost.gameObject;
         }
         else
         {
@@ -92,7 +197,7 @@ public class ButtonInputHandler : MonoBehaviour
             Stone.transform.position = Boost.gameObject.transform.position;
 
             Boost.gameObject.SetActive(false);
-            return Stone.gameObject.GetComponentInChildren<TMP_Text>();
+            return Stone.gameObject;
         }
     }
 }
