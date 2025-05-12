@@ -259,7 +259,10 @@ namespace BattleLoop
                     Battle.RightPlayer.SetMovementEnabled(true);
                     break;
                 case BattleState.Battle_End:
-                    StopCoroutine(battleTimerCoroutine);
+                    if (battleTimerCoroutine != null)
+                    {
+                        StopCoroutine(battleTimerCoroutine);
+                    }
 
                     Battle.LeftPlayer.SetSkillEnabled(false);
                     Battle.LeftPlayer.SetMovementEnabled(false);
