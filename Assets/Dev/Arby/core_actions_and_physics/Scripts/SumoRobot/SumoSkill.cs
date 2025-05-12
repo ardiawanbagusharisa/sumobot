@@ -103,7 +103,6 @@ namespace CoreSumoRobot
 
         public void ActivateBoost()
         {
-            // BattleUIManager.Instance.ShowSkillCooldown(this, ERobotSkillType.Boost);
             boostLastTimeUsed = BattleManager.Instance.ElapsedTime;
             controller.SetMovementEnabled(true);
             controller.MoveSpeed *= BoostMultiplier;
