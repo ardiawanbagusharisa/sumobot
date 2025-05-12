@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using BattleLoop;
 using UnityEngine;
@@ -6,14 +7,16 @@ namespace CoreSumoRobot
 {
     public enum ERobotSkillType
     {
-        Stone,
-        Boost,
-        None,
+        Boost = 0,
+        Stone = 1,
     }
 
+
+    [Serializable]
     public class SumoSkill
     {
-        public ERobotSkillType CurrentSkillType = ERobotSkillType.None;
+        public ERobotSkillType Type = ERobotSkillType.Boost;
+        public bool IsActive = false;
 
         #region Stone Stat
         public float StoneCooldown = 10f;
@@ -36,14 +39,11 @@ namespace CoreSumoRobot
             this.controller = controller;
         }
 
-        // This function provides flexibility of knowing the usage of skill cooldown
-        // call SumoSkill.IsSkillCooldown() -> returns the skill cooldown of current skill
-        // call SumoSkill.IsSkillCooldown(ERobotSkillType.Boost) -> returns skill cooldown only for the boost
-        public bool IsSkillCooldown(ERobotSkillType type = ERobotSkillType.None)
+        public float SkillCooldown()
         {
             float lastUsedSkill = 0;
 
-            switch (type)
+            switch (Type)
             {
                 case ERobotSkillType.Boost:
                     lastUsedSkill = boostLastTimeUsed;
@@ -51,60 +51,34 @@ namespace CoreSumoRobot
                 case ERobotSkillType.Stone:
                     lastUsedSkill = stoneLastTimeUsed;
                     break;
-                case ERobotSkillType.None:
-                    if (CurrentSkillType == ERobotSkillType.None)
-                    {
-                        return false;
-                    }
-
-                    lastUsedSkill = CurrentSkillType == ERobotSkillType.Boost ? boostLastTimeUsed : stoneLastTimeUsed;
-                    break;
             }
 
-            float skillCooldown = type == ERobotSkillType.Boost ? BoostCooldown : StoneCooldown;
+            float skillCooldown = Type == ERobotSkillType.Boost ? BoostCooldown : StoneCooldown;
 
-            Debug.Log($"IsSkillCooldown: elapsedTime={BattleManager.Instance.ElapsedTime}, lastUsedSkill={lastUsedSkill}, skillCooldown={skillCooldown}");
-            if (BattleManager.Instance.ElapsedTime >= lastUsedSkill + skillCooldown)
-            {
-                return false;
-            }
-            return true;
+            float cooldownAmount = lastUsedSkill + skillCooldown - BattleManager.Instance.ElapsedTime;
+            return cooldownAmount;
         }
 
-        public float GetCooldownInfo(ERobotSkillType type = ERobotSkillType.None)
-        {
-            switch (type)
-            {
-                case ERobotSkillType.Boost:
-                    return BoostCooldown;
-                case ERobotSkillType.Stone:
-                    return StoneCooldown;
-                case ERobotSkillType.None:
-                    if (CurrentSkillType == ERobotSkillType.None)
-                    {
-                        return -1;
-                    }
-                    return CurrentSkillType == ERobotSkillType.Boost ? BoostCooldown : StoneCooldown;
-            }
-            return -1;
-        }
+        public bool IsSkillCooldown => SkillCooldown() >= 0f;
 
         public void Reset()
         {
             boostLastTimeUsed = 0;
             stoneLastTimeUsed = 0;
-            CurrentSkillType = ERobotSkillType.None;
+            IsActive = false;
         }
 
-        public void Activate(ERobotSkillType skillTypeParam)
+        public bool Activate(ERobotSkillType skillTypeParam)
         {
-            CurrentSkillType = skillTypeParam;
+            Type = skillTypeParam;
 
-            if (IsSkillCooldown() == false)
+            // Check whether the skill is ready or not
+            if (!IsSkillCooldown)
             {
-                Debug.Log($"[Skill][{CurrentSkillType}] activated!");
-                
-                switch (CurrentSkillType)
+                Debug.Log($"[Skill][{Type}] activated!");
+
+                IsActive = true;
+                switch (Type)
                 {
                     case ERobotSkillType.Boost:
                         ActivateBoost();
@@ -114,34 +88,34 @@ namespace CoreSumoRobot
                         break;
                 }
 
-                controller.StartCoroutine(OnAfterDuration(CurrentSkillType));
-                controller.StartCoroutine(OnAfterCooldown(CurrentSkillType));
+                controller.StartCoroutine(OnAfterDuration(Type));
+                controller.StartCoroutine(OnAfterCooldown(Type));
+                return true;
             }
             else
             {
-                Debug.Log($"[Skill][{CurrentSkillType}] is on cooldown!");
+                Debug.Log($"[Skill][{Type}] is on cooldown!");
             }
+
+            return false;
 
         }
 
         public void ActivateBoost()
         {
-            SkillCooldownUI.Instance.ShowSkillCooldown(this, ERobotSkillType.Boost);
+            // BattleUIManager.Instance.ShowSkillCooldown(this, ERobotSkillType.Boost);
             boostLastTimeUsed = BattleManager.Instance.ElapsedTime;
-
             controller.SetMovementEnabled(true);
-            controller.ChangeMoveSpeed(controller.MoveSpeed * BoostMultiplier);
-            controller.ChangeDashSpeed(controller.DashSpeed * BoostMultiplier);
+            controller.MoveSpeed *= BoostMultiplier;
+            controller.DashSpeed *= BoostMultiplier;
         }
 
         public void ActivateStone()
         {
-            SkillCooldownUI.Instance.ShowSkillCooldown(this, ERobotSkillType.Stone);
             stoneLastTimeUsed = BattleManager.Instance.ElapsedTime;
-
             controller.FreezeMovement();
             controller.SetMovementEnabled(false);
-            controller.SetBounceResistance(StoneBounceBackMultiplier);
+            controller.BounceResistance *= StoneBounceBackMultiplier;
         }
 
         private IEnumerator OnAfterDuration(ERobotSkillType type)
@@ -149,6 +123,7 @@ namespace CoreSumoRobot
             float duration = type == ERobotSkillType.Boost ? BoostDuration : StoneDuration;
             yield return new WaitForSeconds(duration);
 
+            IsActive = false;
             switch (type)
             {
                 case ERobotSkillType.Boost:
@@ -168,8 +143,7 @@ namespace CoreSumoRobot
             float cooldown = type == ERobotSkillType.Boost ? BoostCooldown : StoneCooldown;
             yield return new WaitForSeconds(cooldown);
 
-            CurrentSkillType = ERobotSkillType.None;
-            Debug.Log($"[Skill][{CurrentSkillType}] cooldown end!");
+            Debug.Log($"[Skill][{Type}] cooldown end!");
         }
 
 
