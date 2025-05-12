@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using BattleLoop;
 using CoreSumoRobot;
+using Unity.VisualScripting;
 using UnityEngine;
 
 namespace BattleLoop
@@ -244,7 +245,7 @@ namespace BattleLoop
                     break;
                 case BattleState.Battle_Countdown:
                     ElapsedTime = 0;
-                    if (countdownCoroutine != null)
+                    if (countdownCoroutine != null && !gameObject.IsDestroyed())
                     {
                         StopCoroutine(countdownCoroutine);
                     }
@@ -259,7 +260,7 @@ namespace BattleLoop
                     Battle.RightPlayer.SetMovementEnabled(true);
                     break;
                 case BattleState.Battle_End:
-                    if (battleTimerCoroutine != null)
+                    if (battleTimerCoroutine != null && !gameObject.IsDestroyed())
                     {
                         StopCoroutine(battleTimerCoroutine);
                     }
