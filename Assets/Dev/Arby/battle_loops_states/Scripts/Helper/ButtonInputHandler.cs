@@ -1,5 +1,6 @@
 
 using CoreSumoRobot;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -53,17 +54,22 @@ public class ButtonInputHandler : MonoBehaviour
     }
 
     // Set active to button about what's skill can be used for player
-    public void SetSkillAvailability(ERobotSkillType type)
+    public TMP_Text SetSkillAvailability(ERobotSkillType type)
     {
         if (type == ERobotSkillType.Boost)
         {
             Boost.gameObject.SetActive(true);
+
             Stone.gameObject.SetActive(false);
+            return Boost.gameObject.GetComponentInChildren<TMP_Text>();
         }
         else
         {
             Stone.gameObject.SetActive(true);
+            Stone.transform.position = Boost.gameObject.transform.position;
+
             Boost.gameObject.SetActive(false);
+            return Stone.gameObject.GetComponentInChildren<TMP_Text>();
         }
     }
 

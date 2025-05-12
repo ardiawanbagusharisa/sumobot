@@ -3,8 +3,6 @@ using System.Collections;
 using System.Collections.Generic;
 using BattleLoop;
 using CoreSumoRobot;
-using Unity.VisualScripting;
-using UnityEditor.Experimental.GraphView;
 using UnityEngine;
 
 namespace BattleLoop
@@ -72,7 +70,7 @@ namespace BattleLoop
 
         void Update()
         {
-            if (CurrentRound != null && CurrentRound.BattleState == BattleState.Battle_Ongoing)
+            if (CurrentRound != null && CurrentState == BattleState.Battle_Ongoing)
             {
                 ElapsedTime += Time.deltaTime;
             }
@@ -141,7 +139,8 @@ namespace BattleLoop
 
         private void Deinitialize()
         {
-            GetComponent<InputManager>().UnInitInput();
+            Battle.LeftPlayer.InputProvider = null;
+            Battle.RightPlayer.InputProvider = null;
         }
 
         private IEnumerator StartCountdown()
@@ -239,7 +238,8 @@ namespace BattleLoop
 
                     Battle.LeftPlayer.ResetForNewBattle();
                     Battle.RightPlayer.ResetForNewBattle();
-                    GetComponent<InputManager>().InitInput();
+                    InputManager.Instance.PrepareInput(Battle.LeftPlayer);
+                    InputManager.Instance.PrepareInput(Battle.RightPlayer);
                     StartCoroutine(AllPlayersReady());
                     break;
                 case BattleState.Battle_Countdown:
@@ -304,8 +304,6 @@ namespace BattleLoop
 
             if (CurrentRound != null)
             {
-                CurrentRound.BattleState = CurrentState;
-
                 Battle.CurrentRound = CurrentRound;
                 Battle.Rounds[CurrentRound.RoundNumber] = CurrentRound;
             }
@@ -433,9 +431,7 @@ public class Round
     public int Id;
     public int TimeLeft;
     public int RoundNumber = 0;
-    public BattleState BattleState;
     public SumoRobotController RoundWinner;
-
     public Round(int roundNumber, int time)
     {
         RoundNumber = roundNumber;
