@@ -1,6 +1,5 @@
 // implementasi dengan kelas pak bagus (sample)
 
-using System.Collections.Generic;
 using BattleLoop;
 using CoreSumoRobot;
 using UnityEngine;
@@ -9,16 +8,16 @@ using UnityEngine;
 // Dummy class
 public class LiveCommandInput : MonoBehaviour
 {
-    public SumoRobotInput SumoRobotCommand;
+    public SumoRobotController SumoRobotCommand;
 
-    public void Init(SumoRobotInput sumoRobotCommand)
+    public void Init(SumoRobotController sumoRobotCommand)
     {
         SumoRobotCommand = sumoRobotCommand;
     }
 
     public void ExampleCommand()
     {
-        Debug.Log($"Example of executing {SumoRobotCommand.PlayerController.IdInt}");
+        Debug.Log($"Example of executing {SumoRobotCommand.IdInt}");
         var script = SumoRobotCommand.InputProvider;
         script.EnqueueCommand(new AccelerateTimeAction(2f));
         script.EnqueueCommand(new TurnAngleAction(180f));
@@ -47,10 +46,9 @@ public class LiveCommandInput : MonoBehaviour
     public void GetRobotsInfo()
     {
         Debug.Log($"LeftSpeed: {BattleManager.Instance.Battle.LeftPlayer.DashSpeed}");
-        Debug.Log($"ActionsTime: {BattleManager.Instance.Battle.LeftPlayer.ActionsTime}");
 
         // Debug.Log($"ActionSkill: {BattleManager.Instance.Battle.LeftPlayer.Skill.GetCooldownInfo()}");
-        Debug.Log($"ActionSkill: {BattleManager.Instance.Battle.LeftPlayer.Skill.IsSkillCooldown()}");
+        Debug.Log($"ActionSkill: {BattleManager.Instance.Battle.LeftPlayer.Skill.SkillCooldown()}");
     }
 
     public void GetPlayerInfo()

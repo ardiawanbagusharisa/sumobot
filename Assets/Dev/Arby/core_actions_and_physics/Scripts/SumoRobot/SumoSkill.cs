@@ -9,7 +9,6 @@ namespace CoreSumoRobot
     {
         Boost = 0,
         Stone = 1,
-        None = 2,
     }
 
 
@@ -40,14 +39,11 @@ namespace CoreSumoRobot
             this.controller = controller;
         }
 
-        // This function provides flexibility of knowing the usage of skill cooldown
-        // call SumoSkill.IsSkillCooldown() -> returns the skill cooldown of current skill
-        // call SumoSkill.IsSkillCooldown(ERobotSkillType.Boost) -> returns skill cooldown only for the boost
-        public bool IsSkillCooldown(ERobotSkillType type = ERobotSkillType.None)
+        public float SkillCooldown()
         {
             float lastUsedSkill = 0;
 
-            switch (type)
+            switch (Type)
             {
                 case ERobotSkillType.Boost:
                     lastUsedSkill = boostLastTimeUsed;
@@ -55,25 +51,15 @@ namespace CoreSumoRobot
                 case ERobotSkillType.Stone:
                     lastUsedSkill = stoneLastTimeUsed;
                     break;
-                case ERobotSkillType.None:
-                    if (Type == ERobotSkillType.None)
-                    {
-                        return false;
-                    }
-
-                    lastUsedSkill = Type == ERobotSkillType.Boost ? boostLastTimeUsed : stoneLastTimeUsed;
-                    break;
             }
 
-            float skillCooldown = type == ERobotSkillType.Boost ? BoostCooldown : StoneCooldown;
+            float skillCooldown = Type == ERobotSkillType.Boost ? BoostCooldown : StoneCooldown;
 
-            Debug.Log($"IsSkillCooldown: elapsedTime={BattleManager.Instance.ElapsedTime}, lastUsedSkill={lastUsedSkill}, skillCooldown={skillCooldown}");
-            if (BattleManager.Instance.ElapsedTime >= lastUsedSkill + skillCooldown)
-            {
-                return false;
-            }
-            return true;
+            float cooldownAmount = lastUsedSkill + skillCooldown - BattleManager.Instance.ElapsedTime;
+            return cooldownAmount;
         }
+
+        public bool IsSkillCooldown => SkillCooldown() >= 0f;
 
         public void Reset()
         {
@@ -86,7 +72,8 @@ namespace CoreSumoRobot
         {
             Type = skillTypeParam;
 
-            if (IsSkillCooldown() == false)
+            // Check whether the skill is ready or not
+            if (!IsSkillCooldown)
             {
                 Debug.Log($"[Skill][{Type}] activated!");
 
