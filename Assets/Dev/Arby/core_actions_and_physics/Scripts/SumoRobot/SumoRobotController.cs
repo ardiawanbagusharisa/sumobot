@@ -65,10 +65,14 @@ namespace CoreSumoRobot
             reservedMoveSpeed = MoveSpeed;
             reservedDashSpeed = DashSpeed;
             reserverdBounceResistance = BounceResistance;
+        }
+
+        void OnEnable()
+        {
             SetRules(true);
         }
 
-        void OnDestroy()
+        void OnDisable()
         {
             SetRules(false);
         }

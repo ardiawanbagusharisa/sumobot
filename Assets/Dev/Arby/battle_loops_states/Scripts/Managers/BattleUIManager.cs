@@ -49,7 +49,7 @@ namespace BattleLoop
 
         }
 
-        void Start()
+        void OnEnable()
         {
             BattleManager.Instance.OnBattleChanged += OnBattleChanged;
 
@@ -60,7 +60,7 @@ namespace BattleLoop
             // rightScoreDots = RightScore.GetComponentsInChildren<Image>().Where(img => img.gameObject != RightScore).ToList();
         }
 
-        void OnDestroy()
+        void OnDisable()
         {
             BattleManager.Instance.OnBattleChanged -= OnBattleChanged;
         }
