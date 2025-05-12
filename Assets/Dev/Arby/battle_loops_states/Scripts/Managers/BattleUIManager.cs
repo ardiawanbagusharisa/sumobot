@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using CoreSumoRobot;
@@ -25,14 +26,6 @@ namespace BattleLoop
         public TMP_Text StageBattleTime;
         public TMP_Text LeftScore;
         public TMP_Text RightScore;
-
-        // automatically assigned after [InputManager.PrepareInput] process done, 
-        // this is only used for [BattleInputType.UI]
-        public TMP_Text LeftSpecialSkill;
-
-        // automatically assigned after [InputManager.PrepareInput] process done, 
-        // this is only used for [BattleInputType.UI]
-        public TMP_Text RightSpecialSkill;
 
 
         // private List<Image> leftScoreDots = new List<Image>();
@@ -63,39 +56,6 @@ namespace BattleLoop
         void OnDisable()
         {
             BattleManager.Instance.OnBattleChanged -= OnBattleChanged;
-        }
-
-        void Update()
-        {
-            UpdateSkillCooldown();
-        }
-
-        private void UpdateSkillCooldown()
-        {
-            if (BattleManager.Instance.CurrentState == BattleState.Battle_Ongoing && LeftSpecialSkill != null && RightSpecialSkill != null)
-            {
-                SumoSkill leftPlayerSkill = BattleManager.Instance.Battle.LeftPlayer.Skill;
-                SumoSkill rightPlayerSkill = BattleManager.Instance.Battle.RightPlayer.Skill;
-
-                if (leftPlayerSkill.IsSkillCooldown)
-                {
-                    LeftSpecialSkill.SetText(Mathf.CeilToInt(leftPlayerSkill.SkillCooldown()).ToString());
-                }
-                else
-                {
-                    LeftSpecialSkill.SetText(leftPlayerSkill.Type.ToString());
-                }
-
-
-                if (rightPlayerSkill.IsSkillCooldown && RightSpecialSkill != null)
-                {
-                    RightSpecialSkill.SetText(Mathf.CeilToInt(rightPlayerSkill.SkillCooldown()).ToString());
-                }
-                else
-                {
-                    RightSpecialSkill.SetText(leftPlayerSkill.Type.ToString());
-                }
-            }
         }
 
         private void OnBattleChanged(Battle battle)
@@ -141,11 +101,7 @@ namespace BattleLoop
                     break;
                 case BattleState.Battle_End:
                     // Reset Cooldown Indicator
-                    if (LeftSpecialSkill != null && RightSpecialSkill != null)
-                    {
-                        LeftSpecialSkill.SetText(BattleManager.Instance.Battle.RightPlayer.Skill.Type.ToString());
-                        RightSpecialSkill.SetText(BattleManager.Instance.Battle.RightPlayer.Skill.Type.ToString());
-                    }
+                    InputManager.Instance.ResetCooldownButton();
                     break;
 
                 case BattleState.PostBattle_ShowResult:

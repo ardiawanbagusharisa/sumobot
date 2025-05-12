@@ -42,7 +42,9 @@ namespace CoreSumoRobot
         public event Action<PlayerSide> OnOutOfArena;
         public SumoSkill Skill;
         public InputProvider InputProvider;
-
+        public float LastDashTime = 0;
+        public bool IsDashActive => LastDashTime == 0 ? false : (LastDashTime + DashDuration) >= BattleManager.Instance.ElapsedTime;
+        public bool IsDashCooldown => (LastDashTime + DashCooldown - BattleManager.Instance.ElapsedTime) >= 0f;
 
         private bool isMoveDisabled = true;
         private bool isSkillDisabled = true;
@@ -51,7 +53,6 @@ namespace CoreSumoRobot
         private float reserverdBounceResistance;
         private Rigidbody2D robotRigidBody;
         private float moveLockTime = 0f;
-        private float lastDashTime;
         private bool IsMovementLocked => moveLockTime > 0f;
 
         private event Action<Collision2D> onEnterCollisions;
@@ -148,7 +149,7 @@ namespace CoreSumoRobot
 
         private void ResetActionData()
         {
-            lastDashTime = 0;
+            LastDashTime = 0;
 
             Skill.Reset();
         }
@@ -164,24 +165,21 @@ namespace CoreSumoRobot
                 return;
             }
 
-            if (Time.time >= lastDashTime + DashDuration)
+            switch (type)
             {
-                switch (type)
-                {
-                    case AccelerateActionType.Default:
-                        robotRigidBody.linearVelocity = transform.up * MoveSpeed;
-                        break;
-                    case AccelerateActionType.Time:
-                        if (time == float.NaN) throw new Exception("Time can't be NaN when you are using [AccelerateActionType.Time] type");
-                        StartCoroutine(AccelerateOverTime(time));
-                        break;
-                }
+                case AccelerateActionType.Default:
+                    robotRigidBody.linearVelocity = transform.up * (IsDashActive ? DashSpeed : MoveSpeed);
+                    break;
+                case AccelerateActionType.Time:
+                    if (time == float.NaN) throw new Exception("Time can't be NaN when you are using [AccelerateActionType.Time] type");
+                    StartCoroutine(AccelerateOverTime(time));
+                    break;
             }
         }
 
         public void Dash(DashActionType type, float time = float.NaN)
         {
-            if (isMoveDisabled)
+            if (isMoveDisabled || IsMovementLocked)
             {
                 Debug.Log("Move is disabled.");
                 return;
@@ -190,9 +188,9 @@ namespace CoreSumoRobot
             switch (type)
             {
                 case DashActionType.Default:
-                    if (Time.time >= lastDashTime + DashCooldown)
+                    if (!IsDashCooldown)
                     {
-                        lastDashTime = Time.time;
+                        LastDashTime = BattleManager.Instance.ElapsedTime;
                         robotRigidBody.linearVelocity = transform.up * DashSpeed;
                     }
                     else
@@ -402,7 +400,7 @@ namespace CoreSumoRobot
 
         private void HandleStopping()
         {
-            if (Time.time > lastDashTime + StopDelay)
+            if (Time.time > LastDashTime + StopDelay)
             {
                 // Gradually decrease linear and angular velocities 
                 robotRigidBody.linearVelocity = Vector2.Lerp(robotRigidBody.linearVelocity, Vector2.zero, SlowDownRate * Time.deltaTime); //[Todo] Need to just stop after it close to zero.

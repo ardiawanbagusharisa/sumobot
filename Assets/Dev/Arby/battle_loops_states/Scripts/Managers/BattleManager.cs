@@ -69,6 +69,12 @@ namespace BattleLoop
             TransitionToState(BattleState.PreBatle_Preparing);
         }
 
+        void OnDisable()
+        {
+            Battle.LeftPlayer.OnOutOfArena -= OnPlayerOutOfArena;
+            Battle.RightPlayer.OnOutOfArena -= OnPlayerOutOfArena;
+        }
+
         void Update()
         {
             if (CurrentRound != null && CurrentState == BattleState.Battle_Ongoing)
@@ -245,7 +251,7 @@ namespace BattleLoop
                     break;
                 case BattleState.Battle_Countdown:
                     ElapsedTime = 0;
-                    if (countdownCoroutine != null && !gameObject.IsDestroyed())
+                    if (!gameObject.IsDestroyed() && countdownCoroutine != null)
                     {
                         StopCoroutine(countdownCoroutine);
                     }
@@ -260,7 +266,7 @@ namespace BattleLoop
                     Battle.RightPlayer.SetMovementEnabled(true);
                     break;
                 case BattleState.Battle_End:
-                    if (battleTimerCoroutine != null && !gameObject.IsDestroyed())
+                    if (!gameObject.IsDestroyed())
                     {
                         StopCoroutine(battleTimerCoroutine);
                     }

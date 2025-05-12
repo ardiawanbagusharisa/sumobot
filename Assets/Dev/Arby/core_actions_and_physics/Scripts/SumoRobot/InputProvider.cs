@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.EventSystems;
 
 namespace CoreSumoRobot
 {
@@ -69,12 +70,8 @@ namespace CoreSumoRobot
                     actions.Add(new TurnRightAction());
                 if (Input.GetKey(KeyCode.A))
                     actions.Add(new TurnLeftAction());
-
-
                 if (Input.GetKeyDown(KeyCode.C))
-                {
                     actions.Add(new SkillAction(SkillType));
-                }
             }
             else
             {
