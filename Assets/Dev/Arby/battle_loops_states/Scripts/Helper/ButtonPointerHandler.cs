@@ -1,6 +1,7 @@
 using System;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.UI;
 
 public class ButtonPointerHandler : MonoBehaviour, IPointerDownHandler, IPointerUpHandler
 {
@@ -17,7 +18,11 @@ public class ButtonPointerHandler : MonoBehaviour, IPointerDownHandler, IPointer
     public void OnPointerUp(PointerEventData eventData)
     {
         isHolding = false;
-        OnPress?.Invoke();
+        if (GetComponent<Button>().interactable)
+        {
+            OnPress?.Invoke();
+        }
+
         Debug.Log("Button Up");
     }
 
@@ -25,7 +30,10 @@ public class ButtonPointerHandler : MonoBehaviour, IPointerDownHandler, IPointer
     {
         if (isHolding)
         {
-            OnHold?.Invoke();
+            if (GetComponent<Button>().interactable)
+            {
+                OnHold?.Invoke();
+            }
         }
     }
 }

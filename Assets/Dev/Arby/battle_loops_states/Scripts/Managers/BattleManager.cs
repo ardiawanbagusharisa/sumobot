@@ -32,7 +32,7 @@ namespace BattleLoop
         public static BattleManager Instance { get; private set; }
 
         // Configuration 
-        public BattleInputType BattleInputType = BattleInputType.UI;
+        public InputType BattleInputType = InputType.UI;
         public RoundSystem RoundSystem = RoundSystem.BestOf3;
         public float BattleTime = 60f;
         public float CountdownTime = 3f;
