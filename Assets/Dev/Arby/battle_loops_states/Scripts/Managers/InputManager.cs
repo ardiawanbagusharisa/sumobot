@@ -32,37 +32,47 @@ public class InputManager : MonoBehaviour
         {
             switch (BattleManager.Instance.BattleInputType)
             {
-                case BattleInputType.UI:
+
+                case InputType.Script:
+                    break;
+                case InputType.LiveCommand:
+                    LeftLiveCommand.SetActive(true);
+                    selectedInputObject = LeftLiveCommand;
+
+                    LeftButton.SetActive(false);
+                    break;
+
+                // Handle UI And Keyboard
+                default:
                     LeftButton.SetActive(true);
                     LeftButton.GetComponent<ButtonInputHandler>().SetSkillAvailability(controller.Skill.Type);
                     selectedInputObject = LeftButton;
 
                     LeftLiveCommand.SetActive(false);
                     break;
-                case BattleInputType.LiveCommand:
-                    LeftLiveCommand.SetActive(true);
-                    selectedInputObject = LeftLiveCommand;
 
-                    LeftButton.SetActive(false);
-                    break;
             }
         }
         else
         {
             switch (BattleManager.Instance.BattleInputType)
             {
-                case BattleInputType.UI:
-                    RightButton.SetActive(true);
-                    RightButton.GetComponent<ButtonInputHandler>().SetSkillAvailability(controller.Skill.Type);
-                    selectedInputObject = RightButton;
-
-                    RightLiveCommand.SetActive(false);
+                case InputType.Script:
                     break;
-                case BattleInputType.LiveCommand:
+                case InputType.LiveCommand:
                     RightLiveCommand.SetActive(true);
                     selectedInputObject = RightLiveCommand;
 
                     RightButton.SetActive(false);
+                    break;
+
+                // Handle UI And Keyboard
+                default:
+                    RightButton.SetActive(true);
+                    RightButton.GetComponent<ButtonInputHandler>().SetSkillAvailability(controller.Skill.Type);
+                    selectedInputObject = RightButton;
+                    
+                    RightLiveCommand.SetActive(false);
                     break;
             }
         }
@@ -80,9 +90,9 @@ public class InputManager : MonoBehaviour
         // Additional initialization
         switch (BattleManager.Instance.BattleInputType)
         {
-            case BattleInputType.UI:
+            case InputType.UI:
                 break;
-            case BattleInputType.LiveCommand:
+            case InputType.LiveCommand:
                 LeftLiveCommand.GetComponent<LiveCommandInput>().Init(controller);
                 RightLiveCommand.GetComponent<LiveCommandInput>().Init(controller);
                 break;
@@ -91,7 +101,7 @@ public class InputManager : MonoBehaviour
 
     public void ResetCooldownButton()
     {
-        if (BattleManager.Instance.BattleInputType == BattleInputType.UI)
+        if (BattleManager.Instance.BattleInputType == InputType.UI || BattleManager.Instance.BattleInputType == InputType.Keyboard)
         {
             LeftButton.GetComponent<ButtonInputHandler>().ResetCooldown();
             RightButton.GetComponent<ButtonInputHandler>().ResetCooldown();

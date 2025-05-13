@@ -78,7 +78,7 @@ namespace CoreSumoRobot
             SetRules(false);
         }
 
-        private void Update()
+        void Update()
         {
             ReadInput();
             UpdateDashState();

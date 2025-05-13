@@ -1,6 +1,14 @@
 
+using Unity.VisualScripting;
+
 namespace CoreSumoRobot
 {
+
+    public abstract class ISumoAction
+    {
+        public InputType InputUsed;
+        public abstract void Execute(SumoRobotController controller);
+    }
 
     public enum TurnActionType
     {
@@ -25,12 +33,71 @@ namespace CoreSumoRobot
 
     public class AccelerateAction : ISumoAction
     {
-        public void Execute(SumoRobotController controller)
+        public AccelerateAction(InputType inputType)
+        {
+            InputUsed = inputType;
+        }
+        public override void Execute(SumoRobotController controller)
         {
             controller.Accelerate(AccelerateActionType.Default);
         }
     }
 
+    public class TurnLeftAction : ISumoAction
+    {
+
+        public TurnLeftAction(InputType inputType)
+        {
+            InputUsed = inputType;
+        }
+
+        public override void Execute(SumoRobotController controller)
+        {
+            controller.Turn(TurnActionType.Left);
+        }
+    }
+
+    public class TurnRightAction : ISumoAction
+    {
+        public TurnRightAction(InputType inputType)
+        {
+            InputUsed = inputType;
+        }
+
+        public override void Execute(SumoRobotController controller)
+        {
+            controller.Turn(TurnActionType.Right);
+        }
+    }
+
+
+    public class DashAction : ISumoAction
+    {
+        public DashAction(InputType inputType)
+        {
+            InputUsed = inputType;
+        }
+        public override void Execute(SumoRobotController controller)
+        {
+            controller.Dash(DashActionType.Default);
+        }
+    }
+
+    public class SkillAction : ISumoAction
+    {
+        public ERobotSkillType ERobotSkillType { get; }
+
+        public SkillAction(ERobotSkillType skillType, InputType inputType)
+        {
+            ERobotSkillType = skillType;
+            InputUsed = inputType;
+        }
+
+        public override void Execute(SumoRobotController controller)
+        {
+            controller.UseSkill(ERobotSkillType);
+        }
+    }
 
     public class AccelerateTimeAction : ISumoAction
     {
@@ -40,20 +107,11 @@ namespace CoreSumoRobot
         {
             Time = time;
         }
-        public void Execute(SumoRobotController controller)
+        public override void Execute(SumoRobotController controller)
         {
             controller.Accelerate(AccelerateActionType.Time, Time);
         }
     }
-
-    public class DashAction : ISumoAction
-    {
-        public void Execute(SumoRobotController controller)
-        {
-            controller.Dash(DashActionType.Default);
-        }
-    }
-
 
     public class DashTimeAction : ISumoAction
     {
@@ -63,21 +121,13 @@ namespace CoreSumoRobot
         {
             Time = time;
         }
-        public void Execute(SumoRobotController controller)
+        public override void Execute(SumoRobotController controller)
         {
             controller.Dash(DashActionType.Time, Time);
         }
     }
 
-    public class TurnLeftAction : ISumoAction
-    {
-
-        public void Execute(SumoRobotController controller)
-        {
-            controller.Turn(TurnActionType.Left);
-        }
-    }
-
+    #region Live Command / Script
     public class TurnLeftAngleAction : ISumoAction
     {
         public float AngleValue { get; }
@@ -87,21 +137,12 @@ namespace CoreSumoRobot
             AngleValue = angle;
         }
 
-        public void Execute(SumoRobotController controller)
+        public override void Execute(SumoRobotController controller)
         {
             controller.Turn(TurnActionType.LeftAngle);
         }
     }
 
-    public class TurnRightAction : ISumoAction
-    {
-        public string Description => "";
-
-        public void Execute(SumoRobotController controller)
-        {
-            controller.Turn(TurnActionType.Right);
-        }
-    }
 
     public class TurnRightAngleAction : ISumoAction
     {
@@ -112,7 +153,7 @@ namespace CoreSumoRobot
             AngleValue = angle;
         }
 
-        public void Execute(SumoRobotController controller)
+        public override void Execute(SumoRobotController controller)
         {
             controller.Turn(TurnActionType.RightAngle);
         }
@@ -128,38 +169,12 @@ namespace CoreSumoRobot
             AngleValue = angle;
         }
 
-        public void Execute(SumoRobotController controller)
+        public override void Execute(SumoRobotController controller)
         {
             controller.Turn(TurnActionType.Angle, AngleValue);
         }
     }
 
-    public class SkillAction : ISumoAction
-    {
-        public ERobotSkillType ERobotSkillType { get; }
+    #endregion
 
-        public SkillAction(ERobotSkillType skillType)
-        {
-            ERobotSkillType = skillType;
-        }
-
-
-        public void Execute(SumoRobotController controller)
-        {
-            controller.UseSkill(ERobotSkillType);
-        }
-    }
-
-    public enum ERobotActionType
-    {
-        Accelerate,
-        Dash,
-        Skill,
-        Idle,
-    }
-
-    public interface ISumoAction
-    {
-        void Execute(SumoRobotController controller);
-    }
 }

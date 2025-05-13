@@ -8345,7 +8345,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3a93addaa694d43528f8eb6ca35b41b4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  BattleInputType: 0
+  BattleInputType: 1
   RoundSystem: 3
   BattleTime: 40
   CountdownTime: 3
@@ -8397,10 +8397,6 @@ MonoBehaviour:
   StageBattleTime: {fileID: 1506464103721430510}
   LeftScore: {fileID: 1995473052}
   RightScore: {fileID: 304621562}
-  LeftDash: {fileID: 8682156856159326934}
-  RightDash: {fileID: 1980094120}
-  LeftSpecialSkill: {fileID: 0}
-  RightSpecialSkill: {fileID: 0}
 --- !u!114 &2130233543
 MonoBehaviour:
   m_ObjectHideFlags: 0
