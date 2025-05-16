@@ -8,6 +8,9 @@
 [Mm]emoryCaptures/
 [Uu]ser[Ss]ettings/
 
+# Unity extension or plugins 
+Assets/TextMesh Pro/
+
 # OS Specific
 .DS_Store
 Thumbs.db

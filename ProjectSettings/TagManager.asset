@@ -5,11 +5,21 @@ TagManager:
   serializedVersion: 3
   tags:
   - Robot
+  - Arena/Floor
+  - BattleState/Pre
+  - BattleState/Ongoing
+  - BattleState/Post
+  - Button/Accelerate
+  - Button/TurnLeft
+  - Button/TurnRight
+  - Button/Dash
+  - Button/Stone
+  - Button/Boost
   layers:
   - Default
   - TransparentFX
   - Ignore Raycast
-  - 
+  - Environtment
   - Water
   - UI
   - 
@@ -41,6 +51,12 @@ TagManager:
   m_SortingLayers:
   - name: Default
     uniqueID: 0
+    locked: 0
+  - name: Background
+    uniqueID: 533600045
+    locked: 0
+  - name: Foreground
+    uniqueID: 3941910537
     locked: 0
   m_RenderingLayers:
   - Default
