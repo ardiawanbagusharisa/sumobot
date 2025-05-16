@@ -39,14 +39,13 @@ public class CommandSystem : MonoBehaviour
     #endregion
 
     #region Folding Button
-    public bool isUnfolded = true;
+    public bool isUnfolded = false;
     #endregion
 
    private InputProvider inputProvider;
 
     private void Start()
     {
-        //[Todo] consider to move to onenable()
         initCommandSystem();
     }
 
@@ -147,7 +146,7 @@ public class CommandSystem : MonoBehaviour
         {
             // Add suggested command if it's not already in the last message. 
             string lastMessage = GetLastMessage();
-            Debug.Log("Closest1: " + closest);
+            //Debug.Log("Closest1: " + closest);
             if (lastMessage.Contains("help") || !lastMessage.Contains(closest))
             {
                 Debug.Log("Closest2: " + closest);
@@ -167,7 +166,10 @@ public class CommandSystem : MonoBehaviour
 
     private void OnSubmit(string input)
     {
-        ToggleFold();
+        if (!isUnfolded)
+        {
+            ToggleFold();
+        }
 
         if (!string.IsNullOrEmpty(input)) 
         {
