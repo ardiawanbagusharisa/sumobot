@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections;
 using System.Security.Cryptography.X509Certificates;
+using CoreSumoRobot;
 
 public class CommandSystem : MonoBehaviour
 {
@@ -41,6 +42,7 @@ public class CommandSystem : MonoBehaviour
     private bool isUnfolded = true;
     #endregion
 
+   private InputProvider inputProvider;
 
     private void Start()
     {
@@ -54,13 +56,16 @@ public class CommandSystem : MonoBehaviour
 
     private void initCommandSystem()
     {
+        //[Todo] Handle null later. 
+        inputProvider = GetComponent<InputProvider>();
+
         allCommands = new Dictionary<string, Action<string>>()
         {
             // [Todo] Consider to put "()" for correct format.
             { "accelerate", CommandAccelerate },
             { "turnleft", CommandTurnLeft },
             { "turnright", CommandTurnRight },
-            { "dash", (s) => AddMessageToDisplay("Executing dash()") },
+            { "dash", (s) => Dash() },
             { "skill", (s) => AddMessageToDisplay("Executing skill()") },
             { "getstatus", (s) => AddMessageToDisplay("Executing getstatus()") },
             { "clear", (s) => Clear() },
@@ -301,17 +306,26 @@ public class CommandSystem : MonoBehaviour
 
     private void CommandAccelerate(string arg)
     {
+       inputProvider.EnqueueCommand(new AccelerateTimeAction(float.Parse(arg)));
         AddMessageToDisplay("> Executing accelerate(" + arg + ").\n");
     }
 
     private void CommandTurnLeft(string arg)
     {
+        inputProvider.EnqueueCommand(new TurnLeftAngleAction(float.Parse(arg)));
         AddMessageToDisplay("> Executing TurnLeft(" + arg + ").\n");
     }
 
     private void CommandTurnRight(string arg)
     {
+        inputProvider.EnqueueCommand(new TurnRightAngleAction(float.Parse(arg)));
         AddMessageToDisplay("> Executing TurnRight(" + arg + ").\n");
+    }
+
+    private void Dash()
+    {
+        inputProvider.EnqueueCommand(new DashAction(InputType.LiveCommand));
+        AddMessageToDisplay("> Executing Dash().\n");
     }
     #endregion
 

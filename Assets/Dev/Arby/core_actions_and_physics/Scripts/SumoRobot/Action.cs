@@ -137,7 +137,7 @@ namespace CoreSumoRobot
 
         public override void Execute(SumoRobotController controller)
         {
-            controller.Turn(TurnActionType.LeftAngle);
+            controller.Turn(TurnActionType.LeftAngle, AngleValue);
         }
     }
 
@@ -153,7 +153,7 @@ namespace CoreSumoRobot
 
         public override void Execute(SumoRobotController controller)
         {
-            controller.Turn(TurnActionType.RightAngle);
+            controller.Turn(TurnActionType.RightAngle, AngleValue);
         }
     }
 
