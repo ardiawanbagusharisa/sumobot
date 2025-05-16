@@ -114,6 +114,8 @@ namespace CoreSumoRobot
 
         public void IsInArena(Collider2D collider)
         {
+            if (!Application.isPlaying) return;
+
             if (collider.tag == "Arena/Floor" && !hasOnOutOfArenaInvoked)
             {
                 OnOutOfArena?.Invoke(Side);
@@ -322,6 +324,8 @@ namespace CoreSumoRobot
 
         void BounceRule(Collision2D collision)
         {
+            if (!Application.isPlaying) return;
+
             var otherRobot = collision.gameObject.GetComponent<SumoRobotController>();
             if (otherRobot == null) return;
 
@@ -342,7 +346,7 @@ namespace CoreSumoRobot
                 float receiverImpact = CollisionBaseForce * (senderVelocity / total);  // robotB gets more bounce if A has more speed
 
                 // Check if Sender using Stone, then calculate the Receiver impact
-                if (Skill.Type == ERobotSkillType.Stone && otherRobot.Skill.IsActive)
+                if (Skill.Type == ERobotSkillType.Stone && Skill.IsActive)
                 {
                     receiverImpact = receiverVelocity / total;
                 }
