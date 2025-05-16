@@ -39,13 +39,14 @@ public class CommandSystem : MonoBehaviour
     #endregion
 
     #region Folding Button
-    private bool isUnfolded = true;
+    public bool isUnfolded = true;
     #endregion
 
    private InputProvider inputProvider;
 
     private void Start()
     {
+        //[Todo] consider to move to onenable()
         initCommandSystem();
     }
 
@@ -166,10 +167,7 @@ public class CommandSystem : MonoBehaviour
 
     private void OnSubmit(string input)
     {
-        if (!isUnfolded)
-        {
-            ToggleFold();
-        }
+        ToggleFold();
 
         if (!string.IsNullOrEmpty(input)) 
         {
@@ -332,8 +330,10 @@ public class CommandSystem : MonoBehaviour
     #region Folding Button 
     public void ToggleFold()
     {
+        Debug.Log("ToggleFold: "+isUnfolded);
         isUnfolded = !isUnfolded;
         scrollDisplay.gameObject.SetActive(isUnfolded);
+        Debug.Log("ToggleFold new: " + isUnfolded);
 
         var foldButtonrect = foldingButton.GetComponent<RectTransform>();
         var scale = foldButtonrect.localScale;
