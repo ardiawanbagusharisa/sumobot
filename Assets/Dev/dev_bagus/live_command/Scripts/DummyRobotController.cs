@@ -21,7 +21,7 @@ public class RobotController : MonoBehaviour
         float elapsed = 0f;
         while (elapsed < duration)
         {
-            transform.Translate(Vector3.forward * power * Time.deltaTime);
+            transform.Translate(power * Time.deltaTime * Vector3.forward);
             elapsed += Time.deltaTime;
             yield return null;
         }
@@ -29,12 +29,12 @@ public class RobotController : MonoBehaviour
 
     public void TurnLeft(float angle)
     {
-        transform.Rotate(Vector3.up, -angle);
+        transform.Rotate(0, 0, -angle);
     }
 
     public void TurnRight(float angle)
     {
-        transform.Rotate(Vector3.up, angle);
+        transform.Rotate(0, 0, angle);
     }
 
     public void Dash()
