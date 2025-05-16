@@ -1,11 +1,13 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
 namespace CoreSumoRobot
 {
 
-    public enum BattleInputType
+    public enum InputType
     {
+        Keyboard,
         UI,
         LiveCommand,
         Script,
@@ -18,7 +20,17 @@ namespace CoreSumoRobot
         public PlayerSide PlayerSide;
         public ERobotSkillType SkillType;
 
+        // AccelerateAction: true, means player can press Accelerate
+        public Dictionary<string, bool> StateKeyboardAction = new Dictionary<string, bool>(){
+            {"AccelerateAction",true},
+            {"TurnRightAction",true},
+            {"TurnLeftAction",true},
+            {"DashAction",true},
+            {"SkillAction",true},
+        };
+
         private Queue<ISumoAction> CommandQueue = new Queue<ISumoAction>();
+
 
         public InputProvider(PlayerSide side, bool includeKeyboard = false)
         {
@@ -28,6 +40,13 @@ namespace CoreSumoRobot
 
         void OnEnable()
         {
+            StateKeyboardAction = new Dictionary<string, bool>(){
+            {"AccelerateAction",true},
+            {"TurnRightAction",true},
+            {"TurnLeftAction",true},
+            {"DashAction",true},
+            {"SkillAction",true},
+        };
             CommandQueue = new Queue<ISumoAction>();
         }
 
@@ -61,34 +80,52 @@ namespace CoreSumoRobot
 
             if (PlayerSide == PlayerSide.Left)
             {
-                if (Input.GetKey(KeyCode.W))
-                    actions.Add(new AccelerateAction());
-                if (Input.GetKeyDown(KeyCode.LeftShift))
-                    actions.Add(new DashAction());
-                if (Input.GetKey(KeyCode.D))
-                    actions.Add(new TurnRightAction());
-                if (Input.GetKey(KeyCode.A))
-                    actions.Add(new TurnLeftAction());
-
-
-                if (Input.GetKeyDown(KeyCode.C))
+                if (Input.GetKey(KeyCode.W) && StateKeyboardAction["AccelerateAction"])
                 {
-                    actions.Add(new SkillAction(SkillType));
+                    actions.Add(new AccelerateAction(InputType.Keyboard));
+                }
+                if (Input.GetKey(KeyCode.D) && StateKeyboardAction["TurnRightAction"])
+                {
+                    actions.Add(new TurnRightAction(InputType.Keyboard));
+                }
+                if (Input.GetKey(KeyCode.A) && StateKeyboardAction["TurnRightAction"])
+                {
+                    actions.Add(new TurnLeftAction(InputType.Keyboard));
+                }
+                if (Input.GetKeyDown(KeyCode.LeftShift)&& StateKeyboardAction["DashAction"])
+                {
+                    actions.Add(new DashAction(InputType.Keyboard));
+                }
+                if (Input.GetKeyDown(KeyCode.C)&& StateKeyboardAction["SkillAction"])
+                {
+                    actions.Add(new SkillAction(SkillType, InputType.Keyboard));
                 }
             }
             else
             {
-                if (Input.GetKey(KeyCode.O))
-                    actions.Add(new AccelerateAction());
-                if (Input.GetKeyDown(KeyCode.RightShift))
-                    actions.Add(new DashAction());
-                if (Input.GetKey(KeyCode.Semicolon))
-                    actions.Add(new TurnRightAction());
-                if (Input.GetKey(KeyCode.K))
-                    actions.Add(new TurnLeftAction());
-                if (Input.GetKeyDown(KeyCode.M))
-                    actions.Add(new SkillAction(SkillType));
+                if (Input.GetKey(KeyCode.O)&& StateKeyboardAction["AccelerateAction"])
+                {
+                    actions.Add(new AccelerateAction(InputType.Keyboard));
+                }
+                if (Input.GetKey(KeyCode.Semicolon)&& StateKeyboardAction["TurnRightAction"])
+                {
+                    actions.Add(new TurnRightAction(InputType.Keyboard));
+                }
+                if (Input.GetKey(KeyCode.K)&& StateKeyboardAction["TurnLeftAction"])
+                {
+                    actions.Add(new TurnLeftAction(InputType.Keyboard));
+                }
+                if (Input.GetKeyDown(KeyCode.RightShift)&& StateKeyboardAction["DashAction"])
+                {
+                    actions.Add(new DashAction(InputType.Keyboard));
+                }
+                if (Input.GetKeyDown(KeyCode.M)&& StateKeyboardAction["SkillAction"])
+                {
+                    actions.Add(new SkillAction(SkillType, InputType.Keyboard));
+                }
             }
+
+
             return actions;
         }
         #endregion
@@ -96,33 +133,33 @@ namespace CoreSumoRobot
         #region UI Input
         public void OnAccelerateButtonPressed()
         {
-            CommandQueue.Enqueue(new AccelerateAction());
+            CommandQueue.Enqueue(new AccelerateAction(InputType.UI));
         }
         public void OnDashButtonPressed()
         {
-            CommandQueue.Enqueue(new DashAction());
+            CommandQueue.Enqueue(new DashAction(InputType.UI));
         }
 
         public void OnTurnLeftButtonPressed()
         {
-            CommandQueue.Enqueue(new TurnLeftAction());
+            CommandQueue.Enqueue(new TurnLeftAction(InputType.UI));
         }
 
         public void OnTurnRightButtonPressed()
         {
-            CommandQueue.Enqueue(new TurnRightAction());
+            CommandQueue.Enqueue(new TurnRightAction(InputType.UI));
         }
 
         public void OnBoostSkillButtonPressed()
         {
             if (SkillType != ERobotSkillType.Boost) return;
-            CommandQueue.Enqueue(new SkillAction(ERobotSkillType.Boost));
+            CommandQueue.Enqueue(new SkillAction(ERobotSkillType.Boost, InputType.UI));
         }
 
         public void OnStoneSkillButtonPressed()
         {
             if (SkillType != ERobotSkillType.Stone) return;
-            CommandQueue.Enqueue(new SkillAction(ERobotSkillType.Stone));
+            CommandQueue.Enqueue(new SkillAction(ERobotSkillType.Stone, InputType.UI));
         }
         #endregion
     }

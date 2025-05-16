@@ -32,7 +32,7 @@ namespace BattleLoop
         public static BattleManager Instance { get; private set; }
 
         // Configuration 
-        public BattleInputType BattleInputType = BattleInputType.UI;
+        public InputType BattleInputType = InputType.UI;
         public RoundSystem RoundSystem = RoundSystem.BestOf3;
         public float BattleTime = 60f;
         public float CountdownTime = 3f;
@@ -67,6 +67,12 @@ namespace BattleLoop
         void Start()
         {
             TransitionToState(BattleState.PreBatle_Preparing);
+        }
+
+        void OnDisable()
+        {
+            Battle.LeftPlayer.OnOutOfArena -= OnPlayerOutOfArena;
+            Battle.RightPlayer.OnOutOfArena -= OnPlayerOutOfArena;
         }
 
         void Update()
@@ -245,7 +251,7 @@ namespace BattleLoop
                     break;
                 case BattleState.Battle_Countdown:
                     ElapsedTime = 0;
-                    if (countdownCoroutine != null && !gameObject.IsDestroyed())
+                    if (!gameObject.IsDestroyed() && countdownCoroutine != null)
                     {
                         StopCoroutine(countdownCoroutine);
                     }
@@ -260,7 +266,7 @@ namespace BattleLoop
                     Battle.RightPlayer.SetMovementEnabled(true);
                     break;
                 case BattleState.Battle_End:
-                    if (battleTimerCoroutine != null && !gameObject.IsDestroyed())
+                    if (!gameObject.IsDestroyed())
                     {
                         StopCoroutine(battleTimerCoroutine);
                     }
