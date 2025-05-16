@@ -2705,7 +2705,6 @@ GameObject:
   m_Component:
   - component: {fileID: 739323020}
   - component: {fileID: 739323021}
-  - component: {fileID: 739323022}
   - component: {fileID: 739323023}
   m_Layer: 5
   m_Name: L_LiveCommand
@@ -2751,19 +2750,6 @@ MonoBehaviour:
   IncludeKeyboard: 0
   PlayerSide: 0
   SkillType: 1
---- !u!114 &739323022
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 739323019}
-  m_Enabled: 0
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 956d9bb176f194a899075faea437e9a4, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  SumoRobotCommand: {fileID: 0}
 --- !u!114 &739323023
 MonoBehaviour:
   m_ObjectHideFlags: 0
