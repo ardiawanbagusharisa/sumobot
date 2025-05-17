@@ -4,8 +4,8 @@ using UnityEngine.UI;
 using System;
 using System.Collections.Generic;
 using System.Collections;
-using System.Security.Cryptography.X509Certificates;
 using CoreSumoRobot;
+using System.Security.Cryptography.X509Certificates;
 
 public class CommandSystem : MonoBehaviour
 {
@@ -19,23 +19,8 @@ public class CommandSystem : MonoBehaviour
 
     #region Command variables
     private Dictionary<string, Action<string>> allCommands;
-    private string defaultText = "> Enter command, type \"help\" to show all commands, and press \"tab\" for autocomplete.";
-    private string helperTexts =
-        "> Available Commands:\n" +
-        "- accelerate(d)" +
-            " -> Accelerate the robot forward within duration \"d\" (second).\n" +
-        "- turnleft(a)" +
-            " -> Turn the robot left with given angle \"a\" (degree).\n" +
-        "- turnright(a)" +
-            " -> Turn the robot right with given angle \"a\" (degree).\n" +
-        "- dash()" +
-            " -> Dash the robot forward with x power.\n" +
-        "- skill()" +
-            " -> Activate the robot's special skill.\n" +
-        "- clear()" +
-            " -> Clear the command terminal.\n" +
-        "- help" +
-            " -> Show all available commands.\n";
+    private string defaultText = CommandMessage.Default;
+    private string helperTexts = CommandMessage.Help;
     #endregion
 
     #region Folding Button
@@ -66,19 +51,18 @@ public class CommandSystem : MonoBehaviour
             { "turnleft", CommandTurnLeft },
             { "turnright", CommandTurnRight },
             { "dash", (s) => Dash() },
-            { "skill", (s) => AddMessageToDisplay("Executing skill()") },
-            { "getstatus", (s) => AddMessageToDisplay("Executing getstatus()") },
+            { "skill", (s) => Skill() },
             { "clear", (s) => Clear() },
             { "help", (s) => AddMessageToDisplay(helperTexts) },
+            { "open", (s) => OpenTerminal() },
+            { "close", (s) => CloseTerminal() },
+            { "getstatus", (s) => AddMessageToDisplay("Executing getstatus()") },   //[Todo] Implement get log from log manager. 
         };
-
 
         inputField.onValueChanged.AddListener(OnTyping);
         inputField.onSubmit.AddListener(OnSubmit);
 
-        DisplayMessage(defaultText);
-
-        isUnfolded = scrollDisplay.gameObject.activeSelf;
+        DisplayMessage(defaultText);        
     }
 
     private void CheckPlayerInput() 
@@ -91,7 +75,12 @@ public class CommandSystem : MonoBehaviour
             // [Todo] Move as autocomplete function. 
             if (!string.IsNullOrEmpty(suggestion))
             {
-                inputField.text = suggestion + (suggestion == "help" ? "" : "()");
+                string addParens = "";
+                if (suggestion != "help" && suggestion != "open" && suggestion != "close")
+                {
+                    addParens = "()";
+                }
+                inputField.text = suggestion + addParens;
                 inputField.caretPosition = inputField.text.Length - (inputField.text.Contains("(") ? 1 : 0);
             }
         }
@@ -139,26 +128,43 @@ public class CommandSystem : MonoBehaviour
         LayoutRebuilder.ForceRebuildLayoutImmediate((RectTransform)display.transform);
     }
 
+    private void OpenTerminal() 
+    {
+        if (!isUnfolded) 
+        {
+            ToggleFold();
+        }
+    }
+
+    private void CloseTerminal()
+    {
+        if (isUnfolded)
+        {
+            ToggleFold();
+        }
+    }
+
     private void OnTyping(string currentInput)
     {
         string closest = GetClosestCommand(currentInput);
+        string suggestion = CommandMessage.SuggestedCmd;
+
         if (!string.IsNullOrEmpty(closest))
         {
-            // Add suggested command if it's not already in the last message. 
+            // Add suggested command if it's not already in the last message. Becareful, becase there is a word "help" in the text. 
             string lastMessage = GetLastMessage();
             //Debug.Log("Closest1: " + closest);
             if (lastMessage.Contains("help") || !lastMessage.Contains(closest))
             {
-                Debug.Log("Closest2: " + closest);
-                if (lastMessage.Contains("Suggested Command")) 
+                if (lastMessage.Contains(suggestion)) 
                 {
                     RemoveLastSuggestion();
                 }
-                AddMessageToDisplay("> Suggested Command: " + closest);
+                AddMessageToDisplay("> " + suggestion + ": " + closest);
             }
         }
         // Handle if the input is empty and the last message is a suggestion.
-        else if (string.IsNullOrEmpty(currentInput) && GetLastMessage().Contains("Suggested Command"))
+        else if (string.IsNullOrEmpty(currentInput) && GetLastMessage().Contains(suggestion))
         {
             RemoveLastSuggestion();
         }
@@ -173,7 +179,7 @@ public class CommandSystem : MonoBehaviour
 
         if (!string.IsNullOrEmpty(input)) 
         {
-            AddMessageToDisplay("> Try executing " + input + ".");
+            AddMessageToDisplay("> " + CommandMessage.TryExecute + " " + input + ".");
             TryExecute(input);
             inputField.text = "";
             inputField.ActivateInputField();
@@ -199,10 +205,14 @@ public class CommandSystem : MonoBehaviour
     #region Commands Execution 
     private void TryExecute(string input)
     {
+        //[Todo] Remove one of this later. 
+        // To present the text, we can either use: 1) concatenation ("string" + "string"), or 2) use interpolation ($"string {var}"). 
+        // In this function, let's just try to use interpolation. 
         string trimmed = input.Trim();
         if (string.IsNullOrEmpty(trimmed))
         {
-            AddMessageToDisplay("> Empty command.\n");
+            //AddMessageToDisplay("> " + CommandMessage.EmptyCmd + "\n");
+            AddMessageToDisplay($"> {CommandMessage.EmptyCmd}\n");
             return;
         }
 
@@ -226,7 +236,7 @@ public class CommandSystem : MonoBehaviour
         // Validate if the command exists
         if (!allCommands.TryGetValue(command, out var action))
         {
-            AddMessageToDisplay($"> Unknown command: {command}.");
+            AddMessageToDisplay($"> {CommandMessage.UnknownCmd} \"{command}\".");
             return;
         }
 
@@ -240,13 +250,13 @@ public class CommandSystem : MonoBehaviour
             case "turnright":
                 if (!hasParens)
                 {
-                    AddMessageToDisplay($"> {command}(x) must include parentheses.");
+                    AddMessageToDisplay($"> {command}{CommandMessage.InvalidParensArgs}.");
                     return;
                 }
 
                 if (!float.TryParse(rawArgs, out float floatVal))
                 {
-                    AddMessageToDisplay($"> Invalid argument. Expected float for \"{command}(x)\".");
+                    AddMessageToDisplay($"> {CommandMessage.InvalidArgsExpect} \"{command}{CommandMessage.InvalidArgs}\".");
                     return;
                 }
 
@@ -259,23 +269,25 @@ public class CommandSystem : MonoBehaviour
             case "getstatus":
                 if (!hasParens)
                 {
-                    AddMessageToDisplay($"> {command}() must include parentheses.");
+                    AddMessageToDisplay($"> {command}() {CommandMessage.InvalidParens}.");
                     return;
                 }
 
                 if (!string.IsNullOrWhiteSpace(rawArgs))
                 {
-                    AddMessageToDisplay($"> {command}() does not take any arguments.");
+                    AddMessageToDisplay($"> {command}() {CommandMessage.InvalidNoArgs}");
                     return;
                 }
 
                 action.Invoke("");
                 break;
 
+            case "open":
+            case "close":
             case "help":
                 if (hasParens)
                 {
-                    AddMessageToDisplay("> 'help' should not have parentheses.");
+                    AddMessageToDisplay($"> {command} {CommandMessage.InvalidNoParens}.");
                     return;
                 }
 
@@ -283,63 +295,76 @@ public class CommandSystem : MonoBehaviour
                 break;
 
             default:
-                AddMessageToDisplay($"> Unhandled command: {command}");
+                AddMessageToDisplay($"> {CommandMessage.InvalidDefault} {command}.");
                 break;
         }
 
-        if (!string.IsNullOrEmpty(rawArgs))
+        if (command == "clear")
         {
-            AddMessageToDisplay($"> {command} executed with argument: \"{rawArgs}\".");
-        }
-        else {
-            AddMessageToDisplay($"> {command} executed.");
-            if (command.Contains("clear"))
+            int firstIndex = display.text.IndexOf('\n');
+            if (firstIndex >= 0)
             {
-                int firstIndex = display.text.IndexOf('\n');
                 display.text = display.text.Substring(firstIndex + 1);
-                AddMessageToDisplay(defaultText);
             }
+            //AddMessageToDisplay(defaultText);
+            DisplayMessage(defaultText);
         }
-        
-    }
+        else if (!string.IsNullOrEmpty(rawArgs))
+        {
+            AddMessageToDisplay($"> {command} {CommandMessage.ExecutedWithArgs} \"{rawArgs}\".");
+        }
+        else 
+        {
+            AddMessageToDisplay($"> {command} {CommandMessage.Executed}.");
+        }
 
+
+    }
 
     private void CommandAccelerate(string arg)
     {
        inputProvider.EnqueueCommand(new AccelerateTimeAction(float.Parse(arg)));
-        AddMessageToDisplay("> Executing accelerate(" + arg + ").\n");
+        AddMessageToDisplay("> Executing accelerate(" + arg + ").");
     }
 
     private void CommandTurnLeft(string arg)
     {
         inputProvider.EnqueueCommand(new TurnLeftAngleAction(float.Parse(arg)));
-        AddMessageToDisplay("> Executing TurnLeft(" + arg + ").\n");
+        AddMessageToDisplay("> Executing TurnLeft(" + arg + ").");
     }
 
     private void CommandTurnRight(string arg)
     {
         inputProvider.EnqueueCommand(new TurnRightAngleAction(float.Parse(arg)));
-        AddMessageToDisplay("> Executing TurnRight(" + arg + ").\n");
+        AddMessageToDisplay("> Executing TurnRight(" + arg + ").");
     }
 
     private void Dash()
     {
         inputProvider.EnqueueCommand(new DashAction(InputType.LiveCommand));
-        AddMessageToDisplay("> Executing Dash().\n");
+        AddMessageToDisplay("> Executing Dash().");
+    }
+
+    private void Skill()
+    { 
+        inputProvider.EnqueueCommand(new SkillAction(inputProvider.SkillType, InputType.LiveCommand));
+        AddMessageToDisplay("> Executing Skill().");
+    }
+
+    private void GetStatus() {
+        //[Todo] Implement get log from log manager.
     }
     #endregion
 
     #region Folding Button 
     public void ToggleFold()
     {
-        Debug.Log("ToggleFold: "+isUnfolded);
         isUnfolded = !isUnfolded;
         scrollDisplay.gameObject.SetActive(isUnfolded);
-        Debug.Log("ToggleFold new: " + isUnfolded);
 
         var foldButtonrect = foldingButton.GetComponent<RectTransform>();
         var scale = foldButtonrect.localScale;
-        scale.y = isUnfolded ? Mathf.Abs(scale.y) : -Mathf.Abs(scale.y);
+        scale.y = isUnfolded ? -Mathf.Abs(scale.y) : Mathf.Abs(scale.y);
         foldButtonrect.localScale = scale;
     }
     #endregion
@@ -347,28 +372,43 @@ public class CommandSystem : MonoBehaviour
     #region Inner Class CommandMessage 
     public class CommandMessage 
     { 
-        public static string DefaultText = "> Enter command, type \"help\" to show all commands, and press \"tab\" for autocomplete.";
-        public static string HelpText = "> Available Commands:\n" +
-                                        "- accelerate(d)" +
+        public static string Default = "> Enter command, type \"help\" to show all commands, and press \"tab\" for autocomplete.";
+        public static string Help = "> Available Commands:\n" +
+                                        "   * accelerate(d)" +
                                             " -> Accelerate the robot forward within duration \"d\" (second).\n" +
-                                        "- turnleft(a)" +
+                                        "   * turnleft(a)" +
                                             " -> Turn the robot left with given angle \"a\" (degree).\n" +
-                                        "- turnright(a)" +
+                                        "   * turnright(a)" +
                                             " -> Turn the robot right with given angle \"a\" (degree).\n" +
-                                        "- dash()" +
+                                        "   * dash()" +
                                             " -> Dash the robot forward with x power.\n" +
-                                        "- skill()" +
+                                        "   * skill()" +
                                             " -> Activate the robot's special skill.\n" +
-                                        "- clear()" +
+                                        "   * clear()" +
                                             " -> Clear the command terminal.\n" +
-                                        "- help" +
-                                            " -> Show all available commands.\n";
-        public static string EmptyCommandText = "> Empty command.\n";
-        public static string UnknownCommandText = "> Unknown command!";
-        public static string InvalidArgumentText = "> Invalid argument. Expected ";     // Need to implement the argument.
-        public static string InvalidCommandText = "> Invalid command. Type \"help\" to show all commands";
-        public static string TryExecuteCommandText = "> Try executing ";                // Need to implement the argument.
-        public static string CommandExecutedText = "executed.";                         // Implement the command name. 
+                                        "   * open" +
+                                            " -> Open the command terminal.\n" +
+                                        "   * close" +
+                                            " -> Close the command terminal.\n" +
+                                        "   * help" +
+                                            " -> Show all available commands.";
+        
+        public static string SuggestedCmd = "Suggested command";
+        public static string TryExecute = "Try executing";
+        public static string EmptyCmd = "Empty command";
+        public static string UnknownCmd = "Unknown command!";
+
+        public static string InvalidParensArgs = "(x) must include parentheses";
+        public static string InvalidParens = "must include parentheses";
+        public static string InvalidArgsExpect = "Invalid argument. Expected float for";
+        public static string InvalidArgs = "(x)";
+        public static string InvalidNoArgs = "does not take any arguments";
+        public static string InvalidNoParens= "should not have parentheses";
+        public static string InvalidDefault = "Unhandled command:";
+
+        public static string ExecutedWithArgs = "executed with argument:";
+        public static string Executed = "is executed";
+
     }
     #endregion
 

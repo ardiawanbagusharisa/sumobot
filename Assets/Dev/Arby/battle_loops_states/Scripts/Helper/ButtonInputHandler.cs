@@ -13,6 +13,7 @@ public class ButtonInputHandler : MonoBehaviour
     public ButtonPointerHandler Stone;
     public ButtonPointerHandler Boost;
 
+    //[Todo] Do not use this
     public Color SelectedColor = Color.grey;
     public Color NormalColor = Color.white;
 
@@ -181,6 +182,7 @@ public class ButtonInputHandler : MonoBehaviour
 
     void SetButtonState(GameObject button, bool active)
     {
+        //[Todo] Do not hardcode the color. Use the button(selectable) state. 
         var targetColor = active ? SelectedColor : NormalColor;
 
         button.GetComponent<Button>().image.color = targetColor;
