@@ -173,7 +173,7 @@ namespace BattleLoop
             while (timer >= 0 && CurrentState == BattleState.Battle_Ongoing)
             {
                 int time = Mathf.CeilToInt(timer);
-                Debug.Log(time);
+                //Debug.Log(time);
                 CurrentRound.TimeLeft = time;
 
                 // In order to update UI for time left in realtime, we need to call [ChangeBattleInfo]
