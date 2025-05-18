@@ -81,7 +81,8 @@ namespace CoreSumoRobot
         void Update()
         {
             ReadInput();
-            UpdateDashState();
+
+            LastVelocity = robotRigidBody.linearVelocity;
         }
 
         private void FixedUpdate()
@@ -142,17 +143,8 @@ namespace CoreSumoRobot
             transform.position = StartPosition.position;
             transform.rotation = StartPosition.rotation;
             hasOnOutOfArenaInvoked = false;
-            ResetActionData();
-        }
-        #endregion
-
-
-        #region Robot Action Data
-
-        private void ResetActionData()
-        {
             LastDashTime = 0;
-
+            LastVelocity = Vector2.zero;
             Skill.Reset();
         }
         #endregion
@@ -379,7 +371,9 @@ namespace CoreSumoRobot
 
         public void FreezeMovement()
         {
+            Debug.Log("Freeze movement");
             robotRigidBody.constraints = RigidbodyConstraints2D.FreezePosition;
+            Debug.Log($"Freeze movement {robotRigidBody.constraints}");
         }
 
         public void ResetFreezeMovement()
@@ -387,19 +381,9 @@ namespace CoreSumoRobot
             robotRigidBody.constraints = RigidbodyConstraints2D.None;
         }
 
-        public void SetLastVelocity(Vector2 value)
-        {
-            LastVelocity = value;
-        }
-
         public void ResetBounceResistance()
         {
             BounceResistance = reserverdBounceResistance;
-        }
-
-        private void UpdateDashState()
-        {
-            LastVelocity = robotRigidBody.linearVelocity;
         }
 
         private void HandleStopping()

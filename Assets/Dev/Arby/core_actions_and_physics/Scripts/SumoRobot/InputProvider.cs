@@ -96,7 +96,7 @@ namespace CoreSumoRobot
                 {
                     actions.Add(new DashAction(InputType.Keyboard));
                 }
-                if (Input.GetKeyDown(KeyCode.C)&& StateKeyboardAction["SkillAction"])
+                if (Input.GetKeyDown(KeyCode.C) && StateKeyboardAction["SkillAction"])
                 {
                     actions.Add(new SkillAction(SkillType, InputType.Keyboard));
                 }
