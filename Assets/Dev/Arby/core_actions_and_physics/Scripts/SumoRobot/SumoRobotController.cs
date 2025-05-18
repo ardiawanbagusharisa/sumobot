@@ -163,7 +163,7 @@ namespace CoreSumoRobot
         {
             if (isMoveDisabled || IsMovementLocked)
             {
-                Debug.Log("Move is disabled.");
+                //Debug.Log("Move is disabled.");
                 return;
             }
 

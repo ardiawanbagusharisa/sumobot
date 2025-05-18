@@ -93,7 +93,7 @@ public class InputManager : MonoBehaviour
             case InputType.UI:
                 break;
             case InputType.LiveCommand:
-                LeftLiveCommand.GetComponent<LiveCommandInput>().Init(controller);
+                //LeftLiveCommand.GetComponent<LiveCommandInput>().Init(controller);
                 RightLiveCommand.GetComponent<LiveCommandInput>().Init(controller);
                 break;
         }
