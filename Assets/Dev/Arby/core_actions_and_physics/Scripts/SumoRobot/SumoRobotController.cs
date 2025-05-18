@@ -371,9 +371,7 @@ namespace CoreSumoRobot
 
         public void FreezeMovement()
         {
-            Debug.Log("Freeze movement");
             robotRigidBody.constraints = RigidbodyConstraints2D.FreezePosition;
-            Debug.Log($"Freeze movement {robotRigidBody.constraints}");
         }
 
         public void ResetFreezeMovement()
