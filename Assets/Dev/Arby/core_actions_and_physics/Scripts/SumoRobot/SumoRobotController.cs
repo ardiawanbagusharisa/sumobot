@@ -249,7 +249,7 @@ namespace CoreSumoRobot
             float rotatedAngle = 0f;
             float speed = totalAngle / duration; // degrees per second
 
-            while (Mathf.Abs(rotatedAngle) < Mathf.Abs(totalAngle))
+            while (Mathf.Abs(rotatedAngle) < Mathf.Abs(totalAngle) && BattleManager.Instance.CurrentState == BattleState.Battle_Ongoing)
             {
                 float delta = speed * Time.deltaTime; // how much to rotate this frame
 
@@ -273,7 +273,7 @@ namespace CoreSumoRobot
             // lerping?, uncomment
             // Vector2 initialVelocity = robotRigidBody.linearVelocity; 
 
-            while (elapsedTime < time)
+            while (elapsedTime < time && BattleManager.Instance.CurrentState == BattleState.Battle_Ongoing)
             {
                 // lerping?, uncomment
                 // float t = elapsedTime / time;
@@ -285,7 +285,7 @@ namespace CoreSumoRobot
                 yield return null;
             }
 
-            robotRigidBody.linearVelocity = Vector2.Lerp(robotRigidBody.linearVelocity, Vector2.zero, SlowDownRate * Time.deltaTime);
+            // robotRigidBody.linearVelocity = Vector2.Lerp(robotRigidBody.linearVelocity, Vector2.zero, SlowDownRate * Time.deltaTime);
         }
         #endregion
 
