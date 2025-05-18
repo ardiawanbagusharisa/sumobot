@@ -14,7 +14,7 @@ public class ButtonInputHandler : MonoBehaviour
     public ButtonPointerHandler Boost;
 
     //[Todo] Do not use this
-    public Color SelectedColor = Color.grey;
+    public Color DisabledColor = Color.grey;
     public Color NormalColor = Color.white;
 
     private InputProvider inputProvider;
@@ -183,7 +183,7 @@ public class ButtonInputHandler : MonoBehaviour
     void SetButtonState(GameObject button, bool active)
     {
         //[Todo] Do not hardcode the color. Use the button(selectable) state. 
-        var targetColor = active ? SelectedColor : NormalColor;
+        var targetColor = active ? DisabledColor : NormalColor;
 
         button.GetComponent<Button>().image.color = targetColor;
 
