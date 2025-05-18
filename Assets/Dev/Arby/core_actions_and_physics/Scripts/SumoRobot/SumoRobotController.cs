@@ -81,7 +81,8 @@ namespace CoreSumoRobot
         void Update()
         {
             ReadInput();
-            UpdateDashState();
+
+            LastVelocity = robotRigidBody.linearVelocity;
         }
 
         private void FixedUpdate()
@@ -114,6 +115,8 @@ namespace CoreSumoRobot
 
         public void IsInArena(Collider2D collider)
         {
+            if (!Application.isPlaying) return;
+
             if (collider.tag == "Arena/Floor" && !hasOnOutOfArenaInvoked)
             {
                 OnOutOfArena?.Invoke(Side);
@@ -140,17 +143,8 @@ namespace CoreSumoRobot
             transform.position = StartPosition.position;
             transform.rotation = StartPosition.rotation;
             hasOnOutOfArenaInvoked = false;
-            ResetActionData();
-        }
-        #endregion
-
-
-        #region Robot Action Data
-
-        private void ResetActionData()
-        {
             LastDashTime = 0;
-
+            LastVelocity = Vector2.zero;
             Skill.Reset();
         }
         #endregion
@@ -247,7 +241,7 @@ namespace CoreSumoRobot
             float rotatedAngle = 0f;
             float speed = totalAngle / duration; // degrees per second
 
-            while (Mathf.Abs(rotatedAngle) < Mathf.Abs(totalAngle))
+            while (Mathf.Abs(rotatedAngle) < Mathf.Abs(totalAngle) && BattleManager.Instance.CurrentState == BattleState.Battle_Ongoing)
             {
                 float delta = speed * Time.deltaTime; // how much to rotate this frame
 
@@ -271,7 +265,7 @@ namespace CoreSumoRobot
             // lerping?, uncomment
             // Vector2 initialVelocity = robotRigidBody.linearVelocity; 
 
-            while (elapsedTime < time)
+            while (elapsedTime < time && BattleManager.Instance.CurrentState == BattleState.Battle_Ongoing)
             {
                 // lerping?, uncomment
                 // float t = elapsedTime / time;
@@ -283,7 +277,7 @@ namespace CoreSumoRobot
                 yield return null;
             }
 
-            robotRigidBody.linearVelocity = Vector2.Lerp(robotRigidBody.linearVelocity, Vector2.zero, SlowDownRate * Time.deltaTime);
+            // robotRigidBody.linearVelocity = Vector2.Lerp(robotRigidBody.linearVelocity, Vector2.zero, SlowDownRate * Time.deltaTime);
         }
         #endregion
 
@@ -322,6 +316,8 @@ namespace CoreSumoRobot
 
         void BounceRule(Collision2D collision)
         {
+            if (!Application.isPlaying) return;
+
             var otherRobot = collision.gameObject.GetComponent<SumoRobotController>();
             if (otherRobot == null) return;
 
@@ -342,7 +338,7 @@ namespace CoreSumoRobot
                 float receiverImpact = CollisionBaseForce * (senderVelocity / total);  // robotB gets more bounce if A has more speed
 
                 // Check if Sender using Stone, then calculate the Receiver impact
-                if (Skill.Type == ERobotSkillType.Stone && otherRobot.Skill.IsActive)
+                if (Skill.Type == ERobotSkillType.Stone && Skill.IsActive)
                 {
                     receiverImpact = receiverVelocity / total;
                 }
@@ -383,19 +379,9 @@ namespace CoreSumoRobot
             robotRigidBody.constraints = RigidbodyConstraints2D.None;
         }
 
-        public void SetLastVelocity(Vector2 value)
-        {
-            LastVelocity = value;
-        }
-
         public void ResetBounceResistance()
         {
             BounceResistance = reserverdBounceResistance;
-        }
-
-        private void UpdateDashState()
-        {
-            LastVelocity = robotRigidBody.linearVelocity;
         }
 
         private void HandleStopping()

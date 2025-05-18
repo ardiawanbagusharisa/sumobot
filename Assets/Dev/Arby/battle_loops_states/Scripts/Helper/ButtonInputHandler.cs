@@ -12,13 +12,7 @@ public class ButtonInputHandler : MonoBehaviour
     public ButtonPointerHandler Dash;
     public ButtonPointerHandler Stone;
     public ButtonPointerHandler Boost;
-
-    //[Todo] Do not use this
-    public Color SelectedColor = Color.grey;
-    public Color NormalColor = Color.white;
-
     private InputProvider inputProvider;
-
 
     void Awake()
     {
@@ -53,13 +47,13 @@ public class ButtonInputHandler : MonoBehaviour
         var actions = inputProvider.GetInput();
 
         // Default to normal state
-        SetButtonState(Accelerate.gameObject, false);
-        SetButtonState(TurnLeft.gameObject, false);
-        SetButtonState(TurnRight.gameObject, false);
+        ResetButtonState(Accelerate.gameObject);
+        ResetButtonState(TurnLeft.gameObject);
+        ResetButtonState(TurnRight.gameObject);
         if (Boost.gameObject.activeSelf)
-            SetButtonState(Boost.gameObject, false);
+            ResetButtonState(Boost.gameObject);
         if (Stone.gameObject.activeSelf)
-            SetButtonState(Stone.gameObject, false);
+            ResetButtonState(Stone.gameObject);
 
 
         // Loop and check on Holding-Type button
@@ -180,13 +174,8 @@ public class ButtonInputHandler : MonoBehaviour
         Dash.GetComponentInChildren<Button>().interactable = true;
     }
 
-    void SetButtonState(GameObject button, bool active)
+    void ResetButtonState(GameObject button)
     {
-        //[Todo] Do not hardcode the color. Use the button(selectable) state. 
-        var targetColor = active ? SelectedColor : NormalColor;
-
-        button.GetComponent<Button>().image.color = targetColor;
-
         // Reset Interactable State
         button.GetComponent<Button>().interactable = true;
         inputProvider.StateKeyboardAction["AccelerateAction"] = true;
@@ -197,7 +186,7 @@ public class ButtonInputHandler : MonoBehaviour
     // Prevent multiple input
     void SetHoldButtonState(GameObject button, bool active, ISumoAction action)
     {
-        SetButtonState(button, active);
+        ResetButtonState(button);
 
         if (active)
         {
