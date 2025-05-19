@@ -24,8 +24,10 @@ namespace BattleLoop
         public TMP_Text StageBestOf;
         public TMP_Text StageRoundNumber;
         public TMP_Text StageBattleTime;
-        public TMP_Text LeftScore;
-        public TMP_Text RightScore;
+        public TMP_Text LeftOngoingScore;
+        public TMP_Text RightOngoingScore;
+        public TMP_Text LeftFinalScore;
+        public TMP_Text RightFinalScore;
 
 
         // private List<Image> leftScoreDots = new List<Image>();
@@ -78,6 +80,8 @@ namespace BattleLoop
 
                     LeftDefaultSpecialSkill.value = (int)BattleManager.Instance.Battle.LeftPlayer.Skill.Type;
                     RightDefaultSpecialSkill.value = (int)BattleManager.Instance.Battle.LeftPlayer.Skill.Type;
+                    LeftFinalScore.SetText("");
+                    RightFinalScore.SetText("");
                     break;
 
                 case BattleState.Battle_Preparing:
@@ -109,6 +113,9 @@ namespace BattleLoop
 
                     BattleStatePanel.Find((o) => o.CompareTag("BattleState/Ongoing")).SetActive(false);
                     BattleStatePanel.Find((o) => o.CompareTag("BattleState/Pre")).SetActive(false);
+
+                    LeftFinalScore.SetText(battle.LeftWinCount.ToString());
+                    RightFinalScore.SetText(battle.RightWinCount.ToString());
                     break;
             }
             UpdateScore(battle);
@@ -127,8 +134,8 @@ namespace BattleLoop
                 return;
             }
 
-            LeftScore.SetText(battleInfo.LeftWinCount.ToString());
-            RightScore.SetText(battleInfo.RightWinCount.ToString());
+            LeftOngoingScore.SetText(battleInfo.LeftWinCount.ToString());
+            RightOngoingScore.SetText(battleInfo.RightWinCount.ToString());
 
             // for (int i = 1; i < leftScoreDots.Count; i++)
             // {
@@ -147,8 +154,8 @@ namespace BattleLoop
 
         private void ClearScore()
         {
-            LeftScore.SetText("0");
-            RightScore.SetText("0");
+            LeftOngoingScore.SetText("0");
+            RightOngoingScore.SetText("0");
 
             // for (int i = 0; i < leftScoreDots.Count - 1; i++)
             // {

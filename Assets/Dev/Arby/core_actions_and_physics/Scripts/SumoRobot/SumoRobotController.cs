@@ -59,6 +59,9 @@ namespace CoreSumoRobot
         private event Action<Collider2D> onExitTriggers;
         private bool hasOnOutOfArenaInvoked = false;
 
+        private Coroutine accelerateOverTimeCoroutine;
+        private Coroutine turnOverAngleCoroutine;
+
         private void Awake()
         {
             Skill = new SumoSkill(this);
@@ -151,6 +154,13 @@ namespace CoreSumoRobot
 
 
         #region Robot Action
+        public void StopCoroutineAction()
+        {
+            if (accelerateOverTimeCoroutine != null)
+                StopCoroutine(accelerateOverTimeCoroutine);
+            if (turnOverAngleCoroutine != null)
+                StopCoroutine(turnOverAngleCoroutine);
+        }
         public void Accelerate(AccelerateActionType type, float time = float.NaN)
         {
             if (isMoveDisabled || IsMovementLocked)
@@ -166,7 +176,7 @@ namespace CoreSumoRobot
                     break;
                 case AccelerateActionType.Time:
                     if (time == float.NaN) throw new Exception("Time can't be NaN when you are using [AccelerateActionType.Time] type");
-                    StartCoroutine(AccelerateOverTime(time));
+                    accelerateOverTimeCoroutine = StartCoroutine(AccelerateOverTime(time));
                     break;
             }
         }
@@ -194,7 +204,7 @@ namespace CoreSumoRobot
                     break;
                 case DashActionType.Time:
                     if (time == float.NaN) throw new Exception("Time can't be NaN when you are using [DashActionType.Time] type");
-                    StartCoroutine(AccelerateOverTime(time, isDash: true));
+                    accelerateOverTimeCoroutine = StartCoroutine(AccelerateOverTime(time, isDash: true));
                     break;
             }
 
@@ -213,16 +223,16 @@ namespace CoreSumoRobot
                 case TurnActionType.LeftAngle:
                     if (angle == float.NaN) throw new Exception("Left Angle can't be NaN when you are using [TurnActionInput.LeftAngle] type");
                     if (angle < 0) throw new Exception("Left Angle can't be < 0 when you are using [TurnActionInput.LeftAngle] type");
-                    StartCoroutine(TurnOverAngle(angle * 1f, 0.5f));
+                    turnOverAngleCoroutine = StartCoroutine(TurnOverAngle(angle * 1f, 0.5f));
                     break;
                 case TurnActionType.RightAngle:
                     if (angle == float.NaN) throw new Exception("Right Angle can't be NaN when you are using [TurnActionInput.RightAngle] type");
                     if (angle < 0) throw new Exception("Right Angle can't be < 0 when you are using [TurnActionInput.RightAngle] type");
-                    StartCoroutine(TurnOverAngle(angle * -1f, 0.5f));
+                    turnOverAngleCoroutine = StartCoroutine(TurnOverAngle(angle * -1f, 0.5f));
                     break;
                 case TurnActionType.Angle:
                     if (angle == float.NaN) throw new Exception("Angle can't be NaN when you are using [TurnActionInput.Angle] type");
-                    StartCoroutine(TurnOverAngle(angle, 0.5f));
+                    turnOverAngleCoroutine = StartCoroutine(TurnOverAngle(angle, 0.5f));
                     break;
             }
 
@@ -320,6 +330,9 @@ namespace CoreSumoRobot
 
             var otherRobot = collision.gameObject.GetComponent<SumoRobotController>();
             if (otherRobot == null) return;
+
+            StopCoroutineAction();
+            otherRobot.StopCoroutineAction();
 
             // Compare magnitudes
             float mySpeed = LastVelocity.magnitude;

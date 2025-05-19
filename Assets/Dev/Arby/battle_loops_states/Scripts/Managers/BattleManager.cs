@@ -26,6 +26,13 @@ namespace BattleLoop
         BestOf5 = 5,    // Need 3 winning rounds
     }
 
+    public enum BattleWinner
+    {
+        Left,
+        Right,
+        Draw,
+    }
+
     public class BattleManager : MonoBehaviour
     {
         // Singleton 
@@ -278,7 +285,9 @@ namespace BattleLoop
                     StartCoroutine(ResetBattle());
                     break;
                 case BattleState.Battle_Reset:
-                    if (Battle.GetBattleWinner() != null)
+
+                    var winner = Battle.GetBattleWinner();
+                    if (winner != null)
                     {
                         TransitionToState(BattleState.PostBattle_ShowResult);
                     }
@@ -369,11 +378,15 @@ public class Battle
         Winners[CurrentRound.RoundNumber] = winner;
     }
 
-    public SumoRobotController GetBattleWinner()
+    /// <summary>
+    /// It can return null when the battle is still on going
+    /// </summary>
+    /// <returns></returns>
+    public BattleWinner? GetBattleWinner()
     {
         Debug.Log($"[Battle][GetBattleWinner] leftWinCount: {LeftWinCount}, rightWinCount: {RightWinCount}");
 
-        // winningTreshold is a treshold to help of deciding who has more different score based on BestOfN
+        // to decide who has more different score based on BestOfN
         int winningTreshold = 0;
 
         switch (RoundSystem)
@@ -395,12 +408,12 @@ public class Battle
             if (LeftWinCount > RightWinCount)
             {
                 Debug.Log($"[Battle][GetBattleWinner] Left!");
-                return LeftPlayer;
+                return BattleWinner.Left;
             }
             else
             {
                 Debug.Log($"[Battle][GetBattleWinner] Right!");
-                return RightPlayer;
+                return BattleWinner.Right;
             }
         }
 
@@ -410,16 +423,17 @@ public class Battle
             if (LeftWinCount == RightWinCount)
             {
                 Debug.Log($"[Battle][GetBattleWinner] Draw!");
+                return BattleWinner.Draw;
             }
             else if (LeftWinCount > RightWinCount)
             {
                 Debug.Log($"[Battle][GetBattleWinner] Left!");
-                return LeftPlayer;
+                return BattleWinner.Left;
             }
             else
             {
                 Debug.Log($"[Battle][GetBattleWinner] Right!");
-                return RightPlayer;
+                return BattleWinner.Right;
             }
         }
 

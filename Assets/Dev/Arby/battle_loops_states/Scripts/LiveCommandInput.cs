@@ -38,7 +38,7 @@ public class LiveCommandInput : MonoBehaviour
         var rounds = BattleManager.Instance.CurrentRound.RoundNumber;
         // var lScore = BattleManager.Instance.Battle.LeftPlayer.Score;
         // var rScore = BattleManager.Instance.Battle.RightPlayer.Score;
-        SumoRobotController winner = BattleManager.Instance.Battle.GetBattleWinner();
+        BattleWinner? winner = BattleManager.Instance.Battle.GetBattleWinner();
 
         // Debug.Log($"timer: {timer}, rounds: {rounds}, leftScore: {lScore}, rightScore: {rScore}, winner: {winner}");
     }
