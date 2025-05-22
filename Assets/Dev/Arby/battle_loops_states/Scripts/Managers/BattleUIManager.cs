@@ -20,7 +20,7 @@ namespace BattleLoop
 
         // Battle
         public TMP_Text IndicatorBattle;
-        public TMP_Text IndicatorBattleCountDownTimer;
+        public TMP_Text IndicatorCountdown;
         public TMP_Text StageBestOf;
         public TMP_Text StageRoundNumber;
         public TMP_Text StageBattleTime;
@@ -60,6 +60,20 @@ namespace BattleLoop
             BattleManager.Instance.OnBattleChanged -= OnBattleChanged;
         }
 
+        void Update()
+        {
+            if (BattleManager.Instance.CurrentState == BattleState.Battle_Ongoing ||
+            BattleManager.Instance.CurrentState == BattleState.Battle_End ||
+            BattleManager.Instance.CurrentState == BattleState.Battle_Reset)
+            {
+                StageBattleTime.SetText(Mathf.CeilToInt(BattleManager.Instance.TimeLeft).ToString());
+            }
+            else
+            {
+                StageBattleTime.SetText(BattleManager.Instance.BattleTime.ToString());
+            }
+        }
+
         private void OnBattleChanged(Battle battle)
         {
             StageBestOf.SetText($"Best of {(int)battle.RoundSystem}");
@@ -67,7 +81,6 @@ namespace BattleLoop
 
             Round round = battle.CurrentRound;
             BattleState state = BattleManager.Instance.CurrentState;
-            StageBattleTime.SetText(round.TimeLeft.ToString());
             IndicatorBattle.SetText(state.ToString());
 
             switch (state)
@@ -87,7 +100,7 @@ namespace BattleLoop
                 case BattleState.Battle_Preparing:
                     BattleStatePanel.Find((o) => o.CompareTag("BattleState/Ongoing")).SetActive(true);
                     ClearScore();
-                    IndicatorBattleCountDownTimer.SetText("");
+                    IndicatorCountdown.SetText("");
                     StageBestOf.SetText("");
                     StageRoundNumber.SetText("");
 
@@ -100,7 +113,7 @@ namespace BattleLoop
                     BattleManager.Instance.OnCountdownChanged += OnCountdownChanged;
                     break;
                 case BattleState.Battle_Ongoing:
-                    IndicatorBattleCountDownTimer.SetText("");
+                    IndicatorCountdown.SetText("");
                     BattleManager.Instance.OnCountdownChanged -= OnCountdownChanged;
                     break;
                 case BattleState.Battle_End:
@@ -123,7 +136,7 @@ namespace BattleLoop
 
         private void OnCountdownChanged(float timer)
         {
-            IndicatorBattleCountDownTimer.SetText(timer.ToString());
+            IndicatorCountdown.SetText(timer.ToString());
         }
 
         private void UpdateScore(Battle battleInfo)
