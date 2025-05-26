@@ -77,7 +77,7 @@ namespace CoreSumoRobot
             if (!IsSkillCooldown)
             {
                 Debug.Log($"[Skill][{Type}] activated!");
-                controller.ActionLoggers["Skill"].Call(Type.ToString());
+                LogManager.CallPlayerActionLog(controller.Side, "Skill", Type.ToString());
                 IsActive = true;
                 switch (Type)
                 {

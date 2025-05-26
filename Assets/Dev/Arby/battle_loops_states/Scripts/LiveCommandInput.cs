@@ -27,8 +27,7 @@ public class LiveCommandInput : MonoBehaviour
         script.EnqueueCommand(new TurnRightAngleAction(90f));
 
         script.EnqueueCommand(new DashTimeAction(2f));
-        script.EnqueueCommand(new SkillAction(ERobotSkillType.Boost, InputType.LiveCommand));
-        script.EnqueueCommand(new SkillAction(ERobotSkillType.Stone, InputType.LiveCommand));
+        script.EnqueueCommand(new SkillAction(InputType.LiveCommand));
     }
 
     #region Example of Gather Info

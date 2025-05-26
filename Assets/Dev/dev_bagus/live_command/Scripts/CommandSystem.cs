@@ -347,7 +347,7 @@ public class CommandSystem : MonoBehaviour
 
     private void Skill()
     { 
-        inputProvider.EnqueueCommand(new SkillAction(inputProvider.SkillType, InputType.LiveCommand));
+        inputProvider.EnqueueCommand(new SkillAction(InputType.LiveCommand));
         AddMessageToDisplay("> Executing Skill().");
     }
 
