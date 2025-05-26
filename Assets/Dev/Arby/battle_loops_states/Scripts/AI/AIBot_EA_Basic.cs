@@ -6,33 +6,35 @@ namespace BotAI
 {
     public class AIBot_EA_Basic : MonoBehaviour
     {
+        public float EvaluationInterval = 5f;
+        public float ActionInterval = 0.4f;
+
+        [HideInInspector]
         public EA_Basic_Data brain;
+        [HideInInspector]
         public EA_Basic_Data memory;
 
         private SumoRobotController controller;
         private SumoRobotController enemy;
         private float fitness;
         private float evaluationTimer;
-        private float evaluationInterval = 5f;
-
-        private float actionInterval = 0.4f;
         private float actionTimer = 0f;
 
         void OnEnable()
         {
             controller = GetComponent<SumoRobotController>();
+            controller.OnPlayerBounce += OnPlayerBounce;
         }
 
         void Start()
         {
-            // BattleManager.Instance.OnBattleChanged += OnBattleChanged;
             brain = new EA_Basic_Data();
             RandomizeBrain(brain);
         }
 
         void OnDisable()
         {
-            // BattleManager.Instance.OnBattleChanged -= OnBattleChanged;
+            controller.OnPlayerBounce -= OnPlayerBounce;
         }
 
         void Update()
@@ -40,14 +42,14 @@ namespace BotAI
             if (BattleManager.Instance.CurrentState == BattleState.Battle_Ongoing)
             {
                 evaluationTimer += Time.deltaTime;
-                if (evaluationTimer >= evaluationInterval)
+                if (evaluationTimer >= EvaluationInterval)
                 {
                     EvaluateFitness();
                     evaluationTimer = 0f;
                 }
 
                 actionTimer += Time.deltaTime;
-                if (actionTimer >= actionInterval)
+                if (actionTimer >= ActionInterval)
                 {
                     actionTimer = 0f;
                     Decide();
@@ -93,7 +95,7 @@ namespace BotAI
             data.weightDistance = Random.Range(-1f, 1f);
             data.threshold = Random.Range(-1f, 1f);
 
-            Debug.Log($"[EvolutionaryBotAI][RandomizeBrain] weightAngle: {brain.weightAngle}, weightDistance: {brain.weightAngle}");
+            Debug.Log($"[AIBot_EA_Basic][RandomizeBrain] weightAngle: {brain.weightAngle}, weightDistance: {brain.weightAngle}");
         }
 
         public void Decide()
@@ -107,7 +109,7 @@ namespace BotAI
 
             float value = brain.weightDistance * normalizedDistance;
 
-            Debug.Log($"[EvolutionaryBotAI] value: {value}, weightAngle: {brain.weightAngle}, normalizedAngle: {normalizedAngle}, weightDistance: {brain.weightAngle}, normalizedDistance: {normalizedDistance}");
+            Debug.Log($"[AIBot_EA_Basic] value: {value}, weightAngle: {brain.weightAngle}, normalizedAngle: {normalizedAngle}, weightDistance: {brain.weightAngle}, normalizedDistance: {normalizedDistance}");
 
             float accelDuration = 0.3f;
 
@@ -134,6 +136,11 @@ namespace BotAI
 
 
             fitness += 1f; // Example: reward for taking an action
+        }
+
+        private void OnPlayerBounce(PlayerSide side)
+        {
+            controller.InputProvider.ClearCommands();
         }
     }
 }

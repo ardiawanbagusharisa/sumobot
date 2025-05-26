@@ -1,6 +1,5 @@
 using BattleLoop;
 using CoreSumoRobot;
-using Unity.VisualScripting;
 using UnityEngine;
 
 namespace BotAI
@@ -44,8 +43,6 @@ namespace BotAI
 
                 Vector2 toEnemy = (enemy.transform.position - transform.position).normalized;
                 float angleDiff = Vector2.SignedAngle(transform.up, toEnemy);
-
-                Debug.Log($"Angle to Enemy: {angleDiff}");
 
                 // When angle is quite enough facing the enemy, run dash, skill, accelerate action
                 if (Mathf.Abs(angleDiff) < 20)

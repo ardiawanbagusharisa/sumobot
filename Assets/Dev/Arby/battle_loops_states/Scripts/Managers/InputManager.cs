@@ -71,7 +71,7 @@ public class InputManager : MonoBehaviour
                     RightButton.SetActive(true);
                     RightButton.GetComponent<ButtonInputHandler>().SetSkillAvailability(controller.Skill.Type);
                     selectedInputObject = RightButton;
-                    
+
                     RightLiveCommand.SetActive(false);
                     break;
             }
@@ -93,8 +93,6 @@ public class InputManager : MonoBehaviour
             case InputType.UI:
                 break;
             case InputType.LiveCommand:
-                //LeftLiveCommand.GetComponent<LiveCommandInput>().Init(controller);
-                RightLiveCommand.GetComponent<LiveCommandInput>().Init(controller);
                 break;
         }
     }

@@ -1,8 +1,7 @@
 using UnityEngine;
 
-    namespace BotAI
-    {
-    [System.Serializable]
+namespace BotAI
+{
     public class EA_Basic_Data
     {
         public float weightAngle;

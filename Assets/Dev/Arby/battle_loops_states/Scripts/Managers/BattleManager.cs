@@ -151,8 +151,8 @@ namespace BattleLoop
                     actor: LogActorType.System,
                     data: new Dictionary<string, object>()
                     {
-                        {"type", "player"},
-                        {"side", controller.Side.ToString()},
+                        {"type", "Player"},
+                        {"side", controller.Side.ToLogActorType()},
                         {"skill", controller.Skill.Type.ToString()},
                     });
 

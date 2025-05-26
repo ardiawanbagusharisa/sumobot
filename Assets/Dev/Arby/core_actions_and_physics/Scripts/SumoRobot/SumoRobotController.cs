@@ -67,6 +67,7 @@ namespace CoreSumoRobot
         private Coroutine accelerateOverTimeCoroutine;
         private Coroutine turnOverAngleCoroutine;
 
+        #region Unity
         private void Awake()
         {
             Skill = new SumoSkill(this);
@@ -106,6 +107,7 @@ namespace CoreSumoRobot
                 hasOnOutOfArenaInvoked = true;
             }
         }
+        #endregion
 
         #region Robot State
         public void InitializeForBattle(PlayerSide side, Transform startPosition)
@@ -236,7 +238,7 @@ namespace CoreSumoRobot
 
         IEnumerator TurnOverAngle(float totalAngle)
         {
-            // Initially call debounce-logger turning logic with [duration] starts
+            // Initially call the debounce-logger before turning logic starts
             if (totalAngle < 0)
             {
                 LogManager.CallPlayerActionLog(Side, "TurnLeft");
@@ -289,7 +291,7 @@ namespace CoreSumoRobot
             float elapsedTime = 0f;
             float speed = isDash ? DashSpeed : MoveSpeed;
 
-            // Initially call debounce-logger before accelerating with [time] starts
+            // Initially call debounce-logger before accelerating logic starts
             if (isDash)
             {
                 LogManager.CallPlayerActionLog(Side, "Dash");
@@ -390,13 +392,13 @@ namespace CoreSumoRobot
                 float actorImpact = CollisionBaseForce * targetVelocity / total;  // robotA gets more bounce if B has more speed
                 float targetImpact = CollisionBaseForce * actorVelocity / total;  // robotB gets more bounce if A has more speed
 
-                // Check if Sender using Stone, then calculate the Receiver impact
+                // Check if Actor using Stone, then calculate the Target impact
                 if (Skill.Type == ERobotSkillType.Stone && Skill.IsActive)
                 {
                     targetImpact = targetVelocity / total;
                 }
 
-                // Check if Receiver using Stone, then calculate the Sender impact
+                // Check if Target using Stone, then calculate the Actor impact
                 if (otherRobot.Skill.Type == ERobotSkillType.Stone && otherRobot.Skill.IsActive)
                 {
                     actorImpact = actorVelocity / total;
