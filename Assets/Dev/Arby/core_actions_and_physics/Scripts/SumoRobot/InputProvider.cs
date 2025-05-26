@@ -25,8 +25,7 @@ namespace CoreSumoRobot
         public Dictionary<string, bool> StateKeyboardAction;
         public Dictionary<PlayerSide, Dictionary<KeyCode, ISumoAction>> KeyboardBindings;
 
-        private Queue<ISumoAction> CommandQueue = new Queue<ISumoAction>();
-
+        private Queue<ISumoAction> commandQueue = new Queue<ISumoAction>();
 
         public InputProvider(PlayerSide side, bool includeKeyboard = false)
         {
@@ -52,18 +51,18 @@ namespace CoreSumoRobot
                                     { KeyCode.D, new TurnRightAction(InputType.Keyboard) },
                                     { KeyCode.A, new TurnLeftAction(InputType.Keyboard)},
                                     { KeyCode.LeftShift, new DashAction(InputType.Keyboard)},
-                                    { KeyCode.C, new SkillAction(SkillType,InputType.Keyboard)},
+                                    { KeyCode.C, new SkillAction(InputType.Keyboard)},
                                 }},
                                 {PlayerSide.Right, new Dictionary<KeyCode,ISumoAction>(){
                                     { KeyCode.O, new AccelerateAction(InputType.Keyboard)},
                                     { KeyCode.Semicolon, new TurnRightAction(InputType.Keyboard)},
                                     { KeyCode.K, new TurnLeftAction(InputType.Keyboard)},
                                     { KeyCode.RightShift, new DashAction(InputType.Keyboard)},
-                                    { KeyCode.M, new SkillAction(SkillType,InputType.Keyboard)},
+                                    { KeyCode.M, new SkillAction(InputType.Keyboard)},
                                 }},
                             };
 
-            CommandQueue = new Queue<ISumoAction>();
+            commandQueue = new Queue<ISumoAction>();
         }
 
         public List<ISumoAction> GetInput()
@@ -75,8 +74,8 @@ namespace CoreSumoRobot
                 actions = ReadKeyboardInput();
             }
 
-            while (CommandQueue.Count > 0)
-                actions.Add(CommandQueue.Dequeue());
+            while (commandQueue.Count > 0)
+                actions.Add(commandQueue.Dequeue());
 
             return actions;
         }
@@ -85,7 +84,11 @@ namespace CoreSumoRobot
         // APplied for Live Command And AI Script
         public void EnqueueCommand(ISumoAction action)
         {
-            CommandQueue.Enqueue(action);
+            commandQueue.Enqueue(action);
+        }
+        public void ClearCommands()
+        {
+            commandQueue.Clear();
         }
         #endregion
 
@@ -135,33 +138,33 @@ namespace CoreSumoRobot
         #region UI Input
         public void OnAccelerateButtonPressed()
         {
-            CommandQueue.Enqueue(new AccelerateAction(InputType.UI));
+            commandQueue.Enqueue(new AccelerateAction(InputType.UI));
         }
         public void OnDashButtonPressed()
         {
-            CommandQueue.Enqueue(new DashAction(InputType.UI));
+            commandQueue.Enqueue(new DashAction(InputType.UI));
         }
 
         public void OnTurnLeftButtonPressed()
         {
-            CommandQueue.Enqueue(new TurnLeftAction(InputType.UI));
+            commandQueue.Enqueue(new TurnLeftAction(InputType.UI));
         }
 
         public void OnTurnRightButtonPressed()
         {
-            CommandQueue.Enqueue(new TurnRightAction(InputType.UI));
+            commandQueue.Enqueue(new TurnRightAction(InputType.UI));
         }
 
         public void OnBoostSkillButtonPressed()
         {
             if (SkillType != ERobotSkillType.Boost) return;
-            CommandQueue.Enqueue(new SkillAction(ERobotSkillType.Boost, InputType.UI));
+            commandQueue.Enqueue(new SkillAction(InputType.UI));
         }
 
         public void OnStoneSkillButtonPressed()
         {
             if (SkillType != ERobotSkillType.Stone) return;
-            CommandQueue.Enqueue(new SkillAction(ERobotSkillType.Stone, InputType.UI));
+            commandQueue.Enqueue(new SkillAction(InputType.UI));
         }
         #endregion
     }

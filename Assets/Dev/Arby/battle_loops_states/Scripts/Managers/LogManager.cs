@@ -1,8 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using BattleLoop;
+using CoreSumoRobot;
 using Newtonsoft.Json;
+using Unity.VisualScripting;
 using UnityEngine;
 
 
@@ -15,6 +18,8 @@ public enum LogActorType
 
 public class LogManager
 {
+    public static Dictionary<PlayerSide, Dictionary<string, DebouncedLogger>> ActionLoggers = new Dictionary<PlayerSide, Dictionary<string, DebouncedLogger>>();
+
     private static BattleLog _battleLog;
     private static string _logFilePath;
 
@@ -45,6 +50,60 @@ public class LogManager
 
         public Dictionary<string, object> data = new Dictionary<string, object>();
     }
+
+    #region Sumorobot Action
+
+    public static void SetPlayerAction()
+    {
+        var leftPlayer = BattleManager.Instance.Battle.LeftPlayer;
+        var rightPlayer = BattleManager.Instance.Battle.RightPlayer;
+        if (!ActionLoggers.ContainsKey(leftPlayer.Side))
+            ActionLoggers.Add(leftPlayer.Side, InitByController(leftPlayer));
+        if (!ActionLoggers.ContainsKey(rightPlayer.Side))
+            ActionLoggers.Add(rightPlayer.Side, InitByController(rightPlayer));
+
+        static Dictionary<string, DebouncedLogger> InitByController(SumoRobotController controller)
+        {
+            return new Dictionary<string, DebouncedLogger>
+            {
+                {"Accelerate", new DebouncedLogger(controller, 0.1f) },
+                {"TurnRight", new DebouncedLogger(controller, 0.1f) },
+                {"TurnLeft", new DebouncedLogger(controller, 0.1f) },
+                {"Dash", new DebouncedLogger(controller, controller.DashDuration) },
+                {"Skill", new DebouncedLogger(controller, controller.Skill.SkillDuration) }
+            };
+        }
+    }
+
+    public static void CleanIncompletePlayerAction()
+    {
+        foreach (Dictionary<string, DebouncedLogger> actionSide in ActionLoggers.Values)
+        {
+            foreach (DebouncedLogger action in actionSide.Values)
+            {
+                if (action.IsActive)
+                {
+                    action.SaveToLog();
+                }
+            }
+        }
+    }
+    public static void UpdatePlayerActionLog(PlayerSide side)
+    {
+        if (BattleManager.Instance.CurrentState == BattleState.Battle_Ongoing)
+            foreach (var action in ActionLoggers[side].Values)
+            {
+                action.Update();
+            }
+    }
+    public static void CallPlayerActionLog(PlayerSide side, string logName, string actionName = null)
+    {
+        var actionLog = ActionLoggers[side][logName];
+        actionLog.Call(actionName ?? logName);
+    }
+    #endregion
+
+    #region Core Battle
 
     public static void InitBattle()
     {
@@ -122,10 +181,12 @@ public class LogManager
 
         return _battleLog.rounds[^1]; // last round
     }
+    #endregion
 
     private static void SaveLog()
     {
         string json = JsonConvert.SerializeObject(_battleLog, Formatting.Indented);
         File.WriteAllText(_logFilePath, json);
     }
+
 }

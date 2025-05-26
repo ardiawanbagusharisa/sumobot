@@ -83,17 +83,15 @@ namespace CoreSumoRobot
 
     public class SkillAction : ISumoAction
     {
-        public ERobotSkillType ERobotSkillType { get; }
 
-        public SkillAction(ERobotSkillType skillType, InputType inputType)
+        public SkillAction(InputType inputType)
         {
-            ERobotSkillType = skillType;
             InputUsed = inputType;
         }
 
         public override void Execute(SumoRobotController controller)
         {
-            controller.UseSkill(ERobotSkillType);
+            controller.UseSkill();
         }
     }
 
