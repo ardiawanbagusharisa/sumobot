@@ -8,15 +8,8 @@ namespace BotAI
 {
     public class AIBot_EA_MCTS : MonoBehaviour
     {
-        private SumoRobotController controller;
-        private SumoRobotController enemy;
-
         public float DecisionActionInterval = 0.25f;
         public int DecisionResetInterval = 5;
-        private float decisionTimer;
-        private int decisionIntervalCount = 0;
-
-        EA_MCTS_Node root;
         public static Dictionary<string, ISumoAction> PossibleActions = new Dictionary<string, ISumoAction>() {
             {"AccelerateAction",new AccelerateAction(InputType.Script)},
             {"DashAction",new DashAction(InputType.Script)},
@@ -24,6 +17,12 @@ namespace BotAI
             {"TurnLeftAction",new TurnLeftAngleAction(45f)},
             {"SkillAction",new SkillAction(InputType.Script)},
         };
+
+        private SumoRobotController controller;
+        private SumoRobotController enemy;
+        private float decisionTimer;
+        private int decisionIntervalCount = 0;
+        private EA_MCTS_Node root;
 
         void OnEnable()
         {

@@ -3,7 +3,6 @@ using UnityEditor;
 #endif
 using UnityEngine;
 using System.IO;
-using Unity.VisualScripting;
 using CoreSumoRobot;
 
 public static class Utility

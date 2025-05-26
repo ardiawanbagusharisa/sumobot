@@ -75,6 +75,8 @@ public class LogManager
         }
     }
 
+    // Some actions maybe still hanging when the state is already ended, (e.g. dash and skill).
+    // Therefore, we need manually add to stack
     public static void CleanIncompletePlayerAction()
     {
         foreach (Dictionary<string, DebouncedLogger> actionSide in ActionLoggers.Values)
@@ -103,7 +105,7 @@ public class LogManager
     }
     #endregion
 
-    #region Core Battle
+    #region Core Battle Log
 
     public static void InitBattle()
     {

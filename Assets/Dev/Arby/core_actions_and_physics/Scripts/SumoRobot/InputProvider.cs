@@ -23,7 +23,26 @@ namespace CoreSumoRobot
 
         // AccelerateAction: true, means player can press Accelerate
         public Dictionary<string, bool> StateKeyboardAction;
-        public Dictionary<PlayerSide, Dictionary<KeyCode, ISumoAction>> KeyboardBindings;
+
+        // Store keyboard configurations (keybindings)
+        public static readonly Dictionary<PlayerSide, Dictionary<KeyCode, ISumoAction>> KeyboardBindings
+            = new Dictionary<PlayerSide, Dictionary<KeyCode, ISumoAction>>()
+                            {
+                                {PlayerSide.Left, new Dictionary<KeyCode, ISumoAction>(){
+                                    { KeyCode.W, new AccelerateAction(InputType.Keyboard) },
+                                    { KeyCode.D, new TurnRightAction(InputType.Keyboard) },
+                                    { KeyCode.A, new TurnLeftAction(InputType.Keyboard)},
+                                    { KeyCode.LeftShift, new DashAction(InputType.Keyboard)},
+                                    { KeyCode.C, new SkillAction(InputType.Keyboard)},
+                                }},
+                                {PlayerSide.Right, new Dictionary<KeyCode,ISumoAction>(){
+                                    { KeyCode.O, new AccelerateAction(InputType.Keyboard)},
+                                    { KeyCode.Semicolon, new TurnRightAction(InputType.Keyboard)},
+                                    { KeyCode.K, new TurnLeftAction(InputType.Keyboard)},
+                                    { KeyCode.RightShift, new DashAction(InputType.Keyboard)},
+                                    { KeyCode.M, new SkillAction(InputType.Keyboard)},
+                                }},
+                            };
 
         private Queue<ISumoAction> commandQueue = new Queue<ISumoAction>();
 
@@ -44,23 +63,6 @@ namespace CoreSumoRobot
                                         {"SkillAction",true},
                                     };
 
-            KeyboardBindings = new Dictionary<PlayerSide, Dictionary<KeyCode, ISumoAction>>()
-                            {
-                                {PlayerSide.Left, new Dictionary<KeyCode, ISumoAction>(){
-                                    { KeyCode.W, new AccelerateAction(InputType.Keyboard) },
-                                    { KeyCode.D, new TurnRightAction(InputType.Keyboard) },
-                                    { KeyCode.A, new TurnLeftAction(InputType.Keyboard)},
-                                    { KeyCode.LeftShift, new DashAction(InputType.Keyboard)},
-                                    { KeyCode.C, new SkillAction(InputType.Keyboard)},
-                                }},
-                                {PlayerSide.Right, new Dictionary<KeyCode,ISumoAction>(){
-                                    { KeyCode.O, new AccelerateAction(InputType.Keyboard)},
-                                    { KeyCode.Semicolon, new TurnRightAction(InputType.Keyboard)},
-                                    { KeyCode.K, new TurnLeftAction(InputType.Keyboard)},
-                                    { KeyCode.RightShift, new DashAction(InputType.Keyboard)},
-                                    { KeyCode.M, new SkillAction(InputType.Keyboard)},
-                                }},
-                            };
 
             commandQueue = new Queue<ISumoAction>();
         }
@@ -105,31 +107,6 @@ namespace CoreSumoRobot
                 {
                     actions.Add(item.Value);
                 }
-
-                // // Log started when player press & hold button
-                // if (Input.GetKeyDown(item.Key) && StateKeyboardAction[item.Value.GetType().Name] && BattleManager.Instance.CurrentState == BattleState.Battle_Ongoing)
-                // {
-                //     LogManager.LogRoundEvent(
-
-                //         actor: PlayerSide.ToLogActorType(),
-                //         detail: new Dictionary<string, object>()
-                //                 {
-                //                     {"action", item.Value.GetType().Name},
-                //                     {"active", true},
-                //                 });
-                // }
-
-                // // Log ended when player release button
-                // if (Input.GetKeyUp(item.Key) && StateKeyboardAction[item.Value.GetType().Name] && BattleManager.Instance.CurrentState == BattleState.Battle_Ongoing)
-                // {
-                //     LogManager.LogRoundEvent(
-                //         actor: PlayerSide.ToLogActorType(),
-                //         detail: new Dictionary<string, object>()
-                //                 {
-                //                     {"action", item.Value.GetType().Name},
-                //                     {"active", false},
-                //                 });
-                // }
             }
             return actions;
         }
