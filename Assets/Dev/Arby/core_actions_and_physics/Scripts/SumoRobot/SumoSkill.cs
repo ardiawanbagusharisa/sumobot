@@ -60,6 +60,7 @@ namespace CoreSumoRobot
         }
 
         public bool IsSkillCooldown => SkillCooldown() >= 0f;
+        public float SkillDuration => Type == ERobotSkillType.Boost ? BoostDuration : StoneDuration;
 
         public void Reset()
         {
@@ -76,7 +77,7 @@ namespace CoreSumoRobot
             if (!IsSkillCooldown)
             {
                 Debug.Log($"[Skill][{Type}] activated!");
-
+                controller.ActionLoggers["Skill"].Call(Type.ToString());
                 IsActive = true;
                 switch (Type)
                 {
@@ -121,7 +122,10 @@ namespace CoreSumoRobot
         {
             float duration = type == ERobotSkillType.Boost ? BoostDuration : StoneDuration;
             yield return new WaitForSeconds(duration);
-
+            // LogManager.LogRoundEvent(
+            //         actor: controller.Side == PlayerSide.Left ? LogActorType.LeftPlayer : LogActorType.RightPlayer,
+            //         action: LogActionType.Player_Skill,
+            //         detail: $"type={Type};active=false");
             IsActive = false;
             switch (type)
             {

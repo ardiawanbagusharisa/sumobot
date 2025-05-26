@@ -20,12 +20,14 @@ namespace BattleLoop
 
         // Battle
         public TMP_Text IndicatorBattle;
-        public TMP_Text IndicatorBattleCountDownTimer;
+        public TMP_Text IndicatorCountdown;
         public TMP_Text StageBestOf;
         public TMP_Text StageRoundNumber;
         public TMP_Text StageBattleTime;
-        public TMP_Text LeftScore;
-        public TMP_Text RightScore;
+        public TMP_Text LeftOngoingScore;
+        public TMP_Text RightOngoingScore;
+        public TMP_Text LeftFinalScore;
+        public TMP_Text RightFinalScore;
 
 
         // private List<Image> leftScoreDots = new List<Image>();
@@ -58,6 +60,20 @@ namespace BattleLoop
             BattleManager.Instance.OnBattleChanged -= OnBattleChanged;
         }
 
+        void Update()
+        {
+            if (BattleManager.Instance.CurrentState == BattleState.Battle_Ongoing ||
+            BattleManager.Instance.CurrentState == BattleState.Battle_End ||
+            BattleManager.Instance.CurrentState == BattleState.Battle_Reset)
+            {
+                StageBattleTime.SetText(Mathf.CeilToInt(BattleManager.Instance.TimeLeft).ToString());
+            }
+            else
+            {
+                StageBattleTime.SetText(BattleManager.Instance.BattleTime.ToString());
+            }
+        }
+
         private void OnBattleChanged(Battle battle)
         {
             StageBestOf.SetText($"Best of {(int)battle.RoundSystem}");
@@ -65,7 +81,6 @@ namespace BattleLoop
 
             Round round = battle.CurrentRound;
             BattleState state = BattleManager.Instance.CurrentState;
-            StageBattleTime.SetText(round.TimeLeft.ToString());
             IndicatorBattle.SetText(state.ToString());
 
             switch (state)
@@ -78,12 +93,14 @@ namespace BattleLoop
 
                     LeftDefaultSpecialSkill.value = (int)BattleManager.Instance.Battle.LeftPlayer.Skill.Type;
                     RightDefaultSpecialSkill.value = (int)BattleManager.Instance.Battle.LeftPlayer.Skill.Type;
+                    LeftFinalScore.SetText("");
+                    RightFinalScore.SetText("");
                     break;
 
                 case BattleState.Battle_Preparing:
                     BattleStatePanel.Find((o) => o.CompareTag("BattleState/Ongoing")).SetActive(true);
                     ClearScore();
-                    IndicatorBattleCountDownTimer.SetText("");
+                    IndicatorCountdown.SetText("");
                     StageBestOf.SetText("");
                     StageRoundNumber.SetText("");
 
@@ -96,7 +113,7 @@ namespace BattleLoop
                     BattleManager.Instance.OnCountdownChanged += OnCountdownChanged;
                     break;
                 case BattleState.Battle_Ongoing:
-                    IndicatorBattleCountDownTimer.SetText("");
+                    IndicatorCountdown.SetText("");
                     BattleManager.Instance.OnCountdownChanged -= OnCountdownChanged;
                     break;
                 case BattleState.Battle_End:
@@ -109,6 +126,9 @@ namespace BattleLoop
 
                     BattleStatePanel.Find((o) => o.CompareTag("BattleState/Ongoing")).SetActive(false);
                     BattleStatePanel.Find((o) => o.CompareTag("BattleState/Pre")).SetActive(false);
+
+                    LeftFinalScore.SetText(battle.LeftWinCount.ToString());
+                    RightFinalScore.SetText(battle.RightWinCount.ToString());
                     break;
             }
             UpdateScore(battle);
@@ -116,7 +136,7 @@ namespace BattleLoop
 
         private void OnCountdownChanged(float timer)
         {
-            IndicatorBattleCountDownTimer.SetText(timer.ToString());
+            IndicatorCountdown.SetText(timer.ToString());
         }
 
         private void UpdateScore(Battle battleInfo)
@@ -127,8 +147,8 @@ namespace BattleLoop
                 return;
             }
 
-            LeftScore.SetText(battleInfo.LeftWinCount.ToString());
-            RightScore.SetText(battleInfo.RightWinCount.ToString());
+            LeftOngoingScore.SetText(battleInfo.LeftWinCount.ToString());
+            RightOngoingScore.SetText(battleInfo.RightWinCount.ToString());
 
             // for (int i = 1; i < leftScoreDots.Count; i++)
             // {
@@ -147,8 +167,8 @@ namespace BattleLoop
 
         private void ClearScore()
         {
-            LeftScore.SetText("0");
-            RightScore.SetText("0");
+            LeftOngoingScore.SetText("0");
+            RightOngoingScore.SetText("0");
 
             // for (int i = 0; i < leftScoreDots.Count - 1; i++)
             // {

@@ -33,6 +33,9 @@ namespace CoreSumoRobot
         public float CollisionBaseForce = 4f;
 
         public PlayerSide Side;
+
+        [HideInInspector]
+        public LogActorType ActorType => Side == PlayerSide.Left ? LogActorType.LeftPlayer : LogActorType.RightPlayer;
         #endregion
 
         public Vector2 LastVelocity { get; private set; } = Vector2.zero;
@@ -59,6 +62,11 @@ namespace CoreSumoRobot
         private event Action<Collider2D> onExitTriggers;
         private bool hasOnOutOfArenaInvoked = false;
 
+        private Coroutine accelerateOverTimeCoroutine;
+        private Coroutine turnOverAngleCoroutine;
+
+        public Dictionary<string, DebouncedLogger> ActionLoggers = new Dictionary<string, DebouncedLogger>();
+
         private void Awake()
         {
             Skill = new SumoSkill(this);
@@ -78,11 +86,19 @@ namespace CoreSumoRobot
             SetRules(false);
         }
 
+
         void Update()
         {
             ReadInput();
-
             LastVelocity = robotRigidBody.linearVelocity;
+
+            if (BattleManager.Instance.CurrentState == BattleState.Battle_Ongoing)
+            {
+                foreach (var actionLogger in ActionLoggers)
+                {
+                    actionLogger.Value.Update();
+                }
+            }
         }
 
         private void FixedUpdate()
@@ -147,10 +163,37 @@ namespace CoreSumoRobot
             LastVelocity = Vector2.zero;
             Skill.Reset();
         }
+
+        public void Reset()
+        {
+            SetSkillEnabled(false);
+            SetMovementEnabled(false);
+            
+            foreach (var actionLogger in ActionLoggers)
+            {
+                actionLogger.Value.AddIncompleteAction(); ;
+            }
+        }
+
+        public void SetActionLogger()
+        {
+            ActionLoggers.Add("Accelerate", new DebouncedLogger(this, 0.1f));
+            ActionLoggers.Add("TurnLeft", new DebouncedLogger(this, 0.1f));
+            ActionLoggers.Add("TurnRight", new DebouncedLogger(this, 0.1f));
+            ActionLoggers.Add("Dash", new DebouncedLogger(this, DashDuration));
+            ActionLoggers.Add("Skill", new DebouncedLogger(this, Skill.SkillDuration));
+        }
         #endregion
 
 
         #region Robot Action
+        public void StopCoroutineAction()
+        {
+            if (accelerateOverTimeCoroutine != null)
+                StopCoroutine(accelerateOverTimeCoroutine);
+            if (turnOverAngleCoroutine != null)
+                StopCoroutine(turnOverAngleCoroutine);
+        }
         public void Accelerate(AccelerateActionType type, float time = float.NaN)
         {
             if (isMoveDisabled || IsMovementLocked)
@@ -159,6 +202,9 @@ namespace CoreSumoRobot
                 return;
             }
 
+            // Log with debounce strategy
+            ActionLoggers["Accelerate"].Call("Accelerate");
+
             switch (type)
             {
                 case AccelerateActionType.Default:
@@ -166,7 +212,7 @@ namespace CoreSumoRobot
                     break;
                 case AccelerateActionType.Time:
                     if (time == float.NaN) throw new Exception("Time can't be NaN when you are using [AccelerateActionType.Time] type");
-                    StartCoroutine(AccelerateOverTime(time));
+                    accelerateOverTimeCoroutine = StartCoroutine(AccelerateOverTime(time));
                     break;
             }
         }
@@ -184,6 +230,9 @@ namespace CoreSumoRobot
                 case DashActionType.Default:
                     if (!IsDashCooldown)
                     {
+                        // Log
+                        ActionLoggers["Dash"].Call("Dash");
+
                         LastDashTime = BattleManager.Instance.ElapsedTime;
                         robotRigidBody.linearVelocity = transform.up * DashSpeed;
                     }
@@ -194,7 +243,7 @@ namespace CoreSumoRobot
                     break;
                 case DashActionType.Time:
                     if (time == float.NaN) throw new Exception("Time can't be NaN when you are using [DashActionType.Time] type");
-                    StartCoroutine(AccelerateOverTime(time, isDash: true));
+                    accelerateOverTimeCoroutine = StartCoroutine(AccelerateOverTime(time, isDash: true));
                     break;
             }
 
@@ -205,24 +254,26 @@ namespace CoreSumoRobot
             switch (type)
             {
                 case TurnActionType.Left:
+                    ActionLoggers["TurnLeft"].Call("TurnLeft");
                     transform.Rotate(0, 0, RotateSpeed * Time.deltaTime);
                     break;
                 case TurnActionType.Right:
+                    ActionLoggers["TurnRight"].Call("TurnRight");
                     transform.Rotate(0, 0, -RotateSpeed * Time.deltaTime);
                     break;
                 case TurnActionType.LeftAngle:
                     if (angle == float.NaN) throw new Exception("Left Angle can't be NaN when you are using [TurnActionInput.LeftAngle] type");
                     if (angle < 0) throw new Exception("Left Angle can't be < 0 when you are using [TurnActionInput.LeftAngle] type");
-                    StartCoroutine(TurnOverAngle(angle * 1f, 0.5f));
+                    turnOverAngleCoroutine = StartCoroutine(TurnOverAngle(angle * 1f, 0.5f));
                     break;
                 case TurnActionType.RightAngle:
                     if (angle == float.NaN) throw new Exception("Right Angle can't be NaN when you are using [TurnActionInput.RightAngle] type");
                     if (angle < 0) throw new Exception("Right Angle can't be < 0 when you are using [TurnActionInput.RightAngle] type");
-                    StartCoroutine(TurnOverAngle(angle * -1f, 0.5f));
+                    turnOverAngleCoroutine = StartCoroutine(TurnOverAngle(angle * -1f, 0.5f));
                     break;
                 case TurnActionType.Angle:
                     if (angle == float.NaN) throw new Exception("Angle can't be NaN when you are using [TurnActionInput.Angle] type");
-                    StartCoroutine(TurnOverAngle(angle, 0.5f));
+                    turnOverAngleCoroutine = StartCoroutine(TurnOverAngle(angle, 0.5f));
                     break;
             }
 
@@ -238,6 +289,16 @@ namespace CoreSumoRobot
 
         IEnumerator TurnOverAngle(float totalAngle, float duration)
         {
+            // Start Log
+            if (totalAngle < 0)
+            {
+                ActionLoggers["TurnLeft"].Call("TurnLeft");
+            }
+            else
+            {
+                ActionLoggers["TurnRight"].Call("TurnRight");
+            }
+
             float rotatedAngle = 0f;
             float speed = totalAngle / duration; // degrees per second
 
@@ -253,6 +314,16 @@ namespace CoreSumoRobot
                 transform.Rotate(0, 0, delta); // rotate
                 rotatedAngle += delta; // track how much we've rotated
 
+                // Stop Log
+                if (totalAngle < 0)
+                {
+                    ActionLoggers["TurnLeft"].Call("TurnLeft");
+                }
+                else
+                {
+                    ActionLoggers["TurnRight"].Call("TurnRight");
+                }
+
                 yield return null;
             }
         }
@@ -261,6 +332,16 @@ namespace CoreSumoRobot
         {
             float elapsedTime = 0f;
             float speed = isDash ? DashSpeed : MoveSpeed;
+
+            // Start Log
+            if (isDash)
+            {
+                ActionLoggers["Dash"].Call("Dash");
+            }
+            else
+            {
+                ActionLoggers["Accelerate"].Call("Accelerate");
+            }
 
             // lerping?, uncomment
             // Vector2 initialVelocity = robotRigidBody.linearVelocity; 
@@ -274,6 +355,16 @@ namespace CoreSumoRobot
                 robotRigidBody.linearVelocity = transform.up.normalized * speed;
 
                 elapsedTime += Time.deltaTime;
+
+                // Stop Log
+                if (isDash)
+                {
+                    ActionLoggers["Dash"].Call("Dash");
+                }
+                else
+                {
+                    ActionLoggers["Accelerate"].Call("Accelerate");
+                }
                 yield return null;
             }
 
@@ -321,6 +412,9 @@ namespace CoreSumoRobot
             var otherRobot = collision.gameObject.GetComponent<SumoRobotController>();
             if (otherRobot == null) return;
 
+            StopCoroutineAction();
+            otherRobot.StopCoroutineAction();
+
             // Compare magnitudes
             float mySpeed = LastVelocity.magnitude;
             float otherSpeed = otherRobot.LastVelocity.magnitude;
@@ -329,34 +423,60 @@ namespace CoreSumoRobot
             if (mySpeed >= otherSpeed)
             {
                 Vector2 collisionNormal = collision.contacts[0].normal;
-                float senderVelocity = LastVelocity.magnitude;
-                float receiverVelocity = otherRobot.LastVelocity.magnitude;
+                float actorVelocity = LastVelocity.magnitude;
+                float targetVelocity = otherRobot.LastVelocity.magnitude;
 
-                float total = senderVelocity + receiverVelocity + 0.01f;
+                float total = actorVelocity + targetVelocity + 0.01f;
 
-                float senderImpact = CollisionBaseForce * (receiverVelocity / total);  // robotA gets more bounce if B has more speed
-                float receiverImpact = CollisionBaseForce * (senderVelocity / total);  // robotB gets more bounce if A has more speed
+                float actorImpact = CollisionBaseForce * (targetVelocity / total);  // robotA gets more bounce if B has more speed
+                float targetImpact = CollisionBaseForce * (actorVelocity / total);  // robotB gets more bounce if A has more speed
 
                 // Check if Sender using Stone, then calculate the Receiver impact
                 if (Skill.Type == ERobotSkillType.Stone && Skill.IsActive)
                 {
-                    receiverImpact = receiverVelocity / total;
+                    targetImpact = targetVelocity / total;
                 }
 
                 // Check if Receiver using Stone, then calculate the Sender impact
                 if (otherRobot.Skill.Type == ERobotSkillType.Stone && otherRobot.Skill.IsActive)
                 {
-                    senderImpact = senderVelocity / total;
+                    actorImpact = actorVelocity / total;
                 }
 
                 // Applying opposite bounce back multiplier
-                senderImpact *= otherRobot.BounceResistance;
-                receiverImpact *= BounceResistance;
+                actorImpact *= otherRobot.BounceResistance;
+                targetImpact *= BounceResistance;
 
-                Bounce(collisionNormal, senderImpact);       // away from B
-                otherRobot.Bounce(-collisionNormal, receiverImpact);      // away from A
+                Bounce(collisionNormal, actorImpact);       // away from B
+                otherRobot.Bounce(-collisionNormal, targetImpact);      // away from A
 
-                Debug.Log($"[BounceRule]\nSender=>{Side}, Receiver=>{otherRobot.Side}\nSenderCurrentSkill={Skill.Type}, ReceiverCurrentSkill=>{otherRobot.Skill.Type}\nSenderImpact=>{senderImpact}, ReceiverImpact=>{receiverImpact}");
+                Debug.Log($"[BounceRule]\nSender=>{Side}, Receiver=>{otherRobot.Side}\nSenderCurrentSkill={Skill.Type}, ReceiverCurrentSkill=>{otherRobot.Skill.Type}\nSenderImpact=>{actorImpact}, ReceiverImpact=>{targetImpact}");
+
+                LogManager.LogRoundEvent(
+                    actor: Side.ToLogActorType(),
+                    target: otherRobot.Side.ToLogActorType(),
+                    data: new Dictionary<string, object>()
+                    {
+                        { "type", "Bounce" },
+                        {"actor", new Dictionary<string, object>() {
+                            {"impact", actorImpact},
+                            {"velocity", new Dictionary<string, object>() {
+                                {"x", LastVelocity.x},
+                                {"y", LastVelocity.y}}
+                            },
+                            {"isCurrentSkillActive", Skill.IsActive},
+                            {"bounceResistance", BounceResistance},
+                        } },
+                        {"target", new Dictionary<string, object>() {
+                            {"impact", targetImpact},
+                            {"velocity", new Dictionary<string, object>() {
+                                {"x", otherRobot.LastVelocity.x},
+                                {"y", otherRobot.LastVelocity.y}}
+                            },
+                            {"isCurrentSkillActive", otherRobot.Skill.IsActive},
+                            {"bounceResistance", otherRobot.BounceResistance},
+                        } },
+                    });
             }
         }
 

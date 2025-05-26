@@ -2999,7 +2999,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 2.2062073, y: -85}
+  m_AnchoredPosition: {x: 2.2062988, y: -85}
   m_SizeDelta: {x: 862.3549, y: 87.9227}
   m_Pivot: {x: 0, y: 0.5}
 --- !u!114 &757482879
@@ -3785,7 +3785,7 @@ GameObject:
   - component: {fileID: 1049857827}
   - component: {fileID: 1049857828}
   m_Layer: 5
-  m_Name: Player_Input
+  m_Name: Footer
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -3805,12 +3805,12 @@ RectTransform:
   m_Children:
   - {fileID: 158706379}
   - {fileID: 728913079}
-  m_Father: {fileID: 1613685149}
+  m_Father: {fileID: 4374331392871250406}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: 25.42279}
-  m_SizeDelta: {x: 0, y: 50.8457}
+  m_AnchoredPosition: {x: 0, y: -406.5772}
+  m_SizeDelta: {x: 0, y: -813.1543}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1049857828
 MonoBehaviour:
@@ -5668,42 +5668,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1604059580}
   m_CullTransparentMesh: 1
---- !u!1 &1613685148
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1613685149}
-  m_Layer: 5
-  m_Name: Footer
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!224 &1613685149
-RectTransform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1613685148}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children:
-  - {fileID: 1049857827}
-  m_Father: {fileID: 4374331392871250406}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 960, y: -1080}
-  m_SizeDelta: {x: 1920, y: 216}
-  m_Pivot: {x: 0.5, y: 0}
 --- !u!1 &1646932042
 GameObject:
   m_ObjectHideFlags: 0
@@ -8350,9 +8314,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3a93addaa694d43528f8eb6ca35b41b4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  BattleInputType: 0
+  BattleInputType: 1
   RoundSystem: 3
-  BattleTime: 40
+  BattleTime: 60
   CountdownTime: 3
   StartPositions:
   - {fileID: 1987440270}
@@ -8367,14 +8331,14 @@ MonoBehaviour:
     RightPlayer: {fileID: 0}
     CurrentRound:
       Id: 0
-      TimeLeft: 0
+      FinishTime: 0
       RoundNumber: 0
       RoundWinner: {fileID: 0}
     LeftWinCount: 0
     RightWinCount: 0
   CurrentRound:
     Id: 0
-    TimeLeft: 0
+    FinishTime: 0
     RoundNumber: 0
     RoundWinner: {fileID: 0}
 --- !u!114 &2130233542
@@ -8396,12 +8360,14 @@ MonoBehaviour:
   LeftDefaultSpecialSkill: {fileID: 356688603}
   RightDefaultSpecialSkill: {fileID: 2133437841}
   IndicatorBattle: {fileID: 1254230124}
-  IndicatorBattleCountDownTimer: {fileID: 1218802672}
+  IndicatorCountdown: {fileID: 1218802672}
   StageBestOf: {fileID: 93191128}
   StageRoundNumber: {fileID: 2044528550}
   StageBattleTime: {fileID: 1506464103721430510}
-  LeftScore: {fileID: 1995473052}
-  RightScore: {fileID: 304621562}
+  LeftOngoingScore: {fileID: 1995473052}
+  RightOngoingScore: {fileID: 304621562}
+  LeftFinalScore: {fileID: 5964918650161667861}
+  RightFinalScore: {fileID: 1490776911109916008}
 --- !u!114 &2130233543
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -15796,7 +15762,7 @@ RectTransform:
   m_Children:
   - {fileID: 1680011214}
   - {fileID: 647318861}
-  - {fileID: 1613685149}
+  - {fileID: 1049857827}
   m_Father: {fileID: 6190103857498352438}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -16329,7 +16295,7 @@ GameObject:
   - component: {fileID: 5914990054111648893}
   - component: {fileID: 5964918650161667861}
   m_Layer: 5
-  m_Name: Text (TMP)
+  m_Name: L_PlayerScore
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -18429,7 +18395,7 @@ GameObject:
   - component: {fileID: 5374276035921595188}
   - component: {fileID: 1490776911109916008}
   m_Layer: 5
-  m_Name: Text (TMP)
+  m_Name: R_PlayerScore
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
