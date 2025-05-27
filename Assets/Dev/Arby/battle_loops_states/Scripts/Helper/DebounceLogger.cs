@@ -7,13 +7,13 @@ using UnityEngine;
 public class DebouncedLogger
 {
     private float debounceTime;
-    private Action onDebounced;
     private float lastCallTime;
-    private bool isActive;
+    public bool IsActive;
 
     private Quaternion startRotation;
     private Vector2 startPosition;
     private Vector2 startLinearVelocity;
+    private float startAngularVelocity;
     private float startTime;
     private string Name;
     private SumoRobotController controller;
@@ -22,21 +22,50 @@ public class DebouncedLogger
     {
         this.controller = controller;
         this.debounceTime = debounceTime;
-        onDebounced = () =>
-        {
-            float duration = BattleManager.Instance.ElapsedTime - startTime;
-            Quaternion endRotation = controller.transform.rotation;
-            Vector3 endPosition = controller.transform.position;
-            Vector3 endVelocity = controller.LastVelocity;
+    }
 
-            LogManager.LogRoundEvent(
-                actor: controller.Side.ToLogActorType(),
-                data: new Dictionary<string, object>()
-                {
+    public void Call(string name)
+    {
+        Name = name;
+        if (!IsActive)
+        {
+            IsActive = true;
+            startTime = BattleManager.Instance.ElapsedTime;
+            startPosition = controller.transform.position;
+            startRotation = controller.transform.rotation;
+            startLinearVelocity = controller.LastVelocity;
+            startAngularVelocity = controller.LastAngularVelocity;
+        }
+
+        lastCallTime = BattleManager.Instance.ElapsedTime;
+    }
+
+    public void Update()
+    {
+        if (IsActive && BattleManager.Instance.ElapsedTime - lastCallTime >= debounceTime)
+        {
+            SaveToLog();
+            IsActive = false;
+        }
+    }
+
+    public void SaveToLog()
+    {
+        float duration = BattleManager.Instance.ElapsedTime - startTime;
+        Quaternion endRotation = controller.transform.rotation;
+        Vector3 endPosition = controller.transform.position;
+        Vector3 endLinearVelocity = controller.LastVelocity;
+        float endAngularVelocity = controller.LastAngularVelocity;
+
+        LogManager.LogRoundEvent(
+            actor: controller.Side.ToLogActorType(),
+            data: new Dictionary<string, object>()
+            {
                         { "type", Name },
                         { "before", new Dictionary<string,object>()
                             {
-                                { "velocity", new Dictionary<string,float>()
+                                { "angular_velocity", startAngularVelocity},
+                                { "linear_velocity", new Dictionary<string,float>()
                                     {
                                         {"x",startLinearVelocity.x},
                                         {"y",startLinearVelocity.y},
@@ -57,10 +86,11 @@ public class DebouncedLogger
                         },
                         { "after", new Dictionary<string,object>()
                             {
-                                { "velocity", new Dictionary<string,float>()
+                                { "angular_velocity", endAngularVelocity},
+                                { "linear_velocity", new Dictionary<string,float>()
                                     {
-                                        {"x",endVelocity.x},
-                                        {"y",endVelocity.y},
+                                        {"x",endLinearVelocity.x},
+                                        {"y",endLinearVelocity.y},
                                     }
                                 },
                                 { "position", new Dictionary<string,float>()
@@ -77,39 +107,7 @@ public class DebouncedLogger
                             }
                         },
                         { "duration", duration }
-                }
-            );
-        };
-    }
-
-    public void Call(string name)
-    {
-        Name = name;
-        if (!isActive)
-        {
-            isActive = true;
-            startTime = BattleManager.Instance.ElapsedTime;
-            startPosition = controller.transform.position;
-            startRotation = controller.transform.rotation;
-            startLinearVelocity = controller.LastVelocity;
-        }
-
-        lastCallTime = BattleManager.Instance.ElapsedTime;
-    }
-
-    public void Update()
-    {
-        if (isActive && BattleManager.Instance.ElapsedTime - lastCallTime >= debounceTime)
-        {
-            onDebounced.Invoke();
-            isActive = false;
-        }
-    }
-
-    // When the battle is ended, some actions are maybe still active (e.g skill) from previous [debounceTime]
-    public void AddIncompleteAction()
-    {
-        if (isActive)
-            onDebounced.Invoke();
+            }
+        );
     }
 }

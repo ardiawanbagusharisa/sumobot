@@ -45,14 +45,15 @@ namespace BattleLoop
         public float CountdownTime = 3f;
         public List<Transform> StartPositions = new List<Transform>();
         public GameObject SumoPrefab;
+        public GameObject LeftPlayerObject;
+        public GameObject RightPlayerObject;
 
         // State & Internal 
         public BattleState CurrentState = BattleState.PreBatle_Preparing;
         public float ElapsedTime = 0;
         public float TimeLeft => BattleTime - ElapsedTime;
         public Battle Battle;
-        public Round CurrentRound;
-        // private List<GameObject> players = new List<GameObject>();
+        public Round CurrentRound = null;
 
         // Events 
         public event Action<float> OnCountdownChanged;
@@ -82,8 +83,8 @@ namespace BattleLoop
 
         void OnDisable()
         {
-            Battle.LeftPlayer.OnOutOfArena -= OnPlayerOutOfArena;
-            Battle.RightPlayer.OnOutOfArena -= OnPlayerOutOfArena;
+            Battle.LeftPlayer.OnPlayerOutOfArena -= OnPlayerOutOfArena;
+            Battle.RightPlayer.OnPlayerOutOfArena -= OnPlayerOutOfArena;
         }
 
         void Update()
@@ -93,6 +94,9 @@ namespace BattleLoop
                 ElapsedTime += Time.deltaTime;
             }
         }
+        #endregion
+
+        #region API
 
         public void SetLeftDefaultSkill(int type)
         {
@@ -123,18 +127,14 @@ namespace BattleLoop
         #endregion
 
         #region Core Logic 
-        private void InitializePlayerByPosition(Transform playerPosition)
+        private void InitializePlayer(SumoRobotController controller)
         {
-            GameObject player = Instantiate(SumoPrefab, playerPosition.position, playerPosition.rotation);
-
             // Detect the position of position.x < 0: meaning LeftSide (0), otherwise it's RightSide (1)
-            PlayerSide side = playerPosition.position.x < 0 ? PlayerSide.Left : PlayerSide.Right;
+            PlayerSide side = controller.transform.position.x < 0 ? PlayerSide.Left : PlayerSide.Right;
 
             // Initialize player components
-            SumoRobotController controller = player.GetComponent<SumoRobotController>();
-            controller.InitializeForBattle(side, playerPosition);
-            controller.OnOutOfArena += OnPlayerOutOfArena;
-            controller.SetActionLogger();
+            controller.InitializeForBattle(side, controller.transform);
+            controller.OnPlayerOutOfArena += OnPlayerOutOfArena;
 
             // Check whether player left or right, assign to Battle data
             if (controller.Side == PlayerSide.Left)
@@ -151,8 +151,8 @@ namespace BattleLoop
                     actor: LogActorType.System,
                     data: new Dictionary<string, object>()
                     {
-                        {"type", "player"},
-                        {"side", controller.Side.ToString()},
+                        {"type", "Player"},
+                        {"side", controller.Side.ToLogActorType()},
                         {"skill", controller.Skill.Type.ToString()},
                     });
 
@@ -192,7 +192,7 @@ namespace BattleLoop
         private IEnumerator StartBattleTimer()
         {
             float timer = BattleTime;
-            while (timer >= 0 && CurrentState == BattleState.Battle_Ongoing)
+            while (timer > 0 && CurrentState == BattleState.Battle_Ongoing)
             {
                 yield return new WaitForSeconds(1f);
                 timer -= 1f;
@@ -205,8 +205,8 @@ namespace BattleLoop
         private IEnumerator ResetBattle()
         {
             yield return new WaitForSeconds(3f);
-            Battle.LeftPlayer.GetComponent<SumoRobotController>().ResetForNewBattle();
-            Battle.RightPlayer.GetComponent<SumoRobotController>().ResetForNewBattle();
+            Battle.LeftPlayer.ResetForNewBattle();
+            Battle.RightPlayer.ResetForNewBattle();
             TransitionToState(BattleState.Battle_Reset);
             yield return new WaitForSeconds(1f);
         }
@@ -217,9 +217,9 @@ namespace BattleLoop
 
             Debug.Log("OnPlayerOutOfArena");
 
-            // Find player who's winner
             SumoRobotController winner;
 
+            // Find player who's winner
             if (side == PlayerSide.Left)
             {
                 winner = Battle.RightPlayer;
@@ -237,6 +237,7 @@ namespace BattleLoop
 
             Battle.SetRoundWinner(winner);
 
+            LogManager.CleanIncompletePlayerAction();
             TransitionToState(BattleState.Battle_End);
         }
 
@@ -245,7 +246,7 @@ namespace BattleLoop
             Debug.Log($"State Transition: {CurrentState} → {newState}");
             CurrentState = newState;
 
-            if (CurrentRound == null)
+            if (CurrentRound.RoundNumber == 0)
             {
                 LogManager.LogGlobalEvent(
                        actor: LogActorType.System,
@@ -270,7 +271,19 @@ namespace BattleLoop
             {
                 // Prebattle
                 case BattleState.PreBatle_Preparing:
-                    StartPositions.ForEach(x => InitializePlayerByPosition(x));
+                    if (LeftPlayerObject != null && RightPlayerObject != null)
+                    {
+                        InitializePlayer(LeftPlayerObject.GetComponent<SumoRobotController>());
+                        InitializePlayer(RightPlayerObject.GetComponent<SumoRobotController>());
+                    }
+                    else if (SumoPrefab != null && StartPositions.Count > 0)
+                    {
+                        StartPositions.ForEach(pos =>
+                        {
+                            GameObject player = Instantiate(SumoPrefab, pos.position, pos.rotation);
+                            InitializePlayer(player.GetComponent<SumoRobotController>());
+                        });
+                    }
                     break;
 
                 // Battle
@@ -283,6 +296,8 @@ namespace BattleLoop
                     Battle.RightPlayer.ResetForNewBattle();
                     InputManager.Instance.PrepareInput(Battle.LeftPlayer);
                     InputManager.Instance.PrepareInput(Battle.RightPlayer);
+
+                    LogManager.SetPlayerAction();
                     StartCoroutine(AllPlayersReady());
                     break;
                 case BattleState.Battle_Countdown:
@@ -308,8 +323,10 @@ namespace BattleLoop
                         StopCoroutine(battleTimerCoroutine);
                     }
 
-                    Battle.LeftPlayer.Reset();
-                    Battle.RightPlayer.Reset();
+                    Battle.LeftPlayer.SetSkillEnabled(false);
+                    Battle.LeftPlayer.SetMovementEnabled(false);
+                    Battle.RightPlayer.SetSkillEnabled(false);
+                    Battle.RightPlayer.SetMovementEnabled(false);
                     StartCoroutine(ResetBattle());
                     break;
                 case BattleState.Battle_Reset:
