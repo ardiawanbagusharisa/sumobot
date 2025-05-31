@@ -9790,7 +9790,7 @@ MonoBehaviour:
   StartPositions:
   - {fileID: 1987440270}
   - {fileID: 1757629781}
-  SumoPrefab: {fileID: 1488574921577525681, guid: 7d86083bea786c74f88ce6a4c7986b47, type: 3}
+  SumoPrefab: {fileID: 1488574921577525681, guid: 7630d8fa8520132449931740b6271852, type: 3}
   CurrentState: 0
   ElapsedTime: 0
   Battle:

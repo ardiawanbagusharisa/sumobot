@@ -5,6 +5,8 @@ public class DamageSmoke : MonoBehaviour
 {
     public int Hit = 0;
     public ProceduralSmoke2D smokeController;
+    public AudioClip[] sfxClips;
+    public AudioSource audioSource;
 
     private bool isProcessing = false;
 
@@ -13,9 +15,22 @@ public class DamageSmoke : MonoBehaviour
         // Optional: add filtering (e.g., only bullets or player)
         if (!isProcessing)
         {
+            if (audioSource == null)
+            {
+                audioSource = gameObject.AddComponent<AudioSource>();
+            }
+            if (sfxClips != null && sfxClips.Length > 0)
+            {
+                int randomIndex = Random.Range(0, sfxClips.Length);
+                AudioClip clip = sfxClips[randomIndex];
+                audioSource.PlayOneShot(clip);
+            }
+
             Hit++;
             StartCoroutine(ApplyDamageStateAfterDelay(0.5f));
         }
+        
+
     }
 
     private IEnumerator ApplyDamageStateAfterDelay(float delay)
