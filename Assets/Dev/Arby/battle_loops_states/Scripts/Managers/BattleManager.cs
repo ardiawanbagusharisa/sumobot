@@ -5,6 +5,7 @@ using BattleLoop;
 using CoreSumoRobot;
 using Unity.VisualScripting;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace BattleLoop
 {
@@ -35,6 +36,7 @@ namespace BattleLoop
 
     public class BattleManager : MonoBehaviour
     {
+        public PausePanelManager pauseManager;
         // Singleton 
         public static BattleManager Instance { get; private set; }
 
@@ -92,6 +94,9 @@ namespace BattleLoop
             if (CurrentRound != null && CurrentState == BattleState.Battle_Ongoing)
             {
                 ElapsedTime += Time.deltaTime;
+            }
+            if (Input.GetKeyDown(KeyCode.Escape)) {
+                pauseManager.ShowPause();
             }
         }
         #endregion
@@ -495,6 +500,12 @@ public record Battle
         LeftWinCount = 0;
         RightWinCount = 0;
     }
+
+    public void OnPause()
+    {
+    SceneManager.LoadScene("Pause");
+    }
+
 }
 
 [Serializable]

@@ -12,6 +12,8 @@ public class ButtonInputHandler : MonoBehaviour
     public ButtonPointerHandler Dash;
     public ButtonPointerHandler Stone;
     public ButtonPointerHandler Boost;
+    public Image StoneCooldownCircle;
+    public Image BoostCooldownCircle;
     private InputProvider inputProvider;
 
     void Awake()
@@ -103,20 +105,24 @@ public class ButtonInputHandler : MonoBehaviour
             Dash.GetComponentInChildren<Button>().interactable = true;
         }
     }
-
     private void UpdateSkillCooldown()
     {
+        Debug.Log("UpdateSkillCooldown dipanggil"); // <--- Tambahkan di baris pertama fungsi
+
         GameObject selectedSpecialSkillObj;
+        Image cooldownCircle;
+
         if (Stone.gameObject.activeSelf)
         {
             selectedSpecialSkillObj = Stone.gameObject;
+            cooldownCircle = StoneCooldownCircle;
         }
         else
         {
             selectedSpecialSkillObj = Boost.gameObject;
+            cooldownCircle = BoostCooldownCircle;
         }
 
-        // GameObject maybe null when the engine detached
         if (selectedSpecialSkillObj == null) return;
 
         SumoRobotController player;
@@ -129,15 +135,43 @@ public class ButtonInputHandler : MonoBehaviour
             player = BattleManager.Instance.Battle.RightPlayer;
         }
 
+        float sisaCooldown = player.Skill.SkillCooldown();
+        float maxCooldown = player.Skill.Type == ERobotSkillType.Boost
+            ? player.Skill.BoostCooldown
+            : player.Skill.StoneCooldown;
+        float fill = Mathf.Clamp01(sisaCooldown / Mathf.Max(0.01f, maxCooldown));
+
+        // --- DEBUG LOG DI SINI ---
+        if (cooldownCircle == null)
+        {
+            Debug.LogWarning("CooldownCircle image not assigned!");
+        }
+        else
+        {
+            Debug.Log("Sisa cooldown: " + sisaCooldown + ", max: " + maxCooldown + ", fill: " + fill);
+        }
+        // --- END DEBUG LOG ---
+
+        if (cooldownCircle != null)
+        {
+            cooldownCircle.fillAmount = fill;
+            cooldownCircle.gameObject.SetActive(player.Skill.IsSkillCooldown);
+        }
+
         if (player.Skill.IsSkillCooldown)
         {
             selectedSpecialSkillObj.GetComponentInChildren<Button>().interactable = false;
-            selectedSpecialSkillObj.GetComponentInChildren<TMP_Text>().SetText(Mathf.CeilToInt(player.Skill.SkillCooldown()).ToString());
+            selectedSpecialSkillObj.GetComponentInChildren<TMP_Text>().SetText(Mathf.CeilToInt(sisaCooldown).ToString());
         }
         else
         {
             selectedSpecialSkillObj.GetComponentInChildren<Button>().interactable = true;
             selectedSpecialSkillObj.GetComponentInChildren<TMP_Text>().SetText(player.Skill.Type.ToString());
+            if (cooldownCircle != null)
+            {
+                cooldownCircle.fillAmount = 0;
+                cooldownCircle.gameObject.SetActive(false);
+            }
         }
     }
 
