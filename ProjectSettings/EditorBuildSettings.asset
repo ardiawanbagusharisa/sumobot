@@ -51,7 +51,7 @@ EditorBuildSettings:
     path: Assets/Dev/dev_cleo/battle_ui/Scene/C1_1Scene.unity
     guid: 4da078b95e567ae4e95940140ba86cff
   - enabled: 1
-    path: Assets/Dev/Arby/battle_loops_states/Scenes/devarby_battleloopsstates_v0.5.unity
+    path: Assets/Scenes/Battle/BattleScene.unity
     guid: a6f2094aaddd24d4e81c2ff71ec5eda5
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
