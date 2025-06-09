@@ -74,7 +74,7 @@ namespace CoreSumo
         private float reserverdBounceResistance;
         private Rigidbody2D robotRigidBody;
         private float moveLockTime = 0f;
-        private bool IsMovementLocked => moveLockTime > 0f;
+        public bool IsMovementLocked => moveLockTime > 0f;
 
         private bool hasOnOutOfArenaInvoked = false;
 

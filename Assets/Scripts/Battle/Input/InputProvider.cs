@@ -59,8 +59,6 @@ public class InputProvider : MonoBehaviour
                                         {"DashAction",true},
                                         {"SkillAction",true},
                                     };
-
-
         commandQueue = new Queue<ISumoAction>();
     }
 

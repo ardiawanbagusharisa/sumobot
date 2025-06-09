@@ -18,26 +18,43 @@ namespace BotAI
             new SkillAction(InputType.Script),
 
             new TurnRightAngleAction(15f),
-            new TurnRightAngleAction(45f),
-            new TurnRightAngleAction(90f),
-            
+            // new TurnRightAngleAction(2f),
+            // new TurnRightAngleAction(45f),
+            // new TurnRightAngleAction(90f),
+
             new TurnLeftAngleAction(15f),
-            new TurnLeftAngleAction(45f),
-            new TurnLeftAngleAction(90f),
+            // new TurnLeftAngleAction(2f),
+            // new TurnLeftAngleAction(45f),
+            // new TurnLeftAngleAction(90f),
         };
+
+        public Dictionary<string, EA_MCTS_Node> AllNodes = new();
 
         private SumoController controller;
         private SumoController enemy;
         private float decisionTimer;
         private int decisionIntervalCount = 0;
         private EA_MCTS_Node root;
-        private ISumoAction actionBounceToEnemy;
-        private ISumoAction actionBounceFromEnemy;
+
+        private List<ISumoAction> lastActionsFromEnemy;
+        private List<ISumoAction> lastActionsToEnemy;
+
+        private Queue<ISumoAction> actionsQueue = new();
+
+        void DeQueueWhenAvailable()
+        {
+            while (!controller.IsMovementLocked && actionsQueue.Count > 0)
+            {
+                controller.InputProvider.EnqueueCommand(actionsQueue.Dequeue());
+            }
+        }
 
         void OnEnable()
         {
             controller = GetComponent<SumoController>();
             controller.OnPlayerBounce += OnPlayerBounce;
+            // AllNodes.Add(controller.Side, new());
+            actionsQueue = new();
             InitNode();
         }
 
@@ -68,21 +85,30 @@ namespace BotAI
             if (decisionTimer >= ActionInterval)
             {
                 decisionTimer = 0f;
-                Decide();
                 if (decisionIntervalCount % ReinitPerIters == 0)
                 {
                     decisionIntervalCount = 0;
                     InitNode();
                 }
+                Decide();
                 decisionIntervalCount += 1;
             }
+
+            DeQueueWhenAvailable();
         }
 
-        private void InitNode(ISumoAction goodAction = null, ISumoAction badAction = null)
+        private void InitNode()
         {
-            root = null;
-            root = new EA_MCTS_Node(null, null, goodAction, badAction);
-            root.name = "Root";
+            Debug.Log($"AllNodes {AllNodes.Count()}");
+            AllNodes.Clear();
+            root = new EA_MCTS_Node(
+                null,
+                new List<ISumoAction>(PossibleActions),
+                goodAction: lastActionsToEnemy,
+                badAction: lastActionsFromEnemy);
+            root.Side = controller.Side;
+            root.ID = "Root";
+            root.Init(AllNodes);
         }
 
         EA_MCTS_Node Decide()
@@ -90,25 +116,36 @@ namespace BotAI
             for (int i = 0; i < Iterations; i++)
             {
                 EA_MCTS_Node selected = root.Select();
-                float result = selected.Simulate(enemy, controller, SimulationTime);
-                selected.Backpropagate(result);
+                var expanded = selected.Expand(AllNodes);
+                if (expanded != null)
+                {
+                    float result = expanded.Simulate(enemy, controller, SimulationTime);
+                    expanded.Backpropagate(result);
+                }
+
             }
 
             EA_MCTS_Node bestChild = root.GetBestChild();
+            if (bestChild == null)
+            {
+                return null;
+            }
 
             if (bestChild.totalReward <= LowestScoreToReInit)
             {
                 Debug.Log($"[AIBot_EA_MCTS] LowestScoreToReInit reached {bestChild.totalReward}");
-                InitNode(badAction: bestChild.action);
+                InitNode();
                 return null;
             }
 
-            Debug.Log($"[AIBot_EA_MCTS] root actions: {string.Join(", ", root.children.Select((x) => x.name).ToList())}");
-            Debug.Log($"[AIBot_EA_MCTS] selected-score: {bestChild.totalReward}, selected-action: {bestChild.action.GetType().Name}:{bestChild.action}, selected-visits: {bestChild.visits}, ");
+            Debug.Log($"[AIBot_EA_MCTS] selected-score: {bestChild.totalReward}, selected-action(s): {bestChild.ID} selected-visits: {bestChild.visits}, ");
 
-            controller.InputProvider.EnqueueCommand(bestChild.action);
-            actionBounceFromEnemy = bestChild.action;
-            actionBounceToEnemy = bestChild.action;
+            lastActionsToEnemy = bestChild.actions;
+
+            foreach (var act in bestChild.actions)
+            {
+                actionsQueue.Enqueue(act);
+            }
             return bestChild;
         }
 
@@ -124,14 +161,15 @@ namespace BotAI
         {
             if (side == controller.Side)
             {
-                actionBounceFromEnemy = null;
+                lastActionsFromEnemy = null;
             }
             else
             {
-                actionBounceToEnemy = null;
+                lastActionsToEnemy = null;
             }
+
             controller.InputProvider.ClearCommands();
-            InitNode(goodAction: actionBounceToEnemy, badAction: actionBounceFromEnemy);
+            InitNode();
         }
     }
 }
