@@ -14,6 +14,18 @@ namespace CoreSumo
         public object Param;
         public abstract void Execute(SumoController controller);
 
+        public string Name
+        {
+            get
+            {
+                if (Param == null)
+                {
+                    return GetType().Name;
+                }
+                return $"{GetType().Name}_{Param}";
+            }
+        }
+
         public override string ToString()
         {
             return String.Format($"{InputUsed}:{Param}");
