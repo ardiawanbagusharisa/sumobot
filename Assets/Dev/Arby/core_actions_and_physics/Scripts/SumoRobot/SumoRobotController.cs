@@ -80,13 +80,14 @@ namespace CoreSumoRobot
 
         void Update()
         {
-            ReadInput();
+            
 
             LastVelocity = robotRigidBody.linearVelocity;
         }
 
         private void FixedUpdate()
         {
+            ReadInput();
             HandleStopping();
             if (moveLockTime > 0f)
                 moveLockTime -= Time.deltaTime;
