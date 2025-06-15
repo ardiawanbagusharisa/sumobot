@@ -62,8 +62,10 @@ public class DebouncedLogger
 
         LogManager.LogRoundEvent(
             actor: controller.Side.ToLogActorType(),
+            startedAt: startTime,
             data: new Dictionary<string, object>()
             {
+                        { "duration", duration },
                         { "type", Name },
                         { "parameter", Parameter },
                         { "before", new Dictionary<string,object>()
@@ -110,7 +112,7 @@ public class DebouncedLogger
                                 },
                             }
                         },
-                        { "duration", duration }
+
             }
         );
     }

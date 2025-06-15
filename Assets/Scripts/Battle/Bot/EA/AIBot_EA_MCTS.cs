@@ -7,11 +7,11 @@ namespace BotAI
 {
     public class AIBot_EA_MCTS : Bot
     {
-        public int ReinitPerIters = 5;
+        public int ReinitPerIters = 2;
         public int Iterations = 100;
-        public float ActionInterval = 0.25f;
-        public float SimulationTime = 0.25f;
-        public float LowestScoreToReInit = -1000;
+        public float ActionInterval = 0.03f;
+        public float SimulationTime = 0.3f;
+        public float LowestScoreToReInit = -500;
         public static List<ISumoAction> PossibleActions = new List<ISumoAction>() {
             new AccelerateAction(InputType.Script),
             new DashAction(InputType.Script),

@@ -113,16 +113,18 @@ namespace BotAI
             Vector3 aiPosition = controller.transform.position;
 
             float bonusOrPenalty = 0;
+            float angleScore = 0;
+            float distScore = 0;
 
             foreach (var action in actions)
             {
                 if (action is TurnLeftAngleAction)
                 {
-                    aiDirection += Quaternion.Euler(0, 0, (float)action.Param) * aiDirection;
+                    aiDirection += Quaternion.Euler(0, 0, (float)action.Param) * aiDirection * simulationTime * controller.TurnRate;
                 }
                 else if (action is TurnRightAngleAction rV)
                 {
-                    aiDirection += Quaternion.Euler(0, 0, (float)action.Param) * aiDirection;
+                    aiDirection += Quaternion.Euler(0, 0, (float)action.Param) * aiDirection * simulationTime * controller.TurnRate;
                 }
                 else if (action is AccelerateAction)
                 {
@@ -137,7 +139,7 @@ namespace BotAI
                     else
                     {
                         bonusOrPenalty += 0.1f;
-                        aiPosition += aiDirection.normalized * (controller.DashSpeed * controller.DashDuration) * controller.StopDelay;
+                        aiPosition += aiDirection.normalized * (controller.DashSpeed * controller.DashDuration) * controller.StopDelay * simulationTime;
                     }
 
                 }
@@ -152,29 +154,33 @@ namespace BotAI
                         if (controller.Skill.Type == ERobotSkillType.Boost)
                         {
                             bonusOrPenalty += 0.5f;
-                            aiPosition += aiDirection.normalized * (controller.MoveSpeed * controller.Skill.BoostMultiplier);
+                            aiPosition += aiDirection.normalized * (controller.MoveSpeed * controller.Skill.BoostMultiplier) * simulationTime;
                         }
                     }
                 }
 
-                bool IsPossibleOutFromArena = Vector3.Distance(aiPosition, arenaCenter) > arenaRadius;
-                if (IsPossibleOutFromArena && (action is AccelerateAction || action is DashAction || action is SkillAction))
+                Vector3 toEnemy = enemy.transform.position - aiPosition;
+                float distance = toEnemy.magnitude;
+                float angle = Vector3.SignedAngle(aiDirection, toEnemy.normalized, Vector3.forward);
+
+                angleScore += Mathf.Cos(angle * Mathf.Deg2Rad);
+                distScore += 1f - Mathf.Clamp01(distance / arenaRadius);
+
+                var distanceFromCenter = Vector3.Distance(aiPosition, arenaCenter);
+
+                List<string> actionsInString = actions.Select((a) => a.Name.ToLower()).ToList();
+
+                bool isActionIncludeAccelerating = actionsInString.Contains("accelerateaction") || actionsInString.Contains("dashaction") || actionsInString.Contains("skillaction");
+
+                if ((distanceFromCenter > arenaRadius) && isActionIncludeAccelerating)
                 {
                     // Penalize heavily if sumo will exits the ring, or any action that makes the Sumo move away from exits, reward instead.
-                    bonusOrPenalty += -100f;
-
-                    Debug.Log($"[Simulate][IsPossibleOutFromArena] {ID}, can cause go outside of arena\n Detail:Vector3.Distance({aiPosition}, {arenaCenter}) > {arenaRadius}, resulting: {bonusOrPenalty}");
+                    bonusOrPenalty += arenaRadius - distanceFromCenter + (angleScore - 0.9f + distScore - 0.8f);
+                    Debug.Log($"[Simulate][IsPossibleOutFromArena] {ID}, can cause go outside of arena\n Detail: {aiPosition}, {arenaCenter} > {arenaRadius}, resulting: {bonusOrPenalty}");
                 }
             }
 
-            Vector3 toEnemy = enemy.transform.position - aiPosition;
-            float distance = toEnemy.magnitude;
-            float angle = Vector3.SignedAngle(aiDirection, toEnemy.normalized, Vector3.forward);
-
-            float angleScore = Mathf.Cos(angle * Mathf.Deg2Rad);
-            float distScore = 1f - Mathf.Clamp01(distance / arenaRadius);
-
-            return angleScore + (distScore * 2) + bonusOrPenalty;
+            return (angleScore / actions.Count()) + (distScore / actions.Count()) + (bonusOrPenalty / actions.Count());
         }
 
         public void Backpropagate(float reward)

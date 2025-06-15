@@ -54,8 +54,9 @@ public class LogManager
     [Serializable]
     private class EventLog
     {
-        public string timestamp;
-        public string battle_timestamp;
+        public string loggedAt;
+        public string startedAt;
+        public string updatedAt;
         public string actor;
         public string target;
 
@@ -178,7 +179,7 @@ public class LogManager
     {
         _battleLog.events.Add(new EventLog
         {
-            timestamp = DateTime.Now.ToString("o"),
+            loggedAt = DateTime.Now.ToString("o"),
             actor = actor.ToString(),
             target = target.ToString() ?? null,
             data = data
@@ -189,19 +190,39 @@ public class LogManager
     public static void LogRoundEvent(
         LogActorType actor,
         LogActorType? target = null,
+        float? startedAt = null,
+        float? updatedAt = null,
         Dictionary<string, object> data = null)
     {
         var round = GetCurrentRound();
         if (round != null)
         {
-            round.events.Add(new EventLog
+            EventLog roundLog = new()
             {
-                timestamp = DateTime.Now.ToString("o"),
-                battle_timestamp = BattleManager.Instance.ElapsedTime.ToString(),
+                loggedAt = BattleManager.Instance.ElapsedTime.ToString(),
                 actor = actor.ToString(),
                 target = target.ToString() ?? null,
                 data = data,
-            });
+            };
+            if (startedAt != null)
+            {
+                roundLog.startedAt = startedAt.ToString();
+            }
+            else
+            {
+                roundLog.startedAt = BattleManager.Instance.ElapsedTime.ToString();
+            }
+
+            if (updatedAt != null)
+            {
+                roundLog.updatedAt = updatedAt.ToString();
+            }
+            else
+            {
+                roundLog.updatedAt = BattleManager.Instance.ElapsedTime.ToString();
+            }
+
+            round.events.Add(roundLog);
             SaveLog();
         }
     }
@@ -224,7 +245,7 @@ public class LogManager
         {
             game.rounds.ForEach((rounds) =>
             {
-                rounds.events.OrderBy(log => log.battle_timestamp).ToList();
+                rounds.events = rounds.events.OrderBy(log => float.Parse(log.startedAt)).ToList();
             });
         });
 
