@@ -47,7 +47,7 @@ namespace BotAI
                 if (Mathf.Abs(angleDiff) < 20)
                 {
                     float distance = Vector2.Distance(enemy.transform.position, transform.position);
-                    if (!controller.IsDashCooldown && distance < 2.5f)
+                    if (!controller.IsDashOnCooldown && distance < 2.5f)
                     {
                         controller.InputProvider.EnqueueCommand(new DashAction(InputType.Script));
                     }

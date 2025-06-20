@@ -168,11 +168,11 @@ public class ButtonInputHandler : MonoBehaviour
         bool IsCooldown;
         if (inputProvider.PlayerSide == PlayerSide.Left)
         {
-            IsCooldown = BattleManager.Instance.Battle.LeftPlayer.IsDashCooldown;
+            IsCooldown = BattleManager.Instance.Battle.LeftPlayer.IsDashOnCooldown;
         }
         else
         {
-            IsCooldown = BattleManager.Instance.Battle.RightPlayer.IsDashCooldown;
+            IsCooldown = BattleManager.Instance.Battle.RightPlayer.IsDashOnCooldown;
         }
 
         if (IsCooldown)

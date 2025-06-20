@@ -96,7 +96,7 @@ namespace BotAI
             {
                 aiPosition += aiDirection.normalized * controller.MoveSpeed * simulationTime;
             }
-            else if (action is DashAction && !controller.IsDashCooldown)
+            else if (action is DashAction && !controller.IsDashOnCooldown)
             {
                 aiPosition += aiDirection.normalized * controller.DashSpeed * controller.DashDuration;
             }

@@ -13,59 +13,45 @@ namespace CoreSumo
 
     public class SumoController : MonoBehaviour
     {
-        #region Basic Stats
-        public int IdInt => Side == PlayerSide.Left ? 0 : 1;
+        #region Robot Stats Properties
+        [Header("Robot Stats")]
         public float MoveSpeed = 4.0f;
         public float RotateSpeed = 200.0f;
-        #endregion
-
-        #region Dash Stats
         public float DashSpeed = 5.0f;
-        public float DashDuration = 0.5f;       // Dash duration. 
-        public float DashCooldown = 1.0f;       // Dash cooldown.
+        public float DashDuration = 0.5f;
+        public float DashCooldown = 1.0f;
         #endregion
 
-        #region Physics Stats
-        public float StopDelay = 0.5f;           // Time before robot stops.
-        public float SlowDownRate = 2.0f;        // Robot's slowdown rate (velocity and rotation decay). 
+        #region Physics Stats Properties
+        [Header("Physics Stats")]
+        public float StopDelay = 0.5f;           
+        public float SlowDownRate = 2.0f; 
         public float Torque = 0.4f;
+        public float TurnRate = 1f;
         public float BounceResistance = 1f;
         public float LockReductionMultiplier = 0.9f;
         public float CollisionBaseForce = 4f;
-        public float TurnRate = 1f;
         public float BaseLockDurationMultiplier = 0.5f;
         public MinMax LockDuration = new MinMax(0.8f, 2f);
         public MinMax HalfTurnAngle = new MinMax(0f, 180f);
         public MinMax FullTurnAngle = new MinMax(-360, 360);
-
-        public PlayerSide Side;
         #endregion
 
+        #region General Properties
+        [Header("General Info")]
+        public PlayerSide Side;
+        public SpriteRenderer directionIndicator;
+        public InputProvider InputProvider;
+        public SumoSkill Skill;
+        #endregion
+
+        #region Runtime Variables (readonly) Properties
+        public bool isInputDisabled = false;
         public Vector2 LastVelocity { get; private set; } = Vector2.zero;
         public float LastAngularVelocity => robotRigidBody.angularVelocity;
-        public bool isInputDisabled = false;
-        public SpriteRenderer face;
+        public float LastDashTime = 0;
         public Vector3 StartPosition;
         public Quaternion StartRotation;
-        public SumoSkill Skill;
-        public InputProvider InputProvider;
-        public float LastDashTime = 0;
-        public bool IsDashActive => LastDashTime == 0 ? false : (LastDashTime + DashDuration) >= BattleManager.Instance.ElapsedTime;
-        public float DashCooldownAmount => LastDashTime + DashCooldown - BattleManager.Instance.ElapsedTime;
-        public float DashCooldownAmountNormalized => 1 - DashCooldownAmount / DashCooldown;
-        public bool IsDashCooldown => DashCooldownAmount >= 0f;
-        public LogActorType ActorType => Side == PlayerSide.Left ? LogActorType.LeftPlayer : LogActorType.RightPlayer;
-
-        //[PlayerSide] is the Actor or BounceMaker
-        public event Action<PlayerSide> OnPlayerBounce;
-
-        //[PlayerSide] is the one who get outside from Arena
-        public event Action<PlayerSide> OnPlayerOutOfArena;
-
-        //[PlayerSide] is the invoker
-        //[ISumoAction] is action that invoked, 
-        //[bool] defines true -> preExecute, and false -> postExecute.
-        public event Action<PlayerSide, ISumoAction, bool> OnPlayerAction;
 
         private bool isMoveDisabled = true;
         private bool isSkillDisabled = true;
@@ -74,14 +60,25 @@ namespace CoreSumo
         private float reserverdBounceResistance;
         private Rigidbody2D robotRigidBody;
         private float moveLockTime = 0f;
-        private bool IsMovementLocked => moveLockTime > 0f;
-
         private bool hasOnOutOfArenaInvoked = false;
 
+        // Derived 
+        public bool IsDashActive => LastDashTime == 0 ? false : (LastDashTime + DashDuration) >= BattleManager.Instance.ElapsedTime;
+        public float DashCooldownTimer => LastDashTime + DashCooldown - BattleManager.Instance.ElapsedTime;
+        public float DashCooldownNormalized => 1 - DashCooldownTimer / DashCooldown;
+        public bool IsDashOnCooldown => DashCooldownTimer >= 0f;
+        private bool IsMovementLocked => moveLockTime > 0f;
+        public LogActorType ActorType => Side == PlayerSide.Left ? LogActorType.LeftPlayer : LogActorType.RightPlayer;
+
+        // Events 
+        public event Action<PlayerSide> OnPlayerBounce;
+        public event Action<PlayerSide> OnPlayerOutOfArena;
+        public event Action<PlayerSide, ISumoAction, bool> OnPlayerAction;
         private Coroutine accelerateOverTimeCoroutine;
         private Coroutine turnOverAngleCoroutine;
+        #endregion
 
-        #region Unity
+        #region Unity Methods
         private void Awake()
         {
             Skill = new SumoSkill(this);
@@ -130,7 +127,7 @@ namespace CoreSumo
             StartPosition = startPosition.position;
             StartRotation = startPosition.rotation;
 
-            UpdateFaceColor();
+            UpdateDirectionColor();
             SetSkillEnabled(false);
             SetMovementEnabled(false);
         }
@@ -190,7 +187,7 @@ namespace CoreSumo
             switch (type)
             {
                 case DashActionType.Default:
-                    if (!IsDashCooldown)
+                    if (!IsDashOnCooldown)
                     {
                         // Log
                         LogManager.CallPlayerActionLog(Side, "Dash");
@@ -514,15 +511,15 @@ namespace CoreSumo
         #endregion
 
         #region Robot Appearance
-        public void UpdateFaceColor()
+        public void UpdateDirectionColor()
         {
             if (Side == PlayerSide.Left)
             {
-                face.color = new Color(0, 255, 0);
+                directionIndicator.color = new Color(0, 255, 0);
             }
             else
             {
-                face.color = new Color(255, 0, 0);
+                directionIndicator.color = new Color(255, 0, 0);
             }
         }
         #endregion
