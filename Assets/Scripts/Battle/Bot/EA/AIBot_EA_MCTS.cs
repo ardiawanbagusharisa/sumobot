@@ -7,6 +7,8 @@ namespace BotAI
 {
     public class AIBot_EA_MCTS : Bot
     {
+        public override string Name() => "MCTS";
+
         public int ReinitPerIters = 2;
         public int Iterations = 100;
         public float ActionInterval = 0.03f;
@@ -119,7 +121,7 @@ namespace BotAI
                 var expanded = selected.Expand(AllNodes);
                 if (expanded != null)
                 {
-                    float result = expanded.Simulate(enemy, controller, SimulationTime);
+                    var result = expanded.Simulate(enemy, controller, SimulationTime);
                     expanded.Backpropagate(result);
                 }
 
@@ -142,8 +144,10 @@ namespace BotAI
 
             lastActionsToEnemy = bestChild.actions;
 
+
             foreach (var act in bestChild.actions)
             {
+                act.Reason = bestChild.GetHighestScoreType().ToString();
                 actionsQueue.Enqueue(act);
             }
             return bestChild;
@@ -171,5 +175,7 @@ namespace BotAI
             controller.InputProvider.ClearCommands();
             InitNode();
         }
+
+
     }
 }

@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using CoreSumo;
-using Unity.Collections;
-using UnityEditor.Experimental.GraphView;
+using UnityEditor;
 using UnityEngine;
 
 namespace BotAI
@@ -16,7 +16,9 @@ namespace BotAI
         public List<EA_MCTS_Node> children = new();
         public int visits = 0;
         public float totalReward = 0f;
-
+        public float angleScore = 0f;
+        public float distScore = 0f;
+        public float bonusOrPenalty = 0f;
         public List<ISumoAction> actions = new();
         public string actionString;
         public List<ISumoAction> badAction;
@@ -24,6 +26,28 @@ namespace BotAI
         public bool badActionAlreadyUsed = false;
         public bool goodActionAlreadyUsed = false;
         public PlayerSide Side;
+
+        public HighestScoreType GetHighestScoreType()
+        {
+            try
+            {
+                Dictionary<float, HighestScoreType> highestScore = new()
+                {
+                    {angleScore,HighestScoreType.Angle},
+                    {distScore,HighestScoreType.Distance},
+                    {bonusOrPenalty,HighestScoreType.BonusOrPenalty}
+                };
+                Debug.Log($"GetHighestScoreType {string.Join(", ", highestScore.Select((x) => x.Key.ToString()))}");
+
+                float result = highestScore.Max((i) => i.Key);
+                return highestScore[result];
+            }
+            catch (Exception)
+            {
+
+                return HighestScoreType.Random;
+            }
+        }
 
         public EA_MCTS_Node(EA_MCTS_Node parent, List<ISumoAction> actions, List<ISumoAction> goodAction = null, List<ISumoAction> badAction = null)
         {
@@ -41,7 +65,7 @@ namespace BotAI
             foreach (var action in actions)
             {
                 EA_MCTS_Node newNode = new(this, new List<ISumoAction>() { action });
-                newNode.ID = action.Name;
+                newNode.ID = action.NameWithParam;
                 if (goodAction != null && goodAction.Count > 0)
                 {
                     newNode.totalReward = 10;
@@ -53,7 +77,7 @@ namespace BotAI
                     newNode.visits = 1;
                 }
                 children.Add(newNode);
-                AllNodes.Add(action.Name, newNode);
+                AllNodes.Add(action.NameWithParam, newNode);
             }
         }
 
@@ -61,7 +85,7 @@ namespace BotAI
         {
             var unexploredActs = AIBot_EA_MCTS.PossibleActions.Where(x =>
             {
-                var newActNames = $"{ID}:{x.Name}";
+                var newActNames = $"{ID}:{x.NameWithParam}";
                 if (!AllNodes.ContainsKey(newActNames))
                 {
                     return true;
@@ -77,7 +101,7 @@ namespace BotAI
             System.Random random = new();
             var randomAction = unexploredActs[random.Next(unexploredActs.Count())];
             string newActNames;
-            newActNames = $"{ID}:{randomAction.Name}";
+            newActNames = $"{ID}:{randomAction.NameWithParam}";
 
             var newActs = new List<ISumoAction>(actions)
                 {
@@ -104,7 +128,7 @@ namespace BotAI
             }).First();
         }
 
-        public float Simulate(SumoController enemy, SumoController controller, float simulationTime)
+        public Tuple<float, float, float> Simulate(SumoController enemy, SumoController controller, float simulationTime)
         {
             GameObject arena = BattleManager.Instance.Arena;
             float arenaRadius = arena.GetComponent<CircleCollider2D>().radius * arena.transform.lossyScale.x;
@@ -115,6 +139,10 @@ namespace BotAI
             float bonusOrPenalty = 0;
             float angleScore = 0;
             float distScore = 0;
+
+            List<string> actionsInString = actions.Select((a) => a.Name.ToLower()).ToList();
+
+            bool isActionIncludeAccelerating = actionsInString.Contains("accelerate") || actionsInString.Contains("dash") || actionsInString.Contains("skill");
 
             foreach (var action in actions)
             {
@@ -128,11 +156,18 @@ namespace BotAI
                 }
                 else if (action is AccelerateAction)
                 {
-                    aiPosition += aiDirection.normalized * controller.MoveSpeed * simulationTime;
+                    if (controller.IsMovementLocked || controller.IsMoveDisabled)
+                    {
+                        bonusOrPenalty += -0.1f;
+                    }
+                    else
+                    {
+                        aiPosition += aiDirection.normalized * controller.MoveSpeed * simulationTime;
+                    }
                 }
                 else if (action is DashAction)
                 {
-                    if (controller.IsDashCooldown)
+                    if (controller.IsDashCooldown || controller.IsMovementLocked || controller.IsMoveDisabled)
                     {
                         bonusOrPenalty += -0.1f;
                     }
@@ -168,25 +203,35 @@ namespace BotAI
 
                 var distanceFromCenter = Vector3.Distance(aiPosition, arenaCenter);
 
-                List<string> actionsInString = actions.Select((a) => a.Name.ToLower()).ToList();
-
-                bool isActionIncludeAccelerating = actionsInString.Contains("accelerateaction") || actionsInString.Contains("dashaction") || actionsInString.Contains("skillaction");
-
                 if ((distanceFromCenter > arenaRadius) && isActionIncludeAccelerating)
                 {
                     // Penalize heavily if sumo will exits the ring, or any action that makes the Sumo move away from exits, reward instead.
-                    bonusOrPenalty += arenaRadius - distanceFromCenter + (angleScore - 0.9f + distScore - 0.8f);
+                    bonusOrPenalty += arenaRadius - distanceFromCenter + (angleScore - 0.9f) * 2;
                     Debug.Log($"[Simulate][IsPossibleOutFromArena] {ID}, can cause go outside of arena\n Detail: {aiPosition}, {arenaCenter} > {arenaRadius}, resulting: {bonusOrPenalty}");
+                }
+                else
+                {
+                    distScore += (angleScore > 0.95 && isActionIncludeAccelerating) ? angleScore * 1.5f : 0;
                 }
             }
 
-            return (angleScore / actions.Count()) + (distScore / actions.Count()) + (bonusOrPenalty / actions.Count());
+            float normAngleScore = angleScore / actions.Count();
+            float normDistScore = distScore / actions.Count();
+            float normBonusOrPenalty = bonusOrPenalty / actions.Count();
+
+            this.angleScore += normAngleScore;
+            this.distScore += normBonusOrPenalty;
+            this.bonusOrPenalty += normBonusOrPenalty;
+            return Tuple.Create(normAngleScore, normDistScore, normBonusOrPenalty);
         }
 
-        public void Backpropagate(float reward)
+        public void Backpropagate(Tuple<float, float, float> reward)
         {
             visits++;
-            totalReward += reward;
+            totalReward += reward.Item1 + reward.Item2 + reward.Item3;
+            angleScore += reward.Item1;
+            distScore += reward.Item2;
+            bonusOrPenalty += reward.Item3;
             parent?.Backpropagate(reward);
         }
 
@@ -200,30 +245,14 @@ namespace BotAI
                 return exploitation;
             }).First();
             return highest;
-
-            if (highest.children.Count > 0)
-            {
-                // if (highestParam == null)
-                // {
-                //     highestParam = new() { highest };
-                // }
-                // else
-                // {
-                //     highestParam.Add(highest);
-                // }
-                return highest.GetBestChild();
-            }
-
-            return highest;
-            //     if (highestParam == null)
-            //     {
-            //         return highest;
-            //     }
-            //     return highestParam.OrderByDescending(child =>
-            //    {
-            //        double exploitation = child.totalReward / child.visits;
-            //        return exploitation;
-            //    }).First();
         }
+    }
+
+    public enum HighestScoreType
+    {
+        Angle,
+        Distance,
+        BonusOrPenalty,
+        Random,
     }
 }
