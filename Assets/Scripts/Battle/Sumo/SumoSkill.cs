@@ -10,7 +10,6 @@ namespace CoreSumo
         Stone = 1,
     }
 
-
     [Serializable]
     public class SumoSkill
     {

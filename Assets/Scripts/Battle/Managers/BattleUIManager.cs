@@ -72,11 +72,11 @@ namespace BattleLoop
             {
                 var leftPlayer = BattleManager.Instance.Battle.LeftPlayer;
                 LeftIndicatorSkillCooldown.GetComponent<Image>().fillAmount = leftPlayer.Skill.CooldownAmountNormalized;
-                LeftIndicatorDashCooldown.GetComponent<Image>().fillAmount = leftPlayer.DashCooldownAmountNormalized;
+                LeftIndicatorDashCooldown.GetComponent<Image>().fillAmount = leftPlayer.DashCooldownNormalized;
 
                 var rightPlayer = BattleManager.Instance.Battle.RightPlayer;
                 RightIndicatorSkillCooldown.GetComponent<Image>().fillAmount = rightPlayer.Skill.CooldownAmountNormalized;
-                RightIndicatorDashCooldown.GetComponent<Image>().fillAmount = rightPlayer.DashCooldownAmountNormalized;
+                RightIndicatorDashCooldown.GetComponent<Image>().fillAmount = rightPlayer.DashCooldownNormalized;
 
                 StageBattleTime.SetText(Mathf.CeilToInt(BattleManager.Instance.TimeLeft).ToString());
             }
