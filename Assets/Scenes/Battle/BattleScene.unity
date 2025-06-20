@@ -4389,10 +4389,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 567c7c5eb92f6483a89c16137907cce2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  ReinitPerIters: 3
+  ReinitPerIters: 5
   Iterations: 100
-  ActionInterval: 0.03
-  SimulationTime: 0.2
+  ActionInterval: 0.1
+  SimulationTime: 0.25
   LowestScoreToReInit: -500
 --- !u!1 &728913078
 GameObject:
@@ -10009,7 +10009,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   ReinitPerIters: 1
   Iterations: 100
-  ActionInterval: 0.02
+  ActionInterval: 0.1
   SimulationTime: 0.25
   LowestScoreToReInit: -500
 --- !u!1 &1757629780
@@ -12912,7 +12912,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   BattleInputType: 0
   RoundSystem: 3
-  BattleTime: 60
+  BattleTime: 30
   CountdownTime: 3
   StartPositions:
   - {fileID: 1987440270}
@@ -12996,12 +12996,12 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2130233538}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: b33ce51748b63457ebe9b59f80ac599c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  totalSimulations: 100
+  totalSimulations: 500
   TimeScale: 1
   SimulationOnStart: 1
 --- !u!1 &2133437839
