@@ -4389,11 +4389,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 567c7c5eb92f6483a89c16137907cce2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  ReinitPerIters: 4
+  ReinitPerIters: 3
   Iterations: 100
-  ActionInterval: 0.01
-  SimulationTime: 0.2
-  LowestScoreToReInit: -1000
+  ActionInterval: 0.1
+  SimulationTime: 0.25
+  LowestScoreToReInit: -500
 --- !u!1 &728913078
 GameObject:
   m_ObjectHideFlags: 0
@@ -4730,7 +4730,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 2.2061768, y: -85}
+  m_AnchoredPosition: {x: 2.2062988, y: -85}
   m_SizeDelta: {x: 862.3549, y: 87.9227}
   m_Pivot: {x: 0, y: 0.5}
 --- !u!114 &757482879
@@ -9952,6 +9952,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 1488574921577525681, guid: e48db3198e16346af866a9419a1964cc, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1749723885}
+    - targetCorrespondingSourceObject: {fileID: 1488574921577525681, guid: e48db3198e16346af866a9419a1964cc, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1749723890}
   m_SourcePrefab: {fileID: 100100000, guid: e48db3198e16346af866a9419a1964cc, type: 3}
 --- !u!4 &1749723878 stripped
 Transform:
@@ -9970,7 +9973,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1749723879}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 08f9a23698d5460408113ac58be1f214, type: 3}
   m_Name: 
@@ -9992,6 +9995,23 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0186b9dd298654ac0af6a57dc42d823e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!114 &1749723890
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1749723879}
+  m_Enabled: 0
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 567c7c5eb92f6483a89c16137907cce2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  ReinitPerIters: 4
+  Iterations: 50
+  ActionInterval: 0.1
+  SimulationTime: 0.25
+  LowestScoreToReInit: -500
 --- !u!1 &1757629780
 GameObject:
   m_ObjectHideFlags: 0
@@ -12892,7 +12912,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   BattleInputType: 0
   RoundSystem: 3
-  BattleTime: 60
+  BattleTime: 30
   CountdownTime: 3
   StartPositions:
   - {fileID: 1987440270}
@@ -12976,12 +12996,12 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2130233538}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: b33ce51748b63457ebe9b59f80ac599c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  totalSimulations: 100
+  totalSimulations: 500
   TimeScale: 1
   SimulationOnStart: 1
 --- !u!1 &2133437839

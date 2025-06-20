@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Data.Common;
 using UnityEngine;
 
 namespace CoreSumo
@@ -70,37 +71,25 @@ namespace CoreSumo
             IsActive = false;
         }
 
-        public bool Activate(ERobotSkillType skillTypeParam)
+        public bool Activate(ISumoAction action)
         {
-            Type = skillTypeParam;
-
             // Check whether the skill is ready or not
-            if (!IsSkillCooldown)
+            Debug.Log($"[Skill][{Type}] activated!");
+            IsActive = true;
+            controller.Log(action);
+            switch (Type)
             {
-                Debug.Log($"[Skill][{Type}] activated!");
-                LogManager.CallPlayerActionLog(controller.Side, "Skill", Type.ToString());
-                IsActive = true;
-                switch (Type)
-                {
-                    case ERobotSkillType.Boost:
-                        ActivateBoost();
-                        break;
-                    case ERobotSkillType.Stone:
-                        ActivateStone();
-                        break;
-                }
-
-                controller.StartCoroutine(OnAfterDuration(Type));
-                controller.StartCoroutine(OnAfterCooldown(Type));
-                return true;
-            }
-            else
-            {
-                Debug.Log($"[Skill][{Type}] is on cooldown!");
+                case ERobotSkillType.Boost:
+                    ActivateBoost();
+                    break;
+                case ERobotSkillType.Stone:
+                    ActivateStone();
+                    break;
             }
 
-            return false;
-
+            controller.StartCoroutine(OnAfterDuration(Type));
+            controller.StartCoroutine(OnAfterCooldown(Type));
+            return true;
         }
 
         public void ActivateBoost()

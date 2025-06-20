@@ -5,6 +5,8 @@ namespace BotAI
 {
     public class AIBot_EA_Basic : Bot
     {
+        public override string Name() => "GA";
+        
         public float EvaluationInterval = 5f;
         public float ActionInterval = 0.4f;
 
