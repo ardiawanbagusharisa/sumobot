@@ -73,6 +73,7 @@ public class BattleManager : MonoBehaviour
 
     void OnEnable()
     {
+        LogManager.InitLog();
         Battle = new Battle(Guid.NewGuid().ToString(), RoundSystem);
         LogManager.InitBattle();
     }
@@ -148,7 +149,7 @@ public class BattleManager : MonoBehaviour
             Battle.RightPlayer = controller;
         }
 
-        LogManager.LogGlobalEvent(
+        LogManager.LogBattleState(
                 actor: LogActorType.System,
                 data: new Dictionary<string, object>()
                 {
@@ -199,6 +200,11 @@ public class BattleManager : MonoBehaviour
             timer -= 1f;
         }
 
+        // Draw
+        LogManager.SetRoundWinner("Draw");
+        CurrentRound.RoundWinner = null;
+        Battle.Winners[CurrentRound.RoundNumber] = null;
+        LogManager.CleanIncompletePlayerAction();
         TransitionToState(BattleState.Battle_End);
     }
 
@@ -237,19 +243,19 @@ public class BattleManager : MonoBehaviour
         }
 
         Battle.SetRoundWinner(winner);
-
         LogManager.CleanIncompletePlayerAction();
         TransitionToState(BattleState.Battle_End);
     }
 
     private void TransitionToState(BattleState newState)
     {
+
         Debug.Log($"State Transition: {CurrentState} → {newState}");
         CurrentState = newState;
 
         if (CurrentRound.RoundNumber == 0)
         {
-            LogManager.LogGlobalEvent(
+            LogManager.LogBattleState(
                    actor: LogActorType.System,
                    data: new Dictionary<string, object>()
                    {
@@ -259,15 +265,17 @@ public class BattleManager : MonoBehaviour
         }
         else
         {
-            LogManager.LogRoundEvent(
+            LogManager.LogBattleState(
                 actor: LogActorType.System,
+                includeInCurrentRound: true,
                 data: new Dictionary<string, object>()
                 {
-                        {"battle_state", CurrentState.ToString()}
+                        {"type", "battle_state"},
+                        { "battle_state", CurrentState.ToString()}
                 });
         }
 
-
+        // Post-state
         switch (CurrentState)
         {
             // Prebattle
@@ -289,8 +297,9 @@ public class BattleManager : MonoBehaviour
 
             // Battle
             case BattleState.Battle_Preparing:
+                LogManager.UpdateMetadata();
                 LogManager.StartNewGame();
-                
+
                 Battle.ClearWinner();
                 CurrentRound = new Round(1, Mathf.CeilToInt(BattleTime));
                 LogManager.StartRound(CurrentRound.RoundNumber);
@@ -333,17 +342,18 @@ public class BattleManager : MonoBehaviour
                 StartCoroutine(ResetBattle());
                 break;
             case BattleState.Battle_Reset:
-
                 var winner = Battle.GetBattleWinner();
                 if (winner != null)
                 {
                     LogManager.SetGameWinner((BattleWinner)winner!);
+                    LogManager.UpdateMetadata();
                     TransitionToState(BattleState.PostBattle_ShowResult);
                 }
                 else
                 {
-                    int previousRound = Battle.CurrentRound.RoundNumber;
+                    LogManager.UpdateMetadata();
 
+                    int previousRound = Battle.CurrentRound.RoundNumber;
                     // Create n+1 round
                     CurrentRound = new Round(previousRound + 1, Mathf.CeilToInt(BattleTime));
                     LogManager.StartRound(CurrentRound.RoundNumber);
@@ -352,13 +362,15 @@ public class BattleManager : MonoBehaviour
                     //Start a round again
                     TransitionToState(BattleState.Battle_Countdown);
                 }
-
+                LogManager.SortAndSave();
                 break;
             // Battle
 
 
             // Post Battle
             case BattleState.PostBattle_ShowResult:
+                LogManager.SortAndSave();
+
                 Deinitialize();
                 break;
                 // Post Battle
@@ -418,13 +430,13 @@ public record Battle
         if (winner.Side == PlayerSide.Left)
         {
             LeftWinCount += 1;
-            LogManager.SetRoundWinner(LogActorType.LeftPlayer);
         }
         else
         {
             RightWinCount += 1;
-            LogManager.SetRoundWinner(LogActorType.RightPlayer);
         }
+
+        LogManager.SetRoundWinner(winner.Side.ToString());
 
         CurrentRound.RoundWinner = winner;
         Winners[CurrentRound.RoundNumber] = winner;
