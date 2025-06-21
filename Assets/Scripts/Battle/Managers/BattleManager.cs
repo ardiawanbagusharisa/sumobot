@@ -134,7 +134,7 @@ public class BattleManager : MonoBehaviour
         PlayerSide side = controller.transform.position.x < 0 ? PlayerSide.Left : PlayerSide.Right;
 
         // Initialize player components
-        controller.InitializeForBattle(side, controller.transform);
+        controller.Initialize(side, controller.transform);
         controller.OnPlayerOutOfArena += OnPlayerOutOfArena;
 
         // Check whether player left or right, assign to Battle data
@@ -206,8 +206,8 @@ public class BattleManager : MonoBehaviour
     private IEnumerator ResetBattle()
     {
         yield return new WaitForSeconds(3f);
-        Battle.LeftPlayer.ResetForNewBattle();
-        Battle.RightPlayer.ResetForNewBattle();
+        Battle.LeftPlayer.Reset();
+        Battle.RightPlayer.Reset();
         TransitionToState(BattleState.Battle_Reset);
         yield return new WaitForSeconds(1f);
     }
@@ -295,8 +295,8 @@ public class BattleManager : MonoBehaviour
                 CurrentRound = new Round(1, Mathf.CeilToInt(BattleTime));
                 LogManager.StartRound(CurrentRound.RoundNumber);
 
-                Battle.LeftPlayer.ResetForNewBattle();
-                Battle.RightPlayer.ResetForNewBattle();
+                Battle.LeftPlayer.Reset();
+                Battle.RightPlayer.Reset();
                 InputManager.Instance.PrepareInput(Battle.LeftPlayer);
                 InputManager.Instance.PrepareInput(Battle.RightPlayer);
 
