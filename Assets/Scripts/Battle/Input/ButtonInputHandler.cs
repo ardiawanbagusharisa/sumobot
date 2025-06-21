@@ -293,9 +293,9 @@ public class ButtonInputHandler : MonoBehaviour
     }
 
     // Set active to button about what's skill can be used for player
-    public GameObject SetSkillAvailability(ERobotSkillType type)
+    public GameObject SetSkillAvailability(SkillType type)
     {
-        if (type == ERobotSkillType.Boost)
+        if (type == SkillType.Boost)
         {
             Boost.gameObject.SetActive(true);
 

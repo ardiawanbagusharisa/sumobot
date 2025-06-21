@@ -16,7 +16,7 @@ public class InputProvider : MonoBehaviour
 {
     public bool IncludeKeyboard;
     public PlayerSide PlayerSide;
-    public ERobotSkillType SkillType;
+    public SkillType SkillType;
 
     // AccelerateAction: true, means player can press Accelerate
     public Dictionary<string, bool> StateKeyboardAction;
@@ -59,8 +59,6 @@ public class InputProvider : MonoBehaviour
                                         {"DashAction",true},
                                         {"SkillAction",true},
                                     };
-
-
         commandQueue = new Queue<ISumoAction>();
     }
 
@@ -86,9 +84,12 @@ public class InputProvider : MonoBehaviour
     // APplied for Live Command And AI Script
     public void EnqueueCommand(ISumoAction action)
     {
-        Validate(action);
-        commandQueue.Enqueue(action);
+        if (IsValid(action))
+        {
+            commandQueue.Enqueue(action);
+        }
     }
+
     public void ClearCommands()
     {
         commandQueue.Clear();
@@ -106,7 +107,17 @@ public class InputProvider : MonoBehaviour
             // Map input to actions
             if (Input.GetKey(item.Key) && StateKeyboardAction[item.Value.GetType().Name])
             {
-                actions.Add(item.Value);
+                try
+                {
+                    if (IsValid(item.Value))
+                    {
+                        actions.Add(item.Value);
+                    }
+                }
+                catch (Exception e)
+                {
+                    Debug.LogError(e);
+                }
             }
         }
         return actions;
@@ -116,46 +127,43 @@ public class InputProvider : MonoBehaviour
     #region UI Input
     public void OnAccelerateButtonPressed()
     {
-        commandQueue.Enqueue(new AccelerateAction(InputType.UI));
+        EnqueueCommand(new AccelerateAction(InputType.UI));
     }
-    
+
     public void OnDashButtonPressed()
     {
-        commandQueue.Enqueue(new DashAction(InputType.UI));
+        EnqueueCommand(new DashAction(InputType.UI));
     }
 
     public void OnTurnLeftButtonPressed()
     {
-        commandQueue.Enqueue(new TurnLeftAction(InputType.UI));
+        EnqueueCommand(new TurnLeftAction(InputType.UI));
     }
 
     public void OnTurnRightButtonPressed()
     {
-        commandQueue.Enqueue(new TurnRightAction(InputType.UI));
+        EnqueueCommand(new TurnRightAction(InputType.UI));
     }
 
     public void OnBoostSkillButtonPressed()
     {
-        if (SkillType != ERobotSkillType.Boost) return;
-        commandQueue.Enqueue(new SkillAction(InputType.UI));
+        EnqueueCommand(new SkillAction(InputType.UI));
     }
 
     public void OnStoneSkillButtonPressed()
     {
-        if (SkillType != ERobotSkillType.Stone) return;
-        commandQueue.Enqueue(new SkillAction(InputType.UI));
+        EnqueueCommand(new SkillAction(InputType.UI));
     }
 
-    private void Validate(ISumoAction action)
+    private bool IsValid(ISumoAction action)
     {
         SumoController controller = PlayerSide == PlayerSide.Left ? BattleManager.Instance.Battle.LeftPlayer : BattleManager.Instance.Battle.RightPlayer;
 
-        string actionName = action.GetType().Name;
 
         if (action.Param is float)
         {
             float param = (float)action.Param;
-            if (param == float.NaN) throw new Exception($"parameter can't be NaN when you are using [{actionName}] type");
+            if (param == float.NaN) throw new Exception($"parameter can't be NaN when you are using [{action.NameWithParam}] type");
         }
 
         if (action is TurnLeftAngleAction || action is TurnRightAngleAction)
@@ -163,19 +171,45 @@ public class InputProvider : MonoBehaviour
             float param = (float)action.Param;
             float minAngle = controller.HalfTurnAngle.min;
             float maxAngle = controller.HalfTurnAngle.max;
-            if (param < 0) throw new Exception($"parameter can't be < 0 when you are using [{actionName}] type");
-            if (param < minAngle || param > maxAngle) throw new Exception($"parameter can't be < {minAngle} and > {maxAngle} when you are using [{actionName}]");
+            if (param < 0) throw new Exception($"parameter can't be < 0 when you are using [{action.NameWithParam}] type");
+            if (param < minAngle || param > maxAngle) throw new Exception($"parameter can't be < {minAngle} and > {maxAngle} when you are using [{action.NameWithParam}]");
         }
         else if (action is TurnAngleAction)
         {
             float param = (float)action.Param;
             float minAngle = controller.FullTurnAngle.min;
             float maxAngle = controller.FullTurnAngle.max;
-            if (param < minAngle || param > maxAngle) throw new Exception($"param can't be < {minAngle} and > {maxAngle} when you are using [${actionName}] type");
+            if (param < minAngle || param > maxAngle) throw new Exception($"param can't be < {minAngle} and > {maxAngle} when you are using [${action.NameWithParam}] type");
         }
 
-        //[Todo] Validate cooldown
+        if (action is AccelerateAction || action is AccelerateTimeAction || action is DashAction)
+        {
+            if (controller.IsMovementLocked || controller.IsMoveDisabled)
+            {
+                // throw new Exception($"can't accept [${action.NameWithParam}] while [IsMovementLocked] or [IsMoveDisabled] is true");
+                return false;
+            }
+        }
 
+        if (action is DashAction)
+        {
+            if (controller.IsDashOnCooldown)
+            {
+                // throw new Exception($"can't accept [${action.NameWithParam}] while [IsDashCooldown] is true");
+                return false;
+            }
+        }
+
+        if (action is SkillAction)
+        {
+            if (controller.Skill.IsSkillCooldown)
+            {
+                // throw new Exception($"can't accept [${action.NameWithParam}] while [IsSkillCooldown] is true");
+                return false;
+            }
+        }
+
+        return true;
     }
     #endregion
 }

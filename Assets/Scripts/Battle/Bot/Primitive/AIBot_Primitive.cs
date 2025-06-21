@@ -5,6 +5,8 @@ namespace BotAI
 {
     public class AIBot_Primitive : Bot
     {
+        public override string Name() => "Primitive";
+
         private SumoController controller;
         private SumoController enemy;
         private float actionInterval = 0.4f;
