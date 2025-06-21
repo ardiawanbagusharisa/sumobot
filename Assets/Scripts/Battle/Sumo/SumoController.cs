@@ -45,7 +45,7 @@ namespace CoreSumo
         public SumoSkill Skill;
         #endregion
 
-        #region Runtime Variables (readonly) Properties
+        #region Runtime (readonly) Properties
         public bool isInputDisabled = false;
         public Vector2 LastVelocity { get; private set; } = Vector2.zero;
         public float LastAngularVelocity => robotRigidBody.angularVelocity;
@@ -53,8 +53,8 @@ namespace CoreSumo
         public Vector3 StartPosition;
         public Quaternion StartRotation;
 
-        private bool isMoveDisabled = true;
-        private bool isSkillDisabled = true;
+        public bool IsMoveDisabled = true;
+        public bool IsSkillDisabled = true;
         private float reservedMoveSpeed;
         private float reservedDashSpeed;
         private float reserverdBounceResistance;
@@ -67,7 +67,7 @@ namespace CoreSumo
         public float DashCooldownTimer => LastDashTime + DashCooldown - BattleManager.Instance.ElapsedTime;
         public float DashCooldownNormalized => 1 - DashCooldownTimer / DashCooldown;
         public bool IsDashOnCooldown => DashCooldownTimer >= 0f;
-        private bool IsMovementLocked => moveLockTime > 0f;
+        public bool IsMovementLocked => moveLockTime > 0f;
         public LogActorType ActorType => Side == PlayerSide.Left ? LogActorType.LeftPlayer : LogActorType.RightPlayer;
 
         // Events 
@@ -159,6 +159,11 @@ namespace CoreSumo
         #endregion
 
         #region Robot Action Methods
+        public void Log(ISumoAction action)
+        {
+            LogManager.CallPlayerActionLog(Side, action);
+        }
+
         public void StopCoroutineAction()
         {
             if (accelerateOverTimeCoroutine != null)
@@ -166,83 +171,68 @@ namespace CoreSumo
             if (turnOverAngleCoroutine != null)
                 StopCoroutine(turnOverAngleCoroutine);
         }
-        public void Accelerate(AccelerateType type, float time = float.NaN)
+
+        public void Accelerate(ISumoAction action, AccelerateType type)
         {
-            if (isMoveDisabled || IsMovementLocked)
-                return;
-
-            LogManager.CallPlayerActionLog(Side, "Accelerate");
-
+            // Log with debounce strategy
+            Log(action);
             switch (type)
             {
                 case AccelerateType.Default:
                     robotRigidBody.linearVelocity = transform.up * (IsDashActive ? DashSpeed : MoveSpeed);
+                    Log(action);
                     break;
                 case AccelerateType.Time:
-                    accelerateOverTimeCoroutine = StartCoroutine(AccelerateOverTime(time));
+                    accelerateOverTimeCoroutine = StartCoroutine(AccelerateOverTime(action));
                     break;
             }
         }
 
-        public void Dash(DashType type, float time = float.NaN)
+        public void Dash(ISumoAction action, DashType type)
         {
-            if (isMoveDisabled || IsMovementLocked)
-                return;
-
+            Log(action);
             switch (type)
             {
                 case DashType.Default:
-                    if (!IsDashOnCooldown)
-                    {
-                        LogManager.CallPlayerActionLog(Side, "Dash");
-
-                        LastDashTime = BattleManager.Instance.ElapsedTime;
-                        robotRigidBody.linearVelocity = transform.up * DashSpeed;
-                    }
+                    LastDashTime = BattleManager.Instance.ElapsedTime;
+                    robotRigidBody.linearVelocity = transform.up * DashSpeed;
+                    Log(action);
                     break;
                 case DashType.Time:
-                    accelerateOverTimeCoroutine = StartCoroutine(AccelerateOverTime(time, isDash: true));
+                    accelerateOverTimeCoroutine = StartCoroutine(AccelerateOverTime(action, isDash: true));
                     break;
             }
         }
 
-        public void Turn(TurnType type = TurnType.Angle, float angle = float.NaN)
+        public void Turn(ISumoAction action, TurnType type = TurnType.Angle)
         {
+            Log(action);
             switch (type)
             {
                 case TurnType.Left:
-                    LogManager.CallPlayerActionLog(Side, "TurnLeft");
                     robotRigidBody.MoveRotation(robotRigidBody.rotation + RotateSpeed * Time.fixedDeltaTime);
                     break;
                 case TurnType.Right:
-                    LogManager.CallPlayerActionLog(Side, "TurnRight");
                     robotRigidBody.MoveRotation(robotRigidBody.rotation + -RotateSpeed * Time.fixedDeltaTime);
                     break;
                 case TurnType.LeftAngle:
-                    turnOverAngleCoroutine = StartCoroutine(TurnOverAngle(Mathf.Clamp(angle, HalfTurnAngle.min, FullTurnAngle.max) * 1f));
+                    action.Param = Mathf.Clamp((float)action.Param, HalfTurnAngle.min, HalfTurnAngle.max) * 1f;
+                    turnOverAngleCoroutine = StartCoroutine(TurnOverAngle(action));
                     break;
                 case TurnType.RightAngle:
-                    turnOverAngleCoroutine = StartCoroutine(TurnOverAngle(Mathf.Clamp(angle, HalfTurnAngle.min, HalfTurnAngle.max) * -1f));
+                    action.Param = Mathf.Clamp((float)action.Param, HalfTurnAngle.min, HalfTurnAngle.max) * -1f;
+                    turnOverAngleCoroutine = StartCoroutine(TurnOverAngle(action));
                     break;
                 case TurnType.Angle:
-                    turnOverAngleCoroutine = StartCoroutine(TurnOverAngle(Mathf.Clamp(angle, FullTurnAngle.min, FullTurnAngle.max)));
+                    action.Param = Mathf.Clamp((float)action.Param, FullTurnAngle.min, FullTurnAngle.max);
+                    turnOverAngleCoroutine = StartCoroutine(TurnOverAngle(action));
                     break;
             }
         }
 
-        public void UseSkill()
+        IEnumerator TurnOverAngle(ISumoAction action)
         {
-            if (!isSkillDisabled) 
-                Skill.Activate(Skill.Type);
-        }
-
-        IEnumerator TurnOverAngle(float totalAngle)
-        {
-            if (totalAngle < 0)
-                LogManager.CallPlayerActionLog(Side, "TurnLeft", param: totalAngle.ToString());
-            else
-                LogManager.CallPlayerActionLog(Side, "TurnRight", param: totalAngle.ToString());
-
+            float totalAngle = (float)action.Param;
             float rotatedAngle = 0f;
             float duration = Mathf.Abs(totalAngle) * TurnRate / LastVelocity.magnitude;
             
@@ -261,47 +251,36 @@ namespace CoreSumo
                 transform.Rotate(0, 0, delta); 
                 rotatedAngle += delta;
 
-                // LogManager.CallPlayerActionLog(Side, totalAngle < 0 ? "TurnLeft" : "TurnRight"); + Side
-                if (totalAngle < 0)
-                    LogManager.CallPlayerActionLog(Side, "TurnLeft");
-                else
-                    LogManager.CallPlayerActionLog(Side, "TurnRight");
-
+                Log(action);
                 yield return null;
             }
         }
 
-        IEnumerator AccelerateOverTime(float time, bool isDash = false)
+        IEnumerator AccelerateOverTime(ISumoAction action, bool isDash = false)
         {
             float elapsedTime = 0f;
             float speed = isDash ? DashSpeed : MoveSpeed;
 
-            if (isDash)
-                LogManager.CallPlayerActionLog(Side, "Dash", param: time.ToString());
-            else
-                LogManager.CallPlayerActionLog(Side, "Accelerate", param: time.ToString());
+            Log(action);
 
-            while (elapsedTime < time && BattleManager.Instance.CurrentState == BattleState.Battle_Ongoing && !IsMovementLocked)
+            while (elapsedTime < (float)action.Param && BattleManager.Instance.CurrentState == BattleState.Battle_Ongoing && !IsMovementLocked)
             {
                 robotRigidBody.linearVelocity = transform.up.normalized * speed;
                 elapsedTime += Time.deltaTime;
 
-                if (isDash)
-                    LogManager.CallPlayerActionLog(Side, "Dash");
-                else
-                    LogManager.CallPlayerActionLog(Side, "Accelerate");
-                
+                Log(action);
+
                 yield return null;
             }
         }
 
         public void SetMovementEnabled(bool value)
         {
-            isMoveDisabled = !value;
+            IsMoveDisabled = !value;
         }
         public void SetSkillEnabled(bool value)
         {
-            isSkillDisabled = !value;
+            IsSkillDisabled = !value;
         }
         public void SetInputEnabled(bool value)
         {
@@ -359,10 +338,10 @@ namespace CoreSumo
                 float actorImpact = CollisionBaseForce * enemyVelocity / total; 
                 float targetImpact = CollisionBaseForce * actorVelocity / total;
 
-                if (Skill.Type == ERobotSkillType.Stone && Skill.IsActive)
+                if (Skill.Type == SkillType.Stone && Skill.IsActive)
                     targetImpact = enemyVelocity / total;
 
-                if (otherRobot.Skill.Type == ERobotSkillType.Stone && otherRobot.Skill.IsActive)
+                if (otherRobot.Skill.Type == SkillType.Stone && otherRobot.Skill.IsActive)
                     actorImpact = actorVelocity / total;
 
                 actorImpact *= otherRobot.BounceResistance;
@@ -379,9 +358,9 @@ namespace CoreSumo
 
                 Debug.Log($"[BounceRule]\nActor=>{Side},Target=>{otherRobot.Side}\nActorVelocity=>{actorVelocity},TargetVelocity=>{enemyVelocity}\nActorCurrentSkill=>{Skill.Type}, TargetCurrentSkill=>{otherRobot.Skill.Type}\nActorImpact=>{actorImpact}, TargetImpact=>{targetImpact}");
 
-                LogManager.LogRoundEvent(
-                    actor: Side.ToLogActorType(),
-                    target: otherRobot.Side.ToLogActorType(),
+                LogManager.LogPlayerEvents(
+                    actor: Side,
+                    target: otherRobot.Side,
                     data: new Dictionary<string, object>()
                     {
                         {"type", "Bounce" },

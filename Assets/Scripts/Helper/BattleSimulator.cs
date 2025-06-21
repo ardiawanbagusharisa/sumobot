@@ -24,17 +24,19 @@ public class BattleSimulator : MonoBehaviour
 #endif
 
         Time.timeScale = TimeScale;
-        Time.fixedDeltaTime = 0.02f / TimeScale;
+        Application.runInBackground = true;
+        // Time.fixedDeltaTime = 0.02f / TimeScale;
         StartCoroutine(RunSimulations());
     }
 
     private IEnumerator RunSimulations()
     {
         //Delay for preparing
-        yield return new WaitForSeconds(1);
+        yield return new WaitForSeconds(0.5f);
 
         for (int i = 0; i < totalSimulations; i++)
         {
+            yield return new WaitForSeconds(1);
             BattleManager.Instance.Battle_Start();
 
             // Wait until match is over
@@ -42,6 +44,8 @@ public class BattleSimulator : MonoBehaviour
             {
                 yield return null; // wait frame
             }
+            
+            yield return new WaitForSeconds(1);
             yield return new WaitForEndOfFrame(); // Delay if needed
         }
 

@@ -17,6 +17,7 @@ public class DebouncedLogger
     private float startTime;
     private string Name;
     private string Parameter;
+    private string Reason;
     private SumoController controller;
 
     public DebouncedLogger(SumoController controller, float debounceTime)
@@ -25,7 +26,7 @@ public class DebouncedLogger
         this.debounceTime = debounceTime;
     }
 
-    public void Call(string name, string parameter = null)
+    public void Call(string name, string parameter = null, string reason = null)
     {
         Name = name;
         if (parameter != null)
@@ -38,6 +39,8 @@ public class DebouncedLogger
             startRotation = controller.transform.rotation.eulerAngles.z;
             startLinearVelocity = controller.LastVelocity;
             startAngularVelocity = controller.LastAngularVelocity;
+            Reason = reason;
+            SaveToLog(true);
         }
 
         lastCallTime = BattleManager.Instance.ElapsedTime;
@@ -47,12 +50,18 @@ public class DebouncedLogger
     {
         if (IsActive && BattleManager.Instance.ElapsedTime - lastCallTime >= debounceTime)
         {
-            SaveToLog();
             IsActive = false;
+            SaveToLog(false);
         }
     }
 
-    public void SaveToLog()
+    public void ForceStopAndSave()
+    {
+        IsActive = false;
+        SaveToLog(false);
+    }
+
+    public void SaveToLog(bool start=false)
     {
         float duration = BattleManager.Instance.ElapsedTime - startTime;
         float endRotation = controller.transform.rotation.eulerAngles.z;
@@ -60,12 +69,15 @@ public class DebouncedLogger
         Vector3 endLinearVelocity = controller.LastVelocity;
         float endAngularVelocity = controller.LastAngularVelocity;
 
-        LogManager.LogRoundEvent(
-            actor: controller.Side.ToLogActorType(),
+        LogManager.LogPlayerEvents(
+            actor: controller.Side,
+            startedAt: startTime,
             data: new Dictionary<string, object>()
             {
+                        { "start", start.ToString() },
                         { "type", Name },
                         { "parameter", Parameter },
+                        { "reason", Reason },
                         { "before", new Dictionary<string,object>()
                             {
                                 { "angular_velocity", startAngularVelocity},
@@ -110,7 +122,8 @@ public class DebouncedLogger
                                 },
                             }
                         },
-                        { "duration", duration }
+                        { "duration", duration },
+
             }
         );
     }
