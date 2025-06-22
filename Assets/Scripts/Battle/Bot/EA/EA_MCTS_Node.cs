@@ -172,7 +172,7 @@ public class EA_MCTS_Node
                 else
                 {
                     var predictionSpeed = controller.MoveSpeed;
-                    if (controller.Skill.Type == ERobotSkillType.Boost && controller.Skill.IsActive)
+                    if (controller.Skill.Type == SkillType.Boost && controller.Skill.IsActive)
                     {
                         predictionSpeed *= controller.Skill.BoostMultiplier;
                     }
@@ -182,7 +182,7 @@ public class EA_MCTS_Node
             }
             else if (action is DashAction)
             {
-                if (controller.IsDashCooldown || controller.IsMovementLocked || controller.IsMoveDisabled)
+                if (controller.IsDashOnCooldown || controller.IsMovementLocked || controller.IsMoveDisabled)
                 {
                     bonusOrPenalty -= 0.1f;
                 }
@@ -191,7 +191,7 @@ public class EA_MCTS_Node
                     bonusOrPenalty += 0.1f;
                     var predictionSpeed = controller.DashSpeed;
 
-                    if (controller.Skill.Type == ERobotSkillType.Boost && controller.Skill.IsActive)
+                    if (controller.Skill.Type == SkillType.Boost && controller.Skill.IsActive)
                     {
                         predictionSpeed *= controller.Skill.BoostMultiplier;
                     }
@@ -211,7 +211,7 @@ public class EA_MCTS_Node
                 }
                 else
                 {
-                    if (controller.Skill.Type == ERobotSkillType.Boost)
+                    if (controller.Skill.Type == SkillType.Boost)
                     {
                         bonusOrPenalty += 0.5f;
                         aiPosition += aiDirection.normalized * (controller.MoveSpeed * controller.Skill.BoostMultiplier * simulationTime);

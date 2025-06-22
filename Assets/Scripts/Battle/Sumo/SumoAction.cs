@@ -1,31 +1,20 @@
-
 using System;
-using Unity.VisualScripting;
 
 namespace CoreSumo
 {
-
+    #region Action abstract class and Enums 
     public abstract class ISumoAction
     {
-        // An InputType that player use for this action.
-        // InputUsed is utilized mostly in preventing multiple inputs for one action
-        // for example: 
-        // 1. A battle started with UI Input Type, keyboard also can be used
-        // 2. A battle started with UI Input Type, and Sumo is associated with Script Component [Bot]
         public InputType InputUsed;
-
-        // Why this action is taken. 
-        // Typically used by Script, because we have a reason to give our robot an action, good for labelling in the making of AI
         public string Reason;
-        
         public object Param;
+
         public abstract void Execute(SumoController controller);
 
         public string Name
         {
             get
             {
-                // Get "Accelerate" instead of "AccelerateAction"
                 var name = GetType().Name;
                 return name.EndsWith("Action") ? name.Remove(name.Length - "Action".Length) : name;
             }
@@ -49,7 +38,7 @@ namespace CoreSumo
         }
     }
 
-    public enum TurnActionType
+    public enum TurnType
     {
         Left,
         Right,
@@ -58,18 +47,20 @@ namespace CoreSumo
         Angle,
     }
 
-    public enum AccelerateActionType
+    public enum AccelerateType
     {
         Default,
         Time,
     }
 
-    public enum DashActionType
+    public enum DashType
     {
         Default,
         Time,
     }
+    #endregion
 
+    #region Action classes
     public class AccelerateAction : ISumoAction
     {
         public AccelerateAction(InputType inputType)
@@ -78,7 +69,7 @@ namespace CoreSumo
         }
         public override void Execute(SumoController controller)
         {
-            controller.Accelerate(this, AccelerateActionType.Default);
+            controller.Accelerate(this, AccelerateType.Default);
         }
     }
 
@@ -92,8 +83,7 @@ namespace CoreSumo
 
         public override void Execute(SumoController controller)
         {
-
-            controller.Turn(this, TurnActionType.Left);
+            controller.Turn(this, TurnType.Left);
         }
     }
 
@@ -106,8 +96,7 @@ namespace CoreSumo
 
         public override void Execute(SumoController controller)
         {
-
-            controller.Turn(this, TurnActionType.Right);
+            controller.Turn(this, TurnType.Right);
         }
     }
 
@@ -120,7 +109,7 @@ namespace CoreSumo
         }
         public override void Execute(SumoController controller)
         {
-            controller.Dash(this, DashActionType.Default);
+            controller.Dash(this, DashType.Default);
         }
     }
 
@@ -136,8 +125,9 @@ namespace CoreSumo
             controller.Skill.Activate(this);
         }
     }
+    #endregion
 
-    #region Live Command / Script
+    #region Action classes for Live Command and Script
     public class AccelerateTimeAction : ISumoAction
     {
         public AccelerateTimeAction(float time, InputType inputUsed = InputType.Script)
@@ -147,8 +137,7 @@ namespace CoreSumo
         }
         public override void Execute(SumoController controller)
         {
-
-            controller.Accelerate(this, AccelerateActionType.Time);
+            controller.Accelerate(this, AccelerateType.Time);
         }
     }
 
@@ -162,8 +151,7 @@ namespace CoreSumo
         }
         public override void Execute(SumoController controller)
         {
-
-            controller.Dash(this, DashActionType.Time);
+            controller.Dash(this, DashType.Time);
         }
     }
 
@@ -177,7 +165,6 @@ namespace CoreSumo
 
         public override void Execute(SumoController controller)
         {
-
             controller.Turn(this);
         }
     }
@@ -185,7 +172,6 @@ namespace CoreSumo
 
     public class TurnRightAngleAction : ISumoAction
     {
-
         public TurnRightAngleAction(float angle, InputType inputUsed = InputType.Script)
         {
             Param = angle;
@@ -194,11 +180,9 @@ namespace CoreSumo
 
         public override void Execute(SumoController controller)
         {
-
             controller.Turn(this);
         }
     }
-
 
     public class TurnAngleAction : ISumoAction
     {
@@ -211,11 +195,8 @@ namespace CoreSumo
 
         public override void Execute(SumoController controller)
         {
-
             controller.Turn(this);
         }
     }
-
     #endregion
-
 }

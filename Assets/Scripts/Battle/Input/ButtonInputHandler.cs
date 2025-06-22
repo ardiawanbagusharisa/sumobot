@@ -171,11 +171,11 @@ public class ButtonInputHandler : MonoBehaviour
         bool IsCooldown;
         if (inputProvider.PlayerSide == PlayerSide.Left)
         {
-            IsCooldown = BattleManager.Instance.Battle.LeftPlayer.IsDashCooldown;
+            IsCooldown = BattleManager.Instance.Battle.LeftPlayer.IsDashOnCooldown;
         }
         else
         {
-            IsCooldown = BattleManager.Instance.Battle.RightPlayer.IsDashCooldown;
+            IsCooldown = BattleManager.Instance.Battle.RightPlayer.IsDashOnCooldown;
         }
 
         if (IsCooldown)
@@ -296,9 +296,9 @@ public class ButtonInputHandler : MonoBehaviour
     }
 
     // Set active to button about what's skill can be used for player
-    public GameObject SetSkillAvailability(ERobotSkillType type)
+    public GameObject SetSkillAvailability(SkillType type)
     {
-        if (type == ERobotSkillType.Boost)
+        if (type == SkillType.Boost)
         {
             Boost.gameObject.SetActive(true);
 
