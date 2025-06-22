@@ -67,6 +67,8 @@ public class LogManager
         public string updated_at;
         public string actor;
         public string target;
+        public string category;
+        public bool isStart;
 
         public Dictionary<string, object> data = new Dictionary<string, object>();
     }
@@ -173,8 +175,21 @@ public class LogManager
 
     public static void UpdateMetadata()
     {
-        _battleLog.left_player_stats.bot = BattleManager.Instance.Battle.LeftPlayer.gameObject.GetComponents<Bot>().First((x) => x.enabled)?.Name() ?? "";
-        _battleLog.right_player_stats.bot = BattleManager.Instance.Battle.RightPlayer.gameObject.GetComponents<Bot>().First((x) => x.enabled)?.Name() ?? "";
+        if (BattleManager.Instance.Bot.IsEnable)
+        {
+            var p1Bot = BattleManager.Instance.Bot.Left;
+            var p2Bot = BattleManager.Instance.Bot.Right;
+
+            if (p1Bot != null)
+            {
+                _battleLog.left_player_stats.bot = p1Bot?.ID ?? "";
+            }
+
+            if (p2Bot != null)
+            {
+                _battleLog.right_player_stats.bot = p2Bot?.ID ?? "";
+            }
+        }
 
         _battleLog.left_player_stats.skill_type = BattleManager.Instance.Battle.LeftPlayer.Skill.Type.ToString();
         _battleLog.right_player_stats.skill_type = BattleManager.Instance.Battle.RightPlayer.Skill.Type.ToString();
@@ -285,6 +300,8 @@ public class LogManager
     public static void LogPlayerEvents(
         PlayerSide actor,
         PlayerSide? target = null,
+        string category = "action",
+        bool isStart = false,
         float? startedAt = null,
         float? updatedAt = null,
         Dictionary<string, object> data = null)
@@ -298,6 +315,8 @@ public class LogManager
                 actor = actor.ToString(),
                 target = target.ToString() ?? null,
                 data = data,
+                isStart = isStart,
+                category = category,
             };
 
             if (startedAt != null)
@@ -335,8 +354,10 @@ public class LogManager
 
     public static void SaveCurrentGame()
     {
+
         var json = JsonConvert.SerializeObject(_battleLog.games[CurrentGameIndex], Formatting.Indented);
-        var savePath = Path.Combine(_logFolderPath, $"game_{CurrentGameIndex}.json");
+        string paddedIndex = CurrentGameIndex.ToString("D3"); // D3 = 3-digit padding
+        var savePath = Path.Combine(_logFolderPath, $"game_{paddedIndex}.json");
         File.WriteAllText(savePath, json);
     }
 

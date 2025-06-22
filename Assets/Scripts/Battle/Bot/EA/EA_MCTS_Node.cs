@@ -6,253 +6,289 @@ using CoreSumo;
 using UnityEditor;
 using UnityEngine;
 
-namespace BotAI
+public class EA_MCTS_Node
 {
-    public class EA_MCTS_Node
-    {
-        public string ID;
-        public EA_MCTS_Node head;
-        public EA_MCTS_Node parent;
-        public List<EA_MCTS_Node> children = new();
-        public int visits = 0;
-        public float totalReward = 0f;
-        public float angleScore = 0f;
-        public float distScore = 0f;
-        public float bonusOrPenalty = 0f;
-        public List<ISumoAction> actions = new();
-        public string actionString;
-        public List<ISumoAction> badAction;
-        public List<ISumoAction> goodAction;
-        public bool badActionAlreadyUsed = false;
-        public bool goodActionAlreadyUsed = false;
-        public PlayerSide Side;
+    public string ID;
+    public EA_MCTS_Node head;
+    public EA_MCTS_Node parent;
+    public List<EA_MCTS_Node> children = new();
+    public int visits = 0;
+    public float totalReward = 0f;
+    public float angleScore = 0f;
+    public float distScore = 0f;
+    public float bonusOrPenalty = 0f;
+    public List<ISumoAction> actions = new();
+    public string actionString;
+    public List<ISumoAction> badAction;
+    public List<ISumoAction> goodAction;
+    public bool badActionAlreadyUsed = false;
+    public bool goodActionAlreadyUsed = false;
+    public PlayerSide Side;
 
-        public HighestScoreType GetHighestScoreType()
+    public HighestScoreType GetHighestScoreType()
+    {
+        try
         {
-            try
-            {
-                Dictionary<float, HighestScoreType> highestScore = new()
+            Dictionary<float, HighestScoreType> highestScore = new()
                 {
                     {angleScore,HighestScoreType.Angle},
                     {distScore,HighestScoreType.Distance},
                     {bonusOrPenalty,HighestScoreType.BonusOrPenalty}
                 };
-                Debug.Log($"GetHighestScoreType {string.Join(", ", highestScore.Select((x) => x.Key.ToString()))}");
+            Debug.Log($"GetHighestScoreType {string.Join(", ", highestScore.Select((x) => x.Key.ToString()))}");
 
-                float result = highestScore.Max((i) => i.Key);
-                return highestScore[result];
-            }
-            catch (Exception)
+            float result = highestScore.Max((i) => i.Key);
+            return highestScore[result];
+        }
+        catch (Exception)
+        {
+
+            return HighestScoreType.Random;
+        }
+    }
+
+    public EA_MCTS_Node(EA_MCTS_Node parent, List<ISumoAction> actions, List<ISumoAction> goodAction = null, List<ISumoAction> badAction = null)
+    {
+        this.parent = parent;
+        this.actions = actions;
+        this.badAction = badAction;
+        this.goodAction = goodAction;
+    }
+
+    public void Init(Dictionary<string, EA_MCTS_Node> AllNodes)
+    {
+        children.Clear();
+        totalReward = 0f;
+        visits = 0;
+        foreach (var action in actions)
+        {
+            EA_MCTS_Node newNode = new(this, new List<ISumoAction>() { action });
+            newNode.ID = action.NameWithParam;
+            if (goodAction != null && goodAction.Count > 0)
             {
-
-                return HighestScoreType.Random;
+                newNode.totalReward = 10;
+                newNode.visits = 1;
             }
+            if (badAction != null && badAction.Count > 0)
+            {
+                newNode.totalReward = -10;
+                newNode.visits = 1;
+            }
+            children.Add(newNode);
+            AllNodes.Add(action.NameWithParam, newNode);
+        }
+    }
+
+    public EA_MCTS_Node Expand(Dictionary<string, EA_MCTS_Node> AllNodes)
+    {
+        var unexploredActs = AIBot_EA_MCTS.PossibleActions.Where(x =>
+        {
+            var newActNames = $"{ID}:{x.NameWithParam}";
+            if (!AllNodes.ContainsKey(newActNames))
+            {
+                return true;
+            }
+            return false;
+        }).ToList();
+
+        if (unexploredActs.Count() == 0)
+        {
+            return null;
         }
 
-        public EA_MCTS_Node(EA_MCTS_Node parent, List<ISumoAction> actions, List<ISumoAction> goodAction = null, List<ISumoAction> badAction = null)
-        {
-            this.parent = parent;
-            this.actions = actions;
-            this.badAction = badAction;
-            this.goodAction = goodAction;
-        }
+        System.Random random = new();
+        var randomAction = unexploredActs[random.Next(unexploredActs.Count())];
+        string newActNames;
+        newActNames = $"{ID}:{randomAction.NameWithParam}";
 
-        public void Init(Dictionary<string, EA_MCTS_Node> AllNodes)
-        {
-            children.Clear();
-            totalReward = 0f;
-            visits = 0;
-            foreach (var action in actions)
-            {
-                EA_MCTS_Node newNode = new(this, new List<ISumoAction>() { action });
-                newNode.ID = action.NameWithParam;
-                if (goodAction != null && goodAction.Count > 0)
-                {
-                    newNode.totalReward = 10;
-                    newNode.visits = 1;
-                }
-                if (badAction != null && badAction.Count > 0)
-                {
-                    newNode.totalReward = -10;
-                    newNode.visits = 1;
-                }
-                children.Add(newNode);
-                AllNodes.Add(action.NameWithParam, newNode);
-            }
-        }
-
-        public EA_MCTS_Node Expand(Dictionary<string, EA_MCTS_Node> AllNodes)
-        {
-            var unexploredActs = AIBot_EA_MCTS.PossibleActions.Where(x =>
-            {
-                var newActNames = $"{ID}:{x.NameWithParam}";
-                if (!AllNodes.ContainsKey(newActNames))
-                {
-                    return true;
-                }
-                return false;
-            }).ToList();
-
-            if (unexploredActs.Count() == 0)
-            {
-                return null;
-            }
-
-            System.Random random = new();
-            var randomAction = unexploredActs[random.Next(unexploredActs.Count())];
-            string newActNames;
-            newActNames = $"{ID}:{randomAction.NameWithParam}";
-
-            var newActs = new List<ISumoAction>(actions)
+        var newActs = new List<ISumoAction>(actions)
                 {
                     randomAction
                 };
 
-            EA_MCTS_Node newNode = new(this, newActs);
-            newNode.ID = newActNames;
-            children.Add(newNode);
-            AllNodes.Add(newActNames, newNode);
-            return newNode;
-        }
+        EA_MCTS_Node newNode = new(this, newActs);
+        newNode.ID = newActNames;
+        children.Add(newNode);
+        AllNodes.Add(newActNames, newNode);
+        return newNode;
+    }
 
-        public EA_MCTS_Node Select()
+    public EA_MCTS_Node Select()
+    {
+        if (children.Count == 0) return this;
+        double C = 1.41;
+        return children.OrderByDescending(child =>
         {
-            if (children.Count == 0) return this;
-            double C = 1.41;
-            return children.OrderByDescending(child =>
-            {
-                if (child.visits == 0) return double.MaxValue;
-                double exploitation = child.totalReward / child.visits;
-                double exploration = C * Math.Sqrt(Math.Log(visits + 1) / child.visits);
-                return exploitation + exploration;
-            }).First();
-        }
+            if (child.visits == 0) return double.MaxValue;
+            double exploitation = child.totalReward / child.visits;
+            double exploration = C * Math.Sqrt(Math.Log(visits + 1) / child.visits);
+            return exploitation + exploration;
+        }).First();
+    }
 
-        public Tuple<float, float, float> Simulate(SumoController enemy, SumoController controller, float simulationTime)
+    public Tuple<float, float, float> Simulate(BotAPI api, float simulationTime)
+    {
+        var controller = api.Controller;
+
+        GameObject arena = BattleManager.Instance.Arena;
+        float arenaRadius = arena.GetComponent<CircleCollider2D>().radius * arena.transform.lossyScale.x;
+
+        Vector3 arenaCenter = arena.transform.position;
+        Vector3 aiDirection = api.MyTransform.up;
+        Vector3 aiPosition = api.MyTransform.position;
+
+        float bonusOrPenalty = 0;
+        float angleScore = 0;
+        float distScore = 0;
+
+        //Before Sim
+        Vector3 toEnemy = api.EnemyTransform.position - aiPosition;
+        float distance = toEnemy.magnitude;
+        float angle = Vector3.SignedAngle(aiDirection, toEnemy.normalized, Vector3.forward);
+
+        List<string> actionsInString = actions.Select((a) => a.Name.ToLower()).ToList();
+
+        Debug.Log($"distanceScore before-loop: {distScore}, {string.Join(", ", actionsInString)}");
+
+        bool isActionIncludeAccelerating = actionsInString.Contains("accelerate") || actionsInString.Contains("dash") || actionsInString.Contains("skill");
+
+
+        foreach (var action in actions)
         {
-            GameObject arena = BattleManager.Instance.Arena;
-            float arenaRadius = arena.GetComponent<CircleCollider2D>().radius * arena.transform.lossyScale.x;
-            Vector3 arenaCenter = arena.transform.position;
-            Vector3 aiDirection = controller.transform.up;
-            Vector3 aiPosition = controller.transform.position;
-
-            float bonusOrPenalty = 0;
-            float angleScore = 0;
-            float distScore = 0;
-
-            List<string> actionsInString = actions.Select((a) => a.Name.ToLower()).ToList();
-
-            bool isActionIncludeAccelerating = actionsInString.Contains("accelerate") || actionsInString.Contains("dash") || actionsInString.Contains("skill");
-
-            foreach (var action in actions)
+            if (action is TurnLeftAngleAction)
             {
-                if (action is TurnLeftAngleAction)
+                aiDirection += Quaternion.Euler(0, 0, (float)action.Param) * aiDirection * simulationTime * controller.TurnRate;
+            }
+            else if (action is TurnRightAngleAction)
+            {
+                aiDirection += Quaternion.Euler(0, 0, (float)action.Param) * aiDirection * simulationTime * controller.TurnRate;
+            }
+            else if (action is AccelerateAction)
+            {
+                if (controller.IsMovementLocked || controller.IsMoveDisabled)
                 {
-                    aiDirection += Quaternion.Euler(0, 0, (float)action.Param) * aiDirection * simulationTime * controller.TurnRate;
+                    bonusOrPenalty -= 0.1f;
                 }
-                else if (action is TurnRightAngleAction rV)
+                else
                 {
-                    aiDirection += Quaternion.Euler(0, 0, (float)action.Param) * aiDirection * simulationTime * controller.TurnRate;
-                }
-                else if (action is AccelerateAction)
-                {
-                    if (controller.IsMovementLocked || controller.IsMoveDisabled)
+                    var predictionSpeed = controller.MoveSpeed;
+                    if (controller.Skill.Type == ERobotSkillType.Boost && controller.Skill.IsActive)
                     {
-                        bonusOrPenalty += -0.1f;
-                    }
-                    else
-                    {
-                        aiPosition += aiDirection.normalized * controller.MoveSpeed * simulationTime;
-                    }
-                }
-                else if (action is DashAction)
-                {
-                    if (controller.IsDashCooldown || controller.IsMovementLocked || controller.IsMoveDisabled)
-                    {
-                        bonusOrPenalty += -0.1f;
-                    }
-                    else
-                    {
-                        bonusOrPenalty += 0.1f;
-                        aiPosition += aiDirection.normalized * (controller.DashSpeed * controller.DashDuration) * controller.StopDelay * simulationTime;
+                        predictionSpeed *= controller.Skill.BoostMultiplier;
                     }
 
+                    aiPosition += aiDirection.normalized * (predictionSpeed * simulationTime);
                 }
-                else if (action is SkillAction)
+            }
+            else if (action is DashAction)
+            {
+                if (controller.IsDashCooldown || controller.IsMovementLocked || controller.IsMoveDisabled)
                 {
-                    if (controller.Skill.IsSkillCooldown)
+                    bonusOrPenalty -= 0.1f;
+                }
+                else
+                {
+                    bonusOrPenalty += 0.1f;
+                    var predictionSpeed = controller.DashSpeed;
+
+                    if (controller.Skill.Type == ERobotSkillType.Boost && controller.Skill.IsActive)
                     {
-                        bonusOrPenalty += -0.5f;
+                        predictionSpeed *= controller.Skill.BoostMultiplier;
                     }
-                    else
-                    {
-                        if (controller.Skill.Type == ERobotSkillType.Boost)
-                        {
-                            bonusOrPenalty += 0.5f;
-                            aiPosition += aiDirection.normalized * (controller.MoveSpeed * controller.Skill.BoostMultiplier) * simulationTime;
-                        }
-                    }
+
+                    aiPosition += aiDirection.normalized * (controller.DashDuration * predictionSpeed * simulationTime);
+
+                    // Formula of decelerating / stop-delay
+                    aiPosition *= 0.5f + predictionSpeed * controller.StopDelay;
                 }
 
-                Vector3 toEnemy = enemy.transform.position - aiPosition;
-                float distance = toEnemy.magnitude;
-                float angle = Vector3.SignedAngle(aiDirection, toEnemy.normalized, Vector3.forward);
+            }
+            else if (action is SkillAction)
+            {
+                if (controller.Skill.IsSkillCooldown)
+                {
+                    bonusOrPenalty -= 0.5f;
+                }
+                else
+                {
+                    if (controller.Skill.Type == ERobotSkillType.Boost)
+                    {
+                        bonusOrPenalty += 0.5f;
+                        aiPosition += aiDirection.normalized * (controller.MoveSpeed * controller.Skill.BoostMultiplier * simulationTime);
+                    }
+                }
+            }
 
-                angleScore += Mathf.Cos(angle * Mathf.Deg2Rad);
-                distScore += 1f - Mathf.Clamp01(distance / arenaRadius);
+            toEnemy = api.EnemyTransform.transform.position - aiPosition;
+            distance = toEnemy.magnitude;
+            angle = Vector3.SignedAngle(aiDirection, toEnemy.normalized, Vector3.forward);
 
-                var distanceFromCenter = Vector3.Distance(aiPosition, arenaCenter);
+            angleScore += Mathf.Cos(angle * Mathf.Deg2Rad);
+            distScore += 1f - Mathf.Clamp01(distance / arenaRadius);
 
-                if ((distanceFromCenter > arenaRadius) && isActionIncludeAccelerating)
+            Debug.Log($"distanceScore after-loop: {distScore}");
+            var distanceFromCenter = Vector3.Distance(aiPosition, arenaCenter);
+
+            if (isActionIncludeAccelerating)
+            {
+                if (distanceFromCenter > arenaRadius)
                 {
                     // Penalize heavily if sumo will exits the ring, or any action that makes the Sumo move away from exits, reward instead.
-                    bonusOrPenalty += arenaRadius - distanceFromCenter + (angleScore - 0.9f) * 2;
+                    bonusOrPenalty += (arenaRadius - distanceFromCenter + (angleScore - 0.9f)) * 2;
                     Debug.Log($"[Simulate][IsPossibleOutFromArena] {ID}, can cause go outside of arena\n Detail: {aiPosition}, {arenaCenter} > {arenaRadius}, resulting: {bonusOrPenalty}");
                 }
                 else
                 {
-                    distScore += (angleScore > 0.95 && isActionIncludeAccelerating) ? angleScore * 1.5f : 0;
+                    distScore += (angleScore > 0.95) ? angleScore * 2f : 0;
+                }
+            }
+            else
+            {
+                if (angleScore > 0.9)
+                {
+                    bonusOrPenalty -= 5f;
                 }
             }
 
-            float normAngleScore = angleScore / actions.Count();
-            float normDistScore = distScore / actions.Count();
-            float normBonusOrPenalty = bonusOrPenalty / actions.Count();
-
-            this.angleScore += normAngleScore;
-            this.distScore += normBonusOrPenalty;
-            this.bonusOrPenalty += normBonusOrPenalty;
-            return Tuple.Create(normAngleScore, normDistScore, normBonusOrPenalty);
         }
 
-        public void Backpropagate(Tuple<float, float, float> reward)
-        {
-            visits++;
-            totalReward += reward.Item1 + reward.Item2 + reward.Item3;
-            angleScore += reward.Item1;
-            distScore += reward.Item2;
-            bonusOrPenalty += reward.Item3;
-            parent?.Backpropagate(reward);
-        }
+        float normAngleScore = angleScore / actions.Count();
+        float normDistScore = distScore / actions.Count();
+        float normBonusOrPenalty = bonusOrPenalty / actions.Count();
 
-        public EA_MCTS_Node GetBestChild()
-        {
-            if (children.Count == 0) return null;
-
-            var highest = children.OrderByDescending(child =>
-            {
-                double exploitation = child.totalReward / (child.visits + double.Epsilon);
-                return exploitation;
-            }).First();
-            return highest;
-        }
+        this.angleScore += normAngleScore;
+        this.distScore += normBonusOrPenalty;
+        this.bonusOrPenalty += normBonusOrPenalty;
+        return Tuple.Create(normAngleScore, normDistScore, normBonusOrPenalty);
     }
 
-    public enum HighestScoreType
+    public void Backpropagate(Tuple<float, float, float> reward)
     {
-        Angle,
-        Distance,
-        BonusOrPenalty,
-        Random,
+        visits++;
+        totalReward += reward.Item1 + reward.Item2 + reward.Item3;
+        angleScore += reward.Item1;
+        distScore += reward.Item2;
+        bonusOrPenalty += reward.Item3;
+        parent?.Backpropagate(reward);
     }
+
+    public EA_MCTS_Node GetBestChild()
+    {
+        if (children.Count == 0) return null;
+
+        var highest = children.OrderByDescending(child =>
+        {
+            double exploitation = child.totalReward / (child.visits + double.Epsilon);
+            return exploitation;
+        }).First();
+        return highest;
+    }
+}
+
+public enum HighestScoreType
+{
+    Angle,
+    Distance,
+    BonusOrPenalty,
+    Random,
 }

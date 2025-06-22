@@ -61,7 +61,7 @@ public class DebouncedLogger
         SaveToLog(false);
     }
 
-    public void SaveToLog(bool start=false)
+    public void SaveToLog(bool isStart = false)
     {
         float duration = BattleManager.Instance.ElapsedTime - startTime;
         float endRotation = controller.transform.rotation.eulerAngles.z;
@@ -72,9 +72,9 @@ public class DebouncedLogger
         LogManager.LogPlayerEvents(
             actor: controller.Side,
             startedAt: startTime,
+            isStart: isStart,
             data: new Dictionary<string, object>()
             {
-                        { "start", start.ToString() },
                         { "type", Name },
                         { "parameter", Parameter },
                         { "reason", Reason },

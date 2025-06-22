@@ -90,6 +90,14 @@ public class InputProvider : MonoBehaviour
         }
     }
 
+    public void EnqueueCommands(Queue<ISumoAction> actions)
+    {
+        while (actions.Count > 0)
+        {
+            EnqueueCommand(actions.Dequeue());
+        }
+    }
+
     public void ClearCommands()
     {
         commandQueue.Clear();
@@ -155,7 +163,7 @@ public class InputProvider : MonoBehaviour
         EnqueueCommand(new SkillAction(InputType.UI));
     }
 
-    private bool IsValid(ISumoAction action)
+    public bool IsValid(ISumoAction action)
     {
         SumoController controller = PlayerSide == PlayerSide.Left ? BattleManager.Instance.Battle.LeftPlayer : BattleManager.Instance.Battle.RightPlayer;
 

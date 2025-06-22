@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using UnityEditor.Callbacks;
 using UnityEngine;
 
 namespace CoreSumo
@@ -31,7 +32,7 @@ namespace CoreSumo
         public float Torque = 0.4f;
         public float BounceResistance = 1f;
         public float LockReductionMultiplier = 0.9f;
-        public float CollisionBaseForce = 4f;
+        public float CollisionBaseForce = 5f;
         public float TurnRate = 1f;
         public float BaseLockDurationMultiplier = 0.5f;
         public MinMax LockDuration = new MinMax(0.8f, 2f);
@@ -66,7 +67,6 @@ namespace CoreSumo
         //[ISumoAction] is action that invoked, 
         //[bool] defines true -> preExecute, and false -> postExecute.
         public event Action<PlayerSide, ISumoAction, bool> OnPlayerAction;
-
         public bool IsMoveDisabled = true;
         public bool IsSkillDisabled = true;
         private float reservedMoveSpeed;
@@ -313,6 +313,7 @@ namespace CoreSumo
 
         public float LockMovement(bool isActor, float force)
         {
+            Debug.Log($"isActor: {isActor}, force: {force}");
             float lockDuration = Mathf.Clamp(force * BaseLockDurationMultiplier, LockDuration.min, LockDuration.max);
             if (isActor)
             {
@@ -385,28 +386,33 @@ namespace CoreSumo
                 LogManager.LogPlayerEvents(
                     actor: Side,
                     target: otherRobot.Side,
+                    category: "collision",
                     data: new Dictionary<string, object>()
                     {
                         {"type", "Bounce" },
                         {"actor", new Dictionary<string, object>() {
                             {"impact", actorImpact},
-                            {"velocity", new Dictionary<string, object>() {
+                            {"rotation", transform.rotation.eulerAngles.z},
+                            { "angular_velocity", robotRigidBody.angularVelocity},
+                            {"linear_velocity", new Dictionary<string, object>() {
                                 {"x", LastVelocity.x},
                                 {"y", LastVelocity.y}}
                             },
-                            {"isCurrentSkillActive", Skill.IsActive},
-                            {"bounceResistance", BounceResistance},
-                            {"lockDuration", actorLockDuration},
+                            {"is_skill_active", Skill.IsActive},
+                            {"bounce_resistance", BounceResistance},
+                            {"lock_duration", actorLockDuration},
                         } },
                         {"target", new Dictionary<string, object>() {
                             {"impact", targetImpact},
-                            {"velocity", new Dictionary<string, object>() {
+                            {"rotation", otherRobot.transform.rotation.eulerAngles.z},
+                            {"angular_velocity", otherRobot.robotRigidBody.angularVelocity},
+                            { "linear_velocity", new Dictionary<string, object>() {
                                 {"x", otherRobot.LastVelocity.x},
                                 {"y", otherRobot.LastVelocity.y}}
                             },
-                            {"isCurrentSkillActive", otherRobot.Skill.IsActive},
-                            {"bounceResistance", otherRobot.BounceResistance},
-                            {"lockDuration", targetLockDuration},
+                            {"is_current_skill_active", otherRobot.Skill.IsActive},
+                            {"bounce_resistance", otherRobot.BounceResistance},
+                            {"lock_duration", targetLockDuration},
                         } },
                     });
             }

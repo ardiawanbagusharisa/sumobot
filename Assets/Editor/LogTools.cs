@@ -21,9 +21,4 @@ public static class Utility
         Debug.Log("Logs folder: " + logFolder);
 #endif
     }
-
-    public static LogActorType ToLogActorType(this PlayerSide side)
-    {
-        return side == PlayerSide.Left ? LogActorType.LeftPlayer : LogActorType.RightPlayer;
-    }
 }

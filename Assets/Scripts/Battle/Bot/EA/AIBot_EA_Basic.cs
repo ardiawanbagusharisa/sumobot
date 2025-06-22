@@ -3,10 +3,13 @@ using UnityEngine;
 
 namespace BotAI
 {
+    [CreateAssetMenu(fileName = "BOT_GA", menuName = "Bot/GA")]
     public class AIBot_EA_Basic : Bot
     {
-        public override string Name() => "GA";
-        
+        public override string ID => Name;
+        public override float Interval => ActionInterval;
+
+        public string Name => "GA";
         public float EvaluationInterval = 5f;
         public float ActionInterval = 0.4f;
 
@@ -15,58 +18,12 @@ namespace BotAI
         [HideInInspector]
         public EA_Basic_Data memory;
 
-        private SumoController controller;
-        private SumoController enemy;
         private float fitness;
         private float evaluationTimer;
         private float actionTimer = 0f;
 
-        void OnEnable()
-        {
-            controller = GetComponent<SumoController>();
-            controller.OnPlayerBounce += OnPlayerBounce;
-        }
-
-        void Start()
-        {
-            brain = new EA_Basic_Data();
-            RandomizeBrain(brain);
-        }
-
-        void OnDisable()
-        {
-            controller.OnPlayerBounce -= OnPlayerBounce;
-        }
-
-        void Update()
-        {
-            if (BattleManager.Instance.CurrentState == BattleState.Battle_Ongoing)
-            {
-                evaluationTimer += Time.deltaTime;
-                if (evaluationTimer >= EvaluationInterval)
-                {
-                    EvaluateFitness();
-                    evaluationTimer = 0f;
-                }
-
-                actionTimer += Time.deltaTime;
-                if (actionTimer >= ActionInterval)
-                {
-                    actionTimer = 0f;
-                    Decide();
-                }
-            }
-        }
-
-        void FixedUpdate()
-        {
-            if (enemy == null)
-            {
-                enemy = controller.Side == PlayerSide.Left
-                    ? BattleManager.Instance.Battle.RightPlayer
-                    : BattleManager.Instance.Battle.LeftPlayer;
-            }
-        }
+        private BotAPI api;
+        private BattleState currState;
 
         void EvaluateFitness()
         {
@@ -86,7 +43,7 @@ namespace BotAI
         float CalculateFitness(EA_Basic_Data data)
         {
             // Example: distance to enemy
-            float dist = Vector3.Distance(transform.position, enemy.transform.position);
+            float dist = Vector3.Distance(api.MyTransform.position, api.EnemyTransform.position);
             return 1f / (dist + 0.01f);
         }
 
@@ -101,10 +58,8 @@ namespace BotAI
 
         public void Decide()
         {
-            if (enemy == null) return;
-
-            Vector2 toEnemy = enemy.transform.position - transform.position;
-            float angleToTarget = Vector2.SignedAngle(transform.up, toEnemy.normalized);
+            Vector2 toEnemy = api.EnemyTransform.position - api.MyTransform.position;
+            float angleToTarget = Vector2.SignedAngle(api.MyTransform.up, toEnemy.normalized);
             float normalizedAngle = 1f - Mathf.Abs(angleToTarget) / 180f;
             float normalizedDistance = 1f - Mathf.Abs(toEnemy.magnitude) / 7f;
 
@@ -118,20 +73,20 @@ namespace BotAI
             {
                 if (Mathf.Abs(value) > 0.6f)
                 {
-                    controller.InputProvider.EnqueueCommand(new SkillAction(InputType.Script));
+                    Enqueue(new SkillAction(InputType.Script));
                 }
                 else if (Mathf.Abs(value) > 0.3f)
                 {
-                    controller.InputProvider.EnqueueCommand(new DashAction(InputType.Script));
+                    Enqueue(new DashAction(InputType.Script));
                 }
                 else
                 {
-                    controller.InputProvider.EnqueueCommand(new AccelerateTimeAction(accelDuration));
+                    Enqueue(new AccelerateTimeAction(accelDuration));
                 }
             }
             else
             {
-                controller.InputProvider.EnqueueCommand(new TurnAngleAction(angleToTarget));
+                Enqueue(new TurnAngleAction(angleToTarget));
             }
 
             fitness += 1f; // Example: reward for taking an action
@@ -139,7 +94,45 @@ namespace BotAI
 
         private void OnPlayerBounce(PlayerSide side)
         {
-            controller.InputProvider.ClearCommands();
+            ClearCommands();
+        }
+
+        public override void OnBotInit(PlayerSide side, BotAPI botAPI)
+        {
+            api = botAPI;
+            brain = new EA_Basic_Data();
+            RandomizeBrain(brain);
+        }
+
+        public override void OnBotUpdate()
+        {
+            if (currState != BattleState.Battle_Ongoing) return;
+
+            evaluationTimer += Time.deltaTime;
+            if (evaluationTimer >= EvaluationInterval)
+            {
+                EvaluateFitness();
+                evaluationTimer = 0f;
+            }
+
+            actionTimer += Time.deltaTime;
+            if (actionTimer >= ActionInterval)
+            {
+                actionTimer = 0f;
+                Decide();
+            }
+            
+            base.OnBotUpdate();
+        }
+
+        public override void OnBotCollision(PlayerSide side)
+        {
+            OnPlayerBounce(side);
+        }
+
+        public override void OnBattleStateChanged(BattleState state)
+        {
+            currState = state;
         }
     }
 }
