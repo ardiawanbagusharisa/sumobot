@@ -4359,6 +4359,10 @@ PrefabInstance:
       propertyPath: CollisionBaseForce
       value: 1.5
       objectReference: {fileID: 0}
+    - target: {fileID: 5583292103176566768, guid: e48db3198e16346af866a9419a1964cc, type: 3}
+      propertyPath: directionIndicator
+      value: 
+      objectReference: {fileID: 726563275}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -4372,6 +4376,11 @@ Transform:
 --- !u!1 &726563274 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 1488574921577525681, guid: e48db3198e16346af866a9419a1964cc, type: 3}
+  m_PrefabInstance: {fileID: 726563272}
+  m_PrefabAsset: {fileID: 0}
+--- !u!212 &726563275 stripped
+SpriteRenderer:
+  m_CorrespondingSourceObject: {fileID: 4764707064835075653, guid: e48db3198e16346af866a9419a1964cc, type: 3}
   m_PrefabInstance: {fileID: 726563272}
   m_PrefabAsset: {fileID: 0}
 --- !u!1 &728913078
@@ -9922,6 +9931,10 @@ PrefabInstance:
       propertyPath: CollisionBaseForce
       value: 1.5
       objectReference: {fileID: 0}
+    - target: {fileID: 5583292103176566768, guid: e48db3198e16346af866a9419a1964cc, type: 3}
+      propertyPath: directionIndicator
+      value: 
+      objectReference: {fileID: 1977358362}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []

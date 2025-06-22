@@ -16,7 +16,7 @@ public class InputProvider : MonoBehaviour
 {
     public bool IncludeKeyboard;
     public PlayerSide PlayerSide;
-    public ERobotSkillType SkillType;
+    public SkillType SkillType;
 
     // AccelerateAction: true, means player can press Accelerate
     public Dictionary<string, bool> StateKeyboardAction;
@@ -201,7 +201,7 @@ public class InputProvider : MonoBehaviour
 
         if (action is DashAction)
         {
-            if (controller.IsDashCooldown)
+            if (controller.IsDashOnCooldown)
             {
                 // throw new Exception($"can't accept [${action.NameWithParam}] while [IsDashCooldown] is true");
                 return false;

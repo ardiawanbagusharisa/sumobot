@@ -215,7 +215,7 @@ public class SLMAgentController : MonoBehaviour
 
     bool GetDashReady()
     {
-        return !controller.IsDashCooldown;
+        return !controller.IsDashOnCooldown;
     }
 
     string[] ParseStrategiesFromJson(string json)

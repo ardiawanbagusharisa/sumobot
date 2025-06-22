@@ -147,7 +147,8 @@ TextureImporter:
     secondaryTextures: []
     spriteCustomMetadata:
       entries: []
-    nameFileIdTable: {}
+    nameFileIdTable:
+      rety--blue_0: 2735088965818299152
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
