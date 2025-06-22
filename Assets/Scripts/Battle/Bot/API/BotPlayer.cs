@@ -9,6 +9,8 @@ public class BotPlayer
 
     public void OnUpdate(float ElapsedTime)
     {
+        if (!IsEnable) return;
+
         if (Left != null)
         {
             Left.BotElapsed = ElapsedTime;
@@ -31,6 +33,8 @@ public class BotPlayer
     }
     public void OnBattleStateChanged(BattleState currState)
     {
+        if (!IsEnable) return;
+
         if (Left != null)
         {
             Left.OnBattleStateChanged(currState);

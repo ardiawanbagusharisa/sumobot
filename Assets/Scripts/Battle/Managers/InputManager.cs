@@ -129,9 +129,11 @@ public class InputManager : MonoBehaviour
 
     private void AssignBotsIfExist(PlayerSide side, InputProvider provider)
     {
+        if (!BattleManager.Instance.Bot.IsEnable) return;
+        
         var me = side == PlayerSide.Left ? BattleManager.Instance.Battle.LeftPlayer : BattleManager.Instance.Battle.RightPlayer;
         var enemy = side == PlayerSide.Left ? BattleManager.Instance.Battle.RightPlayer : BattleManager.Instance.Battle.LeftPlayer;
-        
+
         if (BattleManager.Instance.Bot.Left != null && side == PlayerSide.Left)
         {
             BattleManager.Instance.Bot.Left.SetProvider(provider);
