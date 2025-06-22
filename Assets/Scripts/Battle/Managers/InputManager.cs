@@ -1,5 +1,7 @@
 using System;
+using System.Linq;
 using CoreSumo;
+using Unity.VisualScripting;
 using UnityEngine;
 
 public class InputManager : MonoBehaviour
@@ -33,6 +35,8 @@ public class InputManager : MonoBehaviour
             {
 
                 case InputType.Script:
+                    LeftLiveCommand.SetActive(false);
+                    LeftButton.SetActive(false);
                     break;
                 case InputType.LiveCommand:
                     LeftLiveCommand.SetActive(true);
@@ -57,6 +61,8 @@ public class InputManager : MonoBehaviour
             switch (BattleManager.Instance.BattleInputType)
             {
                 case InputType.Script:
+                    RightLiveCommand.SetActive(false);
+                    RightButton.SetActive(false);
                     break;
                 case InputType.LiveCommand:
                     RightLiveCommand.SetActive(true);
@@ -76,23 +82,67 @@ public class InputManager : MonoBehaviour
             }
         }
 
-        if (selectedInputObject == null)
+        InputProvider inputProvider;
+
+        if (BattleManager.Instance.BattleInputType == InputType.Script)
         {
-            throw new Exception("One of [BattleInputType]'s object must be used");
+            if (BattleManager.Instance.Bot.IsEnable)
+            {
+                var scriptInputProvider = controller.AddComponent<InputProvider>();
+                scriptInputProvider.PlayerSide = controller.Side;
+                scriptInputProvider.IncludeKeyboard = false;
+                inputProvider = scriptInputProvider;
+            }
+            else
+            {
+                throw new Exception("One of [BattleInputType]'s object must be used");
+            }
+        }
+        else
+        {
+            if (selectedInputObject == null)
+            {
+                throw new Exception("One of [BattleInputType]'s object must be used");
+            }
+            inputProvider = selectedInputObject.GetComponent<InputProvider>();
         }
 
         // Declare that Robot driven by an input provider
-        InputProvider inputProvider = selectedInputObject.GetComponent<InputProvider>();
         inputProvider.SkillType = controller.Skill.Type;
         controller.InputProvider = inputProvider;
+
+        // Might be called only when the BattleInputType is Script
+        // For now, test it whatever on the input type is set
+        AssignBotsIfExist(controller.Side, inputProvider);
 
         // Additional initialization
         switch (BattleManager.Instance.BattleInputType)
         {
+            case InputType.Script:
+                break;
             case InputType.UI:
                 break;
             case InputType.LiveCommand:
                 break;
+        }
+    }
+
+    private void AssignBotsIfExist(PlayerSide side, InputProvider provider)
+    {
+        var me = side == PlayerSide.Left ? BattleManager.Instance.Battle.LeftPlayer : BattleManager.Instance.Battle.RightPlayer;
+        var enemy = side == PlayerSide.Left ? BattleManager.Instance.Battle.RightPlayer : BattleManager.Instance.Battle.LeftPlayer;
+        
+        if (BattleManager.Instance.Bot.Left != null && side == PlayerSide.Left)
+        {
+            BattleManager.Instance.Bot.Left.SetProvider(provider);
+            BattleManager.Instance.Bot.Left.OnBotInit(side, new BotAPI(me, enemy.transform));
+            BattleManager.Instance.Battle.LeftPlayer.OnPlayerBounce += BattleManager.Instance.Bot.Left.OnBotCollision;
+        }
+        else if (BattleManager.Instance.Bot.Right != null && side == PlayerSide.Right)
+        {
+            BattleManager.Instance.Bot.Right.SetProvider(provider);
+            BattleManager.Instance.Bot.Right.OnBotInit(side, new BotAPI(me, enemy.transform));
+            BattleManager.Instance.Battle.RightPlayer.OnPlayerBounce += BattleManager.Instance.Bot.Right.OnBotCollision;
         }
     }
 

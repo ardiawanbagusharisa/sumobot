@@ -44,12 +44,15 @@ public class BattleManager : MonoBehaviour
     public GameObject SumoPrefab;
     public GameObject LeftPlayerObject;
     public GameObject RightPlayerObject;
+
     public GameObject Arena;
 
     // State & Internal 
     public BattleState CurrentState = BattleState.PreBatle_Preparing;
     public float ElapsedTime = 0;
     public float TimeLeft => BattleTime - ElapsedTime;
+
+    public BotPlayer Bot;
     public Battle Battle;
     public Round CurrentRound = null;
 
@@ -94,8 +97,11 @@ public class BattleManager : MonoBehaviour
         if (CurrentRound != null && CurrentState == BattleState.Battle_Ongoing)
         {
             ElapsedTime += Time.deltaTime;
+
+            Bot?.OnUpdate(ElapsedTime);
         }
     }
+
     #endregion
 
     #region API
@@ -154,7 +160,7 @@ public class BattleManager : MonoBehaviour
                 data: new Dictionary<string, object>()
                 {
                         {"type", "Player"},
-                        {"side", controller.Side.ToLogActorType()},
+                        {"side", controller.Side},
                         {"skill", controller.Skill.Type.ToString()},
                 });
 
@@ -352,6 +358,7 @@ public class BattleManager : MonoBehaviour
                 else
                 {
                     LogManager.UpdateMetadata();
+                    LogManager.SortAndSave();
 
                     int previousRound = Battle.CurrentRound.RoundNumber;
                     // Create n+1 round
@@ -362,7 +369,6 @@ public class BattleManager : MonoBehaviour
                     //Start a round again
                     TransitionToState(BattleState.Battle_Countdown);
                 }
-                LogManager.SortAndSave();
                 break;
             // Battle
 
@@ -370,7 +376,6 @@ public class BattleManager : MonoBehaviour
             // Post Battle
             case BattleState.PostBattle_ShowResult:
                 LogManager.SortAndSave();
-
                 Deinitialize();
                 break;
                 // Post Battle
@@ -389,6 +394,7 @@ public class BattleManager : MonoBehaviour
             Battle.Rounds[CurrentRound.RoundNumber] = CurrentRound;
         }
 
+        Bot?.OnBattleStateChanged(CurrentState);
         OnBattleChanged?.Invoke(Battle);
     }
     #endregion

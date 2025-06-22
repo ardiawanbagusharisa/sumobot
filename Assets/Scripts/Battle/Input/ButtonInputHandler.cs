@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using CoreSumo;
 using TMPro;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -69,13 +70,15 @@ public class ButtonInputHandler : MonoBehaviour
 
     void OnBattleChanged(Battle battle)
     {
+        var me = inputProvider.PlayerSide == PlayerSide.Left ? BattleManager.Instance.Battle.LeftPlayer : BattleManager.Instance.Battle.RightPlayer;
+        
         if (BattleManager.Instance.CurrentState == BattleState.Battle_End)
         {
-            inputProvider.Me().OnPlayerAction -= OnPlayerAction;
+            me.OnPlayerAction -= OnPlayerAction;
         }
         if (BattleManager.Instance.CurrentState == BattleState.Battle_Countdown)
         {
-            inputProvider.Me().OnPlayerAction += OnPlayerAction;
+            me.OnPlayerAction += OnPlayerAction;
         }
     }
 

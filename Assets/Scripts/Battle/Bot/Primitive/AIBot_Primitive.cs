@@ -3,72 +3,76 @@ using UnityEngine;
 
 namespace BotAI
 {
+    [CreateAssetMenu(fileName = "BOT_Primitive", menuName = "Bot/Primitive")]
     public class AIBot_Primitive : Bot
     {
-        public override string Name() => "Primitive";
+        public override string ID => Name;
 
-        private SumoController controller;
-        private SumoController enemy;
+        public override float Interval => actionInterval;
+
+        public string Name = "Primitive";
         private float actionInterval = 0.4f;
         private float actionTimer = 0f;
-        void OnEnable()
+        private BotAPI api;
+        private InputProvider inputProvider;
+        private BattleState currState;
+
+
+        void OnPlayerBounce(PlayerSide side)
         {
-            controller = GetComponent<SumoController>();
-            controller.OnPlayerBounce += OnPlayerBounce;
+            inputProvider.ClearCommands();
         }
 
-        void FixedUpdate()
+        public override void OnBotInit(PlayerSide side, BotAPI botAPI)
         {
-            if (enemy == null)
-            {
-                if (controller.Side == PlayerSide.Left)
-                {
-                    enemy = BattleManager.Instance.Battle.RightPlayer;
-                }
-                else
-                {
-                    enemy = BattleManager.Instance.Battle.LeftPlayer;
-                }
-            }
+            inputProvider = provider;
+            api = botAPI;
         }
 
-        void Update()
+        public override void OnBotUpdate()
         {
-            if (enemy == null) return;
-            if (BattleManager.Instance.CurrentState != BattleState.Battle_Ongoing) return;
-            controller.InputProvider.EnqueueCommand(new AccelerateAction(InputType.Script));
+            if (currState != BattleState.Battle_Ongoing) return;
+
+            Enqueue(new AccelerateAction(InputType.Script));
             actionTimer -= Time.deltaTime;
             if (actionTimer <= 0f)
             {
                 actionTimer = actionInterval;
 
-                Vector2 toEnemy = (enemy.transform.position - transform.position).normalized;
-                float angleDiff = Vector2.SignedAngle(transform.up, toEnemy);
+                Vector2 toEnemy = (api.EnemyTransform.position - api.MyTransform.position).normalized;
+                float angleDiff = Vector2.SignedAngle(api.MyTransform.up, toEnemy);
 
                 // When angle is quite enough facing the enemy, run dash, skill, accelerate action
                 if (Mathf.Abs(angleDiff) < 20)
                 {
-                    float distance = Vector2.Distance(enemy.transform.position, transform.position);
-                    if (!controller.IsDashCooldown && distance < 2.5f)
+                    float distance = Vector2.Distance(api.EnemyTransform.position, api.MyTransform.position);
+                    if (!api.Controller.IsDashCooldown && distance < 2.5f)
                     {
-                        controller.InputProvider.EnqueueCommand(new DashAction(InputType.Script));
+                        api.Controller.InputProvider.EnqueueCommand(new DashAction(InputType.Script));
                     }
 
-                    if (!controller.Skill.IsSkillCooldown)
+                    if (!api.Controller.Skill.IsSkillCooldown)
                     {
-                        controller.InputProvider.EnqueueCommand(new SkillAction(InputType.Script));
+                        api.Controller.InputProvider.EnqueueCommand(new SkillAction(InputType.Script));
                     }
                 }
                 else
                 {
-                    controller.InputProvider.EnqueueCommand(new TurnAngleAction(angleDiff));
+                    api.Controller.InputProvider.EnqueueCommand(new TurnAngleAction(angleDiff));
                 }
             }
+
+            base.OnBotUpdate();
         }
 
-        void OnPlayerBounce(PlayerSide side)
+        public override void OnBotCollision(PlayerSide side)
         {
-            controller.InputProvider.ClearCommands();
+            OnPlayerBounce(side);
+        }
+
+        public override void OnBattleStateChanged(BattleState state)
+        {
+            currState = state;
         }
     }
 }
