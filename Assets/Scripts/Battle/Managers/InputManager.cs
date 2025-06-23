@@ -6,12 +6,14 @@ public class InputManager : MonoBehaviour
 {
     public static InputManager Instance { get; private set; }
 
+    #region Input properties
     public GameObject LeftButton;
     public GameObject RightButton;
-
     public GameObject LeftLiveCommand;
     public GameObject RightLiveCommand;
+    #endregion
 
+    #region Unity methods
     private void Awake()
     {
         if (Instance != null)
@@ -20,68 +22,43 @@ public class InputManager : MonoBehaviour
             return;
         }
         Instance = this;
-
     }
+    #endregion
 
-    public void PrepareInput(SumoController controller)
+    #region Input methods
+    public void InitializeInput(SumoController controller)
     {
-        GameObject selectedInputObject = null;
-        // Assigning UI Object to players
-        if (controller.Side == PlayerSide.Left)
+        GameObject selectedInputObject;
+
+        GameObject liveCommandObject = controller.Side == PlayerSide.Left ? LeftLiveCommand : RightLiveCommand;
+        GameObject UIButtonsObject = controller.Side == PlayerSide.Left ? LeftButton : RightButton;
+
+        switch (BattleManager.Instance.BattleInputType)
         {
-            switch (BattleManager.Instance.BattleInputType)
-            {
+            case InputType.Script:
+                liveCommandObject.SetActive(false);
+                UIButtonsObject.SetActive(false);
+                selectedInputObject = null;
+                break;
 
-                case InputType.Script:
-                    break;
-                case InputType.LiveCommand:
-                    LeftLiveCommand.SetActive(true);
-                    selectedInputObject = LeftLiveCommand;
+            case InputType.LiveCommand:
+                liveCommandObject.SetActive(true);
+                selectedInputObject = liveCommandObject;
+                UIButtonsObject.SetActive(false);
+                break;
 
-                    LeftButton.SetActive(false);
-                    break;
-
-                // Handle UI And Keyboard
-                default:
-                    LeftButton.SetActive(true);
-                    LeftButton.GetComponent<ButtonInputHandler>().SetSkillAvailability(controller.Skill.Type);
-                    selectedInputObject = LeftButton;
-
-                    LeftLiveCommand.SetActive(false);
-                    break;
-
-            }
-        }
-        else
-        {
-            switch (BattleManager.Instance.BattleInputType)
-            {
-                case InputType.Script:
-                    break;
-                case InputType.LiveCommand:
-                    RightLiveCommand.SetActive(true);
-                    selectedInputObject = RightLiveCommand;
-
-                    RightButton.SetActive(false);
-                    break;
-
-                // Handle UI And Keyboard
-                default:
-                    RightButton.SetActive(true);
-                    RightButton.GetComponent<ButtonInputHandler>().SetSkillAvailability(controller.Skill.Type);
-                    selectedInputObject = RightButton;
-
-                    RightLiveCommand.SetActive(false);
-                    break;
-            }
+            // UI button & keyboard 
+            default:
+                UIButtonsObject.SetActive(true);
+                UIButtonsObject.GetComponent<ButtonInputHandler>().SetSkillAvailability(controller.Skill.Type);
+                selectedInputObject = UIButtonsObject;
+                liveCommandObject.SetActive(false);
+                break;
         }
 
         if (selectedInputObject == null)
-        {
             throw new Exception("One of [BattleInputType]'s object must be used");
-        }
 
-        // Declare that Robot driven by an input provider
         InputProvider inputProvider = selectedInputObject.GetComponent<InputProvider>();
         inputProvider.SkillType = controller.Skill.Type;
         controller.InputProvider = inputProvider;
@@ -104,4 +81,5 @@ public class InputManager : MonoBehaviour
             RightButton.GetComponent<ButtonInputHandler>().ResetCooldown();
         }
     }
+    #endregion
 }
