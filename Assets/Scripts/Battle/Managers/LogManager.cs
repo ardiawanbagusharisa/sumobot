@@ -6,7 +6,6 @@ using CoreSumo;
 using Newtonsoft.Json;
 using UnityEngine;
 
-
 public enum LogActorType
 {
     System,
