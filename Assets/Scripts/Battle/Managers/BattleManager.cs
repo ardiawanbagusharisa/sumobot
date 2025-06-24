@@ -275,7 +275,7 @@ public class BattleManager : MonoBehaviour
             // Battle
             case BattleState.Battle_Preparing:
                 LogManager.UpdateMetadata();
-                LogManager.StartNewGame();
+                LogManager.StartGameLog();
 
                 Battle.ClearWinner();
                 CurrentRound = new Round(1, Mathf.CeilToInt(BattleTime));
