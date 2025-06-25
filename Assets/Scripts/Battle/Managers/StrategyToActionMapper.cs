@@ -17,9 +17,9 @@ public static class StrategyToActionMapper
     {
         // Mapping untuk aksi turn angle, format: turn_left_45, turn_right_90, dst
         if (strategy.StartsWith("turn_left_"))
-            return new TurnLeftAngleAction(ParseAngle(strategy));
+            return new TurnAction(InputType.Script, ActionType.TurnLeftWithAngle, ParseAngle(strategy));
         if (strategy.StartsWith("turn_right_"))
-            return new TurnRightAngleAction(ParseAngle(strategy));
+            return new TurnAction(InputType.Script, ActionType.TurnRightWithAngle, ParseAngle(strategy));
 
         switch (strategy)
         {
@@ -28,7 +28,7 @@ public static class StrategyToActionMapper
 
             case "avoid":
                 // Contoh: mapping avoid ke turn left biasa
-                return new TurnLeftAction(InputType.Script);
+                return new TurnAction(InputType.Script, ActionType.TurnLeft);
 
             case "boost":
                 return new SkillAction(InputType.Script);
@@ -41,10 +41,10 @@ public static class StrategyToActionMapper
                 return null;
 
             case "turn_left":
-                return new TurnLeftAction(InputType.Script);
+                return new TurnAction(InputType.Script, ActionType.TurnLeft);
 
             case "turn_right":
-                return new TurnRightAction(InputType.Script);
+                return new TurnAction(InputType.Script, ActionType.TurnRight);
 
             default:
                 Debug.LogWarning($"[StrategyToActionMapper] Unknown strategy: '{strategy}'. No action will be taken.");
