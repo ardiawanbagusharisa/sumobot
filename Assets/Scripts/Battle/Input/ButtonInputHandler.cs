@@ -34,7 +34,7 @@ public class ButtonInputHandler : MonoBehaviour
         Dash.OnPress += inputProvider.OnDashButtonPressed;
         Stone.OnPress += inputProvider.OnStoneSkillButtonPressed;
         Boost.OnPress += inputProvider.OnBoostSkillButtonPressed;
-
+        
         BattleManager.Instance.OnBattleChanged += OnBattleChanged;
         SetUpButtonGuide();
     }

@@ -100,7 +100,6 @@ namespace CoreSumo
         }
     }
 
-
     public class DashAction : ISumoAction
     {
         public DashAction(InputType inputType)
