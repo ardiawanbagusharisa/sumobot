@@ -15,10 +15,8 @@ public class DebouncedLogger
     private Vector2 startLinearVelocity;
     private float startAngularVelocity;
     private float startTime;
-    private string Name;
-    private string Parameter;
-    private string Reason;
-    private SumoController controller;
+    private ISumoAction action;
+    private readonly SumoController controller;
 
     public DebouncedLogger(SumoController controller, float debounceTime)
     {
@@ -26,11 +24,10 @@ public class DebouncedLogger
         this.debounceTime = debounceTime;
     }
 
-    public void Call(string name, string parameter = null, string reason = null)
+    public void Call(ISumoAction action)
     {
-        Name = name;
-        if (parameter != null)
-            Parameter = parameter;
+        this.action ??= action;
+
         if (!IsActive)
         {
             IsActive = true;
@@ -39,7 +36,6 @@ public class DebouncedLogger
             startRotation = controller.transform.rotation.eulerAngles.z;
             startLinearVelocity = controller.LastVelocity;
             startAngularVelocity = controller.LastAngularVelocity;
-            Reason = reason;
             SaveToLog(true);
         }
 
@@ -75,54 +71,54 @@ public class DebouncedLogger
             isStart: isStart,
             data: new Dictionary<string, object>()
             {
-                        { "type", Name },
-                        { "parameter", Parameter },
-                        { "reason", Reason },
-                        { "before", new Dictionary<string,object>()
+                        { "Type", action.Type.ToString() },
+                        { "Parameter", action.Param },
+                        { "Reason", action.Reason },
+                        { "Before", new Dictionary<string,object>()
                             {
-                                { "angular_velocity", startAngularVelocity},
-                                { "linear_velocity", new Dictionary<string,float>()
+                                { "AngularVelocity", startAngularVelocity},
+                                { "LinearVelocity", new Dictionary<string,float>()
                                     {
-                                        {"x",startLinearVelocity.x},
-                                        {"y",startLinearVelocity.y},
+                                        {"X",startLinearVelocity.x},
+                                        {"Y",startLinearVelocity.y},
                                     }
                                 },
-                                { "position", new Dictionary<string,float>()
+                                { "Position", new Dictionary<string,float>()
                                     {
-                                        {"x",startPosition.x},
-                                        {"y",startPosition.y},
+                                        {"X",startPosition.x},
+                                        {"Y",startPosition.y},
                                     }
                                 },
-                                { "rotation", new Dictionary<string,float>()
+                                { "Rotation", new Dictionary<string,float>()
                                     {
-                                        {"z",startRotation},
+                                        {"Z",startRotation},
                                     }
                                 },
                             }
                         },
-                        { "after", new Dictionary<string,object>()
+                        { "After", new Dictionary<string,object>()
                             {
-                                { "angular_velocity", endAngularVelocity},
-                                { "linear_velocity", new Dictionary<string,float>()
+                                { "AngularVelocity", endAngularVelocity},
+                                { "LinearVelocity", new Dictionary<string,float>()
                                     {
-                                        {"x",endLinearVelocity.x},
-                                        {"y",endLinearVelocity.y},
+                                        {"X",endLinearVelocity.x},
+                                        {"Y",endLinearVelocity.y},
                                     }
                                 },
-                                { "position", new Dictionary<string,float>()
+                                { "Position", new Dictionary<string,float>()
                                     {
-                                        {"x",endPosition.x},
-                                        {"y",endPosition.y},
+                                        {"X",endPosition.x},
+                                        {"Y",endPosition.y},
                                     }
                                 },
-                                { "rotation", new Dictionary<string,float>()
+                                { "Rotation", new Dictionary<string,float>()
                                     {
-                                        {"z",endRotation},
+                                        {"Z",endRotation},
                                     }
                                 },
                             }
                         },
-                        { "duration", duration },
+                        { "Duration", duration },
 
             }
         );

@@ -4009,30 +4009,6 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: -90
       objectReference: {fileID: 0}
-    - target: {fileID: 5583292103176566768, guid: e48db3198e16346af866a9419a1964cc, type: 3}
-      propertyPath: Side
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 5583292103176566768, guid: e48db3198e16346af866a9419a1964cc, type: 3}
-      propertyPath: face
-      value: 
-      objectReference: {fileID: 1977358362}
-    - target: {fileID: 5583292103176566768, guid: e48db3198e16346af866a9419a1964cc, type: 3}
-      propertyPath: TurnRate
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 5583292103176566768, guid: e48db3198e16346af866a9419a1964cc, type: 3}
-      propertyPath: LockDuration.max
-      value: 1.5
-      objectReference: {fileID: 0}
-    - target: {fileID: 5583292103176566768, guid: e48db3198e16346af866a9419a1964cc, type: 3}
-      propertyPath: CollisionBaseForce
-      value: 1.5
-      objectReference: {fileID: 0}
-    - target: {fileID: 5583292103176566768, guid: e48db3198e16346af866a9419a1964cc, type: 3}
-      propertyPath: directionIndicator
-      value: 
-      objectReference: {fileID: 726563275}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -4046,11 +4022,6 @@ Transform:
 --- !u!1 &726563274 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 1488574921577525681, guid: e48db3198e16346af866a9419a1964cc, type: 3}
-  m_PrefabInstance: {fileID: 726563272}
-  m_PrefabAsset: {fileID: 0}
---- !u!212 &726563275 stripped
-SpriteRenderer:
-  m_CorrespondingSourceObject: {fileID: 4764707064835075653, guid: e48db3198e16346af866a9419a1964cc, type: 3}
   m_PrefabInstance: {fileID: 726563272}
   m_PrefabAsset: {fileID: 0}
 --- !u!1 &728913078
@@ -4201,7 +4172,6 @@ MonoBehaviour:
   display: {fileID: 3121024363374111878}
   scrollDisplay: {fileID: 6089002818004296818}
   foldingButton: {fileID: 5271242589941734173}
-  isUnfolded: 0
 --- !u!1 &755129911
 GameObject:
   m_ObjectHideFlags: 0
@@ -9245,7 +9215,6 @@ MonoBehaviour:
   display: {fileID: 0}
   scrollDisplay: {fileID: 0}
   foldingButton: {fileID: 0}
-  isUnfolded: 0
 --- !u!1 &1745809395
 GameObject:
   m_ObjectHideFlags: 0
@@ -9457,7 +9426,10 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 1488574921577525681, guid: e48db3198e16346af866a9419a1964cc, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1749723880}
   m_SourcePrefab: {fileID: 100100000, guid: e48db3198e16346af866a9419a1964cc, type: 3}
 --- !u!4 &1749723878 stripped
 Transform:
@@ -9469,6 +9441,23 @@ GameObject:
   m_CorrespondingSourceObject: {fileID: 1488574921577525681, guid: e48db3198e16346af866a9419a1964cc, type: 3}
   m_PrefabInstance: {fileID: 1749723877}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &1749723880
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1749723879}
+  m_Enabled: 0
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 08f9a23698d5460408113ac58be1f214, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  EnableSLM: 0
+  SLMApiUrl: http://localhost:5000/predict
+  DecisionInterval: 0.3
+  arenaCenter: {x: 0, y: 0}
+  arenaRadius: 5
 --- !u!1 &1757629780
 GameObject:
   m_ObjectHideFlags: 0
@@ -12426,7 +12415,7 @@ MonoBehaviour:
   LeftScore: {fileID: 1995473052}
   LeftFinalScore: {fileID: 5964918650161667861}
   LeftDashCooldown: {fileID: 462271141}
-  LeftSkillCooldown: {fileID: 462271141}
+  LeftSkillCooldown: {fileID: 683317187}
   LeftSkillName: {fileID: 569198104}
   RightScore: {fileID: 304621562}
   RightFinalScore: {fileID: 1490776911109916008}

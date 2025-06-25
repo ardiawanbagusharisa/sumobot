@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using UnityEngine;
+using UnityEngine.Rendering.Universal;
 
 namespace CoreSumo
 {
@@ -19,17 +20,14 @@ namespace CoreSumo
         #endregion
 
         #region Skill Stat properties
-        public float StoneCooldown = 10f;
-        public float StoneDuration = 5f;
-        public float StoneBounceBackMultiplier = 10f;
-        public float BoostCooldown = 10f;
-        public float BoostDuration = 5f;
+        public float TotalCooldown = 10f;
+        public float TotalDuration = 5f;
+        public float StoneMultiplier = 10f;
         public float BoostMultiplier = 1.8f;
         #endregion
 
         #region Runtime (readonly) properties
-        private float stoneLastTimeUsed;
-        private float boostLastTimeUsed;
+        private float usedAt;
         private SumoController controller;
         #endregion
 
@@ -38,42 +36,43 @@ namespace CoreSumo
             this.controller = controller;
         }
 
-        #region Runtime properties 
-        public float CooldownAmount()
+        static public SumoSkill CreateSkill(
+            SumoController controller,
+            SkillType type,
+            float cooldown = 10f,
+            float duration = 5f
+            )
         {
-            float lastUsedSkill = 0;
-
-            switch (Type)
+            SumoSkill skill = new(controller)
             {
-                case SkillType.Boost:
-                    lastUsedSkill = boostLastTimeUsed;
-                    break;
-                case SkillType.Stone:
-                    lastUsedSkill = stoneLastTimeUsed;
-                    break;
-            }
-
-            float skillCooldown = Type == SkillType.Boost ? BoostCooldown : StoneCooldown;
-            float cooldownAmount = lastUsedSkill + skillCooldown - BattleManager.Instance.ElapsedTime;
-            return cooldownAmount;
+                Type = type,
+                TotalCooldown = cooldown,
+                TotalDuration = duration,
+            };
+            return skill;
         }
 
-        public float CooldownAmountNormalized => 1 - (CooldownAmount() / SkillCooldown);
-        public bool IsSkillCooldown => CooldownAmount() >= 0f;
-        public float SkillDuration => Type == SkillType.Boost ? BoostDuration : StoneDuration;
-        public float SkillCooldown => Type == SkillType.Boost ? BoostCooldown : StoneCooldown;
+        #region Runtime properties 
+        public float Cooldown => usedAt + TotalCooldown - BattleManager.Instance.ElapsedTime;
+        public float CooldownNormalized => 1 - (Cooldown / TotalCooldown);
+        public bool IsSkillCooldown => Cooldown >= 0f;
         #endregion
 
         #region Activation and cooldown methods
         public void Reset()
         {
-            boostLastTimeUsed = 0;
-            stoneLastTimeUsed = 0;
+            usedAt = 0;
             IsActive = false;
         }
 
         public bool Activate(ISumoAction action)
         {
+            if (IsSkillCooldown)
+            {
+                Debug.Log($"[Skill][{Type}] is on cooldown");
+                return false;
+            }
+
             Debug.Log($"[Skill][{Type}] activated!");
             IsActive = true;
             controller.Log(action);
@@ -87,33 +86,30 @@ namespace CoreSumo
                     break;
             }
 
-            controller.StartCoroutine(OnAfterDuration(Type));
-            controller.StartCoroutine(OnAfterCooldown(Type));
+            controller.StartCoroutine(OnAfterDuration());
+            controller.StartCoroutine(OnAfterCooldown());
             return true;
         }
 
         public void ActivateBoost()
         {
-            boostLastTimeUsed = BattleManager.Instance.ElapsedTime;
-            controller.SetMovementEnabled(true);
+            usedAt = BattleManager.Instance.ElapsedTime;
             controller.MoveSpeed *= BoostMultiplier;
             controller.DashSpeed *= BoostMultiplier;
         }
 
         public void ActivateStone()
         {
-            stoneLastTimeUsed = BattleManager.Instance.ElapsedTime;
+            usedAt = BattleManager.Instance.ElapsedTime;
             controller.FreezeMovement();
-            controller.SetMovementEnabled(false);
-            controller.BounceResistance *= StoneBounceBackMultiplier;
+            controller.BounceResistance *= StoneMultiplier;
         }
 
-        private IEnumerator OnAfterDuration(SkillType type)
+        private IEnumerator OnAfterDuration()
         {
-            float duration = type == SkillType.Boost ? BoostDuration : StoneDuration;
-            yield return new WaitForSeconds(duration);
+            yield return new WaitForSeconds(TotalDuration);
             IsActive = false;
-            switch (type)
+            switch (Type)
             {
                 case SkillType.Boost:
                     controller.ResetMoveSpeed();
@@ -122,15 +118,13 @@ namespace CoreSumo
                 case SkillType.Stone:
                     controller.ResetFreezeMovement();
                     controller.ResetBounceResistance();
-                    controller.SetMovementEnabled(true);
                     break;
             }
         }
 
-        private IEnumerator OnAfterCooldown(SkillType type)
+        private IEnumerator OnAfterCooldown()
         {
-            float cooldown = type == SkillType.Boost ? BoostCooldown : StoneCooldown;
-            yield return new WaitForSeconds(cooldown);
+            yield return new WaitForSeconds(TotalCooldown);
 
             Debug.Log($"[Skill][{Type}] cooldown end!");
         }

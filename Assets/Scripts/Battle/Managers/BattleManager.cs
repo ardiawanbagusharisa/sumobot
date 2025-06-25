@@ -59,7 +59,7 @@ public class BattleManager : MonoBehaviour
     public Battle Battle;
     public Round CurrentRound = null;
     #endregion
-    
+
     #region Events properties 
     public event Action<float> OnCountdownChanged;
     public event Action<Battle> OnBattleChanged;
@@ -101,22 +101,29 @@ public class BattleManager : MonoBehaviour
         if (CurrentRound != null && CurrentState == BattleState.Battle_Ongoing)
         {
             ElapsedTime += Time.deltaTime;
-
-            Bot?.OnUpdate(ElapsedTime);
+            Bot.OnUpdate(ElapsedTime);
         }
     }
+
+    // void FixedUpdate()
+    // {
+    //     if (CurrentRound != null && CurrentState == BattleState.Battle_Ongoing)
+    //     {
+
+    //     }
+    // }
 
     #endregion
 
     #region API methods
     public void SetLeftDefaultSkill(int type)
     {
-        Battle.LeftPlayer.Skill.Type = type == 0 ? SkillType.Boost : SkillType.Stone;
+        Battle.LeftPlayer.AssignSkill(type == 0 ? SkillType.Boost : SkillType.Stone);
     }
 
     public void SetRightDefaultSkill(int type)
     {
-        Battle.RightPlayer.Skill.Type = type == 0 ? SkillType.Boost : SkillType.Stone;
+        Battle.RightPlayer.AssignSkill(type == 0 ? SkillType.Boost : SkillType.Stone);
     }
 
     public void Battle_Start()
@@ -149,7 +156,6 @@ public class BattleManager : MonoBehaviour
             Battle.RightPlayer = controller;
 
         LogManager.LogBattleState(
-                actor: LogActorType.System,
                 data: new Dictionary<string, object>()
                 {
                         {"type", "Player"},
@@ -214,7 +220,7 @@ public class BattleManager : MonoBehaviour
 
     private void OnPlayerOutOfArena(PlayerSide outPlayerSide)
     {
-        if (CurrentState != BattleState.Battle_Ongoing) 
+        if (CurrentState != BattleState.Battle_Ongoing)
             return;
         Debug.Log("OnPlayerOutOfArena");
 
@@ -239,7 +245,6 @@ public class BattleManager : MonoBehaviour
         if (CurrentRound.RoundNumber == 0)
         {
             LogManager.LogBattleState(
-                actor: LogActorType.System,
                 data: new Dictionary<string, object>()
                 {
                     {"type", "battle_state"},
@@ -249,7 +254,6 @@ public class BattleManager : MonoBehaviour
         else
         {
             LogManager.LogBattleState(
-                actor: LogActorType.System,
                 includeInCurrentRound: true,
                 data: new Dictionary<string, object>()
                 {
@@ -307,9 +311,7 @@ public class BattleManager : MonoBehaviour
                 battleTimerCoroutine = StartCoroutine(StartBattleTimer());
 
                 Battle.LeftPlayer.SetSkillEnabled(true);
-                Battle.LeftPlayer.SetMovementEnabled(true);
                 Battle.RightPlayer.SetSkillEnabled(true);
-                Battle.RightPlayer.SetMovementEnabled(true);
                 break;
             case BattleState.Battle_End:
                 CurrentRound.FinishTime = ElapsedTime;
@@ -318,9 +320,7 @@ public class BattleManager : MonoBehaviour
                     StopCoroutine(battleTimerCoroutine);
 
                 Battle.LeftPlayer.SetSkillEnabled(false);
-                Battle.LeftPlayer.SetMovementEnabled(false);
                 Battle.RightPlayer.SetSkillEnabled(false);
-                Battle.RightPlayer.SetMovementEnabled(false);
                 StartCoroutine(ResetBattle());
                 break;
             case BattleState.Battle_Reset:

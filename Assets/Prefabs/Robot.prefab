@@ -258,36 +258,35 @@ MonoBehaviour:
   DashSpeed: 7
   DashDuration: 0.5
   DashCooldown: 1
+  Skill:
+    Type: 0
+    IsActive: 0
+    TotalCooldown: 0
+    TotalDuration: 0
+    StoneMultiplier: 0
+    BoostMultiplier: 0
   StopDelay: 0.5
   SlowDownRate: 2
   Torque: 0.4
-  BounceResistance: 1
-  ActorBounceMultiplier: 0.9
-  CollisionBaseForce: 1.5
   TurnRate: 1
+  BounceResistance: 1
+  LockReductionMultiplier: 0.9
+  CollisionBaseForce: 1.5
   BaseLockDurationMultiplier: 0.5
   LockDuration:
     min: 0.8
     max: 1.5
   HalfTurnAngle:
-    min: 0
+    min: 1
     max: 180
   FullTurnAngle:
     min: -360
     max: 360
   Side: 0
+  directionIndicator: {fileID: 4764707064835075653}
+  InputProvider: {fileID: 0}
   isInputDisabled: 0
-  face: {fileID: 4764707064835075653}
+  LastDashTime: 0
   StartPosition: {x: 0, y: 0, z: 0}
   StartRotation: {x: 0, y: 0, z: 0, w: 0}
-  Skill:
-    Type: 0
-    IsActive: 0
-    StoneCooldown: 0
-    StoneDuration: 0
-    StoneBounceBackMultiplier: 0
-    BoostCooldown: 0
-    BoostDuration: 0
-    BoostMultiplier: 0
-  InputProvider: {fileID: 0}
-  LastDashTime: 0
+  IsSkillDisabled: 1

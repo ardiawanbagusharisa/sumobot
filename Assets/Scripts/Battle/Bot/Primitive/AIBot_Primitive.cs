@@ -58,7 +58,7 @@ namespace BotAI
                 }
                 else
                 {
-                    api.Controller.InputProvider.EnqueueCommand(new TurnAngleAction(angleDiff));
+                    api.Controller.InputProvider.EnqueueCommand(new TurnAction(InputType.Script, ActionType.TurnWithAngle, angleDiff));
                 }
             }
 

@@ -81,12 +81,12 @@ namespace BotAI
                 }
                 else
                 {
-                    Enqueue(new AccelerateTimeAction(accelDuration));
+                    Enqueue(new AccelerateAction(InputType.Script, accelDuration));
                 }
             }
             else
             {
-                Enqueue(new TurnAngleAction(angleToTarget));
+                Enqueue(new TurnAction(InputType.Script, ActionType.TurnWithAngle, angleToTarget));
             }
 
             fitness += 1f; // Example: reward for taking an action
@@ -121,7 +121,7 @@ namespace BotAI
                 actionTimer = 0f;
                 Decide();
             }
-            
+
             base.OnBotUpdate();
         }
 

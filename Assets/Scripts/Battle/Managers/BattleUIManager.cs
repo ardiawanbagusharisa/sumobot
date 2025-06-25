@@ -69,11 +69,11 @@ namespace BattleLoop
             BattleManager.Instance.CurrentState == global::BattleState.Battle_Reset)
             {
                 SumoController leftPlayer = BattleManager.Instance.Battle.LeftPlayer;
-                LeftSkillCooldown.GetComponent<Image>().fillAmount = leftPlayer.Skill.CooldownAmountNormalized;
+                LeftSkillCooldown.GetComponent<Image>().fillAmount = leftPlayer.Skill.CooldownNormalized;
                 LeftDashCooldown.GetComponent<Image>().fillAmount = leftPlayer.DashCooldownNormalized;
 
                 SumoController rightPlayer = BattleManager.Instance.Battle.RightPlayer;
-                RightSkillCooldown.GetComponent<Image>().fillAmount = rightPlayer.Skill.CooldownAmountNormalized;
+                RightSkillCooldown.GetComponent<Image>().fillAmount = rightPlayer.Skill.CooldownNormalized;
                 RightDashCooldown.GetComponent<Image>().fillAmount = rightPlayer.DashCooldownNormalized;
 
                 Timer.SetText(Mathf.CeilToInt(BattleManager.Instance.TimeLeft).ToString());

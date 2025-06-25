@@ -31,16 +31,8 @@ public class AIBot_EA_MCTS : Bot
             new AccelerateAction(InputType.Script),
             new DashAction(InputType.Script),
             new SkillAction(InputType.Script),
-
-            new TurnRightAngleAction(15f),
-            // new TurnRightAngleAction(2f),
-            // new TurnRightAngleAction(45f),
-            // new TurnRightAngleAction(90f),
-
-            new TurnLeftAngleAction(15f),
-            // new TurnLeftAngleAction(2f),
-            // new TurnLeftAngleAction(45f),
-            // new TurnLeftAngleAction(90f),
+            new TurnAction(InputType.Script, ActionType.TurnLeftWithAngle, 15f),
+            new TurnAction(InputType.Script, ActionType.TurnRightWithAngle, 15f),
         };
     public int ReinitPerIters = 2;
     public int Iterations = 100;
@@ -59,19 +51,14 @@ public class AIBot_EA_MCTS : Bot
     public override void OnBotUpdate()
     {
         if (currState != BattleState.Battle_Ongoing) return;
-        
-        decisionTimer += Time.deltaTime;
-        if (decisionTimer >= ActionInterval)
+
+        if (decisionIntervalCount % ReinitPerIters == 0)
         {
-            decisionTimer = 0f;
-            if (decisionIntervalCount % ReinitPerIters == 0)
-            {
-                decisionIntervalCount = 0;
-                InitNode();
-            }
-            Decide();
-            decisionIntervalCount += 1;
+            decisionIntervalCount = 0;
+            InitNode();
         }
+
+        Decide();
 
         DeQueueWhenAvailable();
 
@@ -94,8 +81,6 @@ public class AIBot_EA_MCTS : Bot
         {
             lastActionsToEnemy = null;
         }
-
-
         InitNode();
     }
 
@@ -110,7 +95,7 @@ public class AIBot_EA_MCTS : Bot
 
     void DeQueueWhenAvailable()
     {
-        while (!api.Controller.IsMovementLocked && actionsQueue.Count > 0)
+        while (!api.Controller.IsMovementDisabled && actionsQueue.Count > 0)
         {
             Enqueue(actionsQueue.Dequeue());
         }
@@ -125,7 +110,7 @@ public class AIBot_EA_MCTS : Bot
             new List<ISumoAction>(PossibleActions),
             goodAction: lastActionsToEnemy,
             badAction: lastActionsFromEnemy);
-        root.Side = this.side;
+        root.Side = side;
         root.ID = "Root";
         root.Init(AllNodes);
     }
@@ -160,7 +145,6 @@ public class AIBot_EA_MCTS : Bot
         Debug.Log($"[AIBot_EA_MCTS] selected-score: {bestChild.totalReward}, selected-action(s): {bestChild.ID} selected-visits: {bestChild.visits}, ");
 
         lastActionsToEnemy = bestChild.actions;
-
 
         foreach (var act in bestChild.actions)
         {

@@ -9,7 +9,7 @@ using System.Linq;
 
 public class CommandSystem : MonoBehaviour
 {
-    #region UI variables 
+    #region UI Elements properties 
     [Header("UI Elements")]
     public TMP_InputField inputField;
     public TextMeshProUGUI display;
@@ -17,29 +17,31 @@ public class CommandSystem : MonoBehaviour
     public Button foldingButton;
     #endregion
 
-    #region Command variables
+    #region Command properties
     private Dictionary<string, Action<string>> allCommands;
     private string defaultText = CommandMessage.Default;
     private string helperTexts = CommandMessage.Help;
     #endregion
 
-    #region Folding Button
-    public bool isUnfolded = false;
+    #region Runtime properties 
+    private bool isUnfolded = false;
+    private InputProvider inputProvider;
     #endregion
 
-    private InputProvider inputProvider;
-
+    #region Unity methods
     private void Start()
     {
-        initCommandSystem();
+        InitCommandSystem();
     }
 
     private void Update()
     {
         CheckPlayerInput();
     }
+    #endregion
 
-    private void initCommandSystem()
+    #region Command system methods
+    private void InitCommandSystem()
     {
         //[Todo] Handle null later. 
         inputProvider = GetComponent<InputProvider>();
@@ -52,7 +54,7 @@ public class CommandSystem : MonoBehaviour
             { "turnright", CommandTurnRight },
             { "dash", (s) => Dash() },
             { "skill", (s) => Skill() },
-            { "clear", (s) => Clear() },
+            { "clear", (s) => ClearTerminal() },
             { "help", (s) => AddMessageToDisplay(helperTexts) },
             { "open", (s) => OpenTerminal() },
             { "close", (s) => CloseTerminal() },
@@ -75,11 +77,8 @@ public class CommandSystem : MonoBehaviour
             // [Todo] Move as autocomplete function. 
             if (!string.IsNullOrEmpty(suggestion))
             {
-                string addParens = "";
-                if (suggestion != "help" && suggestion != "open" && suggestion != "close")
-                {
-                    addParens = "()";
-                }
+                string addParens = (suggestion != "help" && suggestion != "open" && suggestion != "close") ? "()" : "";
+
                 inputField.text = suggestion + addParens;
                 inputField.caretPosition = inputField.text.Length - (inputField.text.Contains("(") ? 1 : 0);
             }
@@ -88,7 +87,7 @@ public class CommandSystem : MonoBehaviour
 
     private void DisplayMessage(string message)
     {
-        Clear();
+        ClearTerminal();
         display.text = message;
         StartCoroutine(ScrollDisplayToBottom());
     }
@@ -122,7 +121,7 @@ public class CommandSystem : MonoBehaviour
         scrollDisplay.verticalNormalizedPosition = 0f; // 0 = bottom, 1 = top.
     }
 
-    private void Clear()
+    private void ClearTerminal()
     {
         display.text = "";
         scrollDisplay.verticalNormalizedPosition = 1f;
@@ -132,17 +131,13 @@ public class CommandSystem : MonoBehaviour
     private void OpenTerminal()
     {
         if (!isUnfolded)
-        {
             ToggleFold();
-        }
     }
 
     private void CloseTerminal()
     {
         if (isUnfolded)
-        {
             ToggleFold();
-        }
     }
 
     private void OnTyping(string currentInput)
@@ -154,17 +149,15 @@ public class CommandSystem : MonoBehaviour
         {
             // Add suggested command if it's not already in the last message. Becareful, becase there is a word "help" in the text. 
             string lastMessage = GetLastMessage();
-            //Debug.Log("Closest1: " + closest);
+
             if (lastMessage.Contains("help") || !lastMessage.Contains(closest))
             {
                 if (lastMessage.Contains(suggestion))
-                {
                     RemoveLastSuggestion();
-                }
+
                 AddMessageToDisplay("> " + suggestion + ": " + closest);
             }
         }
-        // Handle if the input is empty and the last message is a suggestion.
         else if (string.IsNullOrEmpty(currentInput) && GetLastMessage().Contains(suggestion))
         {
             RemoveLastSuggestion();
@@ -173,10 +166,7 @@ public class CommandSystem : MonoBehaviour
 
     private void OnSubmit(string input)
     {
-        if (!isUnfolded)
-        {
-            ToggleFold();
-        }
+        OpenTerminal();
 
         if (!string.IsNullOrEmpty(input))
         {
@@ -203,24 +193,31 @@ public class CommandSystem : MonoBehaviour
         return "";
     }
 
+    public void ToggleFold()
+    {
+        isUnfolded = !isUnfolded;
+        scrollDisplay.gameObject.SetActive(isUnfolded);
+
+        var foldButtonrect = foldingButton.GetComponent<RectTransform>();
+        var scale = foldButtonrect.localScale;
+        scale.y = isUnfolded ? -Mathf.Abs(scale.y) : Mathf.Abs(scale.y);
+        foldButtonrect.localScale = scale;
+    }
+    #endregion
+
     #region Commands Execution 
     private void TryExecute(string input)
     {
-        //[Todo] Remove one of this later. 
-        // To present the text, we can either use: 1) concatenation ("string" + "string"), or 2) use interpolation ($"string {var}"). 
-        // In this function, let's just try to use interpolation. 
         string trimmed = input.Trim();
         if (string.IsNullOrEmpty(trimmed))
         {
-            //AddMessageToDisplay("> " + CommandMessage.EmptyCmd + "\n");
             AddMessageToDisplay($"> {CommandMessage.EmptyCmd}\n");
             return;
         }
 
-        // Extract command name and arguments
+        // Extract command name and arguments 
         int parenStart = trimmed.IndexOf('(');
         int parenEnd = trimmed.IndexOf(')');
-
         string command = "";
         string rawArgs = "";
 
@@ -234,7 +231,7 @@ public class CommandSystem : MonoBehaviour
             command = trimmed;
         }
 
-        // Validate if the command exists
+        // Validate if command exists
         if (!allCommands.TryGetValue(command, out var action))
         {
             AddMessageToDisplay($"> {CommandMessage.UnknownCmd} \"{command}\".");
@@ -310,40 +307,34 @@ public class CommandSystem : MonoBehaviour
         {
             int firstIndex = display.text.IndexOf('\n');
             if (firstIndex >= 0)
-            {
                 display.text = display.text.Substring(firstIndex + 1);
-            }
-            //AddMessageToDisplay(defaultText);
+
             DisplayMessage(defaultText);
         }
         else if (!string.IsNullOrEmpty(rawArgs))
-        {
             AddMessageToDisplay($"> {command} {CommandMessage.ExecutedWithArgs} \"{rawArgs}\".");
-        }
         else
-        {
             AddMessageToDisplay($"> {command} {CommandMessage.Executed}.");
-        }
-
-
     }
 
     private void CommandAccelerate(string arg)
     {
-        inputProvider.EnqueueCommand(new AccelerateTimeAction(float.Parse(arg)));
+        inputProvider.EnqueueCommand(new AccelerateAction(InputType.LiveCommand, float.Parse(arg)));
         AddMessageToDisplay("> Executing accelerate(" + arg + ").");
 
     }
 
     private void CommandTurnLeft(string arg)
     {
-        inputProvider.EnqueueCommand(new TurnLeftAngleAction(float.Parse(arg)));
+        ISumoAction turnLeft = new TurnAction(InputType.LiveCommand, ActionType.TurnLeftWithAngle, float.Parse(arg));
+        inputProvider.EnqueueCommand(turnLeft);
         AddMessageToDisplay("> Executing TurnLeft(" + arg + ").");
     }
 
     private void CommandTurnRight(string arg)
     {
-        inputProvider.EnqueueCommand(new TurnRightAngleAction(float.Parse(arg)));
+        ISumoAction turnRight = new TurnAction(InputType.LiveCommand, ActionType.TurnRightWithAngle, float.Parse(arg));
+        inputProvider.EnqueueCommand(turnRight);
         AddMessageToDisplay("> Executing TurnRight(" + arg + ").");
     }
 
@@ -365,19 +356,6 @@ public class CommandSystem : MonoBehaviour
     }
     #endregion
 
-    #region Folding Button 
-    public void ToggleFold()
-    {
-        isUnfolded = !isUnfolded;
-        scrollDisplay.gameObject.SetActive(isUnfolded);
-
-        var foldButtonrect = foldingButton.GetComponent<RectTransform>();
-        var scale = foldButtonrect.localScale;
-        scale.y = isUnfolded ? -Mathf.Abs(scale.y) : Mathf.Abs(scale.y);
-        foldButtonrect.localScale = scale;
-    }
-    #endregion
-
     #region Inner Class CommandMessage 
     public class CommandMessage
     {
@@ -394,7 +372,7 @@ public class CommandSystem : MonoBehaviour
                                         "   * skill()" +
                                             " -> Activate the robot's special skill.\n" +
                                         "   * clear()" +
-                                            " -> Clear the command terminal.\n" +
+                                            " -> ClearTerminal the command terminal.\n" +
                                         "   * open" +
                                             " -> Open the command terminal.\n" +
                                         "   * close" +

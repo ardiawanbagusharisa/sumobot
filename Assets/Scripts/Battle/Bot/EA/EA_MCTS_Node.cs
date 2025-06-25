@@ -35,8 +35,6 @@ public class EA_MCTS_Node
                     {distScore,HighestScoreType.Distance},
                     {bonusOrPenalty,HighestScoreType.BonusOrPenalty}
                 };
-            Debug.Log($"GetHighestScoreType {string.Join(", ", highestScore.Select((x) => x.Key.ToString()))}");
-
             float result = highestScore.Max((i) => i.Key);
             return highestScore[result];
         }
@@ -63,7 +61,7 @@ public class EA_MCTS_Node
         foreach (var action in actions)
         {
             EA_MCTS_Node newNode = new(this, new List<ISumoAction>() { action });
-            newNode.ID = action.NameWithParam;
+            newNode.ID = action.FullName;
             if (goodAction != null && goodAction.Count > 0)
             {
                 newNode.totalReward = 10;
@@ -75,7 +73,7 @@ public class EA_MCTS_Node
                 newNode.visits = 1;
             }
             children.Add(newNode);
-            AllNodes.Add(action.NameWithParam, newNode);
+            AllNodes.Add(action.FullName, newNode);
         }
     }
 
@@ -83,7 +81,7 @@ public class EA_MCTS_Node
     {
         var unexploredActs = AIBot_EA_MCTS.PossibleActions.Where(x =>
         {
-            var newActNames = $"{ID}:{x.NameWithParam}";
+            var newActNames = $"{ID}:{x.FullName}";
             if (!AllNodes.ContainsKey(newActNames))
             {
                 return true;
@@ -99,15 +97,14 @@ public class EA_MCTS_Node
         System.Random random = new();
         var randomAction = unexploredActs[random.Next(unexploredActs.Count())];
         string newActNames;
-        newActNames = $"{ID}:{randomAction.NameWithParam}";
+        newActNames = $"{ID}:{randomAction.FullName}";
 
-        var newActs = new List<ISumoAction>(actions)
-                {
-                    randomAction
-                };
+        var newActs = new List<ISumoAction>(actions) { randomAction };
 
-        EA_MCTS_Node newNode = new(this, newActs);
-        newNode.ID = newActNames;
+        EA_MCTS_Node newNode = new(this, newActs)
+        {
+            ID = newActNames
+        };
         children.Add(newNode);
         AllNodes.Add(newActNames, newNode);
         return newNode;
@@ -155,17 +152,21 @@ public class EA_MCTS_Node
 
         foreach (var action in actions)
         {
-            if (action is TurnLeftAngleAction)
+            if (action is TurnAction)
             {
-                aiDirection += Quaternion.Euler(0, 0, (float)action.Param) * aiDirection * simulationTime * controller.TurnRate;
-            }
-            else if (action is TurnRightAngleAction)
-            {
-                aiDirection += Quaternion.Euler(0, 0, (float)action.Param) * aiDirection * simulationTime * controller.TurnRate;
+                Debug.Log($"action.Param ${action.Type} {action.Param}");
+                if (action.Type == ActionType.TurnLeftWithAngle)
+                {
+                    aiDirection += Quaternion.Euler(0, 0, (float)action.Param) * aiDirection * simulationTime * controller.TurnRate;
+                }
+                else if (action.Type == ActionType.TurnRightWithAngle)
+                {
+                    aiDirection += Quaternion.Euler(0, 0, -(float)action.Param) * aiDirection * simulationTime * controller.TurnRate;
+                }
             }
             else if (action is AccelerateAction)
             {
-                if (controller.IsMovementLocked || controller.IsMoveDisabled)
+                if (controller.IsMovementDisabled)
                 {
                     bonusOrPenalty -= 0.1f;
                 }
@@ -182,7 +183,7 @@ public class EA_MCTS_Node
             }
             else if (action is DashAction)
             {
-                if (controller.IsDashOnCooldown || controller.IsMovementLocked || controller.IsMoveDisabled)
+                if (controller.IsDashOnCooldown || controller.IsMovementDisabled)
                 {
                     bonusOrPenalty -= 0.1f;
                 }
