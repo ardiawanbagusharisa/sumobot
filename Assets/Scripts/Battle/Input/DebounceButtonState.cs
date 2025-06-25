@@ -2,13 +2,16 @@ using UnityEngine;
 
 public class DebounceButtonState
 {
+    #region Runtime properties
     private float debounceTime;
     private float lastCallTime;
     public bool IsActive;
     private float startTime;
     private string Name;
     private GameObject go;
+    #endregion
 
+    #region Debounce methods
     public DebounceButtonState(GameObject go, float debounceTime)
     {
         this.debounceTime = debounceTime;
@@ -34,4 +37,5 @@ public class DebounceButtonState
             IsActive = false;
         }
     }
+    #endregion
 }

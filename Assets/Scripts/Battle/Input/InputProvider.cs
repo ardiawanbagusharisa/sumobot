@@ -11,13 +11,15 @@ public enum InputType
     Script,
 }
 
-
 public class InputProvider : MonoBehaviour
 {
+    #region Input properties
     public bool IncludeKeyboard;
     public PlayerSide PlayerSide;
     public SkillType SkillType;
+    #endregion
 
+    #region Runtime properties
     // AccelerateAction: true, means player can press Accelerate
     public Dictionary<string, bool> StateKeyboardAction;
 
@@ -42,6 +44,7 @@ public class InputProvider : MonoBehaviour
                         };
 
     private Queue<ISumoAction> commandQueue = new Queue<ISumoAction>();
+    #endregion
 
     public InputProvider(PlayerSide side, bool includeKeyboard = false)
     {
@@ -49,6 +52,7 @@ public class InputProvider : MonoBehaviour
         IncludeKeyboard = includeKeyboard;
     }
 
+    #region Unity methods
     void OnEnable()
     {
         StateKeyboardAction = new Dictionary<string, bool>()
@@ -61,15 +65,15 @@ public class InputProvider : MonoBehaviour
                                     };
         commandQueue = new Queue<ISumoAction>();
     }
+    #endregion
 
+    #region Input methods
     public List<ISumoAction> GetInput()
     {
-        var actions = new List<ISumoAction>();
+        List<ISumoAction> actions = new List<ISumoAction>();
 
         if (IncludeKeyboard)
-        {
             actions = ReadKeyboardInput();
-        }
 
         while (commandQueue.Count > 0)
         {
@@ -78,10 +82,10 @@ public class InputProvider : MonoBehaviour
 
         return actions;
     }
-
+    #endregion
 
     #region Public API
-    // APplied for Live Command And AI Script
+    // Applied for Live Command And AI Script
     public void EnqueueCommand(ISumoAction action)
     {
         if (IsValid(action))
@@ -110,9 +114,7 @@ public class InputProvider : MonoBehaviour
                 try
                 {
                     if (IsValid(item.Value))
-                    {
                         actions.Add(item.Value);
-                    }
                 }
                 catch (Exception e)
                 {
@@ -157,13 +159,14 @@ public class InputProvider : MonoBehaviour
 
     private bool IsValid(ISumoAction action)
     {
-        SumoController controller = PlayerSide == PlayerSide.Left ? BattleManager.Instance.Battle.LeftPlayer : BattleManager.Instance.Battle.RightPlayer;
-
+        Battle battle = BattleManager.Instance.Battle;
+        SumoController controller = PlayerSide == PlayerSide.Left ? battle.LeftPlayer : battle.RightPlayer;
 
         if (action.Param is float)
         {
             float param = (float)action.Param;
-            if (param == float.NaN) throw new Exception($"parameter can't be NaN when you are using [{action.NameWithParam}] type");
+            if (param == float.NaN) 
+                throw new Exception($"parameter can't be NaN when you are using [{action.NameWithParam}] type");
         }
 
         if (action is TurnLeftAngleAction || action is TurnRightAngleAction)
@@ -171,15 +174,18 @@ public class InputProvider : MonoBehaviour
             float param = (float)action.Param;
             float minAngle = controller.HalfTurnAngle.min;
             float maxAngle = controller.HalfTurnAngle.max;
-            if (param < 0) throw new Exception($"parameter can't be < 0 when you are using [{action.NameWithParam}] type");
-            if (param < minAngle || param > maxAngle) throw new Exception($"parameter can't be < {minAngle} and > {maxAngle} when you are using [{action.NameWithParam}]");
+            if (param < 0) 
+                throw new Exception($"parameter can't be < 0 when you are using [{action.NameWithParam}] type");
+            if (param < minAngle || param > maxAngle) 
+                throw new Exception($"parameter can't be < {minAngle} and > {maxAngle} when you are using [{action.NameWithParam}]");
         }
         else if (action is TurnAngleAction)
         {
             float param = (float)action.Param;
             float minAngle = controller.FullTurnAngle.min;
             float maxAngle = controller.FullTurnAngle.max;
-            if (param < minAngle || param > maxAngle) throw new Exception($"param can't be < {minAngle} and > {maxAngle} when you are using [${action.NameWithParam}] type");
+            if (param < minAngle || param > maxAngle) 
+                throw new Exception($"param can't be < {minAngle} and > {maxAngle} when you are using [${action.NameWithParam}] type");
         }
 
         if (action is AccelerateAction || action is AccelerateTimeAction || action is DashAction)

@@ -4221,7 +4221,6 @@ MonoBehaviour:
   display: {fileID: 3121024363374111878}
   scrollDisplay: {fileID: 6089002818004296818}
   foldingButton: {fileID: 5271242589941734173}
-  isUnfolded: 0
 --- !u!1 &755129911
 GameObject:
   m_ObjectHideFlags: 0
@@ -9265,7 +9264,6 @@ MonoBehaviour:
   display: {fileID: 0}
   scrollDisplay: {fileID: 0}
   foldingButton: {fileID: 0}
-  isUnfolded: 0
 --- !u!1 &1745809395
 GameObject:
   m_ObjectHideFlags: 0
@@ -9522,7 +9520,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1749723879}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 0186b9dd298654ac0af6a57dc42d823e, type: 3}
   m_Name: 
@@ -9534,7 +9532,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1749723879}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 567c7c5eb92f6483a89c16137907cce2, type: 3}
   m_Name: 
@@ -12497,7 +12495,7 @@ MonoBehaviour:
   LeftScore: {fileID: 1995473052}
   LeftFinalScore: {fileID: 5964918650161667861}
   LeftDashCooldown: {fileID: 462271141}
-  LeftSkillCooldown: {fileID: 462271141}
+  LeftSkillCooldown: {fileID: 683317187}
   LeftSkillName: {fileID: 569198104}
   RightScore: {fileID: 304621562}
   RightFinalScore: {fileID: 1490776911109916008}
