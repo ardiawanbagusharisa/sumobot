@@ -100,7 +100,7 @@ public class LogManager
         {
             return new Dictionary<string, DebouncedLogger>
             {
-                {"Accelerate", new DebouncedLogger(controller, 0.1f) },
+                { "Accelerate", new DebouncedLogger(controller, 0.1f) },
                 { "TurnRight", new DebouncedLogger(controller, 0.1f) },
                 { "TurnLeft", new DebouncedLogger(controller, 0.1f) },
                 { "TurnLeftAngle", new DebouncedLogger(controller, 0.1f) },

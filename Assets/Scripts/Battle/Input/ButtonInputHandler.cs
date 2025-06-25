@@ -7,6 +7,7 @@ using UnityEngine.UI;
 
 public class ButtonInputHandler : MonoBehaviour
 {
+    #region UI Lements properties
     public ButtonPointerHandler Accelerate;
     public ButtonPointerHandler TurnLeft;
     public ButtonPointerHandler TurnRight;
@@ -14,11 +15,14 @@ public class ButtonInputHandler : MonoBehaviour
     public ButtonPointerHandler Stone;
     public ButtonPointerHandler Boost;
     private InputProvider inputProvider;
+    #endregion
 
+    #region Runtime properties
     private float delayHoldSeconds = 0.08f;
-
     private Dictionary<string, Tuple<GameObject, float, InputType?>> lastInputType = new Dictionary<string, Tuple<GameObject, float, InputType?>>();
+    #endregion
 
+    #region Unity methods
     void Awake()
     {
         inputProvider = gameObject.GetComponent<InputProvider>();
@@ -51,66 +55,17 @@ public class ButtonInputHandler : MonoBehaviour
         BattleManager.Instance.OnBattleChanged -= OnBattleChanged;
     }
 
-    public GameObject GetSelectedSkillButton()
-    {
-        GameObject selectedSpecialSkillObj;
-        if (Stone.gameObject.activeSelf)
-        {
-            selectedSpecialSkillObj = Stone.gameObject;
-        }
-        else
-        {
-            selectedSpecialSkillObj = Boost.gameObject;
-        }
-
-        return selectedSpecialSkillObj;
-    }
-
-
-    void OnBattleChanged(Battle battle)
-    {
-        if (BattleManager.Instance.CurrentState == BattleState.Battle_End)
-        {
-            inputProvider.Me().OnPlayerAction -= OnPlayerAction;
-        }
-        if (BattleManager.Instance.CurrentState == BattleState.Battle_Countdown)
-        {
-            inputProvider.Me().OnPlayerAction += OnPlayerAction;
-        }
-    }
-
-    void OnPlayerAction(PlayerSide side, ISumoAction action, bool isPreExecute)
-    {
-        if (isPreExecute)
-        {
-            var actionName = action.GetType().Name;
-            if (!lastInputType.ContainsKey(actionName))
-            {
-                lastInputType.Add(actionName, null);
-            }
-            lastInputType[actionName] = new(GetHoldTypeButtonByAction(action), Time.time, action.InputUsed);
-        }
-    }
-
-
     void Update()
     {
-        // Handle button interactable state for Hold Type Button
         foreach (var item in lastInputType)
         {
             if (item.Value != null)
             {
-                if (Time.time - item.Value.Item2 >= delayHoldSeconds)
-                {
-                    UpdateHoldTypeButtonState(item.Value.Item1, false, item.Key, item.Value.Item3);
-                }
-                else
-                    UpdateHoldTypeButtonState(item.Value.Item1, true, item.Key, item.Value.Item3);
+                bool isHolding = (Time.time - item.Value.Item2 < delayHoldSeconds);
+                UpdateHoldTypeButtonState(item.Value.Item1, isHolding, item.Key, item.Value.Item3);
             }
         }
 
-        // Handle button interactable state for [Skill] and [Dash]
-        // Default to normal state
         if (Boost.gameObject.activeSelf)
             ResetButtonState(Boost.gameObject);
         if (Stone.gameObject.activeSelf)
@@ -119,6 +74,32 @@ public class ButtonInputHandler : MonoBehaviour
         {
             UpdateSkillCooldown();
             UpdateDashCooldown();
+        }
+    }
+    #endregion
+
+    #region Button handling methods
+    public GameObject GetSelectedSkillButton()
+    {
+        return Stone.gameObject.activeSelf ? Stone.gameObject : Boost.gameObject;
+    }
+
+    void OnBattleChanged(Battle battle)
+    {
+        if (BattleManager.Instance.CurrentState == BattleState.Battle_End)
+            inputProvider.Me().OnPlayerAction -= OnPlayerAction;
+        if (BattleManager.Instance.CurrentState == BattleState.Battle_Countdown)
+            inputProvider.Me().OnPlayerAction += OnPlayerAction;
+    }
+
+    void OnPlayerAction(PlayerSide side, ISumoAction action, bool isPreExecute)
+    {
+        if (isPreExecute)
+        {
+            string actionName = action.GetType().Name;
+            if (!lastInputType.ContainsKey(actionName))
+                lastInputType.Add(actionName, null);
+            lastInputType[actionName] = new(GetHoldTypeButtonByAction(action), Time.time, action.InputUsed);
         }
     }
 
@@ -142,10 +123,7 @@ public class ButtonInputHandler : MonoBehaviour
         }
         else if (action is SkillAction)
         {
-            if (GetSelectedSkillButton() != null)
-            {
-                return GetSelectedSkillButton();
-            }
+            return GetSelectedSkillButton();
         }
         return null;
     }
@@ -154,10 +132,10 @@ public class ButtonInputHandler : MonoBehaviour
     {
         foreach (var item in InputProvider.KeyboardBindings[inputProvider.PlayerSide])
         {
-            var go = GetHoldTypeButtonByAction(item.Value);
+            GameObject go = GetHoldTypeButtonByAction(item.Value);
             if (go != null)
             {
-                var text = go.GetComponentInChildren<TMP_Text>();
+                TMP_Text text = go.GetComponentInChildren<TMP_Text>();
                 text.SetText($"{go.name}\n({item.Key})");
             }
         }
@@ -165,76 +143,35 @@ public class ButtonInputHandler : MonoBehaviour
 
     private void UpdateDashCooldown()
     {
-        bool IsCooldown;
-        if (inputProvider.PlayerSide == PlayerSide.Left)
-        {
-            IsCooldown = BattleManager.Instance.Battle.LeftPlayer.IsDashOnCooldown;
-        }
-        else
-        {
-            IsCooldown = BattleManager.Instance.Battle.RightPlayer.IsDashOnCooldown;
-        }
+        Battle battle = BattleManager.Instance.Battle;
+        bool IsCooldown = inputProvider.PlayerSide == PlayerSide.Left ? battle.LeftPlayer.IsDashOnCooldown : battle.RightPlayer.IsDashOnCooldown;
 
-        if (IsCooldown)
-        {
-            Dash.GetComponentInChildren<Button>().interactable = false;
-        }
-        else
-        {
-            Dash.GetComponentInChildren<Button>().interactable = true;
-        }
+        Dash.GetComponentInChildren<Button>().interactable = !IsCooldown;
     }
 
     private void UpdateSkillCooldown()
     {
-        if (GetSelectedSkillButton() == null) return;
+        GameObject selectedSkillButton = GetSelectedSkillButton();
+        if (selectedSkillButton == null) 
+            return;
 
-        SumoController player;
-        if (inputProvider.PlayerSide == PlayerSide.Left)
-        {
-            player = BattleManager.Instance.Battle.LeftPlayer;
-        }
-        else
-        {
-            player = BattleManager.Instance.Battle.RightPlayer;
-        }
-
-        if (player.Skill.IsSkillCooldown)
-        {
-            GetSelectedSkillButton().GetComponentInChildren<Button>().interactable = false;
-        }
-        else
-        {
-            GetSelectedSkillButton().GetComponentInChildren<Button>().interactable = true;
-        }
+        Battle battle = BattleManager.Instance.Battle;
+        SumoController player = inputProvider.PlayerSide == PlayerSide.Left ? battle.LeftPlayer : battle.RightPlayer;
+        
+        selectedSkillButton.GetComponentInChildren<Button>().interactable = !player.Skill.IsSkillCooldown;
     }
 
     public void ResetCooldown()
     {
         // Special Skill
-        GameObject selectedSpecialSkillObj;
-        if (Stone.gameObject.activeSelf)
-        {
-            selectedSpecialSkillObj = Stone.gameObject;
-        }
-        else
-        {
-            selectedSpecialSkillObj = Boost.gameObject;
-        }
+        GameObject selectedSpecialSkillObj = Stone.gameObject.activeSelf ? Stone.gameObject : Boost.gameObject;
 
         // GameObject maybe null when the engine detached
-        if (selectedSpecialSkillObj == null) return;
+        if (selectedSpecialSkillObj == null) 
+            return;
 
-        SumoController player;
-        if (inputProvider.PlayerSide == PlayerSide.Left)
-        {
-            player = BattleManager.Instance.Battle.LeftPlayer;
-        }
-        else
-        {
-            player = BattleManager.Instance.Battle.RightPlayer;
-        }
-
+        Battle battle = BattleManager.Instance.Battle;
+        SumoController player = inputProvider.PlayerSide == PlayerSide.Left ? battle.LeftPlayer : battle.RightPlayer;
         selectedSpecialSkillObj.GetComponentInChildren<Button>().interactable = true;
 
         // Dash
@@ -247,71 +184,45 @@ public class ButtonInputHandler : MonoBehaviour
     }
 
     // Prevent multiple input
-    void UpdateHoldTypeButtonState(GameObject button, bool active, string actionName, InputType? inputType)
+    void UpdateHoldTypeButtonState(GameObject buttonObject, bool active, string actionName, InputType? inputType)
     {
-        if (button == null) return;
+        if (buttonObject == null)
+            return;
+
+        Button button = buttonObject.GetComponent<Button>();
+
         if (inputType == null)
         {
-            button.GetComponent<Button>().interactable = true;
+            button.interactable = true;
             inputProvider.StateKeyboardAction[actionName] = true;
             return;
         }
 
-        if (active)
-        {
-            if (inputType == InputType.Keyboard)
-            {
-                button.GetComponent<Button>().interactable = false;
-            }
-            else if (inputType == InputType.UI)
-            {
-                inputProvider.StateKeyboardAction[actionName] = false;
-            }
-            else
-            {
-                inputProvider.StateKeyboardAction[actionName] = false;
-                button.GetComponent<Button>().interactable = false;
-            }
-        }
+        bool targetState = !active;
+
+        if (inputType == InputType.Keyboard)
+            button.interactable = targetState;
+        else if (inputType == InputType.UI)
+            inputProvider.StateKeyboardAction[actionName] = targetState;
         else
         {
-            if (inputType == InputType.Keyboard)
-            {
-                button.GetComponent<Button>().interactable = true;
-            }
-            else if (inputType == InputType.UI)
-            {
-                inputProvider.StateKeyboardAction[actionName] = true;
-            }
-            else
-            {
-                inputProvider.StateKeyboardAction[actionName] = true;
-                button.GetComponent<Button>().interactable = true;
-            }
+            inputProvider.StateKeyboardAction[actionName] = targetState;
+            button.interactable = targetState;
         }
-
     }
 
-    // Set active to button about what's skill can be used for player
     public GameObject SetSkillAvailability(SkillType type)
     {
-        if (type == SkillType.Boost)
-        {
-            Boost.gameObject.SetActive(true);
-
-            Stone.gameObject.SetActive(false);
-            return Boost.gameObject;
-        }
-        else
-        {
-            Stone.gameObject.SetActive(true);
-
-            // In the debug mode, the Stone is actually in the center of the Button Area,
-            // we need to swap Stone position with Boost in order to have a neat position
+        GameObject activatedObject = type == SkillType.Boost ? Boost.gameObject : Stone.gameObject;
+        GameObject deactivatedObject = type == SkillType.Boost ? Stone.gameObject : Boost.gameObject;
+        
+        if (activatedObject.activeSelf == true && type == SkillType.Stone)
             Stone.transform.position = Boost.gameObject.transform.position;
 
-            Boost.gameObject.SetActive(false);
-            return Stone.gameObject;
-        }
+        activatedObject.SetActive(true);
+        deactivatedObject.SetActive(false);
+
+        return activatedObject;
     }
+    #endregion
 }
