@@ -5,6 +5,7 @@ using CoreSumo;
 using Unity.VisualScripting;
 using UnityEngine;
 
+#region Battle enums
 public enum BattleState
 {
     PreBatle_Preparing,     // Initial state in scene, used only once. 
@@ -29,13 +30,14 @@ public enum BattleWinner
     Right,
     Draw,
 }
+#endregion
 
 public class BattleManager : MonoBehaviour
 {
-    // Singleton 
     public static BattleManager Instance { get; private set; }
 
-    // Configuration 
+    #region Battle Configuration properties
+    [Header("Battle Configuration")]
     public InputType BattleInputType = InputType.UI;
     public RoundSystem RoundSystem = RoundSystem.BestOf3;
     public float BattleTime = 60f;
@@ -46,8 +48,9 @@ public class BattleManager : MonoBehaviour
     public GameObject RightPlayerObject;
 
     public GameObject Arena;
+    #endregion
 
-    // State & Internal 
+    #region Runtime (readonly) properties 
     public BattleState CurrentState = BattleState.PreBatle_Preparing;
     public float ElapsedTime = 0;
     public float TimeLeft => BattleTime - ElapsedTime;
@@ -55,14 +58,16 @@ public class BattleManager : MonoBehaviour
     public BotPlayer Bot;
     public Battle Battle;
     public Round CurrentRound = null;
-
-    // Events 
+    #endregion
+    
+    #region Events properties 
     public event Action<float> OnCountdownChanged;
     public event Action<Battle> OnBattleChanged;
     private Coroutine battleTimerCoroutine;
     private Coroutine countdownCoroutine;
+    #endregion
 
-    #region Unity
+    #region Unity methods 
     private void Awake()
     {
         if (Instance != null)
@@ -71,7 +76,6 @@ public class BattleManager : MonoBehaviour
             return;
         }
         Instance = this;
-
     }
 
     void OnEnable()
@@ -104,8 +108,7 @@ public class BattleManager : MonoBehaviour
 
     #endregion
 
-    #region API
-
+    #region API methods
     public void SetLeftDefaultSkill(int type)
     {
         Battle.LeftPlayer.Skill.Type = type == 0 ? SkillType.Boost : SkillType.Stone;
@@ -116,7 +119,6 @@ public class BattleManager : MonoBehaviour
         Battle.RightPlayer.Skill.Type = type == 0 ? SkillType.Boost : SkillType.Stone;
     }
 
-    // Start a battle. Can also be called from UI.
     public void Battle_Start()
     {
         if (CurrentState == BattleState.Battle_Preparing ||
@@ -134,42 +136,31 @@ public class BattleManager : MonoBehaviour
     }
     #endregion
 
-    #region Core Logic 
+    #region Core Logic methods 
     private void InitializePlayer(SumoController controller)
     {
-        // Detect the position of position.x < 0: meaning LeftSide (0), otherwise it's RightSide (1)
         PlayerSide side = controller.transform.position.x < 0 ? PlayerSide.Left : PlayerSide.Right;
-
-        // Initialize player components
         controller.Initialize(side, controller.transform);
         controller.OnPlayerOutOfArena += OnPlayerOutOfArena;
 
-        // Check whether player left or right, assign to Battle data
         if (controller.Side == PlayerSide.Left)
-        {
             Battle.LeftPlayer = controller;
-
-        }
         else
-        {
             Battle.RightPlayer = controller;
-        }
 
         LogManager.LogBattleState(
                 actor: LogActorType.System,
                 data: new Dictionary<string, object>()
                 {
                         {"type", "Player"},
-                        {"side", controller.Side},
-                        {"skill", controller.Skill.Type.ToString()},
+                        {"outPlayerSide", controller.Side},
+                        {"skill", controller.Skill.Type},
                 });
-
         Debug.Log($"Player registered: {side}");
     }
 
     IEnumerator AllPlayersReady()
     {
-        // Delay state transition reaction
         yield return new WaitForSeconds(0.5f);
         TransitionToState(BattleState.Battle_Countdown);
     }
@@ -182,18 +173,17 @@ public class BattleManager : MonoBehaviour
 
     private IEnumerator StartCountdown()
     {
-        Debug.Log("Battle starting in...");
+        //Debug.Log("Battle starting in...");
         yield return new WaitForSeconds(1f);
 
         float timer = CountdownTime;
         while (timer > 0 && CurrentState == BattleState.Battle_Countdown)
         {
-            Debug.Log(Mathf.Ceil(timer));
+            //Debug.Log(Mathf.Ceil(timer));
             OnCountdownChanged?.Invoke(timer);
             yield return new WaitForSeconds(1f);
             timer -= 1f;
         }
-
         TransitionToState(BattleState.Battle_Ongoing);
     }
 
@@ -206,14 +196,12 @@ public class BattleManager : MonoBehaviour
             timer -= 1f;
         }
 
-        // Draw
         LogManager.SetRoundWinner("Draw");
         CurrentRound.RoundWinner = null;
         Battle.Winners[CurrentRound.RoundNumber] = null;
         LogManager.CleanIncompletePlayerAction();
         TransitionToState(BattleState.Battle_End);
     }
-
 
     private IEnumerator ResetBattle()
     {
@@ -224,23 +212,13 @@ public class BattleManager : MonoBehaviour
         yield return new WaitForSeconds(1f);
     }
 
-    private void OnPlayerOutOfArena(PlayerSide side)
+    private void OnPlayerOutOfArena(PlayerSide outPlayerSide)
     {
-        if (CurrentState != BattleState.Battle_Ongoing) return;
-
+        if (CurrentState != BattleState.Battle_Ongoing) 
+            return;
         Debug.Log("OnPlayerOutOfArena");
 
-        SumoController winner;
-
-        // Find player who's winner
-        if (side == PlayerSide.Left)
-        {
-            winner = Battle.RightPlayer;
-        }
-        else
-        {
-            winner = Battle.LeftPlayer;
-        }
+        SumoController winner = outPlayerSide == PlayerSide.Left ? Battle.RightPlayer : Battle.LeftPlayer;
 
         if (winner == null)
         {
@@ -255,19 +233,18 @@ public class BattleManager : MonoBehaviour
 
     private void TransitionToState(BattleState newState)
     {
-
         Debug.Log($"State Transition: {CurrentState} → {newState}");
         CurrentState = newState;
 
         if (CurrentRound.RoundNumber == 0)
         {
             LogManager.LogBattleState(
-                   actor: LogActorType.System,
-                   data: new Dictionary<string, object>()
-                   {
-                            {"type", "battle_state"},
-                            {"state", CurrentState.ToString()},
-                   });
+                actor: LogActorType.System,
+                data: new Dictionary<string, object>()
+                {
+                    {"type", "battle_state"},
+                    {"state", CurrentState.ToString()},
+                });
         }
         else
         {
@@ -276,8 +253,8 @@ public class BattleManager : MonoBehaviour
                 includeInCurrentRound: true,
                 data: new Dictionary<string, object>()
                 {
-                        {"type", "battle_state"},
-                        { "battle_state", CurrentState.ToString()}
+                    {"type", "battle_state"},
+                    { "battle_state", CurrentState.ToString()}
                 });
         }
 
@@ -304,7 +281,7 @@ public class BattleManager : MonoBehaviour
             // Battle
             case BattleState.Battle_Preparing:
                 LogManager.UpdateMetadata();
-                LogManager.StartNewGame();
+                LogManager.StartGameLog();
 
                 Battle.ClearWinner();
                 CurrentRound = new Round(1, Mathf.CeilToInt(BattleTime));
@@ -312,18 +289,18 @@ public class BattleManager : MonoBehaviour
 
                 Battle.LeftPlayer.Reset();
                 Battle.RightPlayer.Reset();
-                InputManager.Instance.PrepareInput(Battle.LeftPlayer);
-                InputManager.Instance.PrepareInput(Battle.RightPlayer);
+                InputManager.Instance.InitializeInput(Battle.LeftPlayer);
+                InputManager.Instance.InitializeInput(Battle.RightPlayer);
 
                 LogManager.SetPlayerAction();
                 StartCoroutine(AllPlayersReady());
                 break;
             case BattleState.Battle_Countdown:
                 ElapsedTime = 0;
+
                 if (!gameObject.IsDestroyed() && countdownCoroutine != null)
-                {
                     StopCoroutine(countdownCoroutine);
-                }
+
                 countdownCoroutine = StartCoroutine(StartCountdown());
                 break;
             case BattleState.Battle_Ongoing:
@@ -336,10 +313,9 @@ public class BattleManager : MonoBehaviour
                 break;
             case BattleState.Battle_End:
                 CurrentRound.FinishTime = ElapsedTime;
+
                 if (!gameObject.IsDestroyed())
-                {
                     StopCoroutine(battleTimerCoroutine);
-                }
 
                 Battle.LeftPlayer.SetSkillEnabled(false);
                 Battle.LeftPlayer.SetMovementEnabled(false);
@@ -361,24 +337,20 @@ public class BattleManager : MonoBehaviour
                     LogManager.SortAndSave();
 
                     int previousRound = Battle.CurrentRound.RoundNumber;
-                    // Create n+1 round
                     CurrentRound = new Round(previousRound + 1, Mathf.CeilToInt(BattleTime));
                     LogManager.StartRound(CurrentRound.RoundNumber);
 
                     Debug.Log($"CurrentRound.RoundNumber {CurrentRound.RoundNumber}");
-                    //Start a round again
+
                     TransitionToState(BattleState.Battle_Countdown);
                 }
                 break;
-            // Battle
-
 
             // Post Battle
             case BattleState.PostBattle_ShowResult:
                 LogManager.SortAndSave();
                 Deinitialize();
                 break;
-                // Post Battle
         }
 
         UpdateBattleData();
@@ -387,7 +359,6 @@ public class BattleManager : MonoBehaviour
     // Call this when we need to trigger OnBattleChanged immediately
     private void UpdateBattleData()
     {
-
         if (CurrentRound != null)
         {
             Battle.CurrentRound = CurrentRound;
@@ -400,8 +371,7 @@ public class BattleManager : MonoBehaviour
     #endregion
 }
 
-
-
+#region Battle and Round class
 [Serializable]
 public record Battle
 {
@@ -434,13 +404,9 @@ public record Battle
     public void SetRoundWinner(SumoController winner)
     {
         if (winner.Side == PlayerSide.Left)
-        {
             LeftWinCount += 1;
-        }
         else
-        {
             RightWinCount += 1;
-        }
 
         LogManager.SetRoundWinner(winner.Side.ToString());
 
@@ -448,15 +414,10 @@ public record Battle
         Winners[CurrentRound.RoundNumber] = winner;
     }
 
-    /// <summary>
-    /// It can return null when the battle is still on going
-    /// </summary>
-    /// <returns></returns>
     public BattleWinner? GetBattleWinner()
     {
         Debug.Log($"[Battle][GetBattleWinner] leftWinCount: {LeftWinCount}, rightWinCount: {RightWinCount}");
 
-        // to decide who has more different score based on BestOfN
         int winningTreshold = 0;
 
         switch (RoundSystem)
@@ -476,35 +437,20 @@ public record Battle
         if (scoreDifference >= winningTreshold)
         {
             if (LeftWinCount > RightWinCount)
-            {
-                Debug.Log($"[Battle][GetBattleWinner] Left!");
                 return BattleWinner.Left;
-            }
             else
-            {
-                Debug.Log($"[Battle][GetBattleWinner] Right!");
                 return BattleWinner.Right;
-            }
         }
 
         // Check whether current round reaches max round
         if (CurrentRound.RoundNumber == (int)RoundSystem)
         {
             if (LeftWinCount == RightWinCount)
-            {
-                Debug.Log($"[Battle][GetBattleWinner] Draw!");
                 return BattleWinner.Draw;
-            }
             else if (LeftWinCount > RightWinCount)
-            {
-                Debug.Log($"[Battle][GetBattleWinner] Left!");
                 return BattleWinner.Left;
-            }
             else
-            {
-                Debug.Log($"[Battle][GetBattleWinner] Right!");
                 return BattleWinner.Right;
-            }
         }
 
         return null;
@@ -532,3 +478,4 @@ public class Round
         FinishTime = time;
     }
 }
+#endregion

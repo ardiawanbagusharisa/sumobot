@@ -21,6 +21,7 @@ namespace CoreSumo
         public float DashSpeed = 5.0f;
         public float DashDuration = 0.5f;
         public float DashCooldown = 1.0f;
+        public SumoSkill Skill;
         #endregion
 
         #region Physics Stats Properties
@@ -43,7 +44,6 @@ namespace CoreSumo
         public PlayerSide Side;
         public SpriteRenderer directionIndicator;
         public InputProvider InputProvider;
-        public SumoSkill Skill;
         #endregion
 
         #region Runtime (readonly) Properties

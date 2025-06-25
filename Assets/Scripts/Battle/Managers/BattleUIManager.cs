@@ -1,3 +1,4 @@
+using CoreSumo;
 using System.Collections.Generic;
 using System.Linq;
 using TMPro;
@@ -10,33 +11,37 @@ namespace BattleLoop
     {
         public static BattleUIManager Instance { get; private set; }
 
-        public List<GameObject> BattleStatePanel = new List<GameObject>();
+        #region UI Elements properties
+        [Header("Main Panels")]
+        public List<GameObject> BattlePanels = new List<GameObject>();
 
-        // Pre-battle
-        public TMP_Dropdown LeftDefaultSpecialSkill;
-        public TMP_Dropdown RightDefaultSpecialSkill;
+        [Header("Pre-battle UI")]
+        public TMP_Dropdown LeftSkill;
+        public TMP_Dropdown RightSkill;
 
-        // Battle
-        public TMP_Text IndicatorBattle;
-        public TMP_Text IndicatorCountdown;
-        public TMP_Text StageBestOf;
-        public TMP_Text StageRoundNumber;
-        public TMP_Text StageBattleTime;
-        public TMP_Text LeftOngoingScore;
-        public TMP_Text RightOngoingScore;
+        [Header("Battle UI")]
+        public TMP_Text BattleState;
+        public TMP_Text Countdown;
+        public TMP_Text RoundSystem;
+        public TMP_Text Round;
+        public TMP_Text Timer;
+
+        [Header("Battle UI - Left Player")]
+        public TMP_Text LeftScore;
         public TMP_Text LeftFinalScore;
+        public Image LeftDashCooldown;
+        public Image LeftSkillCooldown;
+        public TMP_Text LeftSkillName;
+
+        [Header("Battle UI - Right Player")]
+        public TMP_Text RightScore;
         public TMP_Text RightFinalScore;
-        public Image LeftIndicatorDashCooldown;
-        public Image LeftIndicatorSkillCooldown;
-        public TMP_Text LeftIndicatorSkillName;
-        public Image RightIndicatorDashCooldown;
-        public Image RightIndicatorSkillCooldown;
-        public TMP_Text RightIndicatorSkillName;
+        public Image RightDashCooldown;
+        public Image RightSkillCooldown; 
+        public TMP_Text RightSkillName;
+        #endregion
 
-
-        // private List<Image> leftScoreDots = new List<Image>();
-        // private List<Image> rightScoreDots = new List<Image>();
-
+        #region Unity methods
         private void Awake()
         {
             if (Instance != null)
@@ -45,18 +50,11 @@ namespace BattleLoop
                 return;
             }
             Instance = this;
-
         }
 
         void OnEnable()
         {
             BattleManager.Instance.OnBattleChanged += OnBattleChanged;
-
-            // leftScoreDots = LeftScore.GetComponentsInChildren<Image>().Where(img => img.gameObject != LeftScore).ToList();
-            // // Reverse the left player scores because we want the indicators start from right
-            // leftScoreDots.Reverse();
-
-            // rightScoreDots = RightScore.GetComponentsInChildren<Image>().Where(img => img.gameObject != RightScore).ToList();
         }
 
         void OnDisable()
@@ -66,86 +64,78 @@ namespace BattleLoop
 
         void FixedUpdate()
         {
-            if (BattleManager.Instance.CurrentState == BattleState.Battle_Ongoing ||
-            BattleManager.Instance.CurrentState == BattleState.Battle_End ||
-            BattleManager.Instance.CurrentState == BattleState.Battle_Reset)
+            if (BattleManager.Instance.CurrentState == global::BattleState.Battle_Ongoing ||
+            BattleManager.Instance.CurrentState == global::BattleState.Battle_End ||
+            BattleManager.Instance.CurrentState == global::BattleState.Battle_Reset)
             {
-                var leftPlayer = BattleManager.Instance.Battle.LeftPlayer;
-                LeftIndicatorSkillCooldown.GetComponent<Image>().fillAmount = leftPlayer.Skill.CooldownAmountNormalized;
-                LeftIndicatorDashCooldown.GetComponent<Image>().fillAmount = leftPlayer.DashCooldownNormalized;
+                SumoController leftPlayer = BattleManager.Instance.Battle.LeftPlayer;
+                LeftSkillCooldown.GetComponent<Image>().fillAmount = leftPlayer.Skill.CooldownAmountNormalized;
+                LeftDashCooldown.GetComponent<Image>().fillAmount = leftPlayer.DashCooldownNormalized;
 
-                var rightPlayer = BattleManager.Instance.Battle.RightPlayer;
-                RightIndicatorSkillCooldown.GetComponent<Image>().fillAmount = rightPlayer.Skill.CooldownAmountNormalized;
-                RightIndicatorDashCooldown.GetComponent<Image>().fillAmount = rightPlayer.DashCooldownNormalized;
+                SumoController rightPlayer = BattleManager.Instance.Battle.RightPlayer;
+                RightSkillCooldown.GetComponent<Image>().fillAmount = rightPlayer.Skill.CooldownAmountNormalized;
+                RightDashCooldown.GetComponent<Image>().fillAmount = rightPlayer.DashCooldownNormalized;
 
-                StageBattleTime.SetText(Mathf.CeilToInt(BattleManager.Instance.TimeLeft).ToString());
+                Timer.SetText(Mathf.CeilToInt(BattleManager.Instance.TimeLeft).ToString());
             }
             else
             {
-                RightIndicatorSkillCooldown.GetComponent<Image>().fillAmount = 0;
-                RightIndicatorDashCooldown.GetComponent<Image>().fillAmount = 0;
-                LeftIndicatorSkillCooldown.GetComponent<Image>().fillAmount = 0;
-                LeftIndicatorDashCooldown.GetComponent<Image>().fillAmount = 0;
+                RightSkillCooldown.GetComponent<Image>().fillAmount = 0;
+                RightDashCooldown.GetComponent<Image>().fillAmount = 0;
+                LeftSkillCooldown.GetComponent<Image>().fillAmount = 0;
+                LeftDashCooldown.GetComponent<Image>().fillAmount = 0;
 
-                StageBattleTime.SetText(BattleManager.Instance.BattleTime.ToString());
+                Timer.SetText(BattleManager.Instance.BattleTime.ToString());
             }
         }
+        #endregion
 
+        #region Battle changes
         private void OnBattleChanged(Battle battle)
         {
-            StageBestOf.SetText($"Best of {(int)battle.RoundSystem}");
-            StageRoundNumber.SetText($"Round {battle.CurrentRound.RoundNumber}");
+            RoundSystem.SetText($"Best of {(int)battle.RoundSystem}");
+            Round.SetText($"Round {battle.CurrentRound.RoundNumber}");
 
             Round round = battle.CurrentRound;
             BattleState state = BattleManager.Instance.CurrentState;
-            IndicatorBattle.SetText(state.ToString());
+            BattleState.SetText(state.ToString());
 
             switch (state)
             {
-                case BattleState.PreBatle_Preparing:
-                    BattleStatePanel.Find((o) => o.CompareTag("BattleState/Pre")).SetActive(true);
-
-                    BattleStatePanel.Find((o) => o.CompareTag("BattleState/Ongoing")).SetActive(false);
-                    BattleStatePanel.Find((o) => o.CompareTag("BattleState/Post")).SetActive(false);
-
-                    LeftDefaultSpecialSkill.value = (int)BattleManager.Instance.Battle.LeftPlayer.Skill.Type;
-                    RightDefaultSpecialSkill.value = (int)BattleManager.Instance.Battle.LeftPlayer.Skill.Type;
+                case global::BattleState.PreBatle_Preparing:
+                    BattlePanels.Find((o) => o.CompareTag("BattleState/Pre")).SetActive(true);
+                    BattlePanels.Find((o) => o.CompareTag("BattleState/Ongoing")).SetActive(false);
+                    BattlePanels.Find((o) => o.CompareTag("BattleState/Post")).SetActive(false);
+                    LeftSkill.value = (int)BattleManager.Instance.Battle.LeftPlayer.Skill.Type;
+                    RightSkill.value = (int)BattleManager.Instance.Battle.LeftPlayer.Skill.Type;
                     LeftFinalScore.SetText("");
                     RightFinalScore.SetText("");
                     break;
-
-                case BattleState.Battle_Preparing:
-                    BattleStatePanel.Find((o) => o.CompareTag("BattleState/Ongoing")).SetActive(true);
+                case global::BattleState.Battle_Preparing:
+                    BattlePanels.Find((o) => o.CompareTag("BattleState/Ongoing")).SetActive(true);
                     ClearScore();
-                    IndicatorCountdown.SetText("");
-                    StageBestOf.SetText("");
-                    StageRoundNumber.SetText("");
-                    BattleStatePanel.Find((o) => o.CompareTag("BattleState/Pre")).SetActive(false);
-                    BattleStatePanel.Find((o) => o.CompareTag("BattleState/Post")).SetActive(false);
-
-                    // ClearScore();
+                    Countdown.SetText("");
+                    RoundSystem.SetText("");
+                    Round.SetText("");
+                    BattlePanels.Find((o) => o.CompareTag("BattleState/Pre")).SetActive(false);
+                    BattlePanels.Find((o) => o.CompareTag("BattleState/Post")).SetActive(false);
                     break;
-                case BattleState.Battle_Countdown:
-                    LeftIndicatorSkillName.SetText(BattleManager.Instance.Battle.LeftPlayer.Skill.Type.ToString());
-                    RightIndicatorSkillName.SetText(BattleManager.Instance.Battle.RightPlayer.Skill.Type.ToString());
+                case global::BattleState.Battle_Countdown:
+                    LeftSkillName.SetText(BattleManager.Instance.Battle.LeftPlayer.Skill.Type.ToString());
+                    RightSkillName.SetText(BattleManager.Instance.Battle.RightPlayer.Skill.Type.ToString());
                     BattleManager.Instance.OnCountdownChanged += OnCountdownChanged;
                     break;
-                case BattleState.Battle_Ongoing:
-                    IndicatorCountdown.SetText("");
-
+                case global::BattleState.Battle_Ongoing:
+                    Countdown.SetText("");
                     BattleManager.Instance.OnCountdownChanged -= OnCountdownChanged;
                     break;
-                case BattleState.Battle_End:
-                    // Reset Cooldown Indicator
+                case global::BattleState.Battle_End:
                     InputManager.Instance.ResetCooldownButton();
                     break;
-
-                case BattleState.PostBattle_ShowResult:
-                    BattleStatePanel.Find((o) => o.CompareTag("BattleState/Post")).SetActive(true);
-
-                    BattleStatePanel.Find((o) => o.CompareTag("BattleState/Ongoing")).SetActive(false);
-                    BattleStatePanel.Find((o) => o.CompareTag("BattleState/Pre")).SetActive(false);
-
+                case global::BattleState.PostBattle_ShowResult:
+                    BattlePanels.Find((o) => o.CompareTag("BattleState/Post")).SetActive(true);
+                    BattlePanels.Find((o) => o.CompareTag("BattleState/Ongoing")).SetActive(false);
+                    BattlePanels.Find((o) => o.CompareTag("BattleState/Pre")).SetActive(false);
                     LeftFinalScore.SetText(battle.LeftWinCount.ToString());
                     RightFinalScore.SetText(battle.RightWinCount.ToString());
                     break;
@@ -155,7 +145,7 @@ namespace BattleLoop
 
         private void OnCountdownChanged(float timer)
         {
-            IndicatorCountdown.SetText(timer.ToString());
+            Countdown.SetText(timer.ToString());
         }
 
         private void UpdateScore(Battle battleInfo)
@@ -166,48 +156,16 @@ namespace BattleLoop
                 return;
             }
 
-            LeftOngoingScore.SetText(battleInfo.LeftWinCount.ToString());
-            RightOngoingScore.SetText(battleInfo.RightWinCount.ToString());
-
-            // for (int i = 1; i < leftScoreDots.Count; i++)
-            // {
-            //     if (i <= battleInfo.LeftWinCount)
-            //     {
-            //         if (!leftScoreDots[i - 1].IsDestroyed())
-            //             leftScoreDots[i - 1].color = Color.green;
-            //     }
-            //     if (i <= battleInfo.RightWinCount)
-            //     {
-            //         if (!leftScoreDots[i - 1].IsDestroyed())
-            //             rightScoreDots[i - 1].color = Color.green;
-            //     }
-            // }
+            LeftScore.SetText(battleInfo.LeftWinCount.ToString());
+            RightScore.SetText(battleInfo.RightWinCount.ToString());
         }
 
         private void ClearScore()
         {
-            LeftOngoingScore.SetText("0");
-            RightOngoingScore.SetText("0");
-
-            // for (int i = 0; i < leftScoreDots.Count - 1; i++)
-            // {
-            //     leftScoreDots[i].color = Color.white;
-            //     rightScoreDots[i].color = Color.white;
-            // }
+            LeftScore.SetText("0");
+            RightScore.SetText("0");
         }
-
-    }
-}
-
-class FilledScore
-{
-    public Image ScoreImage;
-    public bool IsFilled;
-
-    public FilledScore(Image scoreImage, bool isFilled)
-    {
-        ScoreImage = scoreImage;
-        IsFilled = isFilled;
+        #endregion
     }
 }
 
