@@ -4,6 +4,8 @@ using System.Linq;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using System.Collections;
+using UnityEngine.SceneManagement;
 
 namespace BattleLoop
 {
@@ -20,7 +22,8 @@ namespace BattleLoop
         public TMP_Dropdown RightSkill;
 
         [Header("Battle UI")]
-        public TMP_Text BattleState;
+        public TMP_Text BattleStateText;
+
         public TMP_Text Countdown;
         public TMP_Text RoundSystem;
         public TMP_Text Round;
@@ -37,7 +40,7 @@ namespace BattleLoop
         public TMP_Text RightScore;
         public TMP_Text RightFinalScore;
         public Image RightDashCooldown;
-        public Image RightSkillCooldown; 
+        public Image RightSkillCooldown;
         public TMP_Text RightSkillName;
         #endregion
 
@@ -52,40 +55,67 @@ namespace BattleLoop
             Instance = this;
         }
 
-        void OnEnable()
+        private void OnEnable()
         {
-            BattleManager.Instance.OnBattleChanged += OnBattleChanged;
+            if (BattleManager.Instance != null)
+                BattleManager.Instance.OnBattleChanged += OnBattleChanged;
         }
 
-        void OnDisable()
+        private void OnDisable()
         {
-            BattleManager.Instance.OnBattleChanged -= OnBattleChanged;
+            if (BattleManager.Instance != null)
+                BattleManager.Instance.OnBattleChanged -= OnBattleChanged;
         }
 
-        void FixedUpdate()
+        private void FixedUpdate()
         {
-            if (BattleManager.Instance.CurrentState == global::BattleState.Battle_Ongoing ||
-            BattleManager.Instance.CurrentState == global::BattleState.Battle_End ||
-            BattleManager.Instance.CurrentState == global::BattleState.Battle_Reset)
+            if (BattleManager.Instance == null) return;
+
+            var state = BattleManager.Instance.CurrentState;
+            bool isBattleState = state == BattleState.Battle_Ongoing ||
+                                 state == BattleState.Battle_End ||
+                                 state == BattleState.Battle_Reset;
+
+            int timeLeft = Mathf.CeilToInt(BattleManager.Instance.TimeLeft);
+            float battleTime = BattleManager.Instance.BattleTime;
+
+            if (isBattleState)
             {
-                SumoController leftPlayer = BattleManager.Instance.Battle.LeftPlayer;
-                LeftSkillCooldown.GetComponent<Image>().fillAmount = leftPlayer.Skill.CooldownAmountNormalized;
-                LeftDashCooldown.GetComponent<Image>().fillAmount = leftPlayer.DashCooldownNormalized;
+                if (Timer != null)
+                    Timer.SetText(timeLeft.ToString());
 
-                SumoController rightPlayer = BattleManager.Instance.Battle.RightPlayer;
-                RightSkillCooldown.GetComponent<Image>().fillAmount = rightPlayer.Skill.CooldownAmountNormalized;
-                RightDashCooldown.GetComponent<Image>().fillAmount = rightPlayer.DashCooldownNormalized;
+                var leftPlayer = BattleManager.Instance.Battle.LeftPlayer;
+                if (leftPlayer != null)
+                {
+                    if (LeftSkillCooldown != null)
+                        LeftSkillCooldown.fillAmount = leftPlayer.Skill.CooldownAmountNormalized;
+                    if (LeftDashCooldown != null)
+                        LeftDashCooldown.fillAmount = leftPlayer.DashCooldownNormalized;
+                }
 
-                Timer.SetText(Mathf.CeilToInt(BattleManager.Instance.TimeLeft).ToString());
+                var rightPlayer = BattleManager.Instance.Battle.RightPlayer;
+                if (rightPlayer != null)
+                {
+                    if (RightSkillCooldown != null)
+                        RightSkillCooldown.fillAmount = rightPlayer.Skill.CooldownAmountNormalized;
+                    if (RightDashCooldown != null)
+                        RightDashCooldown.fillAmount = rightPlayer.DashCooldownNormalized;
+                }
             }
             else
             {
-                RightSkillCooldown.GetComponent<Image>().fillAmount = 0;
-                RightDashCooldown.GetComponent<Image>().fillAmount = 0;
-                LeftSkillCooldown.GetComponent<Image>().fillAmount = 0;
-                LeftDashCooldown.GetComponent<Image>().fillAmount = 0;
+                if (RightSkillCooldown != null)
+                    RightSkillCooldown.fillAmount = 0;
+                if (RightDashCooldown != null)
+                    RightDashCooldown.fillAmount = 0;
+                if (LeftSkillCooldown != null)
+                    LeftSkillCooldown.fillAmount = 0;
+                if (LeftDashCooldown != null)
+                    LeftDashCooldown.fillAmount = 0;
 
-                Timer.SetText(BattleManager.Instance.BattleTime.ToString());
+                // Reset timer UI
+                if (Timer != null)
+                    Timer.SetText(battleTime.ToString());
             }
         }
         #endregion
@@ -98,7 +128,7 @@ namespace BattleLoop
 
             Round round = battle.CurrentRound;
             BattleState state = BattleManager.Instance.CurrentState;
-            BattleState.SetText(state.ToString());
+            BattleStateText.SetText(state.ToString());
 
             switch (state)
             {
@@ -164,6 +194,135 @@ namespace BattleLoop
         {
             LeftScore.SetText("0");
             RightScore.SetText("0");
+        }
+        #endregion
+
+        #region Guide Panel
+        // === Guide Panel Fields ===
+        public GameObject guidePanel;
+        public TMP_Text guideTitleText;
+        public TMP_Text guideContentText;
+        public Button gameplayTab;
+        public Button rulesTab;
+        public Button controlsTab;
+        public ScrollRect guideScrollRect;
+        public Color guideActiveTabColor = new Color(1f, 0.89f, 0.62f);
+        public Color guideInactiveTabColor = new Color(0.88f, 0.88f, 0.88f);
+        [TextArea(2, 6)] public string gameplayContent;
+        [TextArea(2, 6)] public string rulesContent;
+        [TextArea(2, 6)] public string controlsContent;
+
+        // === Guide Panel Methods ===
+        public void ShowGuidePanel()
+        {
+            if (guidePanel != null)
+            {
+                guidePanel.SetActive(true);
+                ShowGuideTab("Gameplay");
+            }
+        }
+
+        public void HideGuidePanel()
+        {
+            if (guidePanel != null)
+                guidePanel.SetActive(false);
+        }
+
+        public void ShowGuideTab(string tab)
+        {
+            switch (tab)
+            {
+                case "Gameplay":
+                    guideTitleText.text = "Gameplay";
+                    guideContentText.text = gameplayContent;
+                    SetGuideTabHighlight(gameplayTab, true);
+                    SetGuideTabHighlight(rulesTab, false);
+                    SetGuideTabHighlight(controlsTab, false);
+                    break;
+                case "Rules":
+                    guideTitleText.text = "Rules";
+                    guideContentText.text = rulesContent;
+                    SetGuideTabHighlight(gameplayTab, false);
+                    SetGuideTabHighlight(rulesTab, true);
+                    SetGuideTabHighlight(controlsTab, false);
+                    break;
+                case "Controls":
+                    guideTitleText.text = "Controls";
+                    guideContentText.text = controlsContent;
+                    SetGuideTabHighlight(gameplayTab, false);
+                    SetGuideTabHighlight(rulesTab, false);
+                    SetGuideTabHighlight(controlsTab, true);
+                    break;
+            }
+            if (guideScrollRect != null)
+                StartCoroutine(ResetGuideScroll());
+        }
+
+        private IEnumerator ResetGuideScroll()
+        {
+            yield return null;
+            guideScrollRect.verticalNormalizedPosition = 1f;
+        }
+
+        private void SetGuideTabHighlight(Button tab, bool active)
+        {
+            if (tab == null) return;
+            var colors = tab.colors;
+            colors.normalColor = active ? guideActiveTabColor : guideInactiveTabColor;
+            colors.selectedColor = active ? guideActiveTabColor : guideInactiveTabColor;
+            tab.colors = colors;
+
+            Image tabImg = tab.GetComponent<Image>();
+            if (tabImg != null)
+                tabImg.color = active ? guideActiveTabColor : guideInactiveTabColor;
+        }
+        #endregion
+
+        #region Pause Panel
+        public GameObject pausePanel;
+
+        // Methods for pause panel
+        public void ShowPause()
+        {
+            pausePanel.SetActive(true);
+            Time.timeScale = 0;
+        }
+
+        public void OnResume()
+        {
+            pausePanel.SetActive(false);
+            Time.timeScale = 1;
+        }
+
+        public void OnRestart()
+        {
+            Time.timeScale = 1;
+            SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+        }
+
+        public void OnBack()
+        {
+            Time.timeScale = 1;
+            SceneManager.LoadScene("campaignScene");
+        }
+
+
+        public void OnOut()
+        {
+            Time.timeScale = 1;
+            SceneManager.LoadScene("MainMenu");
+        }
+        #endregion
+
+        #region Initialization
+        private void Start()
+        {
+            // Setup guide tab listeners
+            if (gameplayTab != null) gameplayTab.onClick.AddListener(() => ShowGuideTab("Gameplay"));
+            if (rulesTab != null) rulesTab.onClick.AddListener(() => ShowGuideTab("Rules"));
+            if (controlsTab != null) controlsTab.onClick.AddListener(() => ShowGuideTab("Controls"));
+            if (guidePanel != null) guidePanel.SetActive(false);
+            if (pausePanel != null) pausePanel.SetActive(false);
         }
         #endregion
     }
