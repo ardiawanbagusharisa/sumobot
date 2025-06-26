@@ -26,29 +26,42 @@ public class ButtonInputHandler : MonoBehaviour
 
     void OnEnable()
     {
-        Accelerate.OnHold += inputProvider.OnAccelerateButtonPressed;
-        TurnLeft.OnHold += inputProvider.OnTurnLeftButtonPressed;
-        TurnRight.OnHold += inputProvider.OnTurnRightButtonPressed;
+        if (inputProvider != null)
+        {
+            if (Accelerate != null) Accelerate.OnHold += inputProvider.OnAccelerateButtonPressed;
+            if (TurnLeft != null) TurnLeft.OnHold += inputProvider.OnTurnLeftButtonPressed;
+            if (TurnRight != null) TurnRight.OnHold += inputProvider.OnTurnRightButtonPressed;
 
-        Dash.OnPress += inputProvider.OnDashButtonPressed;
-        Stone.OnPress += inputProvider.OnStoneSkillButtonPressed;
-        Boost.OnPress += inputProvider.OnBoostSkillButtonPressed;
-        
-        BattleManager.Instance.OnBattleChanged += OnBattleChanged;
+            if (Dash != null) Dash.OnPress += inputProvider.OnDashButtonPressed;
+            if (Stone != null) Stone.OnPress += inputProvider.OnStoneSkillButtonPressed;
+            if (Boost != null) Boost.OnPress += inputProvider.OnBoostSkillButtonPressed;
+        }
+
+        if (BattleManager.Instance != null)
+            BattleManager.Instance.OnBattleChanged += OnBattleChanged;
+
         SetUpButtonGuide();
     }
 
     void OnDisable()
     {
-        Accelerate.OnHold -= inputProvider.OnAccelerateButtonPressed;
-        TurnLeft.OnHold -= inputProvider.OnTurnLeftButtonPressed;
-        TurnRight.OnHold -= inputProvider.OnTurnRightButtonPressed;
+        if (inputProvider != null)
+        {
+            if (Accelerate != null) Accelerate.OnHold -= inputProvider.OnAccelerateButtonPressed;
+            if (TurnLeft != null) TurnLeft.OnHold -= inputProvider.OnTurnLeftButtonPressed;
+            if (TurnRight != null) TurnRight.OnHold -= inputProvider.OnTurnRightButtonPressed;
 
-        Dash.OnPress -= inputProvider.OnDashButtonPressed;
-        Stone.OnPress -= inputProvider.OnStoneSkillButtonPressed;
-        Boost.OnPress -= inputProvider.OnBoostSkillButtonPressed;
+            if (Dash != null) Dash.OnPress -= inputProvider.OnDashButtonPressed;
+            if (Stone != null) Stone.OnPress -= inputProvider.OnStoneSkillButtonPressed;
+            if (Boost != null) Boost.OnPress -= inputProvider.OnBoostSkillButtonPressed;
 
-        BattleManager.Instance.OnBattleChanged -= OnBattleChanged;
+            var me = inputProvider.Me();
+            if (me != null)
+                me.OnPlayerAction -= OnPlayerAction;
+        }
+
+        if (BattleManager.Instance != null)
+            BattleManager.Instance.OnBattleChanged -= OnBattleChanged;
     }
 
     public GameObject GetSelectedSkillButton()

@@ -28,6 +28,11 @@ public class DebouncedLogger
 
     public void Call(string name, string parameter = null, string reason = null)
     {
+        if (controller == null || controller.gameObject == null || !controller.gameObject.activeInHierarchy)
+            return;
+        if (BattleManager.Instance == null)
+            return;
+
         Name = name;
         if (parameter != null)
             Parameter = parameter;
@@ -46,9 +51,18 @@ public class DebouncedLogger
         lastCallTime = BattleManager.Instance.ElapsedTime;
     }
 
+
     public void Update()
     {
-        if (IsActive && BattleManager.Instance.ElapsedTime - lastCallTime >= debounceTime)
+        if (!IsActive) return;
+        if (controller == null || controller.gameObject == null || !controller.gameObject.activeInHierarchy)
+        {
+            IsActive = false;
+            return;
+        }
+        if (BattleManager.Instance == null) return;
+
+        if (BattleManager.Instance.ElapsedTime - lastCallTime >= debounceTime)
         {
             IsActive = false;
             SaveToLog(false);
@@ -61,8 +75,12 @@ public class DebouncedLogger
         SaveToLog(false);
     }
 
-    public void SaveToLog(bool start=false)
+    public void SaveToLog(bool start = false)
     {
+        // Cegah error kalau controller/battlemgr hilang
+        if (controller == null || controller.gameObject == null || !controller.gameObject.activeInHierarchy) return;
+        if (BattleManager.Instance == null) return;
+
         float duration = BattleManager.Instance.ElapsedTime - startTime;
         float endRotation = controller.transform.rotation.eulerAngles.z;
         Vector3 endPosition = controller.transform.position;
@@ -74,55 +92,55 @@ public class DebouncedLogger
             startedAt: startTime,
             data: new Dictionary<string, object>()
             {
-                        { "start", start.ToString() },
-                        { "type", Name },
-                        { "parameter", Parameter },
-                        { "reason", Reason },
-                        { "before", new Dictionary<string,object>()
-                            {
-                                { "angular_velocity", startAngularVelocity},
-                                { "linear_velocity", new Dictionary<string,float>()
-                                    {
-                                        {"x",startLinearVelocity.x},
-                                        {"y",startLinearVelocity.y},
-                                    }
-                                },
-                                { "position", new Dictionary<string,float>()
-                                    {
-                                        {"x",startPosition.x},
-                                        {"y",startPosition.y},
-                                    }
-                                },
-                                { "rotation", new Dictionary<string,float>()
-                                    {
-                                        {"z",startRotation},
-                                    }
-                                },
-                            }
-                        },
-                        { "after", new Dictionary<string,object>()
-                            {
-                                { "angular_velocity", endAngularVelocity},
-                                { "linear_velocity", new Dictionary<string,float>()
-                                    {
-                                        {"x",endLinearVelocity.x},
-                                        {"y",endLinearVelocity.y},
-                                    }
-                                },
-                                { "position", new Dictionary<string,float>()
-                                    {
-                                        {"x",endPosition.x},
-                                        {"y",endPosition.y},
-                                    }
-                                },
-                                { "rotation", new Dictionary<string,float>()
-                                    {
-                                        {"z",endRotation},
-                                    }
-                                },
-                            }
-                        },
-                        { "duration", duration },
+            { "start", start.ToString() },
+            { "type", Name },
+            { "parameter", Parameter },
+            { "reason", Reason },
+            { "before", new Dictionary<string,object>()
+                {
+                    { "angular_velocity", startAngularVelocity},
+                    { "linear_velocity", new Dictionary<string,float>()
+                        {
+                            {"x",startLinearVelocity.x},
+                            {"y",startLinearVelocity.y},
+                        }
+                    },
+                    { "position", new Dictionary<string,float>()
+                        {
+                            {"x",startPosition.x},
+                            {"y",startPosition.y},
+                        }
+                    },
+                    { "rotation", new Dictionary<string,float>()
+                        {
+                            {"z",startRotation},
+                        }
+                    },
+                }
+            },
+            { "after", new Dictionary<string,object>()
+                {
+                    { "angular_velocity", endAngularVelocity},
+                    { "linear_velocity", new Dictionary<string,float>()
+                        {
+                            {"x",endLinearVelocity.x},
+                            {"y",endLinearVelocity.y},
+                        }
+                    },
+                    { "position", new Dictionary<string,float>()
+                        {
+                            {"x",endPosition.x},
+                            {"y",endPosition.y},
+                        }
+                    },
+                    { "rotation", new Dictionary<string,float>()
+                        {
+                            {"z",endRotation},
+                        }
+                    },
+                }
+            },
+            { "duration", duration },
 
             }
         );

@@ -319,9 +319,9 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 498877648}
-        m_TargetAssemblyTypeName: GuideTabManager, Assembly-CSharp
-        m_MethodName: ShowPanel
+      - m_Target: {fileID: 2130233542}
+        m_TargetAssemblyTypeName: BattleLoop.BattleUIManager, Assembly-CSharp
+        m_MethodName: ShowGuidePanel
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -1275,10 +1275,10 @@ RectTransform:
   - {fileID: 739323020}
   m_Father: {fileID: 1049857827}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 480, y: -133.42285}
-  m_SizeDelta: {x: 960, y: 266.8457}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &158706380
 MonoBehaviour:
@@ -1486,9 +1486,9 @@ RectTransform:
   - {fileID: 1934257694}
   m_Father: {fileID: 757482878}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 351.17746, y: -43.96135}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 176}
   m_Pivot: {x: 0, y: 0.5}
 --- !u!1 &232679872
@@ -1677,8 +1677,6 @@ RectTransform:
   - {fileID: 2810435256613096967}
   - {fileID: 6190103857498352438}
   - {fileID: 6099528391180481548}
-  - {fileID: 675150627}
-  - {fileID: 498877645}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -2612,6 +2610,109 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 462271138}
   m_CullTransparentMesh: 1
+--- !u!1 &484723084
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 484723088}
+  - component: {fileID: 484723087}
+  - component: {fileID: 484723086}
+  - component: {fileID: 484723085}
+  m_Layer: 0
+  m_Name: Pop Up
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &484723085
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 484723084}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dc42784cf147c0c48a680349fa168899, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_IgnoreReversedGraphics: 1
+  m_BlockingObjects: 0
+  m_BlockingMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+--- !u!114 &484723086
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 484723084}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0cd44c1031e13a943bb63640046fad76, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_UiScaleMode: 0
+  m_ReferencePixelsPerUnit: 100
+  m_ScaleFactor: 1
+  m_ReferenceResolution: {x: 800, y: 600}
+  m_ScreenMatchMode: 0
+  m_MatchWidthOrHeight: 0
+  m_PhysicalUnit: 3
+  m_FallbackScreenDPI: 96
+  m_DefaultSpriteDPI: 96
+  m_DynamicPixelsPerUnit: 1
+  m_PresetInfoIsWorld: 0
+--- !u!223 &484723087
+Canvas:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 484723084}
+  m_Enabled: 1
+  serializedVersion: 3
+  m_RenderMode: 0
+  m_Camera: {fileID: 0}
+  m_PlaneDistance: 100
+  m_PixelPerfect: 0
+  m_ReceivesEvents: 1
+  m_OverrideSorting: 0
+  m_OverridePixelPerfect: 0
+  m_SortingBucketNormalizedSize: 0
+  m_VertexColorAlwaysGammaSpace: 0
+  m_AdditionalShaderChannelsFlag: 25
+  m_UpdateRectTransformForStandalone: 0
+  m_SortingLayerID: 0
+  m_SortingOrder: 0
+  m_TargetDisplay: 0
+--- !u!224 &484723088
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 484723084}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 0, y: 0, z: 0}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 675150627}
+  - {fileID: 498877645}
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
+  m_Pivot: {x: 0, y: 0}
 --- !u!1 &498877644
 GameObject:
   m_ObjectHideFlags: 0
@@ -2623,7 +2724,6 @@ GameObject:
   - component: {fileID: 498877645}
   - component: {fileID: 498877647}
   - component: {fileID: 498877646}
-  - component: {fileID: 498877648}
   m_Layer: 5
   m_Name: Guide
   m_TagString: Untagged
@@ -2638,7 +2738,7 @@ RectTransform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 498877644}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -2646,12 +2746,12 @@ RectTransform:
   - {fileID: 759883452}
   - {fileID: 21595483}
   - {fileID: 1165471480}
-  m_Father: {fileID: 293054140}
+  m_Father: {fileID: 484723088}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: -1100, y: -470.00003}
+  m_AnchoredPosition: {x: 91.37744, y: 0}
+  m_SizeDelta: {x: -917.2452, y: -470}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &498877646
 MonoBehaviour:
@@ -2691,121 +2791,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 498877644}
   m_CullTransparentMesh: 1
---- !u!114 &498877648
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 498877644}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 9bfee5539d95c51489109e8ed94ebab7, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  gameplayTab: {fileID: 1287126315}
-  rulesTab: {fileID: 1217337665}
-  controlsTab: {fileID: 83862934}
-  guidePanel: {fileID: 498877644}
-  titleText: {fileID: 911269690}
-  contentText: {fileID: 2133684713}
-  scrollRect: {fileID: 1261601528}
-  activeTabColor: {r: 1, g: 0.89, b: 0.62, a: 1}
-  inactiveTabColor: {r: 0.88, g: 0.88, b: 0.88, a: 1}
-  gameplayContent: 'Sumobot is a robot game that pits strength in a sumo ring. Your
-    main goal is to push your opponent out of the ring, while staying in the circle.
-
-
-
-    How
-    to Play:
-
-    - Control your sumo robot to move, dodge, and attack your opponent.
-
-    -
-    Use special moves like Dash to make quick attacks or avoid enemy attacks.
-
-    -
-    There are 2 types of special skills, Boost (for quick movements) and Stone (to
-    freeze and withstand collisions).
-
-    - Each round starts with both robots in
-    their respective positions.
-
-    - The game ends when one of the robots exits
-    the ring.
-
-    - The player who remains in the ring is declared the winner.
-
-
-
-    Playing
-    Tips:
-
-    - Use skills and Dash at the right time to avoid collisions or make
-    surprise attacks.
-
-    - Pay attention to your opponent''s position and direction
-    of movement, look for gaps to attack from the side or behind.
-
-    - Avoid being
-    too close to the edge of the ring so that you don''t get pushed out easily.'
-  rulesContent: '1. Win and Lose
-
-    - Players will win if they successfully push
-    their opponent out of the arena (sumo ring).
-
-    - Players will win if they
-    are able to survive in the arena until time runs out.
-
-    - Players are declared
-    the loser if their robot is pushed out first.
-
-    - Players are declared the
-    winner if they are able to win the most rounds
-
-
-
-    2. Prohibitions
-
-    You
-    are not allowed to exploit bugs to gain an advantage.
-
-
-
-    3. Round System
-
-    -
-    The game can take place in several rounds (according to the settings).
-
-    -
-    Rounds can be 3,4 or 5
-
-    - The time for one round is 30-60 seconds
-
-    -
-    The winning score will be calculated after each round is completed.
-
-
-
-    4.
-    Skills and Cooldown
-
-    - Each skill such as Boost and Stone has a cooldown
-    time, it cannot be used continuously.
-
-    - Players must wait for the cooldown
-    to finish before they can use the skill again.
-
-
-
-    5. Penalties
-
-    If a
-    player violates the rules (eg: bug exploit), the round can be disqualified.'
-  controlsContent: "Basic Movement\r\nW/O \u2013 Forward\r\nA/L \u2013 Swipe Left\r\nD/''
-    \u2013 Swipe Right\r\n\r\nSkill & Action\r\nSpacebar \u2013 Dash\r\nShift \u2013
-    Special Skill"
 --- !u!1 &517755154
 GameObject:
   m_ObjectHideFlags: 0
@@ -3725,7 +3710,6 @@ GameObject:
   - component: {fileID: 675150627}
   - component: {fileID: 675150630}
   - component: {fileID: 675150629}
-  - component: {fileID: 675150628}
   m_Layer: 5
   m_Name: Pause
   m_TagString: Untagged
@@ -3740,32 +3724,19 @@ RectTransform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 675150626}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1616811427}
-  m_Father: {fileID: 293054140}
+  m_Father: {fileID: 484723088}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
---- !u!114 &675150628
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 675150626}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1d67876f222500341accdd1d96c275c7, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  PausePanel: {fileID: 675150626}
 --- !u!114 &675150629
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3957,6 +3928,37 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 683317184}
   m_CullTransparentMesh: 1
+--- !u!1 &713556495
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 713556496}
+  m_Layer: 0
+  m_Name: ------
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &713556496
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 713556495}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0.19913371, y: 2.0101626, z: 0.6564811}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &726563272
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -4107,10 +4109,10 @@ RectTransform:
   - {fileID: 1737562084}
   m_Father: {fileID: 1049857827}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 1440, y: -133.42285}
-  m_SizeDelta: {x: 960, y: 266.8457}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &728913080
 MonoBehaviour:
@@ -4255,9 +4257,9 @@ RectTransform:
   - {fileID: 1995473051}
   m_Father: {fileID: 757482878}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 782.3549, y: -43.96135}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 160, y: 70}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &755129914
@@ -4331,9 +4333,9 @@ RectTransform:
   - {fileID: 755129912}
   m_Father: {fileID: 1783706572}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 2.2061768, y: -85}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 862.3549, y: 87.9227}
   m_Pivot: {x: 0, y: 0.5}
 --- !u!114 &757482879
@@ -6032,9 +6034,9 @@ RectTransform:
   - {fileID: 304621561}
   m_Father: {fileID: 2108760118}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 80, y: -43.96135}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 160, y: 70}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1102639362
@@ -6440,9 +6442,9 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 498877648}
-        m_TargetAssemblyTypeName: GuideTabManager, Assembly-CSharp
-        m_MethodName: HidePanel
+      - m_Target: {fileID: 2130233542}
+        m_TargetAssemblyTypeName: BattleLoop.BattleUIManager, Assembly-CSharp
+        m_MethodName: HideGuidePanel
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -9072,8 +9074,8 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 675150628}
-        m_TargetAssemblyTypeName: PausePanelManager, Assembly-CSharp
+      - m_Target: {fileID: 2130233542}
+        m_TargetAssemblyTypeName: BattleLoop.BattleUIManager, Assembly-CSharp
         m_MethodName: OnRestart
         m_Mode: 1
         m_Arguments:
@@ -11861,8 +11863,8 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 675150628}
-        m_TargetAssemblyTypeName: PausePanelManager, Assembly-CSharp
+      - m_Target: {fileID: 2130233542}
+        m_TargetAssemblyTypeName: BattleLoop.BattleUIManager, Assembly-CSharp
         m_MethodName: OnResume
         m_Mode: 1
         m_Arguments:
@@ -12294,9 +12296,9 @@ RectTransform:
   - {fileID: 1721160423}
   m_Father: {fileID: 2108760118}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 511.17746, y: -43.96135}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 176}
   m_Pivot: {x: 0, y: 0.5}
 --- !u!1 &2100938118
@@ -12363,9 +12365,9 @@ RectTransform:
   - {fileID: 2098728207}
   m_Father: {fileID: 1783706572}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 1055.4388, y: -85}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 862.3549, y: 87.9227}
   m_Pivot: {x: 0, y: 0.5}
 --- !u!114 &2108760119
@@ -12489,7 +12491,7 @@ MonoBehaviour:
   - {fileID: 9154546434793356397}
   LeftSkill: {fileID: 356688603}
   RightSkill: {fileID: 2133437841}
-  BattleState: {fileID: 1254230124}
+  BattleStateText: {fileID: 1254230124}
   Countdown: {fileID: 1218802672}
   RoundSystem: {fileID: 93191128}
   Round: {fileID: 2044528550}
@@ -12504,6 +12506,110 @@ MonoBehaviour:
   RightDashCooldown: {fileID: 356651434}
   RightSkillCooldown: {fileID: 141416491}
   RightSkillName: {fileID: 1439708249}
+  guidePanel: {fileID: 498877644}
+  guideTitleText: {fileID: 911269690}
+  guideContentText: {fileID: 2133684713}
+  gameplayTab: {fileID: 1287126315}
+  rulesTab: {fileID: 1217337665}
+  controlsTab: {fileID: 83862934}
+  guideScrollRect: {fileID: 1261601528}
+  guideActiveTabColor: {r: 1, g: 0.89, b: 0.62, a: 1}
+  guideInactiveTabColor: {r: 0.88, g: 0.88, b: 0.88, a: 1}
+  gameplayContent: 'Sumobot is a robot game that pits strength in a sumo ring. Your
+    main goal is to push your opponent out of the ring, while staying in the circle.
+
+
+
+    How
+    to Play:
+
+    - Control your sumo robot to move, dodge, and attack your opponent.
+
+    -
+    Use special moves like Dash to make quick attacks or avoid enemy attacks.
+
+    -
+    There are 2 types of special skills, Boost (for quick movements) and Stone (to
+    freeze and withstand collisions).
+
+    - Each round starts with both robots in
+    their respective positions.
+
+    - The game ends when one of the robots exits
+    the ring.
+
+    - The player who remains in the ring is declared the winner.
+
+
+
+    Playing
+    Tips:
+
+    - Use skills and Dash at the right time to avoid collisions or make
+    surprise attacks.
+
+    - Pay attention to your opponent''s position and direction
+    of movement, look for gaps to attack from the side or behind.
+
+    - Avoid being
+    too close to the edge of the ring so that you don''t get pushed out easily.'
+  rulesContent: '1. Win and Lose
+
+    - Players will win if they successfully push
+    their opponent out of the arena (sumo ring).
+
+    - Players will win if they
+    are able to survive in the arena until time runs out.
+
+    - Players are declared
+    the loser if their robot is pushed out first.
+
+    - Players are declared the
+    winner if they are able to win the most rounds
+
+
+
+    2. Prohibitions
+
+    You
+    are not allowed to exploit bugs to gain an advantage.
+
+
+
+    3. Round System
+
+    -
+    The game can take place in several rounds (according to the settings).
+
+    -
+    Rounds can be 3,4 or 5
+
+    - The time for one round is 30-60 seconds
+
+    -
+    The winning score will be calculated after each round is completed.
+
+
+
+    4.
+    Skills and Cooldown
+
+    - Each skill such as Boost and Stone has a cooldown
+    time, it cannot be used continuously.
+
+    - Players must wait for the cooldown
+    to finish before they can use the skill again.
+
+
+
+    5. Penalties
+
+    If a
+    player violates the rules (eg: bug exploit), the round can be disqualified.'
+  controlsContent: "Basic Movement\r\nW/O \u2013 Forward\r\nA/L \u2013 Swipe Left\r\nD/''
+    \u2013 Swipe Right\r\n\r\nSkill & Action\r\nSpacebar \u2013 Dash\r\nShift \u2013
+    Special Skill"
+  pausePanel: {fileID: 675150626}
 --- !u!114 &2130233543
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -12821,8 +12927,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 20, y: 0.0007171631}
-  m_SizeDelta: {x: 592.17, y: 40.22}
+  m_AnchoredPosition: {x: 3.2095947, y: -0.00093078613}
+  m_SizeDelta: {x: 511.5292, y: 40.22}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &2133684717
 MonoBehaviour:
@@ -13382,7 +13488,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &915649604634171299
 RectTransform:
   m_ObjectHideFlags: 0
@@ -14146,9 +14252,9 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 246833195}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 56, y: -56}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 60, y: 60}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &1789883000022901369
@@ -15762,9 +15868,9 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 246833195}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 142, y: -56}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 60, y: 60}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &3991365131905155800
@@ -15782,7 +15888,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!1 &4003466103278506339
 GameObject:
   m_ObjectHideFlags: 0
@@ -16527,8 +16633,8 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 675150628}
-        m_TargetAssemblyTypeName: PausePanelManager, Assembly-CSharp
+      - m_Target: {fileID: 2130233542}
+        m_TargetAssemblyTypeName: BattleLoop.BattleUIManager, Assembly-CSharp
         m_MethodName: ShowPause
         m_Mode: 1
         m_Arguments:
@@ -16925,9 +17031,9 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 498877648}
-        m_TargetAssemblyTypeName: GuideTabManager, Assembly-CSharp
-        m_MethodName: ShowPanel
+      - m_Target: {fileID: 2130233542}
+        m_TargetAssemblyTypeName: BattleLoop.BattleUIManager, Assembly-CSharp
+        m_MethodName: ShowGuidePanel
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -18122,9 +18228,9 @@ RectTransform:
   - {fileID: 93191127}
   m_Father: {fileID: 1783706572}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 960, y: -85}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 182.0529, y: 113.8503}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &7620435137448000587
@@ -18994,3 +19100,5 @@ SceneRoots:
   - {fileID: 1198878979}
   - {fileID: 1772143615}
   - {fileID: 1878821220}
+  - {fileID: 713556496}
+  - {fileID: 484723088}
