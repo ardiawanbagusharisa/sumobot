@@ -23,20 +23,14 @@ namespace SumoInput
         {
             isHolding = false;
             if (GetComponent<Button>().interactable)
-            {
                 Actions[ActionOnPress]?.Invoke();
-            }
         }
 
         private void Update()
         {
             if (isHolding)
-            {
                 if (GetComponent<Button>().interactable)
-                {
                     Actions[ActionOnHold]?.Invoke();
-                }
-            }
         }
         #endregion
     }

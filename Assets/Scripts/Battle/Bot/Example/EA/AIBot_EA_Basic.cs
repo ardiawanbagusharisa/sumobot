@@ -30,14 +30,10 @@ namespace SumoBot
         void EvaluateFitness()
         {
             if (memory == null || fitness > CalculateFitness(memory))
-            {
                 memory = brain.Clone();
-            }
             else
-            {
                 brain = EA_Basic_Data.Crossover(brain, memory);
-                brain.Mutate(0.1f);
-            }
+            brain.Mutate(0.1f);
 
             fitness = 0f;
         }
@@ -74,29 +70,19 @@ namespace SumoBot
             if (Mathf.Abs(angleToTarget) < 20f)
             {
                 if (Mathf.Abs(value) > 0.6f)
-                {
                     Enqueue(new SkillAction(InputType.Script));
-                }
                 else if (Mathf.Abs(value) > 0.3f)
-                {
                     Enqueue(new DashAction(InputType.Script));
-                }
                 else
-                {
                     Enqueue(new AccelerateAction(InputType.Script, accelDuration));
-                }
             }
             else
             {
 
                 if (angleToTarget < 0)
-                {
                     Enqueue(new TurnAction(InputType.Script, ActionType.TurnLeftWithAngle, Mathf.Abs(angleToTarget)));
-                }
                 else
-                {
                     Enqueue(new TurnAction(InputType.Script, ActionType.TurnRightWithAngle, Mathf.Abs(angleToTarget)));
-                }
             }
 
             fitness += 1f; // Example: reward for taking an action

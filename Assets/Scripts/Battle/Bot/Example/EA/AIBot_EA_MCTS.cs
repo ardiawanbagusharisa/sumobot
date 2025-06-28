@@ -46,9 +46,7 @@ namespace SumoBot
         void OnBattleChanged(BattleState state)
         {
             if (state == BattleState.Battle_End)
-            {
                 InitNode();
-            }
         }
 
         public override void OnBotUpdate()
@@ -82,13 +80,9 @@ namespace SumoBot
         public override void OnBotCollision(object[] args)
         {
             if (side == (PlayerSide)args[0])
-            {
                 lastActionsFromEnemy = null;
-            }
             else
-            {
                 lastActionsToEnemy = null;
-            }
             InitNode();
         }
 
@@ -139,9 +133,7 @@ namespace SumoBot
 
             EA_MCTS_Node bestChild = root.GetBestChild();
             if (bestChild == null)
-            {
                 return null;
-            }
 
             if (bestChild.totalReward <= LowestScoreToReInit)
             {

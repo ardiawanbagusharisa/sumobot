@@ -195,23 +195,17 @@ namespace SumoInput
             if (action is AccelerateAction)
             {
                 if (controller.IsDashActive || controller.IsMovementDisabled)
-                {
                     return false;
-                }
             }
             if (action is DashAction)
             {
                 if (controller.IsDashOnCooldown || controller.IsMovementDisabled)
-                {
                     return false;
-                }
             }
             if (action is SkillAction)
             {
                 if (controller.Skill.IsSkillOnCooldown)
-                {
                     return false;
-                }
             }
             return true;
         }

@@ -136,9 +136,7 @@ namespace SumoManager
             }
 
             if (Battle.LeftPlayer == null && Battle.RightPlayer == null)
-            {
                 return;
-            }
             TransitionToState(BattleState.Battle_Preparing);
         }
         #endregion

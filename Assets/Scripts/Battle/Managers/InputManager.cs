@@ -74,16 +74,13 @@ namespace SumoManager
                     inputProvider = scriptInputProvider;
                 }
                 else
-                {
                     throw new Exception($"Battle with [{battleInputType}] should provide InputProvider");
-                }
             }
             else
             {
                 if (selectedInputObject == null)
-                {
                     throw new Exception($"One of [{battleInputType}]'s object must be used");
-                }
+                    
                 inputProvider = selectedInputObject.GetComponent<InputProvider>();
             }
 
