@@ -3967,7 +3967,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 1335788416037175078, guid: e48db3198e16346af866a9419a1964cc, type: 3}
       propertyPath: m_Enabled
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 1488574921577525681, guid: e48db3198e16346af866a9419a1964cc, type: 3}
       propertyPath: m_Name
@@ -9434,7 +9434,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1749723879}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 0186b9dd298654ac0af6a57dc42d823e, type: 3}
   m_Name: 
@@ -12069,7 +12069,6 @@ MonoBehaviour:
   StartPositions:
   - {fileID: 1987440270}
   - {fileID: 1757629781}
-  SumoPrefab: {fileID: 1488574921577525681, guid: e48db3198e16346af866a9419a1964cc, type: 3}
   LeftPlayerObject: {fileID: 726563274}
   RightPlayerObject: {fileID: 1749723879}
   Arena: {fileID: 1194899209}
@@ -12086,14 +12085,12 @@ MonoBehaviour:
     LeftPlayer: {fileID: 0}
     RightPlayer: {fileID: 0}
     CurrentRound:
-      Id: 0
       FinishTime: 0
       RoundNumber: 0
       RoundWinner: {fileID: 0}
     LeftWinCount: 0
     RightWinCount: 0
   CurrentRound:
-    Id: 0
     FinishTime: 0
     RoundNumber: 0
     RoundWinner: {fileID: 0}
@@ -12115,7 +12112,7 @@ MonoBehaviour:
   - {fileID: 9154546434793356397}
   LeftSkill: {fileID: 356688603}
   RightSkill: {fileID: 2133437841}
-  BattleState: {fileID: 1254230124}
+  BattleStateUI: {fileID: 1254230124}
   Countdown: {fileID: 1218802672}
   RoundSystem: {fileID: 93191128}
   Round: {fileID: 2044528550}
@@ -12158,7 +12155,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b33ce51748b63457ebe9b59f80ac599c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  totalSimulations: 2
+  TotalSimulations: 5
   TimeScale: 3
   SimulationOnStart: 1
 --- !u!1 &2133437839
