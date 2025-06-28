@@ -22,30 +22,30 @@ public class InputProvider : MonoBehaviour
 
     #region Runtime properties
 
-    // ActionType.Acceelrate -> true, means player can press Accelerate
+    // ActionType.Accelerate -> true, means player can press Accelerate
     public Dictionary<ActionType, bool> StateKeyboardAction;
 
     // Store keyboard configurations (keybindings)
     public static readonly Dictionary<PlayerSide, Dictionary<KeyCode, ISumoAction>> KeyboardBindings
-        = new Dictionary<PlayerSide, Dictionary<KeyCode, ISumoAction>>()
-                        {
-                                {PlayerSide.Left, new Dictionary<KeyCode, ISumoAction>(){
-                                    { KeyCode.W, new AccelerateAction(InputType.Keyboard) },
-                                    { KeyCode.D, new TurnAction(InputType.Keyboard, ActionType.TurnRight) },
-                                    { KeyCode.A, new TurnAction(InputType.Keyboard, ActionType.TurnLeft)},
-                                    { KeyCode.LeftShift, new DashAction(InputType.Keyboard)},
-                                    { KeyCode.C, new SkillAction(InputType.Keyboard)},
-                                }},
-                                {PlayerSide.Right, new Dictionary<KeyCode,ISumoAction>(){
-                                    { KeyCode.O, new AccelerateAction(InputType.Keyboard)},
-                                    { KeyCode.Semicolon, new TurnAction(InputType.Keyboard, ActionType.TurnRight)},
-                                    { KeyCode.K, new TurnAction(InputType.Keyboard, ActionType.TurnLeft)},
-                                    { KeyCode.RightShift, new DashAction(InputType.Keyboard)},
-                                    { KeyCode.M, new SkillAction(InputType.Keyboard)},
-                                }},
-                        };
+        = new()
+        {
+                {PlayerSide.Left, new Dictionary<KeyCode, ISumoAction>(){
+                    { KeyCode.W, new AccelerateAction(InputType.Keyboard) },
+                    { KeyCode.D, new TurnAction(InputType.Keyboard, ActionType.TurnRight) },
+                    { KeyCode.A, new TurnAction(InputType.Keyboard, ActionType.TurnLeft)},
+                    { KeyCode.LeftShift, new DashAction(InputType.Keyboard)},
+                    { KeyCode.C, new SkillAction(InputType.Keyboard)},
+                }},
+                {PlayerSide.Right, new Dictionary<KeyCode,ISumoAction>(){
+                    { KeyCode.O, new AccelerateAction(InputType.Keyboard)},
+                    { KeyCode.Semicolon, new TurnAction(InputType.Keyboard, ActionType.TurnRight)},
+                    { KeyCode.K, new TurnAction(InputType.Keyboard, ActionType.TurnLeft)},
+                    { KeyCode.RightShift, new DashAction(InputType.Keyboard)},
+                    { KeyCode.M, new SkillAction(InputType.Keyboard)},
+                }},
+        };
 
-    private Queue<ISumoAction> commandQueue = new Queue<ISumoAction>();
+    private Queue<ISumoAction> commandQueue = new();
     #endregion
 
     public InputProvider(PlayerSide side, bool includeKeyboard = false)

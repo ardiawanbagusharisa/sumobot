@@ -3,7 +3,7 @@ using UnityEngine;
 
 public class BattleSimulator : MonoBehaviour
 {
-    public int totalSimulations = 5;
+    public int TotalSimulations = 5;
     public float TimeScale = 5f;
 
     // Should be [false] if we ewant to run in Headless-mode
@@ -34,7 +34,7 @@ public class BattleSimulator : MonoBehaviour
         //Delay for preparing
         yield return new WaitForSeconds(0.5f);
 
-        for (int i = 0; i < totalSimulations; i++)
+        for (int i = 0; i < TotalSimulations; i++)
         {
             yield return new WaitForSeconds(1);
             BattleManager.Instance.Battle_Start();

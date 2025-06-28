@@ -10,7 +10,7 @@ public class ActionLog : BaseLog
 
     public new Dictionary<string, dynamic> ToMap()
     {
-        return new Dictionary<string, dynamic>()
+        return new()
         {
             { "Name", Action.Name},
             { "Parameter", Action.Param},

@@ -5,30 +5,30 @@ using System.Collections.Generic;
 public class TrackableAction
 {
     [NonSerialized]
-    private Action<object[]> _action;
+    private Action<object[]> action;
 
     [NonSerialized]
-    private readonly HashSet<Delegate> _subscribers = new();
+    private readonly HashSet<Delegate> subscribers = new();
 
     public void Subscribe(Action<object[]> callback)
     {
-        if (_subscribers.Add(callback))
+        if (subscribers.Add(callback))
         {
-            _action += callback;
+            action += callback;
         }
     }
 
     public void Unsubscribe(Action<object[]> callback)
     {
-        if (_subscribers.Remove(callback))
+        if (subscribers.Remove(callback))
         {
-            _action -= callback;
+            action -= callback;
         }
     }
 
     public void Invoke(object[] param)
     {
-        _action?.Invoke(param);
+        action?.Invoke(param);
     }
 
     public void Invoke(object arg)
@@ -41,12 +41,12 @@ public class TrackableAction
         Invoke(new object[] { });
     }
 
-    public IReadOnlyCollection<Delegate> Subscribers => _subscribers;
+    public IReadOnlyCollection<Delegate> Subscribers => subscribers;
 
-    public int SubscribersCount => _subscribers.Count;
+    public int SubscribersCount => subscribers.Count;
     public IEnumerable<string> GetSubscriberDescriptions()
     {
-        foreach (var d in _subscribers)
+        foreach (var d in subscribers)
         {
             var method = d.Method;
             var target = d.Target;

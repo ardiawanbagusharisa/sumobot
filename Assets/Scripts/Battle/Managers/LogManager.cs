@@ -4,7 +4,6 @@ using System.IO;
 using System.Linq;
 using CoreSumo;
 using Newtonsoft.Json;
-using Unity.VisualScripting;
 using UnityEngine;
 
 public enum LogActorType
@@ -64,7 +63,7 @@ public class LogManager
         public string Category;
         public bool IsStart;
 
-        public Dictionary<string, object> Data = new Dictionary<string, object>();
+        public Dictionary<string, object> Data = new();
     }
 
     [Serializable]
@@ -80,7 +79,7 @@ public class LogManager
     #endregion
 
     #region class properties 
-    public static Dictionary<PlayerSide, Dictionary<string, EventLogger>> ActionLoggers = new Dictionary<PlayerSide, Dictionary<string, EventLogger>>();
+    public static Dictionary<PlayerSide, Dictionary<ActionType, EventLogger>> ActionLoggers = new();
 
     private static BattleLog battleLog;
     private static string logFolderPath;
@@ -100,30 +99,26 @@ public class LogManager
         if (!ActionLoggers.ContainsKey(rightPlayer.Side))
             ActionLoggers.Add(rightPlayer.Side, InitByController(rightPlayer));
 
-        static Dictionary<string, EventLogger> InitByController(SumoController controller)
+        static Dictionary<ActionType, EventLogger> InitByController(SumoController controller)
         {
-            Dictionary<string, EventLogger> logs = new();
+            Dictionary<ActionType, EventLogger> logs = new();
             IEnumerable<ActionType> actionTypes = Enum.GetValues(typeof(ActionType)).Cast<ActionType>();
             foreach (ActionType action in actionTypes)
             {
                 switch (action)
                 {
                     case ActionType.Dash:
-                        logs.Add(action.ToString(), new EventLogger(controller, controller.DashDuration));
+                        logs.Add(action, new EventLogger(controller, controller.DashDuration));
                         break;
                     case ActionType.SkillStone:
                     case ActionType.SkillBoost:
-                        logs.Add(action.ToString(), new EventLogger(controller, controller.Skill.TotalDuration));
+                        logs.Add(action, new EventLogger(controller, controller.Skill.TotalDuration));
                         break;
                     default:
-                        logs.Add(action.ToString(), new EventLogger(controller, 0.1f));
+                        logs.Add(action, new EventLogger(controller, 0.1f));
                         break;
                 }
             }
-
-            // Register event logging for Collision / Bounce
-            // logs.Add("Collision", new EventLogger(controller, new CollisionLog()));
-
             return logs;
         }
     }
@@ -132,7 +127,7 @@ public class LogManager
     // Therefore, we need manually add to stack
     public static void FlushActionLog()
     {
-        foreach (Dictionary<string, EventLogger> actionSide in ActionLoggers.Values)
+        foreach (Dictionary<ActionType, EventLogger> actionSide in ActionLoggers.Values)
         {
             foreach (EventLogger actionLogger in actionSide.Values)
             {
@@ -144,8 +139,9 @@ public class LogManager
 
     public static void UpdateActionLog(PlayerSide side)
     {
-        if (BattleManager.Instance.CurrentState == BattleState.Battle_Ongoing || BattleManager.Instance.CurrentState == BattleState.Battle_End)
-            foreach (var action in ActionLoggers[side].Values)
+        BattleState currentState = BattleManager.Instance.CurrentState;
+        if (currentState == BattleState.Battle_Ongoing || currentState == BattleState.Battle_End)
+            foreach (EventLogger action in ActionLoggers[side].Values)
             {
                 action.Update();
             }
@@ -155,7 +151,7 @@ public class LogManager
     {
         if (BattleManager.Instance.CurrentState == BattleState.Battle_Ongoing)
         {
-            var actionLog = ActionLoggers[side][action.Type.ToString()];
+            EventLogger actionLog = ActionLoggers[side][action.Type];
             actionLog.Call(action);
         }
     }
@@ -166,7 +162,7 @@ public class LogManager
     public static void InitLog()
     {
         string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-        var folderName = $"battle_{timestamp}";
+        string folderName = $"battle_{timestamp}";
 
         logFolderPath = Path.Combine(Application.persistentDataPath, "Logs", folderName);
         Directory.CreateDirectory(logFolderPath);
@@ -191,8 +187,8 @@ public class LogManager
     {
         if (BattleManager.Instance.Bot.IsEnable)
         {
-            var leftBot = BattleManager.Instance.Bot.Left;
-            var rightBot = BattleManager.Instance.Bot.Right;
+            Bot leftBot = BattleManager.Instance.Bot.Left;
+            Bot rightBot = BattleManager.Instance.Bot.Right;
 
             if (leftBot != null)
             {
@@ -348,16 +344,16 @@ public class LogManager
     public static void SaveCurrentGame()
     {
 
-        var json = JsonConvert.SerializeObject(battleLog.Games[CurrentGameIndex], Formatting.Indented);
+        string json = JsonConvert.SerializeObject(battleLog.Games[CurrentGameIndex], Formatting.Indented);
         string paddedIndex = CurrentGameIndex.ToString("D3"); // D3 = 3-digit padding
-        var savePath = Path.Combine(logFolderPath, $"game_{paddedIndex}.json");
+        string savePath = Path.Combine(logFolderPath, $"game_{paddedIndex}.json");
         File.WriteAllText(savePath, json);
     }
 
     public static void SaveBattle()
     {
-        var json = JsonConvert.SerializeObject(battleLog, Formatting.Indented);
-        var savePath = Path.Combine(logFolderPath, "metadata.json");
+        string json = JsonConvert.SerializeObject(battleLog, Formatting.Indented);
+        string savePath = Path.Combine(logFolderPath, "metadata.json");
         File.WriteAllText(savePath, json);
     }
 
