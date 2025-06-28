@@ -55,7 +55,7 @@ namespace CoreSumo
         #region Runtime properties 
         public float Cooldown => usedAt + TotalCooldown - BattleManager.Instance.ElapsedTime;
         public float CooldownNormalized => 1 - (Cooldown / TotalCooldown);
-        public bool IsSkillCooldown => Cooldown >= 0f;
+        public bool IsSkillOnCooldown => Cooldown >= 0f;
         #endregion
 
         #region Activation and cooldown methods
@@ -67,7 +67,8 @@ namespace CoreSumo
 
         public bool Activate(ISumoAction action)
         {
-            if (IsSkillCooldown)
+            action.Type = (Type == SkillType.Boost) ? ActionType.SkillBoost : ActionType.SkillStone;
+            if (IsSkillOnCooldown)
             {
                 Debug.Log($"[Skill][{Type}] is on cooldown");
                 return false;

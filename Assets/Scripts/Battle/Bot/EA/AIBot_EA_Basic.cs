@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace BotAI
 {
-    [CreateAssetMenu(fileName = "BOT_GA", menuName = "Bot/GA")]
+    // [CreateAssetMenu(fileName = "BOT_GA", menuName = "Bot/GA")]
     public class AIBot_EA_Basic : Bot
     {
         public override string ID => Name;
@@ -86,7 +86,15 @@ namespace BotAI
             }
             else
             {
-                Enqueue(new TurnAction(InputType.Script, ActionType.TurnWithAngle, angleToTarget));
+
+                if (angleToTarget < 0)
+                {
+                    Enqueue(new TurnAction(InputType.Script, ActionType.TurnLeftWithAngle, Mathf.Abs(angleToTarget)));
+                }
+                else
+                {
+                    Enqueue(new TurnAction(InputType.Script, ActionType.TurnRightWithAngle, Mathf.Abs(angleToTarget)));
+                }
             }
 
             fitness += 1f; // Example: reward for taking an action
@@ -125,9 +133,9 @@ namespace BotAI
             base.OnBotUpdate();
         }
 
-        public override void OnBotCollision(PlayerSide side)
+        public override void OnBotCollision(object[] args)
         {
-            OnPlayerBounce(side);
+            OnPlayerBounce((PlayerSide)args[0]);
         }
 
         public override void OnBattleStateChanged(BattleState state)

@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using CoreSumo;
 using Newtonsoft.Json;
+using Unity.VisualScripting;
 using UnityEngine;
 
 public enum LogActorType
@@ -48,7 +49,7 @@ public class LogManager
         public int Index;
         public string Timestamp;
         public string Winner;
-        public List<EventLog> ActionEvents = new();
+        public List<EventLog> PlayerEvents = new();
         public List<EventLog> StateEvents = new();
     }
 
@@ -79,7 +80,7 @@ public class LogManager
     #endregion
 
     #region class properties 
-    public static Dictionary<PlayerSide, Dictionary<string, DebouncedLogger>> ActionLoggers = new Dictionary<PlayerSide, Dictionary<string, DebouncedLogger>>();
+    public static Dictionary<PlayerSide, Dictionary<string, EventLogger>> ActionLoggers = new Dictionary<PlayerSide, Dictionary<string, EventLogger>>();
 
     private static BattleLog battleLog;
     private static string logFolderPath;
@@ -89,7 +90,7 @@ public class LogManager
 
     #region Action Logging methods
 
-    public static void SetPlayerAction()
+    public static void RegisterAction()
     {
         SumoController leftPlayer = BattleManager.Instance.Battle.LeftPlayer;
         SumoController rightPlayer = BattleManager.Instance.Battle.RightPlayer;
@@ -99,45 +100,49 @@ public class LogManager
         if (!ActionLoggers.ContainsKey(rightPlayer.Side))
             ActionLoggers.Add(rightPlayer.Side, InitByController(rightPlayer));
 
-        static Dictionary<string, DebouncedLogger> InitByController(SumoController controller)
+        static Dictionary<string, EventLogger> InitByController(SumoController controller)
         {
-            Dictionary<string, DebouncedLogger> logs = new();
+            Dictionary<string, EventLogger> logs = new();
             IEnumerable<ActionType> actionTypes = Enum.GetValues(typeof(ActionType)).Cast<ActionType>();
             foreach (ActionType action in actionTypes)
             {
                 switch (action)
                 {
                     case ActionType.Dash:
-                        logs.Add(action.ToString(), new DebouncedLogger(controller, controller.DashDuration));
+                        logs.Add(action.ToString(), new EventLogger(controller, controller.DashDuration));
                         break;
                     case ActionType.SkillStone:
                     case ActionType.SkillBoost:
-                        logs.Add(action.ToString(), new DebouncedLogger(controller, controller.Skill.TotalDuration));
+                        logs.Add(action.ToString(), new EventLogger(controller, controller.Skill.TotalDuration));
                         break;
                     default:
-                        logs.Add(action.ToString(), new DebouncedLogger(controller, 0.1f));
+                        logs.Add(action.ToString(), new EventLogger(controller, 0.1f));
                         break;
                 }
             }
+
+            // Register event logging for Collision / Bounce
+            // logs.Add("Collision", new EventLogger(controller, new CollisionLog()));
+
             return logs;
         }
     }
 
     // Some actions maybe still hanging when the state is already ended, (e.g. dash and skill).
     // Therefore, we need manually add to stack
-    public static void CleanIncompletePlayerAction()
+    public static void FlushActionLog()
     {
-        foreach (Dictionary<string, DebouncedLogger> actionSide in ActionLoggers.Values)
+        foreach (Dictionary<string, EventLogger> actionSide in ActionLoggers.Values)
         {
-            foreach (DebouncedLogger actionLogger in actionSide.Values)
+            foreach (EventLogger actionLogger in actionSide.Values)
             {
-                if (actionLogger.IsActive)
+                if (actionLogger.IsActive && actionLogger.ForceSave)
                     actionLogger.ForceStopAndSave();
             }
         }
     }
 
-    public static void UpdatePlayerActionLog(PlayerSide side)
+    public static void UpdateActionLog(PlayerSide side)
     {
         if (BattleManager.Instance.CurrentState == BattleState.Battle_Ongoing || BattleManager.Instance.CurrentState == BattleState.Battle_End)
             foreach (var action in ActionLoggers[side].Values)
@@ -146,7 +151,7 @@ public class LogManager
             }
     }
 
-    public static void CallPlayerActionLog(PlayerSide side, ISumoAction action)
+    public static void CallActionLog(PlayerSide side, ISumoAction action)
     {
         if (BattleManager.Instance.CurrentState == BattleState.Battle_Ongoing)
         {
@@ -208,10 +213,11 @@ public class LogManager
             RoundLog currRound = GetCurrentRound();
             if (currRound != null)
             {
-                battleLog.LeftPLayerStats.ActionTaken += GetCurrentRound().ActionEvents.FindAll((x) => x.Actor == "Left" && (string)x.Data["Type"] != "Bounce").Count();
-                battleLog.RightPlayerStats.ActionTaken += GetCurrentRound().ActionEvents.FindAll((x) => x.Actor == "Right" && (string)x.Data["Type"] != "Bounce").Count();
-                battleLog.LeftPLayerStats.ContactMade += GetCurrentRound().ActionEvents.FindAll((x) => x.Actor == "Left" && (string)x.Data["Type"] == "Bounce").Count();
-                battleLog.RightPlayerStats.ContactMade += GetCurrentRound().ActionEvents.FindAll((x) => x.Actor == "Right" && (string)x.Data["Type"] == "Bounce").Count();
+                battleLog.LeftPLayerStats.ActionTaken += GetCurrentRound().PlayerEvents.FindAll((x) => x.Actor == "Left" && x.Category == "Action").Count();
+                battleLog.RightPlayerStats.ActionTaken += GetCurrentRound().PlayerEvents.FindAll((x) => x.Actor == "Right" && x.Category == "Action").Count();
+
+                battleLog.LeftPLayerStats.ContactMade += GetCurrentRound().PlayerEvents.FindAll((x) => x.Actor == "Left" && x.Category == "Collision").Count();
+                battleLog.RightPlayerStats.ContactMade += GetCurrentRound().PlayerEvents.FindAll((x) => x.Actor == "Right" && x.Category == "Collision").Count();
             }
         }
 
@@ -302,7 +308,7 @@ public class LogManager
     public static void LogPlayerEvents(
         PlayerSide actor,
         PlayerSide? target = null,
-        string category = "action",
+        string category = "Action",
         bool isStart = false,
         float? startedAt = null,
         float? updatedAt = null,
@@ -323,7 +329,7 @@ public class LogManager
 
             eventLog.StartedAt = startedAt != null ? startedAt.ToString() : BattleManager.Instance.ElapsedTime.ToString();
             eventLog.UpdatedAt = updatedAt != null ? updatedAt.ToString() : eventLog.UpdatedAt = BattleManager.Instance.ElapsedTime.ToString();
-            roundLog.ActionEvents.Add(eventLog);
+            roundLog.PlayerEvents.Add(eventLog);
         }
     }
     private static RoundLog GetCurrentRound()
@@ -359,7 +365,7 @@ public class LogManager
     {
         battleLog.Games[CurrentGameIndex].Rounds.ForEach((rounds) =>
         {
-            rounds.ActionEvents = rounds.ActionEvents.OrderBy(log => float.Parse(log?.StartedAt ?? "0")).ToList();
+            rounds.PlayerEvents = rounds.PlayerEvents.OrderBy(log => float.Parse(log?.UpdatedAt ?? "0")).ToList();
         });
         SaveCurrentGame();
     }

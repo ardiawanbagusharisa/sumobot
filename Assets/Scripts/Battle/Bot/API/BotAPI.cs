@@ -39,7 +39,12 @@ public class BotAPI
     {
         return myController.Skill;
     }
-    
+
+    public bool CanExecute(ISumoAction action)
+    {
+        return Controller.InputProvider.CanExecute(action);
+    }
+
     public SumoController Controller
     {
         get

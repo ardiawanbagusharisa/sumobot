@@ -37,7 +37,7 @@ namespace BattleLoop
         public TMP_Text RightScore;
         public TMP_Text RightFinalScore;
         public Image RightDashCooldown;
-        public Image RightSkillCooldown; 
+        public Image RightSkillCooldown;
         public TMP_Text RightSkillName;
         #endregion
 
@@ -54,12 +54,12 @@ namespace BattleLoop
 
         void OnEnable()
         {
-            BattleManager.Instance.OnBattleChanged += OnBattleChanged;
+            BattleManager.Instance.Actions[BattleManager.OnBattleChanged].Subscribe(OnBattleChanged);
         }
 
         void OnDisable()
         {
-            BattleManager.Instance.OnBattleChanged -= OnBattleChanged;
+            BattleManager.Instance.Actions[BattleManager.OnBattleChanged].Unsubscribe(OnBattleChanged);
         }
 
         void FixedUpdate()
@@ -91,8 +91,9 @@ namespace BattleLoop
         #endregion
 
         #region Battle changes
-        private void OnBattleChanged(Battle battle)
+        private void OnBattleChanged(object[] args)
         {
+            var battle = (Battle)args[0];
             RoundSystem.SetText($"Best of {(int)battle.RoundSystem}");
             Round.SetText($"Round {battle.CurrentRound.RoundNumber}");
 
@@ -123,11 +124,11 @@ namespace BattleLoop
                 case global::BattleState.Battle_Countdown:
                     LeftSkillName.SetText(BattleManager.Instance.Battle.LeftPlayer.Skill.Type.ToString());
                     RightSkillName.SetText(BattleManager.Instance.Battle.RightPlayer.Skill.Type.ToString());
-                    BattleManager.Instance.OnCountdownChanged += OnCountdownChanged;
+                    BattleManager.Instance.Actions[BattleManager.OnCountdownChanged].Subscribe(OnCountdownChanged);
                     break;
                 case global::BattleState.Battle_Ongoing:
                     Countdown.SetText("");
-                    BattleManager.Instance.OnCountdownChanged -= OnCountdownChanged;
+                    BattleManager.Instance.Actions[BattleManager.OnCountdownChanged].Unsubscribe(OnCountdownChanged);
                     break;
                 case global::BattleState.Battle_End:
                     InputManager.Instance.ResetCooldownButton();
@@ -143,9 +144,9 @@ namespace BattleLoop
             UpdateScore(battle);
         }
 
-        private void OnCountdownChanged(float timer)
+        private void OnCountdownChanged(object[] args)
         {
-            Countdown.SetText(timer.ToString());
+            Countdown.SetText(((float)args[0]).ToString());
         }
 
         private void UpdateScore(Battle battleInfo)

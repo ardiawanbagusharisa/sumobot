@@ -72,90 +72,75 @@ public class GameLogJsonToCsvConverter : EditorWindow
             var csvRows = new List<Dictionary<string, string>>();
 
             var files = Directory.GetFiles(folderPath, "game_*.json")
-            .Where(f => Regex.IsMatch(Path.GetFileName(f), @"game_\d+\.json"))
-            .OrderBy(f => ExtractGameIndex(Path.GetFileNameWithoutExtension(f)))
-            .ToList();
+    .Where(f => Regex.IsMatch(Path.GetFileName(f), @"game_\d+\.json"))
+    .OrderBy(f => ExtractGameIndex(Path.GetFileNameWithoutExtension(f)))
+    .ToList();
 
             foreach (var file in files)
             {
                 string json = File.ReadAllText(file);
                 JObject root = JObject.Parse(json);
 
-                int gameIndex = (int?)root["index"] ?? -1;
-                string gameTimestamp = (string)root["timestamp"] ?? "";
-                string gameWinner = root?["winner"]?.ToString() ?? "";
+                int gameIndex = (int?)root["Index"] ?? -1;
+                string gameTimestamp = (string)root["Timestamp"] ?? "";
+                string gameWinner = root?["Winner"]?.ToString() ?? "";
 
-                foreach (var round in root?["rounds"] as JArray ?? new JArray())
+                foreach (var round in root?["Rounds"] as JArray ?? new JArray())
                 {
-                    int roundIndex = (int?)round["index"] ?? -1;
-                    string roundTimestamp = round?["timestamp"]?.ToString() ?? "";
-                    string roundWinner = round?["winner"]?.ToString() ?? "";
+                    int roundIndex = (int?)round["Index"] ?? -1;
+                    string roundTimestamp = round?["Timestamp"]?.ToString() ?? "";
+                    string roundWinner = round?["Winner"]?.ToString() ?? "";
 
-                    foreach (var action in round?["action_events"] as JArray ?? new JArray())
+                    foreach (var eventLog in round?["PlayerEvents"] as JArray ?? new JArray())
                     {
                         var row = new Dictionary<string, string>
                         {
-                            ["game_index"] = (gameIndex + 1).ToString(),
-                            ["game_winner"] = gameWinner == "Draw" ? "2" : gameWinner == "Left" ? "0" : "1",
-                            ["game_timestamp"] = gameTimestamp,
-                            ["round_index"] = roundIndex.ToString(),
-                            ["round_winner"] = gameWinner == "Draw" ? "2" : gameWinner == "Left" ? "0" : "1",
-                            ["round_timestamp"] = roundTimestamp,
-                            ["logged_at"] = action?["logged_at"]?.ToString(),
-                            ["started_at"] = action?["started_at"]?.ToString(),
-                            ["updated_at"] = action?["updated_at"]?.ToString(),
-                            ["actor"] = action?["actor"]?.ToString() == "Left" ? "0" : "1",
-                            ["target"] = action?["target"]?.ToString() == "Left" ? "0" : "1",
-                            ["category"] = action?["category"]?.ToString(),
-                            ["isStart"] = ((bool?)action?["isStart"] == true ? 1 : 0).ToString(),
-                            ["type"] = action?["data"]?["type"]?.ToString(),
-                            ["parameter"] = action?["data"]?["parameter"]?.ToString(),
-                            ["duration"] = action?["data"]?["duration"]?.ToString(),
-                            ["reason"] = action?["data"]?["reason"]?.ToString()
+                            ["GameIndex"] = (gameIndex + 1).ToString(),
+                            ["GameWinner"] = gameWinner == "Draw" ? "2" : gameWinner == "Left" ? "0" : "1",
+                            ["GameTimestamp"] = gameTimestamp,
+                            ["RoundIndex"] = roundIndex.ToString(),
+                            ["RoundWinner"] = gameWinner == "Draw" ? "2" : gameWinner == "Left" ? "0" : "1",
+                            ["RoundTimestamp"] = roundTimestamp,
+
+                            ["LoggedAt"] = eventLog?["LoggedAt"]?.ToString(),
+                            ["StartedAt"] = eventLog?["StartedAt"]?.ToString(),
+                            ["UpdatedAt"] = eventLog?["UpdatedAt"]?.ToString(),
+                            ["Actor"] = eventLog?["Actor"]?.ToString() == "Left" ? "0" : "1",
+                            ["Target"] = eventLog?["Target"]?.ToString() == "Left" ? "0" : "1",
+                            ["Category"] = eventLog?["Category"]?.ToString(),
+                            ["IsStart"] = ((bool?)eventLog?["IsStart"] == true ? 1 : 0).ToString(),
                         };
 
-                        var before = action?["data"]?["before"];
-                        if (before != null)
+                        var data = eventLog?["Data"]?["Robot"];
+                        if (data != null)
                         {
-                            row["b_pos_x"] = before["position"]?["x"]?.ToString();
-                            row["b_pos_y"] = before["position"]?["y"]?.ToString();
-                            row["b_linv_x"] = before["linear_velocity"]?["x"]?.ToString();
-                            row["b_linv_y"] = before["linear_velocity"]?["y"]?.ToString();
-                            row["b_angv"] = before["angular_velocity"]?.ToString();
-                            row["b_rot"] = before["rotation"]?["z"]?.ToString();
+                            row["PosX"] = data["Position"]?["X"]?.ToString();
+                            row["PosY"] = data["Position"]?["Y"]?.ToString();
+                            row["LinvX"] = data["LinearVelocity"]?["X"]?.ToString();
+                            row["LinvY"] = data["LinearVelocity"]?["Y"]?.ToString();
+                            row["Angv"] = data["AngularVelocity"]?.ToString();
+                            row["Rot"] = data["Rotation"]?["Z"]?.ToString();
                         }
 
-                        var after = action?["data"]?["after"];
-                        if (after != null)
+                        if (eventLog?["Category"]?.ToString() == "Collision")
                         {
-                            row["a_pos_x"] = after["position"]?["x"]?.ToString();
-                            row["a_pos_y"] = after["position"]?["y"]?.ToString();
-                            row["a_linv_x"] = after["linear_velocity"]?["x"]?.ToString();
-                            row["a_linv_y"] = after["linear_velocity"]?["y"]?.ToString();
-                            row["a_angv"] = after["angular_velocity"]?.ToString();
-                            row["a_rot"] = after["rotation"]?["z"]?.ToString();
-                        }
-
-                        if (action?["category"]?.ToString() == "collision")
-                        {
-                            var actorData = action["data"]?["actor"];
-                            var targetData = action["data"]?["target"];
+                            var collisionData = eventLog["Data"];
 
                             // Actor
-                            row["act_impact"] = actorData?["impact"]?.ToString();
-                            row["act_linv_x"] = actorData?["linear_velocity"]?["x"]?.ToString();
-                            row["act_linv_y"] = actorData?["linear_velocity"]?["y"]?.ToString();
-                            row["act_angv"] = actorData?["angular_velocity"]?.ToString();
-                            row["act_rot"] = actorData?["rotation"]?.ToString();
-                            row["act_lock_dur"] = actorData?["lock_duration"]?.ToString();
+                            row["ColIsActor"] = collisionData?["IsActor"]?.ToString();
+                            row["ColImpact"] = collisionData?["Impact"]?.ToString();
+                            row["ColLockDuration"] = collisionData?["LockDuration"]?.ToString();
+                            row["ColDuration"] = collisionData?["Duration"]?.ToString();
+                        }
+                        else if (eventLog?["Category"]?.ToString() == "Action")
+                        {
+                            var actionData = eventLog["Data"];
 
-                            // Target
-                            row["tar_impact"] = targetData?["impact"]?.ToString();
-                            row["tar_linv_x"] = targetData?["linear_velocity"]?["x"]?.ToString();
-                            row["tar_linv_y"] = targetData?["linear_velocity"]?["y"]?.ToString();
-                            row["tar_angv"] = targetData?["angular_velocity"]?.ToString();
-                            row["tar_rot"] = targetData?["rotation"]?.ToString();
-                            row["tar_lock_dur"] = targetData?["lock_duration"]?.ToString();
+                            // Actor
+                            row["ActName"] = actionData?["Name"]?.ToString();
+                            row["ActParam"] = actionData?["Parameter"]?.ToString();
+                            row["ActReason"] = actionData?["Reason"]?.ToString();
+                            row["ActDuration"] = actionData?["Duration"]?.ToString();
                         }
 
                         csvRows.Add(row);
@@ -174,6 +159,7 @@ public class GameLogJsonToCsvConverter : EditorWindow
                     writer.WriteLine(string.Join(",", values));
                 }
             }
+
 
             EditorUtility.DisplayDialog("Success", "CSV generated successfully!", "OK");
             Debug.Log("CSV saved to: " + outputPath);

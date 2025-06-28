@@ -4,7 +4,7 @@ using System.Linq;
 using CoreSumo;
 
 
-[CreateAssetMenu(fileName = "BOT_MCTS", menuName = "Bot/MCTS")]
+// [CreateAssetMenu(fileName = "BOT_MCTS", menuName = "Bot/MCTS")]
 public class AIBot_EA_MCTS : Bot
 {
     public override string ID => Name;
@@ -52,13 +52,18 @@ public class AIBot_EA_MCTS : Bot
     {
         if (currState != BattleState.Battle_Ongoing) return;
 
-        if (decisionIntervalCount % ReinitPerIters == 0)
+        decisionTimer += Time.deltaTime;
+        if (decisionTimer >= ActionInterval)
         {
-            decisionIntervalCount = 0;
-            InitNode();
+            decisionTimer = 0f;
+            if (decisionIntervalCount % ReinitPerIters == 0)
+            {
+                decisionIntervalCount = 0;
+                InitNode();
+            }
+            Decide();
+            decisionIntervalCount += 1;
         }
-
-        Decide();
 
         DeQueueWhenAvailable();
 
@@ -71,9 +76,9 @@ public class AIBot_EA_MCTS : Bot
         OnBattleChanged(state);
     }
 
-    public override void OnBotCollision(PlayerSide side)
+    public override void OnBotCollision(object[] args)
     {
-        if (side == this.side)
+        if (side == (PlayerSide)args[0])
         {
             lastActionsFromEnemy = null;
         }
