@@ -141,18 +141,12 @@ namespace SumoHelper
                 if (collision.IsActor)
                 {
                     if (controller.Side == PlayerSide.Left)
-                    {
                         target = PlayerSide.Right;
-                    }
                     else
-                    {
                         target = PlayerSide.Left;
-                    }
                 }
                 else
-                {
                     target = null;
-                }
             }
 
             LogManager.LogPlayerEvents(

@@ -15,17 +15,14 @@ namespace SumoHelper
         public void Subscribe(Action<object[]> callback)
         {
             if (subscribers.Add(callback))
-            {
                 action += callback;
-            }
+            
         }
 
         public void Unsubscribe(Action<object[]> callback)
         {
             if (subscribers.Remove(callback))
-            {
                 action -= callback;
-            }
         }
 
         public void Invoke(object[] param)

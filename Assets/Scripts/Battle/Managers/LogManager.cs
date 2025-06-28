@@ -195,14 +195,10 @@ namespace SumoManager
                 Bot rightBot = BattleManager.Instance.Bot.Right;
 
                 if (leftBot != null)
-                {
                     battleLog.LeftPLayerStats.Bot = leftBot?.ID ?? "";
-                }
 
                 if (rightBot != null)
-                {
                     battleLog.RightPlayerStats.Bot = rightBot?.ID ?? "";
-                }
             }
 
             battleLog.LeftPLayerStats.SkillType = BattleManager.Instance.Battle.LeftPlayer.Skill.Type.ToString();

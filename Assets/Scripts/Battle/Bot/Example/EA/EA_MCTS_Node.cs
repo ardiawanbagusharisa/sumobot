@@ -86,16 +86,12 @@ namespace SumoBot
             {
                 var newActNames = $"{ID}:{x.FullName}";
                 if (!AllNodes.ContainsKey(newActNames))
-                {
                     return true;
-                }
                 return false;
             }).ToList();
 
             if (unexploredActs.Count() == 0)
-            {
                 return null;
-            }
 
             System.Random random = new();
             var randomAction = unexploredActs[random.Next(unexploredActs.Count())];

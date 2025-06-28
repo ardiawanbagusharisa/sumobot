@@ -27,9 +27,7 @@ namespace SumoCore
             get
             {
                 if (Param == null)
-                {
                     return Name;
-                }
                 return $"{Name}_({Param})";
             }
         }
@@ -63,9 +61,7 @@ namespace SumoCore
                 Param = time;
             }
             else
-            {
                 Type = ActionType.Accelerate;
-            }
         }
 
         public override void Execute(SumoController controller)
@@ -108,13 +104,10 @@ namespace SumoCore
         public SkillAction(InputType inputType, ActionType? skillType = null)
         {
             if (skillType != null)
-            {
                 Type = (ActionType)skillType;
-            }
             else
-            {
                 Type = ActionType.SkillBoost;
-            }
+
             InputUsed = inputType;
         }
 

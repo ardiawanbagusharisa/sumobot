@@ -49,14 +49,10 @@ namespace SumoBot
                 {
                     float distance = Vector2.Distance(api.EnemyTransform.position, api.MyTransform.position);
                     if (!api.Controller.IsDashOnCooldown && distance < 2.5f)
-                    {
-                        api.Controller.InputProvider.EnqueueCommand(new DashAction(InputType.Script));
-                    }
+                        Enqueue(new DashAction(InputType.Script));
 
                     if (!api.Controller.Skill.IsSkillOnCooldown)
-                    {
-                        api.Controller.InputProvider.EnqueueCommand(new SkillAction(InputType.Script));
-                    }
+                        Enqueue(new SkillAction(InputType.Script));
                 }
                 else
                 {

@@ -100,9 +100,7 @@ namespace SumoCore
             LastVelocity = robotRigidBody.linearVelocity;
 
             if (collisionLogger != null && collisionLogger.IsActive)
-            {
                 collisionLogger.Update();
-            }
 
             LogManager.UpdateActionLog(Side);
         }
@@ -161,13 +159,9 @@ namespace SumoCore
         public void UpdateDirectionColor()
         {
             if (Side == PlayerSide.Left)
-            {
                 directionIndicator.color = new Color(0, 255, 0);
-            }
             else
-            {
                 directionIndicator.color = new Color(255, 0, 0);
-            }
         }
         #endregion
 
@@ -215,7 +209,7 @@ namespace SumoCore
         public void Turn(ISumoAction action)
         {
             Log(action);
-            
+
             switch (action.Type)
             {
                 case ActionType.TurnLeft:
@@ -259,9 +253,7 @@ namespace SumoCore
                 float delta = turnSpeed * Time.deltaTime;
 
                 if (Mathf.Abs(rotatedAngle + delta * Mathf.Sign(totalAngle)) > Mathf.Abs(totalAngle))
-                {
                     delta = Mathf.Abs(totalAngle - rotatedAngle);
-                }
 
                 float step = delta * Mathf.Sign(totalAngle);
                 transform.Rotate(0, 0, step);
@@ -313,9 +305,7 @@ namespace SumoCore
         {
             float lockDuration = Mathf.Clamp(force * BaseLockDurationMultiplier, LockDuration.min, LockDuration.max);
             if (isActor)
-            {
                 lockDuration *= LockReductionMultiplier;
-            }
             moveLockTime = Mathf.Max(moveLockTime, lockDuration);
             return lockDuration;
         }
@@ -332,9 +322,7 @@ namespace SumoCore
             float enemyVelocity = enemyRobot.LastVelocity.magnitude + float.Epsilon;
 
             if ((actorVelocity + enemyVelocity) < 0.01f)
-            {
                 return;
-            }
 
             Vector2 collisionNormal = collision.contacts[0].normal;
 
