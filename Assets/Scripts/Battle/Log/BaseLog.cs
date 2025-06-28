@@ -8,11 +8,11 @@ public class BaseLog
     public Vector2 Position;
     public Vector2 LinearVelocity;
     public float Rotation;
-    
+
 
     public Dictionary<string, dynamic> ToMap()
     {
-        return new Dictionary<string, dynamic>(){
+        return new(){
             { "AngularVelocity", AngularVelocity},
             { "LinearVelocity", new Dictionary<string,float>()
                 {

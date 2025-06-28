@@ -9,21 +9,22 @@ public class CollisionLog : BaseLog
     public float BounceResistance;
     public float LockDuration = float.NaN;
     public bool IsSkillActive;
+    public bool IsDashActive;
 
     public float Duration;
 
     public new Dictionary<string, dynamic> ToMap()
     {
-        var data = new Dictionary<string, dynamic>()
+        return new()
         {
             { "IsActor", IsActor},
             { "Impact", Impact},
             { "LockDuration", LockDuration},
             { "IsSkillActive", IsSkillActive},
-            
+            { "IsDashActive", IsDashActive},
+
             { "Duration", Duration},
             { "Robot", base.ToMap()},
         };
-        return data;
     }
 }

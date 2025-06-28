@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using CoreSumo;
 using TMPro;
@@ -83,7 +82,7 @@ public class ButtonInputHandler : MonoBehaviour
             if (item.Value != null)
             {
                 bool isHolding = Time.time - item.Value < delayHoldSeconds;
-                UpdateHoldTypeButtonState(item.Key, isHolding);
+                UpdateButtonState(item.Key, isHolding);
             }
         }
 
@@ -143,7 +142,7 @@ public class ButtonInputHandler : MonoBehaviour
     }
 
     // Prevent multiple input
-    void UpdateHoldTypeButtonState(ActionType actionType, bool active)
+    void UpdateButtonState(ActionType actionType, bool active)
     {
         GameObject buttonObject = actionButtonMap[actionType];
         InputType? inputType = actionInputTypeMap[actionType];

@@ -42,8 +42,8 @@ public class BattleManager : MonoBehaviour
     public RoundSystem RoundSystem = RoundSystem.BestOf3;
     public float BattleTime = 60f;
     public float CountdownTime = 3f;
-    public List<Transform> StartPositions = new List<Transform>();
-    public GameObject SumoPrefab;
+    public List<Transform> StartPositions = new();
+    // public GameObject SumoPrefab;
     public GameObject LeftPlayerObject;
     public GameObject RightPlayerObject;
 
@@ -174,21 +174,13 @@ public class BattleManager : MonoBehaviour
         TransitionToState(BattleState.Battle_Countdown);
     }
 
-    private void Deinitialize()
-    {
-        Battle.LeftPlayer.InputProvider = null;
-        Battle.RightPlayer.InputProvider = null;
-    }
-
     private IEnumerator StartCountdown()
     {
-        //Debug.Log("Battle starting in...");
         yield return new WaitForSeconds(1f);
 
         float timer = CountdownTime;
         while (timer > 0 && CurrentState == BattleState.Battle_Countdown)
         {
-            //Debug.Log(Mathf.Ceil(timer));
             Actions[OnCountdownChanged].Invoke(timer);
             yield return new WaitForSeconds(1f);
             timer -= 1f;
@@ -226,7 +218,7 @@ public class BattleManager : MonoBehaviour
         if (CurrentState != BattleState.Battle_Ongoing)
             return;
         Debug.Log("OnPlayerOutOfArena");
-        var Side = (PlayerSide)args[0];
+        PlayerSide Side = (PlayerSide)args[0];
         SumoController winner = Side == PlayerSide.Left ? Battle.RightPlayer : Battle.LeftPlayer;
 
         if (winner == null)
@@ -275,14 +267,14 @@ public class BattleManager : MonoBehaviour
                     InitializePlayer(LeftPlayerObject.GetComponent<SumoController>());
                     InitializePlayer(RightPlayerObject.GetComponent<SumoController>());
                 }
-                else if (SumoPrefab != null && StartPositions.Count > 0)
-                {
-                    StartPositions.ForEach(pos =>
-                    {
-                        GameObject player = Instantiate(SumoPrefab, pos.position, pos.rotation);
-                        InitializePlayer(player.GetComponent<SumoController>());
-                    });
-                }
+                // else if (SumoPrefab != null && StartPositions.Count > 0)
+                // {
+                //     StartPositions.ForEach(pos =>
+                //     {
+                //         GameObject player = Instantiate(SumoPrefab, pos.position, pos.rotation);
+                //         InitializePlayer(player.GetComponent<SumoController>());
+                //     });
+                // }
                 Bot.Init(LeftPlayerObject, RightPlayerObject);
                 break;
 
@@ -353,7 +345,8 @@ public class BattleManager : MonoBehaviour
             // Post Battle
             case BattleState.PostBattle_ShowResult:
                 LogManager.SortAndSave();
-                Deinitialize();
+                Battle.LeftPlayer.InputProvider = null;
+                Battle.RightPlayer.InputProvider = null;
                 break;
         }
 

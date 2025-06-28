@@ -59,8 +59,9 @@ public class InputManager : MonoBehaviour
         }
 
         InputProvider inputProvider;
+        InputType battleInputType = BattleManager.Instance.BattleInputType;
 
-        if (BattleManager.Instance.BattleInputType == InputType.Script)
+        if (battleInputType == InputType.Script)
         {
             if (BattleManager.Instance.Bot.IsEnable)
             {
@@ -71,14 +72,14 @@ public class InputManager : MonoBehaviour
             }
             else
             {
-                throw new Exception("Battle with [InputType.Script] should provide InputProvider");
+                throw new Exception($"Battle with [{battleInputType}] should provide InputProvider");
             }
         }
         else
         {
             if (selectedInputObject == null)
             {
-                throw new Exception("One of [BattleInputType]'s object must be used");
+                throw new Exception($"One of [{battleInputType}]'s object must be used");
             }
             inputProvider = selectedInputObject.GetComponent<InputProvider>();
         }

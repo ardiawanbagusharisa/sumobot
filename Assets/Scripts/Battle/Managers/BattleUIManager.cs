@@ -13,7 +13,7 @@ namespace BattleLoop
 
         #region UI Elements properties
         [Header("Main Panels")]
-        public List<GameObject> BattlePanels = new List<GameObject>();
+        public List<GameObject> BattlePanels = new();
 
         [Header("Pre-battle UI")]
         public TMP_Dropdown LeftSkill;
@@ -122,8 +122,8 @@ namespace BattleLoop
                     BattlePanels.Find((o) => o.CompareTag("BattleState/Post")).SetActive(false);
                     break;
                 case global::BattleState.Battle_Countdown:
-                    LeftSkillName.SetText(BattleManager.Instance.Battle.LeftPlayer.Skill.Type.ToString());
-                    RightSkillName.SetText(BattleManager.Instance.Battle.RightPlayer.Skill.Type.ToString());
+                    LeftSkillName.SetText(battle.LeftPlayer.Skill.Type.ToString());
+                    RightSkillName.SetText(battle.RightPlayer.Skill.Type.ToString());
                     BattleManager.Instance.Actions[BattleManager.OnCountdownChanged].Subscribe(OnCountdownChanged);
                     break;
                 case global::BattleState.Battle_Ongoing:

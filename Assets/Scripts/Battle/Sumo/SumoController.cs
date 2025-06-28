@@ -27,6 +27,7 @@ namespace CoreSumo
         #region Physics Stats Properties
         [Header("Physics Stats")]
         public float StopDelay = 0.5f;
+        public float StopTreshold = 0.05f;
         public float SlowDownRate = 2.0f;
         public float Torque = 0.4f;
         public float TurnRate = 1f;
@@ -210,6 +211,7 @@ namespace CoreSumo
         public void Turn(ISumoAction action)
         {
             Log(action);
+            
             switch (action.Type)
             {
                 case ActionType.TurnLeft:
@@ -319,8 +321,7 @@ namespace CoreSumo
 
         void BounceRule(Collision2D collision)
         {
-            SumoController enemyRobot = collision.gameObject.GetComponent<SumoController>();
-            if (enemyRobot == null)
+            if (!collision.gameObject.TryGetComponent<SumoController>(out var enemyRobot))
                 return;
 
             float actorVelocity = LastVelocity.magnitude + float.Epsilon;
@@ -352,7 +353,8 @@ namespace CoreSumo
                     IsActor = true,
                     Impact = actorImpact,
                     LockDuration = actorLockDuration,
-                    IsSkillActive = Skill.IsActive
+                    IsSkillActive = Skill.IsActive,
+                    IsDashActive = IsDashActive,
                 };
 
                 CollisionLog targetLog = new()
@@ -360,7 +362,8 @@ namespace CoreSumo
                     IsActor = false,
                     Impact = targetImpact,
                     LockDuration = targetLockDuration,
-                    IsSkillActive = enemyRobot.Skill.IsActive
+                    IsSkillActive = enemyRobot.Skill.IsActive,
+                    IsDashActive = enemyRobot.IsDashActive,
                 };
 
                 LogCollision(actorLog);
@@ -409,6 +412,11 @@ namespace CoreSumo
 
         private void HandleStopping()
         {
+            if (robotRigidBody.linearVelocity.magnitude < StopTreshold)
+            {
+                robotRigidBody.linearVelocity = Vector2.zero;
+                return;
+            }
             if (Time.time > LastDashTime + StopDelay)
             {
                 robotRigidBody.linearVelocity = Vector2.Lerp(robotRigidBody.linearVelocity, Vector2.zero, SlowDownRate * Time.deltaTime);
