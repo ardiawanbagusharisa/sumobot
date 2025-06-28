@@ -3,14 +3,15 @@ using System.Collections.Generic;
 using CoreSumo;
 using UnityEngine;
 
-
-public abstract class Bot : ScriptableObject
+// For test / debug, switch between ScriptableObject / Component
+public abstract class Bot : MonoBehaviour
 {
     // [Todo]: Inherited Bot script shouldn't be able to access internal attributes
     // Need to configure asmdef (assembly scope)
-    internal float BotElapsed = 0;
+    internal float ElapsedTime = 0;
     internal InputProvider provider;
     internal Queue<ISumoAction> actions;
+    
     internal void SetProvider(InputProvider provider)
     {
         actions = new Queue<ISumoAction>();
@@ -31,7 +32,7 @@ public abstract class Bot : ScriptableObject
     }
 
     // Called when two robots get into collision (Bounce), [side] is the collider.
-    public abstract void OnBotCollision(PlayerSide side);
+    public abstract void OnBotCollision(object[] side);
 
     // Called whenever battle state ischanged
     public abstract void OnBattleStateChanged(BattleState state);

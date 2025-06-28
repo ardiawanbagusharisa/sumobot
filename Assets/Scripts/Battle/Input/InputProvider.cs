@@ -21,8 +21,9 @@ public class InputProvider : MonoBehaviour
     #endregion
 
     #region Runtime properties
-    // AccelerateAction: true, means player can press Accelerate
-    public Dictionary<string, bool> StateKeyboardAction;
+
+    // ActionType.Acceelrate -> true, means player can press Accelerate
+    public Dictionary<ActionType, bool> StateKeyboardAction;
 
     // Store keyboard configurations (keybindings)
     public static readonly Dictionary<PlayerSide, Dictionary<KeyCode, ISumoAction>> KeyboardBindings
@@ -60,7 +61,7 @@ public class InputProvider : MonoBehaviour
         IEnumerable<ActionType> actionTypes = Enum.GetValues(typeof(ActionType)).Cast<ActionType>();
         foreach (ActionType action in actionTypes)
         {
-            StateKeyboardAction.Add(action.ToString(), true);
+            StateKeyboardAction.Add(action, true);
         }
 
         commandQueue = new Queue<ISumoAction>();
@@ -111,13 +112,13 @@ public class InputProvider : MonoBehaviour
     #region Keyboard Input
     private List<ISumoAction> ReadKeyboardInput()
     {
-        var actions = new List<ISumoAction>();
+        List<ISumoAction> actions = new();
 
         Dictionary<KeyCode, ISumoAction> sideKeyboard = KeyboardBindings[PlayerSide];
         foreach (var item in sideKeyboard)
         {
             // Map input to actions
-            if (Input.GetKey(item.Key) && StateKeyboardAction[item.Value.Type.ToString()])
+            if (Input.GetKey(item.Key) && StateKeyboardAction[item.Value.Type])
             {
                 try
                 {
@@ -135,32 +136,27 @@ public class InputProvider : MonoBehaviour
     #endregion
 
     #region UI Input
-    public void OnAccelerateButtonPressed()
+    public void OnAccelerateButtonPressed(object[] _)
     {
         EnqueueCommand(new AccelerateAction(InputType.UI));
     }
 
-    public void OnDashButtonPressed()
+    public void OnDashButtonPressed(object[] _)
     {
         EnqueueCommand(new DashAction(InputType.UI));
     }
 
-    public void OnTurnLeftButtonPressed()
+    public void OnTurnLeftButtonPressed(object[] _)
     {
         EnqueueCommand(new TurnAction(InputType.UI, ActionType.TurnLeft));
     }
 
-    public void OnTurnRightButtonPressed()
+    public void OnTurnRightButtonPressed(object[] _)
     {
         EnqueueCommand(new TurnAction(InputType.UI, ActionType.TurnRight));
     }
 
-    public void OnBoostSkillButtonPressed()
-    {
-        EnqueueCommand(new SkillAction(InputType.UI));
-    }
-
-    public void OnStoneSkillButtonPressed()
+    public void OnSkillButtonPressed(object[] _)
     {
         EnqueueCommand(new SkillAction(InputType.UI));
     }
@@ -177,23 +173,41 @@ public class InputProvider : MonoBehaviour
                 throw new Exception($"parameter can't be NaN when you are using [{action.FullName}] type");
         }
 
-        if (action is TurnAction)
+        if (action.Type == ActionType.TurnLeftWithAngle || action.Type == ActionType.TurnRightWithAngle)
         {
-            if (action.Type == ActionType.TurnLeftWithAngle || action.Type == ActionType.TurnRightWithAngle)
+            float param = (float)action.Param;
+            float minAngle = controller.HalfTurnAngle.min;
+            float maxAngle = controller.HalfTurnAngle.max;
+            if (param < minAngle || param > maxAngle)
+                throw new Exception($"parameter can't be < {minAngle} or > {maxAngle} when you are using [{action.FullName}]");
+        }
+        return true;
+    }
+
+    public bool CanExecute(ISumoAction action)
+    {
+        Battle battle = BattleManager.Instance.Battle;
+        SumoController controller = PlayerSide == PlayerSide.Left ? battle.LeftPlayer : battle.RightPlayer;
+
+        if (action is AccelerateAction)
+        {
+            if (controller.IsDashActive || controller.IsMovementDisabled)
             {
-                float param = (float)action.Param;
-                float minAngle = controller.HalfTurnAngle.min;
-                float maxAngle = controller.HalfTurnAngle.max;
-                if (param < minAngle || param > maxAngle)
-                    throw new Exception($"parameter can't be < {minAngle} or > {maxAngle} when you are using [{action.FullName}]");
+                return false;
             }
-            else if (action.Type == ActionType.TurnWithAngle)
+        }
+        if (action is DashAction)
+        {
+            if (controller.IsDashOnCooldown || controller.IsMovementDisabled)
             {
-                float param = (float)action.Param;
-                float minAngle = controller.FullTurnAngle.min;
-                float maxAngle = controller.FullTurnAngle.max;
-                if (param < minAngle || param > maxAngle)
-                    throw new Exception($"param can't be < {minAngle} and > {maxAngle} when you are using [${action.FullName}] type");
+                return false;
+            }
+        }
+        if (action is SkillAction)
+        {
+            if (controller.Skill.IsSkillOnCooldown)
+            {
+                return false;
             }
         }
         return true;

@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace BotAI
 {
-    [CreateAssetMenu(fileName = "BOT_Primitive", menuName = "Bot/Primitive")]
+    // [CreateAssetMenu(fileName = "BOT_Primitive", menuName = "Bot/Primitive")]
     public class AIBot_Primitive : Bot
     {
         public override string ID => Name;
@@ -51,23 +51,31 @@ namespace BotAI
                         api.Controller.InputProvider.EnqueueCommand(new DashAction(InputType.Script));
                     }
 
-                    if (!api.Controller.Skill.IsSkillCooldown)
+                    if (!api.Controller.Skill.IsSkillOnCooldown)
                     {
                         api.Controller.InputProvider.EnqueueCommand(new SkillAction(InputType.Script));
                     }
                 }
                 else
                 {
-                    api.Controller.InputProvider.EnqueueCommand(new TurnAction(InputType.Script, ActionType.TurnWithAngle, angleDiff));
+                    if (angleDiff > 0)
+                    {
+                        api.Controller.InputProvider.EnqueueCommand(new TurnAction(InputType.Script, ActionType.TurnLeftWithAngle, Mathf.Abs(angleDiff)));
+                    }
+                    else
+                    {
+                        api.Controller.InputProvider.EnqueueCommand(new TurnAction(InputType.Script, ActionType.TurnRightWithAngle, Mathf.Abs(angleDiff)));
+                    }
+
                 }
             }
 
             base.OnBotUpdate();
         }
 
-        public override void OnBotCollision(PlayerSide side)
+        public override void OnBotCollision(object[] args)
         {
-            OnPlayerBounce(side);
+            OnPlayerBounce((PlayerSide)args[0]);
         }
 
         public override void OnBattleStateChanged(BattleState state)

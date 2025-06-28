@@ -21,7 +21,7 @@ public class AIBot_Template : Bot
     }
 
     // When your AI is got a collision (bounce)
-    public override void OnBotCollision(PlayerSide side)
+    public override void OnBotCollision(object[] args)
     {
         throw new System.NotImplementedException();
     }

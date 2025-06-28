@@ -55,14 +55,17 @@ public class BattleManager : MonoBehaviour
     public float ElapsedTime = 0;
     public float TimeLeft => BattleTime - ElapsedTime;
 
-    public BotPlayer Bot;
+    public BotPlayerHandler Bot = new();
     public Battle Battle;
     public Round CurrentRound = null;
     #endregion
 
     #region Events properties 
-    public event Action<float> OnCountdownChanged;
-    public event Action<Battle> OnBattleChanged;
+    public ActionRegistry Actions = new();
+    // [float]
+    public static string OnCountdownChanged = "OnCountdownChanged";
+    // [Battle]
+    public static string OnBattleChanged = "OnBattleChanged";
     private Coroutine battleTimerCoroutine;
     private Coroutine countdownCoroutine;
     #endregion
@@ -92,8 +95,8 @@ public class BattleManager : MonoBehaviour
 
     void OnDisable()
     {
-        Battle.LeftPlayer.OnPlayerOutOfArena -= OnPlayerOutOfArena;
-        Battle.RightPlayer.OnPlayerOutOfArena -= OnPlayerOutOfArena;
+        Battle.LeftPlayer.Actions[SumoController.OnPlayerOutOfArena].Unsubscribe(OnPlayerOutOfArena);
+        Battle.RightPlayer.Actions[SumoController.OnPlayerOutOfArena].Unsubscribe(OnPlayerOutOfArena);
     }
 
     void Update()
@@ -148,7 +151,7 @@ public class BattleManager : MonoBehaviour
     {
         PlayerSide side = controller.transform.position.x < 0 ? PlayerSide.Left : PlayerSide.Right;
         controller.Initialize(side, controller.transform);
-        controller.OnPlayerOutOfArena += OnPlayerOutOfArena;
+        controller.Actions[SumoController.OnPlayerOutOfArena].Subscribe(OnPlayerOutOfArena);
 
         if (controller.Side == PlayerSide.Left)
             Battle.LeftPlayer = controller;
@@ -186,7 +189,7 @@ public class BattleManager : MonoBehaviour
         while (timer > 0 && CurrentState == BattleState.Battle_Countdown)
         {
             //Debug.Log(Mathf.Ceil(timer));
-            OnCountdownChanged?.Invoke(timer);
+            Actions[OnCountdownChanged].Invoke(timer);
             yield return new WaitForSeconds(1f);
             timer -= 1f;
         }
@@ -205,7 +208,7 @@ public class BattleManager : MonoBehaviour
         LogManager.SetRoundWinner("Draw");
         CurrentRound.RoundWinner = null;
         Battle.Winners[CurrentRound.RoundNumber] = null;
-        LogManager.CleanIncompletePlayerAction();
+        LogManager.FlushActionLog();
         TransitionToState(BattleState.Battle_End);
     }
 
@@ -218,13 +221,13 @@ public class BattleManager : MonoBehaviour
         yield return new WaitForSeconds(1f);
     }
 
-    private void OnPlayerOutOfArena(PlayerSide outPlayerSide)
+    private void OnPlayerOutOfArena(object[] args)
     {
         if (CurrentState != BattleState.Battle_Ongoing)
             return;
         Debug.Log("OnPlayerOutOfArena");
-
-        SumoController winner = outPlayerSide == PlayerSide.Left ? Battle.RightPlayer : Battle.LeftPlayer;
+        var Side = (PlayerSide)args[0];
+        SumoController winner = Side == PlayerSide.Left ? Battle.RightPlayer : Battle.LeftPlayer;
 
         if (winner == null)
         {
@@ -233,7 +236,7 @@ public class BattleManager : MonoBehaviour
         }
 
         Battle.SetRoundWinner(winner);
-        LogManager.CleanIncompletePlayerAction();
+        LogManager.FlushActionLog();
         TransitionToState(BattleState.Battle_End);
     }
 
@@ -280,6 +283,7 @@ public class BattleManager : MonoBehaviour
                         InitializePlayer(player.GetComponent<SumoController>());
                     });
                 }
+                Bot.Init(LeftPlayerObject, RightPlayerObject);
                 break;
 
             // Battle
@@ -296,7 +300,7 @@ public class BattleManager : MonoBehaviour
                 InputManager.Instance.InitializeInput(Battle.LeftPlayer);
                 InputManager.Instance.InitializeInput(Battle.RightPlayer);
 
-                LogManager.SetPlayerAction();
+                LogManager.RegisterAction();
                 StartCoroutine(AllPlayersReady());
                 break;
             case BattleState.Battle_Countdown:
@@ -324,7 +328,7 @@ public class BattleManager : MonoBehaviour
                 StartCoroutine(ResetBattle());
                 break;
             case BattleState.Battle_Reset:
-                var winner = Battle.GetBattleWinner();
+                BattleWinner? winner = Battle.GetBattleWinner();
                 if (winner != null)
                 {
                     LogManager.SetGameWinner((BattleWinner)winner!);
@@ -365,8 +369,8 @@ public class BattleManager : MonoBehaviour
             Battle.Rounds[CurrentRound.RoundNumber] = CurrentRound;
         }
 
-        Bot?.OnBattleStateChanged(CurrentState);
-        OnBattleChanged?.Invoke(Battle);
+        Bot.OnBattleStateChanged(CurrentState);
+        Actions[OnBattleChanged].Invoke(Battle);
     }
     #endregion
 }

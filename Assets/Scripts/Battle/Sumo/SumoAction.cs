@@ -44,7 +44,6 @@ namespace CoreSumo
         TurnRight,
         TurnLeftWithAngle,
         TurnRightWithAngle,
-        TurnWithAngle,
         SkillBoost,
         SkillStone,
     }
@@ -96,6 +95,7 @@ namespace CoreSumo
         public DashAction(InputType inputType)
         {
             InputUsed = inputType;
+            Type = ActionType.Dash;
         }
         public override void Execute(SumoController controller)
         {
@@ -110,6 +110,10 @@ namespace CoreSumo
             if (skillType != null)
             {
                 Type = (ActionType)skillType;
+            }
+            else
+            {
+                Type = ActionType.SkillBoost;
             }
             InputUsed = inputType;
         }

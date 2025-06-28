@@ -120,7 +120,7 @@ public class EA_MCTS_Node
             double exploitation = child.totalReward / child.visits;
             double exploration = C * Math.Sqrt(Math.Log(visits + 1) / child.visits);
             return exploitation + exploration;
-        }).First();
+        }).FirstOrDefault();
     }
 
     public Tuple<float, float, float> Simulate(BotAPI api, float simulationTime)
@@ -166,11 +166,7 @@ public class EA_MCTS_Node
             }
             else if (action is AccelerateAction)
             {
-                if (controller.IsMovementDisabled)
-                {
-                    bonusOrPenalty -= 0.1f;
-                }
-                else
+                if (api.CanExecute(action))
                 {
                     var predictionSpeed = controller.MoveSpeed;
                     if (controller.Skill.Type == SkillType.Boost && controller.Skill.IsActive)
@@ -180,14 +176,14 @@ public class EA_MCTS_Node
 
                     aiPosition += aiDirection.normalized * (predictionSpeed * simulationTime);
                 }
-            }
-            else if (action is DashAction)
-            {
-                if (controller.IsDashOnCooldown || controller.IsMovementDisabled)
+                else
                 {
                     bonusOrPenalty -= 0.1f;
                 }
-                else
+            }
+            else if (action is DashAction)
+            {
+                if (api.CanExecute(action))
                 {
                     bonusOrPenalty += 0.1f;
                     var predictionSpeed = controller.DashSpeed;
@@ -202,21 +198,25 @@ public class EA_MCTS_Node
                     // Formula of decelerating / stop-delay
                     aiPosition *= 0.5f + predictionSpeed * controller.StopDelay;
                 }
+                else
+                {
+                    bonusOrPenalty -= 0.1f;
+                }
 
             }
             else if (action is SkillAction)
             {
-                if (controller.Skill.IsSkillCooldown)
-                {
-                    bonusOrPenalty -= 0.5f;
-                }
-                else
+                if (api.CanExecute(action))
                 {
                     if (controller.Skill.Type == SkillType.Boost)
                     {
                         bonusOrPenalty += 0.5f;
                         aiPosition += aiDirection.normalized * (controller.MoveSpeed * controller.Skill.BoostMultiplier * simulationTime);
                     }
+                }
+                else
+                {
+                    bonusOrPenalty -= 0.5f;
                 }
             }
 
@@ -281,7 +281,7 @@ public class EA_MCTS_Node
         {
             double exploitation = child.totalReward / (child.visits + double.Epsilon);
             return exploitation;
-        }).First();
+        }).FirstOrDefault();
         return highest;
     }
 }

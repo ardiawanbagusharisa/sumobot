@@ -6,8 +6,9 @@ using UnityEngine.UI;
 public class ButtonPointerHandler : MonoBehaviour, IPointerDownHandler, IPointerUpHandler
 {
     #region Action properties
-    public event Action OnHold;
-    public event Action OnPress;
+    public ActionRegistry Actions = new();
+    static public string ActionOnHold = "ActionOnHold";
+    static public string ActionOnPress = "ActionOnPress";
     private bool isHolding = false;
     #endregion
 
@@ -22,7 +23,7 @@ public class ButtonPointerHandler : MonoBehaviour, IPointerDownHandler, IPointer
         isHolding = false;
         if (GetComponent<Button>().interactable)
         {
-            OnPress?.Invoke();
+            Actions[ActionOnPress]?.Invoke();
         }
     }
 
@@ -32,7 +33,7 @@ public class ButtonPointerHandler : MonoBehaviour, IPointerDownHandler, IPointer
         {
             if (GetComponent<Button>().interactable)
             {
-                OnHold?.Invoke();
+                Actions[ActionOnHold]?.Invoke();
             }
         }
     }

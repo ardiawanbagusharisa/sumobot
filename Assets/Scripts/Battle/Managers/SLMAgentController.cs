@@ -210,7 +210,7 @@ public class SLMAgentController : MonoBehaviour
 
     bool GetSkillReady()
     {
-        return !controller.Skill.IsSkillCooldown;
+        return !controller.Skill.IsSkillOnCooldown;
     }
 
     bool GetDashReady()

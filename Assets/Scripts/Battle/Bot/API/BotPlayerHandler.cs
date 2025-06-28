@@ -1,11 +1,24 @@
 using System;
+using System.Linq;
+using CoreSumo;
+using UnityEngine;
 
 [Serializable]
-public class BotPlayer
+public class BotPlayerHandler
 {
     public bool IsEnable;
+    public bool IsScriptable = false;
     public Bot Left;
     public Bot Right;
+
+    public void Init(GameObject leftGameObject, GameObject rightGameObject)
+    {
+        if (!IsEnable) return;
+        if (IsScriptable) return;
+
+        Left = leftGameObject.GetComponent<SumoController>().Bot;
+        Right = rightGameObject.GetComponent<SumoController>().Bot;
+    }
 
     public void OnUpdate(float ElapsedTime)
     {
@@ -13,20 +26,20 @@ public class BotPlayer
 
         if (Left != null)
         {
-            Left.BotElapsed = ElapsedTime;
-            if (Left.BotElapsed >= Left.Interval)
+            Left.ElapsedTime = ElapsedTime;
+            if (Left.ElapsedTime >= Left.Interval)
             {
-                Left.BotElapsed = 0;
+                Left.ElapsedTime = 0;
                 Left.OnBotUpdate();
             }
         }
 
         if (Right != null)
         {
-            Right.BotElapsed = ElapsedTime;
-            if (Right.BotElapsed >= Right.Interval)
+            Right.ElapsedTime = ElapsedTime;
+            if (Right.ElapsedTime >= Right.Interval)
             {
-                Right.BotElapsed = 0;
+                Right.ElapsedTime = 0;
                 Right.OnBotUpdate();
             }
         }
