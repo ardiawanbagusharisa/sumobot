@@ -2,17 +2,19 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class BaseLog
+namespace SumoLog
 {
-    public float AngularVelocity;
-    public Vector2 Position;
-    public Vector2 LinearVelocity;
-    public float Rotation;
-
-
-    public Dictionary<string, dynamic> ToMap()
+    public class BaseLog
     {
-        return new(){
+        public float AngularVelocity;
+        public Vector2 Position;
+        public Vector2 LinearVelocity;
+        public float Rotation;
+
+
+        public Dictionary<string, dynamic> ToMap()
+        {
+            return new(){
             { "AngularVelocity", AngularVelocity},
             { "LinearVelocity", new Dictionary<string,float>()
                 {
@@ -32,5 +34,6 @@ public class BaseLog
                 }
             },
         };
+        }
     }
 }

@@ -1,6 +1,6 @@
-using System;
+using SumoInput;
 
-namespace CoreSumo
+namespace SumoCore
 {
     #region Action abstract class and Enums 
     public abstract class ISumoAction

@@ -1,60 +1,63 @@
 using System;
-using System.Linq;
-using CoreSumo;
+using SumoCore;
+using SumoManager;
 using UnityEngine;
 
-[Serializable]
-public class BotPlayerHandler
+namespace SumoBot
 {
-    public bool IsEnable;
-    public bool IsScriptable = false;
-    public Bot Left;
-    public Bot Right;
-
-    public void Init(GameObject leftGameObject, GameObject rightGameObject)
+    [Serializable]
+    public class BotPlayerHandler
     {
-        if (!IsEnable) return;
-        if (IsScriptable) return;
+        public bool IsEnable;
+        public bool IsScriptable = false;
+        public Bot Left;
+        public Bot Right;
 
-        Left = leftGameObject.GetComponent<SumoController>().Bot;
-        Right = rightGameObject.GetComponent<SumoController>().Bot;
-    }
-
-    public void OnUpdate(float ElapsedTime)
-    {
-        if (!IsEnable) return;
-
-        if (Left != null)
+        public void Init(GameObject leftGameObject, GameObject rightGameObject)
         {
-            Left.ElapsedTime = ElapsedTime;
-            if (Left.ElapsedTime >= Left.Interval)
+            if (!IsEnable) return;
+            if (IsScriptable) return;
+
+            Left = leftGameObject.GetComponent<SumoController>().Bot;
+            Right = rightGameObject.GetComponent<SumoController>().Bot;
+        }
+
+        public void OnUpdate(float ElapsedTime)
+        {
+            if (!IsEnable) return;
+
+            if (Left != null)
             {
-                Left.ElapsedTime = 0;
-                Left.OnBotUpdate();
+                Left.ElapsedTime = ElapsedTime;
+                if (Left.ElapsedTime >= Left.Interval)
+                {
+                    Left.ElapsedTime = 0;
+                    Left.OnBotUpdate();
+                }
+            }
+
+            if (Right != null)
+            {
+                Right.ElapsedTime = ElapsedTime;
+                if (Right.ElapsedTime >= Right.Interval)
+                {
+                    Right.ElapsedTime = 0;
+                    Right.OnBotUpdate();
+                }
             }
         }
-
-        if (Right != null)
+        public void OnBattleStateChanged(BattleState currState)
         {
-            Right.ElapsedTime = ElapsedTime;
-            if (Right.ElapsedTime >= Right.Interval)
+            if (!IsEnable) return;
+
+            if (Left != null)
             {
-                Right.ElapsedTime = 0;
-                Right.OnBotUpdate();
+                Left.OnBattleStateChanged(currState);
             }
-        }
-    }
-    public void OnBattleStateChanged(BattleState currState)
-    {
-        if (!IsEnable) return;
-
-        if (Left != null)
-        {
-            Left.OnBattleStateChanged(currState);
-        }
-        if (Right != null)
-        {
-            Right.OnBattleStateChanged(currState);
+            if (Right != null)
+            {
+                Right.OnBattleStateChanged(currState);
+            }
         }
     }
 }

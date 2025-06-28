@@ -1,16 +1,18 @@
 using System.Collections.Generic;
-using CoreSumo;
+using SumoCore;
 using Unity.VisualScripting;
 
-public class ActionLog : BaseLog
+namespace SumoLog
 {
-    [DoNotSerialize]
-    public ISumoAction Action;
-    public float Duration;
-
-    public new Dictionary<string, dynamic> ToMap()
+    public class ActionLog : BaseLog
     {
-        return new()
+        [DoNotSerialize]
+        public ISumoAction Action;
+        public float Duration;
+
+        public new Dictionary<string, dynamic> ToMap()
+        {
+            return new()
         {
             { "Name", Action.Name},
             { "Parameter", Action.Param},
@@ -19,5 +21,6 @@ public class ActionLog : BaseLog
             { "Duration", Duration},
             { "Robot", base.ToMap()},
         };
+        }
     }
 }

@@ -1,15 +1,18 @@
 
 using System;
 
-[Serializable]
-public class MinMax
+namespace SumoHelper
 {
-    public float min;
-    public float max;
-
-    public MinMax(float min, float max)
+    [Serializable]
+    public class MinMax
     {
-        this.min = min;
-        this.max = max;
+        public float min;
+        public float max;
+
+        public MinMax(float min, float max)
+        {
+            this.min = min;
+            this.max = max;
+        }
     }
 }

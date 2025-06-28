@@ -1,50 +1,55 @@
 using System;
 using System.Collections.Generic;
-using CoreSumo;
+using SumoCore;
+using SumoInput;
+using SumoManager;
 using UnityEngine;
 
-// For test / debug, switch between ScriptableObject / Component
-public abstract class Bot : MonoBehaviour
+namespace SumoBot
 {
-    // [Todo]: Inherited Bot script shouldn't be able to access internal attributes
-    // Need to configure asmdef (assembly scope)
-    internal float ElapsedTime = 0;
-    internal InputProvider provider;
-    internal Queue<ISumoAction> actions;
-    
-    internal void SetProvider(InputProvider provider)
+    // For test / debug, switch between ScriptableObject / Component
+    public abstract class Bot : MonoBehaviour
     {
-        actions = new Queue<ISumoAction>();
-        this.provider = provider;
-    }
+        // [Todo]: Inherited Bot script shouldn't be able to access internal attributes
+        // Need to configure asmdef (assembly scope)
+        internal float ElapsedTime = 0;
+        internal InputProvider provider;
+        internal Queue<ISumoAction> actions;
 
-    public abstract string ID { get; }
+        internal void SetProvider(InputProvider provider)
+        {
+            actions = new Queue<ISumoAction>();
+            this.provider = provider;
+        }
 
-    [Range(0.1f, 10f)]
-    public abstract float Interval { get; }
+        public abstract string ID { get; }
 
-    public abstract void OnBotInit(PlayerSide side, BotAPI botAPI);
+        [Range(0.1f, 10f)]
+        public abstract float Interval { get; }
 
-    // Called when elapsed time of battle timer is satisfy with the interval
-    public virtual void OnBotUpdate()
-    {
-        provider.EnqueueCommands(actions);
-    }
+        public abstract void OnBotInit(PlayerSide side, BotAPI botAPI);
 
-    // Called when two robots get into collision (Bounce), [side] is the collider.
-    public abstract void OnBotCollision(object[] side);
+        // Called when elapsed time of battle timer is satisfy with the interval
+        public virtual void OnBotUpdate()
+        {
+            provider.EnqueueCommands(actions);
+        }
 
-    // Called whenever battle state ischanged
-    public abstract void OnBattleStateChanged(BattleState state);
+        // Called when two robots get into collision (Bounce), [side] is the collider.
+        public abstract void OnBotCollision(object[] side);
 
-    // Actions will be dequeued / invoked when the interval is set
-    public virtual void Enqueue(ISumoAction action)
-    {
-        actions.Enqueue(action);
-    }
+        // Called whenever battle state ischanged
+        public abstract void OnBattleStateChanged(BattleState state);
 
-    public virtual void ClearCommands()
-    {
-        actions.Clear();
+        // Actions will be dequeued / invoked when the interval is set
+        public virtual void Enqueue(ISumoAction action)
+        {
+            actions.Enqueue(action);
+        }
+
+        public virtual void ClearCommands()
+        {
+            actions.Clear();
+        }
     }
 }

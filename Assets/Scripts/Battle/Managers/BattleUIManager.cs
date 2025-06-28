@@ -1,11 +1,12 @@
-using CoreSumo;
 using System.Collections.Generic;
 using System.Linq;
+using SumoCore;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace BattleLoop
+
+namespace SumoManager
 {
     public class BattleUIManager : MonoBehaviour
     {
@@ -20,7 +21,7 @@ namespace BattleLoop
         public TMP_Dropdown RightSkill;
 
         [Header("Battle UI")]
-        public TMP_Text BattleState;
+        public TMP_Text BattleStateUI;
         public TMP_Text Countdown;
         public TMP_Text RoundSystem;
         public TMP_Text Round;
@@ -64,9 +65,9 @@ namespace BattleLoop
 
         void FixedUpdate()
         {
-            if (BattleManager.Instance.CurrentState == global::BattleState.Battle_Ongoing ||
-            BattleManager.Instance.CurrentState == global::BattleState.Battle_End ||
-            BattleManager.Instance.CurrentState == global::BattleState.Battle_Reset)
+            if (BattleManager.Instance.CurrentState == BattleState.Battle_Ongoing ||
+            BattleManager.Instance.CurrentState == BattleState.Battle_End ||
+            BattleManager.Instance.CurrentState == BattleState.Battle_Reset)
             {
                 SumoController leftPlayer = BattleManager.Instance.Battle.LeftPlayer;
                 LeftSkillCooldown.GetComponent<Image>().fillAmount = leftPlayer.Skill.CooldownNormalized;
@@ -99,11 +100,11 @@ namespace BattleLoop
 
             Round round = battle.CurrentRound;
             BattleState state = BattleManager.Instance.CurrentState;
-            BattleState.SetText(state.ToString());
+            BattleStateUI.SetText(state.ToString());
 
             switch (state)
             {
-                case global::BattleState.PreBatle_Preparing:
+                case BattleState.PreBatle_Preparing:
                     BattlePanels.Find((o) => o.CompareTag("BattleState/Pre")).SetActive(true);
                     BattlePanels.Find((o) => o.CompareTag("BattleState/Ongoing")).SetActive(false);
                     BattlePanels.Find((o) => o.CompareTag("BattleState/Post")).SetActive(false);
@@ -112,7 +113,7 @@ namespace BattleLoop
                     LeftFinalScore.SetText("");
                     RightFinalScore.SetText("");
                     break;
-                case global::BattleState.Battle_Preparing:
+                case BattleState.Battle_Preparing:
                     BattlePanels.Find((o) => o.CompareTag("BattleState/Ongoing")).SetActive(true);
                     ClearScore();
                     Countdown.SetText("");
@@ -121,19 +122,18 @@ namespace BattleLoop
                     BattlePanels.Find((o) => o.CompareTag("BattleState/Pre")).SetActive(false);
                     BattlePanels.Find((o) => o.CompareTag("BattleState/Post")).SetActive(false);
                     break;
-                case global::BattleState.Battle_Countdown:
+                case BattleState.Battle_Countdown:
                     LeftSkillName.SetText(battle.LeftPlayer.Skill.Type.ToString());
                     RightSkillName.SetText(battle.RightPlayer.Skill.Type.ToString());
                     BattleManager.Instance.Actions[BattleManager.OnCountdownChanged].Subscribe(OnCountdownChanged);
                     break;
-                case global::BattleState.Battle_Ongoing:
+                case BattleState.Battle_Ongoing:
                     Countdown.SetText("");
                     BattleManager.Instance.Actions[BattleManager.OnCountdownChanged].Unsubscribe(OnCountdownChanged);
                     break;
-                case global::BattleState.Battle_End:
-                    InputManager.Instance.ResetCooldownButton();
+                case BattleState.Battle_End:
                     break;
-                case global::BattleState.PostBattle_ShowResult:
+                case BattleState.PostBattle_ShowResult:
                     BattlePanels.Find((o) => o.CompareTag("BattleState/Post")).SetActive(true);
                     BattlePanels.Find((o) => o.CompareTag("BattleState/Ongoing")).SetActive(false);
                     BattlePanels.Find((o) => o.CompareTag("BattleState/Pre")).SetActive(false);
@@ -169,4 +169,3 @@ namespace BattleLoop
         #endregion
     }
 }
-

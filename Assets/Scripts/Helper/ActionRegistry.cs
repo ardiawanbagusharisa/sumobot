@@ -1,20 +1,23 @@
 using System;
 using System.Collections.Generic;
 
-[Serializable]
-public class ActionRegistry
+namespace SumoHelper
 {
-    private Dictionary<string, TrackableAction> actions = new();
-
-    public TrackableAction this[string key]
+    [Serializable]
+    public class ActionRegistry
     {
-        get
-        {
-            if (!actions.ContainsKey(key))
-                actions[key] = new TrackableAction();
-            return actions[key];
-        }
-    }
+        private Dictionary<string, TrackableAction> actions = new();
 
-    public IReadOnlyDictionary<string, TrackableAction> Actions => actions;
+        public TrackableAction this[string key]
+        {
+            get
+            {
+                if (!actions.ContainsKey(key))
+                    actions[key] = new TrackableAction();
+                return actions[key];
+            }
+        }
+
+        public IReadOnlyDictionary<string, TrackableAction> Actions => actions;
+    }
 }
