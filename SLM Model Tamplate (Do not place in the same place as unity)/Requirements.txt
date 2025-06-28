@@ -1,0 +1,6 @@
+torch
+pandas
+flask
+nltk
+numpy
+pickle-mixin    
