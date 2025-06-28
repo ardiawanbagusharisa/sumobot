@@ -25,8 +25,8 @@ namespace CoreSumo
 
         #region Physics Stats Properties
         [Header("Physics Stats")]
-        public float StopDelay = 0.5f;           
-        public float SlowDownRate = 2.0f; 
+        public float StopDelay = 0.5f;
+        public float SlowDownRate = 2.0f;
         public float Torque = 0.4f;
         public float TurnRate = 1f;
         public float BounceResistance = 1f;
@@ -47,6 +47,8 @@ namespace CoreSumo
 
         #region Runtime (readonly) Properties
         public bool isInputDisabled = false;
+        public bool isSkillReady => Skill != null && !Skill.IsSkillCooldown;
+        public bool isDashReady => !IsDashOnCooldown;
         public Vector2 LastVelocity { get; private set; } = Vector2.zero;
         public float LastAngularVelocity => robotRigidBody.angularVelocity;
         public float LastDashTime = 0;
@@ -110,7 +112,7 @@ namespace CoreSumo
 
         void OnTriggerExit2D(Collider2D collision)
         {
-            if (!Application.isPlaying) 
+            if (!Application.isPlaying)
                 return;
 
             if (collision.CompareTag("Arena/Floor") && !isOutOfArena)
@@ -235,7 +237,7 @@ namespace CoreSumo
             float totalAngle = (float)action.Param;
             float rotatedAngle = 0f;
             float duration = Mathf.Abs(totalAngle) * TurnRate / LastVelocity.magnitude;
-            
+
             if (duration > TurnRate)
                 duration = TurnRate;
 
@@ -243,12 +245,12 @@ namespace CoreSumo
 
             while (Mathf.Abs(rotatedAngle) < Mathf.Abs(totalAngle) && BattleManager.Instance.CurrentState == BattleState.Battle_Ongoing && !IsMovementLocked)
             {
-                float delta = speed * Time.deltaTime; 
+                float delta = speed * Time.deltaTime;
 
                 if (Mathf.Abs(rotatedAngle + delta) > Mathf.Abs(totalAngle))
                     delta = totalAngle - rotatedAngle;
 
-                transform.Rotate(0, 0, delta); 
+                transform.Rotate(0, 0, delta);
                 rotatedAngle += delta;
 
                 Log(action);
@@ -313,11 +315,11 @@ namespace CoreSumo
 
         void BounceRule(Collision2D collision)
         {
-            if (!Application.isPlaying) 
+            if (!Application.isPlaying)
                 return;
 
             SumoController otherRobot = collision.gameObject.GetComponent<SumoController>();
-            if (otherRobot == null) 
+            if (otherRobot == null)
                 return;
 
             float actorVelocity = LastVelocity.magnitude;
@@ -332,10 +334,10 @@ namespace CoreSumo
                 Vector2 collisionNormal = collision.contacts[0].normal;
                 float total = actorVelocity + enemyVelocity + 0.01f;
 
-                if (total < 0.1f) 
+                if (total < 0.1f)
                     return;
 
-                float actorImpact = CollisionBaseForce * enemyVelocity / total; 
+                float actorImpact = CollisionBaseForce * enemyVelocity / total;
                 float targetImpact = CollisionBaseForce * actorVelocity / total;
 
                 if (Skill.Type == SkillType.Stone && Skill.IsActive)
@@ -347,8 +349,8 @@ namespace CoreSumo
                 actorImpact *= otherRobot.BounceResistance;
                 targetImpact *= BounceResistance;
 
-                Bounce(collisionNormal, actorImpact); 
-                otherRobot.Bounce(-collisionNormal, targetImpact); 
+                Bounce(collisionNormal, actorImpact);
+                otherRobot.Bounce(-collisionNormal, targetImpact);
 
                 OnPlayerBounce?.Invoke(Side);
                 otherRobot.OnPlayerBounce?.Invoke(Side);
@@ -413,7 +415,7 @@ namespace CoreSumo
         {
             if (Time.time > LastDashTime + StopDelay)
             {
-                robotRigidBody.linearVelocity = Vector2.Lerp(robotRigidBody.linearVelocity, Vector2.zero, SlowDownRate * Time.deltaTime); 
+                robotRigidBody.linearVelocity = Vector2.Lerp(robotRigidBody.linearVelocity, Vector2.zero, SlowDownRate * Time.deltaTime);
                 robotRigidBody.angularVelocity = Mathf.Lerp(robotRigidBody.angularVelocity, 0, SlowDownRate * Time.deltaTime);
             }
         }

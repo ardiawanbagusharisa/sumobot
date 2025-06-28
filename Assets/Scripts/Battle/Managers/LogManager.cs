@@ -81,7 +81,7 @@ public class LogManager
 
     private static BattleLog _battleLog;
     private static string _logFolderPath;
-    
+
     public static int CurrentGameIndex => _battleLog.games.Count > 0 ? _battleLog.games[^1].index : 0;
     #endregion
 
@@ -159,7 +159,7 @@ public class LogManager
     public static void InitBattle()
     {
         BattleManager battleManager = BattleManager.Instance;
-        
+
         _battleLog = new BattleLog();
         _battleLog.input_type = battleManager.BattleInputType.ToString();
         _battleLog.battle_id = battleManager.Battle.BattleID.ToString();
@@ -171,8 +171,12 @@ public class LogManager
 
     public static void UpdateMetadata()
     {
-        _battleLog.left_player_stats.bot = BattleManager.Instance.Battle.LeftPlayer.gameObject.GetComponents<Bot>().First((x) => x.enabled)?.Name() ?? "";
-        _battleLog.right_player_stats.bot = BattleManager.Instance.Battle.RightPlayer.gameObject.GetComponents<Bot>().First((x) => x.enabled)?.Name() ?? "";
+        var leftBot = BattleManager.Instance.Battle.LeftPlayer.gameObject.GetComponents<Bot>().FirstOrDefault(x => x.enabled);
+        _battleLog.left_player_stats.bot = leftBot != null ? leftBot.Name() : "";
+
+        var rightBot = BattleManager.Instance.Battle.RightPlayer.gameObject.GetComponents<Bot>().FirstOrDefault(x => x.enabled);
+        _battleLog.right_player_stats.bot = rightBot != null ? rightBot.Name() : "";
+
         _battleLog.left_player_stats.skill_type = BattleManager.Instance.Battle.LeftPlayer.Skill.Type.ToString();
         _battleLog.right_player_stats.skill_type = BattleManager.Instance.Battle.RightPlayer.Skill.Type.ToString();
 
@@ -194,7 +198,7 @@ public class LogManager
     public static void StartGameLog()
     {
         int newGameIndex = CurrentGameIndex;
-        
+
         if (_battleLog.games.Count > 0)
             newGameIndex += 1;
 
@@ -294,7 +298,7 @@ public class LogManager
                 data = data,
             };
 
-            eventLog.started_at = startedAt != null ? startedAt.ToString(): BattleManager.Instance.ElapsedTime.ToString();
+            eventLog.started_at = startedAt != null ? startedAt.ToString() : BattleManager.Instance.ElapsedTime.ToString();
             eventLog.updated_at = updatedAt != null ? updatedAt.ToString() : eventLog.updated_at = BattleManager.Instance.ElapsedTime.ToString();
             roundLog.action_events.Add(eventLog);
         }
