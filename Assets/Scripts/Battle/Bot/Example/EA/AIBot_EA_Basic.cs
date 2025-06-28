@@ -1,7 +1,9 @@
-using CoreSumo;
+using SumoCore;
+using SumoInput;
+using SumoManager;
 using UnityEngine;
 
-namespace BotAI
+namespace SumoBot
 {
     // [CreateAssetMenu(fileName = "BOT_GA", menuName = "Bot/GA")]
     public class AIBot_EA_Basic : Bot

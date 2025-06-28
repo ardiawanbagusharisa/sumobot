@@ -1,5 +1,6 @@
 // StrategyToActionMapper.cs
-using CoreSumo;
+using SumoCore;
+using SumoInput;
 using UnityEngine;
 
 /// <summary>

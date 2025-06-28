@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace BotAI
+namespace SumoBot
 {
     public class EA_Basic_Data
     {

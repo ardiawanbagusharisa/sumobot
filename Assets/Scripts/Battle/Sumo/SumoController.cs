@@ -1,10 +1,14 @@
-using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using SumoBot;
+using SumoHelper;
+using SumoInput;
+using SumoLog;
+using SumoManager;
 using UnityEngine;
 
-namespace CoreSumo
+namespace SumoCore
 {
     public enum PlayerSide
     {

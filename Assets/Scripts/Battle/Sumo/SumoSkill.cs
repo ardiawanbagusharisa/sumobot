@@ -1,8 +1,9 @@
 using System;
 using System.Collections;
+using SumoManager;
 using UnityEngine;
 
-namespace CoreSumo
+namespace SumoCore
 {
     public enum SkillType
     {
