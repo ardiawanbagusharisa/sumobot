@@ -53,6 +53,8 @@ namespace SumoCore
         #region Runtime (readonly) Properties
         public Bot Bot;
         public bool isInputDisabled = false;
+        public bool isSkillReady => Skill != null && !Skill.IsSkillOnCooldown;
+        public bool isDashReady => !IsDashOnCooldown;
         public Vector2 LastVelocity { get; private set; } = Vector2.zero;
         public float LastAngularVelocity => robotRigidBody.angularVelocity;
         public float LastDashTime = 0;
@@ -412,6 +414,7 @@ namespace SumoCore
             }
             if (Time.time > LastDashTime + StopDelay)
             {
+                robotRigidBody.linearVelocity = Vector2.Lerp(robotRigidBody.linearVelocity, Vector2.zero, SlowDownRate * Time.deltaTime);
                 robotRigidBody.linearVelocity = Vector2.Lerp(robotRigidBody.linearVelocity, Vector2.zero, SlowDownRate * Time.deltaTime);
                 robotRigidBody.angularVelocity = Mathf.Lerp(robotRigidBody.angularVelocity, 0, SlowDownRate * Time.deltaTime);
             }

@@ -26,7 +26,7 @@ namespace SumoLog
                 { "Robot", base.ToMap()},
             };
         }
-        public static ActionLog FromMap(Dictionary<string, object> map)
+        public static new ActionLog FromMap(Dictionary<string, object> map)
         {
             var robot = (JObject)map["Robot"];
             Vector2 tempLinearVelocity = new((float)(double)robot["LinearVelocity"]["X"], (float)(double)robot["LinearVelocity"]["Y"]);
