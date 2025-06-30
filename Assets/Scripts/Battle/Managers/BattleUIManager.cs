@@ -72,6 +72,7 @@ namespace SumoManager
             battleTime.CurrentState == BattleState.Battle_End ||
             battleTime.CurrentState == BattleState.Battle_Reset)
             {
+                Timer.SetText(Mathf.CeilToInt(battleTime.TimeLeft).ToString());
                 SumoController leftPlayer = battleTime.Battle.LeftPlayer;
                 LeftSkillCooldown.GetComponent<Image>().fillAmount = leftPlayer.Skill.CooldownNormalized;
                 LeftDashCooldown.GetComponent<Image>().fillAmount = leftPlayer.DashCooldownNormalized;
