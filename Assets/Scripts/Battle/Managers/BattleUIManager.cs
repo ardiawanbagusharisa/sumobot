@@ -1,11 +1,12 @@
-using CoreSumo;
 using System.Collections.Generic;
 using System.Linq;
+using SumoCore;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace BattleLoop
+
+namespace SumoManager
 {
     public class BattleUIManager : MonoBehaviour
     {
@@ -13,14 +14,14 @@ namespace BattleLoop
 
         #region UI Elements properties
         [Header("Main Panels")]
-        public List<GameObject> BattlePanels = new List<GameObject>();
+        public List<GameObject> BattlePanels = new();
 
         [Header("Pre-battle UI")]
         public TMP_Dropdown LeftSkill;
         public TMP_Dropdown RightSkill;
 
         [Header("Battle UI")]
-        public TMP_Text BattleState;
+        public TMP_Text BattleStateUI;
         public TMP_Text Countdown;
         public TMP_Text RoundSystem;
         public TMP_Text Round;
@@ -37,7 +38,7 @@ namespace BattleLoop
         public TMP_Text RightScore;
         public TMP_Text RightFinalScore;
         public Image RightDashCooldown;
-        public Image RightSkillCooldown; 
+        public Image RightSkillCooldown;
         public TMP_Text RightSkillName;
         #endregion
 
@@ -54,26 +55,26 @@ namespace BattleLoop
 
         void OnEnable()
         {
-            BattleManager.Instance.OnBattleChanged += OnBattleChanged;
+            BattleManager.Instance.Actions[BattleManager.OnBattleChanged].Subscribe(OnBattleChanged);
         }
 
         void OnDisable()
         {
-            BattleManager.Instance.OnBattleChanged -= OnBattleChanged;
+            BattleManager.Instance.Actions[BattleManager.OnBattleChanged].Unsubscribe(OnBattleChanged);
         }
 
         void FixedUpdate()
         {
-            if (BattleManager.Instance.CurrentState == global::BattleState.Battle_Ongoing ||
-            BattleManager.Instance.CurrentState == global::BattleState.Battle_End ||
-            BattleManager.Instance.CurrentState == global::BattleState.Battle_Reset)
+            if (BattleManager.Instance.CurrentState == BattleState.Battle_Ongoing ||
+            BattleManager.Instance.CurrentState == BattleState.Battle_End ||
+            BattleManager.Instance.CurrentState == BattleState.Battle_Reset)
             {
                 SumoController leftPlayer = BattleManager.Instance.Battle.LeftPlayer;
-                LeftSkillCooldown.GetComponent<Image>().fillAmount = leftPlayer.Skill.CooldownAmountNormalized;
+                LeftSkillCooldown.GetComponent<Image>().fillAmount = leftPlayer.Skill.CooldownNormalized;
                 LeftDashCooldown.GetComponent<Image>().fillAmount = leftPlayer.DashCooldownNormalized;
 
                 SumoController rightPlayer = BattleManager.Instance.Battle.RightPlayer;
-                RightSkillCooldown.GetComponent<Image>().fillAmount = rightPlayer.Skill.CooldownAmountNormalized;
+                RightSkillCooldown.GetComponent<Image>().fillAmount = rightPlayer.Skill.CooldownNormalized;
                 RightDashCooldown.GetComponent<Image>().fillAmount = rightPlayer.DashCooldownNormalized;
 
                 Timer.SetText(Mathf.CeilToInt(BattleManager.Instance.TimeLeft).ToString());
@@ -91,18 +92,19 @@ namespace BattleLoop
         #endregion
 
         #region Battle changes
-        private void OnBattleChanged(Battle battle)
+        private void OnBattleChanged(object[] args)
         {
+            var battle = (Battle)args[0];
             RoundSystem.SetText($"Best of {(int)battle.RoundSystem}");
             Round.SetText($"Round {battle.CurrentRound.RoundNumber}");
 
             Round round = battle.CurrentRound;
             BattleState state = BattleManager.Instance.CurrentState;
-            BattleState.SetText(state.ToString());
+            BattleStateUI.SetText(state.ToString());
 
             switch (state)
             {
-                case global::BattleState.PreBatle_Preparing:
+                case BattleState.PreBatle_Preparing:
                     BattlePanels.Find((o) => o.CompareTag("BattleState/Pre")).SetActive(true);
                     BattlePanels.Find((o) => o.CompareTag("BattleState/Ongoing")).SetActive(false);
                     BattlePanels.Find((o) => o.CompareTag("BattleState/Post")).SetActive(false);
@@ -111,7 +113,7 @@ namespace BattleLoop
                     LeftFinalScore.SetText("");
                     RightFinalScore.SetText("");
                     break;
-                case global::BattleState.Battle_Preparing:
+                case BattleState.Battle_Preparing:
                     BattlePanels.Find((o) => o.CompareTag("BattleState/Ongoing")).SetActive(true);
                     ClearScore();
                     Countdown.SetText("");
@@ -120,19 +122,18 @@ namespace BattleLoop
                     BattlePanels.Find((o) => o.CompareTag("BattleState/Pre")).SetActive(false);
                     BattlePanels.Find((o) => o.CompareTag("BattleState/Post")).SetActive(false);
                     break;
-                case global::BattleState.Battle_Countdown:
-                    LeftSkillName.SetText(BattleManager.Instance.Battle.LeftPlayer.Skill.Type.ToString());
-                    RightSkillName.SetText(BattleManager.Instance.Battle.RightPlayer.Skill.Type.ToString());
-                    BattleManager.Instance.OnCountdownChanged += OnCountdownChanged;
+                case BattleState.Battle_Countdown:
+                    LeftSkillName.SetText(battle.LeftPlayer.Skill.Type.ToString());
+                    RightSkillName.SetText(battle.RightPlayer.Skill.Type.ToString());
+                    BattleManager.Instance.Actions[BattleManager.OnCountdownChanged].Subscribe(OnCountdownChanged);
                     break;
-                case global::BattleState.Battle_Ongoing:
+                case BattleState.Battle_Ongoing:
                     Countdown.SetText("");
-                    BattleManager.Instance.OnCountdownChanged -= OnCountdownChanged;
+                    BattleManager.Instance.Actions[BattleManager.OnCountdownChanged].Unsubscribe(OnCountdownChanged);
                     break;
-                case global::BattleState.Battle_End:
-                    InputManager.Instance.ResetCooldownButton();
+                case BattleState.Battle_End:
                     break;
-                case global::BattleState.PostBattle_ShowResult:
+                case BattleState.PostBattle_ShowResult:
                     BattlePanels.Find((o) => o.CompareTag("BattleState/Post")).SetActive(true);
                     BattlePanels.Find((o) => o.CompareTag("BattleState/Ongoing")).SetActive(false);
                     BattlePanels.Find((o) => o.CompareTag("BattleState/Pre")).SetActive(false);
@@ -143,9 +144,9 @@ namespace BattleLoop
             UpdateScore(battle);
         }
 
-        private void OnCountdownChanged(float timer)
+        private void OnCountdownChanged(object[] args)
         {
-            Countdown.SetText(timer.ToString());
+            Countdown.SetText(((float)args[0]).ToString());
         }
 
         private void UpdateScore(Battle battleInfo)
@@ -168,4 +169,3 @@ namespace BattleLoop
         #endregion
     }
 }
-

@@ -1,9 +1,14 @@
-using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
+using SumoBot;
+using SumoHelper;
+using SumoInput;
+using SumoLog;
+using SumoManager;
 using UnityEngine;
 
-namespace CoreSumo
+namespace SumoCore
 {
     public enum PlayerSide
     {
@@ -25,17 +30,17 @@ namespace CoreSumo
 
         #region Physics Stats Properties
         [Header("Physics Stats")]
-        public float StopDelay = 0.5f;           
-        public float SlowDownRate = 2.0f; 
+        public float StopDelay = 0.5f;
+        public float StopTreshold = 0.05f;
+        public float SlowDownRate = 2.0f;
         public float Torque = 0.4f;
         public float TurnRate = 1f;
         public float BounceResistance = 1f;
         public float LockReductionMultiplier = 0.9f;
         public float CollisionBaseForce = 4f;
         public float BaseLockDurationMultiplier = 0.5f;
-        public MinMax LockDuration = new MinMax(0.8f, 2f);
-        public MinMax HalfTurnAngle = new MinMax(0f, 180f);
-        public MinMax FullTurnAngle = new MinMax(-360, 360);
+        public MinMax LockDuration = new(0.8f, 2f);
+        public MinMax HalfTurnAngle = new(0f, 180f);
         #endregion
 
         #region General Properties
@@ -46,14 +51,13 @@ namespace CoreSumo
         #endregion
 
         #region Runtime (readonly) Properties
+        public Bot Bot;
         public bool isInputDisabled = false;
         public Vector2 LastVelocity { get; private set; } = Vector2.zero;
         public float LastAngularVelocity => robotRigidBody.angularVelocity;
         public float LastDashTime = 0;
         public Vector3 StartPosition;
         public Quaternion StartRotation;
-
-        public bool IsMoveDisabled = true;
         public bool IsSkillDisabled = true;
         private float reservedMoveSpeed;
         private float reservedDashSpeed;
@@ -61,19 +65,20 @@ namespace CoreSumo
         private Rigidbody2D robotRigidBody;
         private float moveLockTime = 0f;
         private bool isOutOfArena = false;
+        private EventLogger collisionLogger;
 
         // Derived 
-        public bool IsDashActive => LastDashTime == 0 ? false : (LastDashTime + DashDuration) >= BattleManager.Instance.ElapsedTime;
+        public bool IsDashActive => LastDashTime != 0 && (LastDashTime + DashDuration) >= BattleManager.Instance.ElapsedTime;
         public float DashCooldownTimer => LastDashTime + DashCooldown - BattleManager.Instance.ElapsedTime;
         public float DashCooldownNormalized => 1 - DashCooldownTimer / DashCooldown;
         public bool IsDashOnCooldown => DashCooldownTimer >= 0f;
-        public bool IsMovementLocked => moveLockTime > 0f;
-        public LogActorType ActorType => Side == PlayerSide.Left ? LogActorType.LeftPlayer : LogActorType.RightPlayer;
+        public bool IsMovementDisabled => BattleManager.Instance.CurrentState != BattleState.Battle_Ongoing || moveLockTime > 0f;
 
         // Events 
-        public event Action<PlayerSide> OnPlayerBounce;
-        public event Action<PlayerSide> OnPlayerOutOfArena;
-        public event Action<PlayerSide, ISumoAction, bool> OnPlayerAction;
+        public ActionRegistry Actions = new();
+        public const string OnPlayerBounce = "OnPlayerBounce"; // [Side]
+        public const string OnPlayerOutOfArena = "OnPlayerOutOfArena"; // [Side]
+        public const string OnPlayerAction = "OnPlayerAction"; // [Side, ISumoAction, bool]
         private Coroutine accelerateOverTimeCoroutine;
         private Coroutine turnOverAngleCoroutine;
         #endregion
@@ -81,7 +86,7 @@ namespace CoreSumo
         #region Unity Methods
         private void Awake()
         {
-            Skill = new SumoSkill(this);
+            Bot = GetComponents<Bot>()?.FirstOrDefault((x) => x.enabled);
             robotRigidBody = GetComponent<Rigidbody2D>();
             reservedMoveSpeed = MoveSpeed;
             reservedDashSpeed = DashSpeed;
@@ -93,13 +98,17 @@ namespace CoreSumo
             ReadInput();
 
             LastVelocity = robotRigidBody.linearVelocity;
-            LogManager.UpdatePlayerActionLog(Side);
+
+            if (collisionLogger != null && collisionLogger.IsActive)
+                collisionLogger.Update();
+
+            LogManager.UpdateActionLog(Side);
         }
 
         void FixedUpdate()
         {
             HandleStopping();
-            if (IsMovementLocked)
+            if (IsMovementDisabled)
                 moveLockTime -= Time.deltaTime;
         }
 
@@ -110,12 +119,9 @@ namespace CoreSumo
 
         void OnTriggerExit2D(Collider2D collision)
         {
-            if (!Application.isPlaying) 
-                return;
-
             if (collision.CompareTag("Arena/Floor") && !isOutOfArena)
             {
-                OnPlayerOutOfArena?.Invoke(Side);
+                Actions[OnPlayerOutOfArena]?.Invoke(Side);
                 isOutOfArena = true;
             }
         }
@@ -128,9 +134,14 @@ namespace CoreSumo
             StartPosition = startPosition.position;
             StartRotation = startPosition.rotation;
 
+            AssignSkill();
             UpdateDirectionColor();
             SetSkillEnabled(false);
-            SetMovementEnabled(false);
+        }
+
+        public void AssignSkill(SkillType type = SkillType.Boost)
+        {
+            Skill = SumoSkill.CreateSkill(this, type);
         }
 
         public void Reset()
@@ -148,20 +159,16 @@ namespace CoreSumo
         public void UpdateDirectionColor()
         {
             if (Side == PlayerSide.Left)
-            {
                 directionIndicator.color = new Color(0, 255, 0);
-            }
             else
-            {
                 directionIndicator.color = new Color(255, 0, 0);
-            }
         }
         #endregion
 
         #region Robot Action Methods
         public void Log(ISumoAction action)
         {
-            LogManager.CallPlayerActionLog(Side, action);
+            LogManager.CallActionLog(Side, action);
         }
 
         public void StopCoroutineAction()
@@ -172,59 +179,49 @@ namespace CoreSumo
                 StopCoroutine(turnOverAngleCoroutine);
         }
 
-        public void Accelerate(ISumoAction action, AccelerateType type)
+        public void Accelerate(ISumoAction action)
         {
-            // Log with debounce strategy
+            if (IsMovementDisabled || IsDashActive) return;
+
             Log(action);
-            switch (type)
+            switch (action.Type)
             {
-                case AccelerateType.Default:
+                case ActionType.Accelerate:
                     robotRigidBody.linearVelocity = transform.up * (IsDashActive ? DashSpeed : MoveSpeed);
                     Log(action);
                     break;
-                case AccelerateType.Time:
+                case ActionType.AccelerateWithTime:
                     accelerateOverTimeCoroutine = StartCoroutine(AccelerateOverTime(action));
                     break;
             }
         }
 
-        public void Dash(ISumoAction action, DashType type)
+        public void Dash(ISumoAction action)
         {
+            if (IsMovementDisabled || IsDashOnCooldown) return;
+
             Log(action);
-            switch (type)
-            {
-                case DashType.Default:
-                    LastDashTime = BattleManager.Instance.ElapsedTime;
-                    robotRigidBody.linearVelocity = transform.up * DashSpeed;
-                    Log(action);
-                    break;
-                case DashType.Time:
-                    accelerateOverTimeCoroutine = StartCoroutine(AccelerateOverTime(action, isDash: true));
-                    break;
-            }
+            LastDashTime = BattleManager.Instance.ElapsedTime;
+            robotRigidBody.linearVelocity = transform.up * DashSpeed;
+            Log(action);
         }
 
-        public void Turn(ISumoAction action, TurnType type = TurnType.Angle)
+        public void Turn(ISumoAction action)
         {
             Log(action);
-            switch (type)
+
+            switch (action.Type)
             {
-                case TurnType.Left:
+                case ActionType.TurnLeft:
                     robotRigidBody.MoveRotation(robotRigidBody.rotation + RotateSpeed * Time.fixedDeltaTime);
                     break;
-                case TurnType.Right:
+                case ActionType.TurnRight:
                     robotRigidBody.MoveRotation(robotRigidBody.rotation + -RotateSpeed * Time.fixedDeltaTime);
                     break;
-                case TurnType.LeftAngle:
-                    action.Param = Mathf.Clamp((float)action.Param, HalfTurnAngle.min, HalfTurnAngle.max) * 1f;
+                case ActionType.TurnLeftWithAngle:
                     turnOverAngleCoroutine = StartCoroutine(TurnOverAngle(action));
                     break;
-                case TurnType.RightAngle:
-                    action.Param = Mathf.Clamp((float)action.Param, HalfTurnAngle.min, HalfTurnAngle.max) * -1f;
-                    turnOverAngleCoroutine = StartCoroutine(TurnOverAngle(action));
-                    break;
-                case TurnType.Angle:
-                    action.Param = Mathf.Clamp((float)action.Param, FullTurnAngle.min, FullTurnAngle.max);
+                case ActionType.TurnRightWithAngle:
                     turnOverAngleCoroutine = StartCoroutine(TurnOverAngle(action));
                     break;
             }
@@ -232,24 +229,35 @@ namespace CoreSumo
 
         IEnumerator TurnOverAngle(ISumoAction action)
         {
-            float totalAngle = (float)action.Param;
-            float rotatedAngle = 0f;
-            float duration = Mathf.Abs(totalAngle) * TurnRate / LastVelocity.magnitude;
-            
-            if (duration > TurnRate)
-                duration = TurnRate;
+            float totalAngle;
 
-            float speed = totalAngle / duration;
-
-            while (Mathf.Abs(rotatedAngle) < Mathf.Abs(totalAngle) && BattleManager.Instance.CurrentState == BattleState.Battle_Ongoing && !IsMovementLocked)
+            switch (action.Type)
             {
-                float delta = speed * Time.deltaTime; 
+                case ActionType.TurnLeftWithAngle:
+                    totalAngle = Mathf.Abs((float)action.Param);
+                    break;
+                case ActionType.TurnRightWithAngle:
+                    totalAngle = -Mathf.Abs((float)action.Param);
+                    break;
+                default:
+                    yield break;
+            }
 
-                if (Mathf.Abs(rotatedAngle + delta) > Mathf.Abs(totalAngle))
-                    delta = totalAngle - rotatedAngle;
+            float rotatedAngle = 0f;
+            float turnSpeed = TurnRate * 100;
 
-                transform.Rotate(0, 0, delta); 
-                rotatedAngle += delta;
+            while (Mathf.Abs(rotatedAngle) < Mathf.Abs(totalAngle) &&
+                   BattleManager.Instance.CurrentState == BattleState.Battle_Ongoing &&
+                   !IsMovementDisabled)
+            {
+                float delta = turnSpeed * Time.deltaTime;
+
+                if (Mathf.Abs(rotatedAngle + delta * Mathf.Sign(totalAngle)) > Mathf.Abs(totalAngle))
+                    delta = Mathf.Abs(totalAngle - rotatedAngle);
+
+                float step = delta * Mathf.Sign(totalAngle);
+                transform.Rotate(0, 0, step);
+                rotatedAngle += step;
 
                 Log(action);
                 yield return null;
@@ -263,7 +271,7 @@ namespace CoreSumo
 
             Log(action);
 
-            while (elapsedTime < (float)action.Param && BattleManager.Instance.CurrentState == BattleState.Battle_Ongoing && !IsMovementLocked)
+            while (elapsedTime < (float)action.Param && BattleManager.Instance.CurrentState == BattleState.Battle_Ongoing && !IsMovementDisabled)
             {
                 robotRigidBody.linearVelocity = transform.up.normalized * speed;
                 elapsedTime += Time.deltaTime;
@@ -274,10 +282,6 @@ namespace CoreSumo
             }
         }
 
-        public void SetMovementEnabled(bool value)
-        {
-            IsMoveDisabled = !value;
-        }
         public void SetSkillEnabled(bool value)
         {
             IsSkillDisabled = !value;
@@ -301,9 +305,7 @@ namespace CoreSumo
         {
             float lockDuration = Mathf.Clamp(force * BaseLockDurationMultiplier, LockDuration.min, LockDuration.max);
             if (isActor)
-            {
                 lockDuration *= LockReductionMultiplier;
-            }
             moveLockTime = Mathf.Max(moveLockTime, lockDuration);
             return lockDuration;
         }
@@ -313,85 +315,76 @@ namespace CoreSumo
 
         void BounceRule(Collision2D collision)
         {
-            if (!Application.isPlaying) 
+            if (!collision.gameObject.TryGetComponent<SumoController>(out var enemyRobot))
                 return;
 
-            SumoController otherRobot = collision.gameObject.GetComponent<SumoController>();
-            if (otherRobot == null) 
+            float actorVelocity = LastVelocity.magnitude + float.Epsilon;
+            float enemyVelocity = enemyRobot.LastVelocity.magnitude + float.Epsilon;
+
+            if ((actorVelocity + enemyVelocity) < 0.01f)
                 return;
 
-            float actorVelocity = LastVelocity.magnitude;
-            float enemyVelocity = otherRobot.LastVelocity.magnitude;
+            Vector2 collisionNormal = collision.contacts[0].normal;
 
             StopCoroutineAction();
-            //otherRobot.StopCoroutineAction();
 
-            // Faster robot handles the bounce 
+            // Faster robot handles the logic of assignment bounce and logging
             if (actorVelocity >= enemyVelocity)
             {
-                Vector2 collisionNormal = collision.contacts[0].normal;
-                float total = actorVelocity + enemyVelocity + 0.01f;
+                float actorImpact = Bounce(collisionNormal, enemyVelocity, actorVelocity, enemyRobot);
+                float targetImpact = enemyRobot.Bounce(-collisionNormal, actorVelocity, enemyVelocity, this);
 
-                if (total < 0.1f) 
-                    return;
+                Actions[OnPlayerBounce]?.Invoke(Side);
+                enemyRobot.Actions[OnPlayerBounce]?.Invoke(Side);
 
-                float actorImpact = CollisionBaseForce * enemyVelocity / total; 
-                float targetImpact = CollisionBaseForce * actorVelocity / total;
+                float actorLockDuration = LockMovement(true, actorImpact);
+                float targetLockDuration = enemyRobot.LockMovement(false, targetImpact);
 
-                if (Skill.Type == SkillType.Stone && Skill.IsActive)
-                    targetImpact = enemyVelocity / total;
+                CollisionLog actorLog = new()
+                {
+                    IsActor = true,
+                    Impact = actorImpact,
+                    LockDuration = actorLockDuration,
+                    IsSkillActive = Skill.IsActive,
+                    IsDashActive = IsDashActive,
+                };
 
-                if (otherRobot.Skill.Type == SkillType.Stone && otherRobot.Skill.IsActive)
-                    actorImpact = actorVelocity / total;
+                CollisionLog targetLog = new()
+                {
+                    IsActor = false,
+                    Impact = targetImpact,
+                    LockDuration = targetLockDuration,
+                    IsSkillActive = enemyRobot.Skill.IsActive,
+                    IsDashActive = enemyRobot.IsDashActive,
+                };
 
-                actorImpact *= otherRobot.BounceResistance;
-                targetImpact *= BounceResistance;
+                LogCollision(actorLog);
+                enemyRobot.LogCollision(targetLog);
 
-                Bounce(collisionNormal, actorImpact); 
-                otherRobot.Bounce(-collisionNormal, targetImpact); 
-
-                OnPlayerBounce?.Invoke(Side);
-                otherRobot.OnPlayerBounce?.Invoke(Side);
-
-                float actorLockDuration = LockMovement(isActor: true, actorImpact);
-                float targetLockDuration = otherRobot.LockMovement(isActor: false, targetImpact);
-
-                Debug.Log($"[BounceRule]\nActor=>{Side},Target=>{otherRobot.Side}\nActorVelocity=>{actorVelocity},TargetVelocity=>{enemyVelocity}\nActorCurrentSkill=>{Skill.Type}, TargetCurrentSkill=>{otherRobot.Skill.Type}\nActorImpact=>{actorImpact}, TargetImpact=>{targetImpact}");
-
-                LogManager.LogPlayerEvents(
-                    actor: Side,
-                    target: otherRobot.Side,
-                    data: new Dictionary<string, object>()
-                    {
-                        {"type", "Bounce" },
-                        {"actor", new Dictionary<string, object>() {
-                            {"impact", actorImpact},
-                            {"velocity", new Dictionary<string, object>() {
-                                {"x", LastVelocity.x},
-                                {"y", LastVelocity.y}}
-                            },
-                            {"isCurrentSkillActive", Skill.IsActive},
-                            {"bounceResistance", BounceResistance},
-                            {"lockDuration", actorLockDuration},
-                        } },
-                        {"target", new Dictionary<string, object>() {
-                            {"impact", targetImpact},
-                            {"velocity", new Dictionary<string, object>() {
-                                {"x", otherRobot.LastVelocity.x},
-                                {"y", otherRobot.LastVelocity.y}}
-                            },
-                            {"isCurrentSkillActive", otherRobot.Skill.IsActive},
-                            {"bounceResistance", otherRobot.BounceResistance},
-                            {"lockDuration", targetLockDuration},
-                        } },
-                    });
+                Debug.Log($"[BounceRule]\nActor=>{Side},Target=>{enemyRobot.Side}\nActorVelocity=>{actorVelocity},TargetVelocity=>{enemyVelocity}\nActorCurrentSkill=> {Skill.Type} isActive:{Skill.IsActive}, TargetCurrentSkill=>{enemyRobot.Skill.Type} isActive: {enemyRobot.Skill.IsActive} \nActorImpact=>{actorImpact}, TargetImpact=>{targetImpact}");
             }
         }
 
-        public void Bounce(Vector2 direction, float force)
+        public void LogCollision(CollisionLog log)
         {
-            robotRigidBody.AddForce(force * direction, ForceMode2D.Impulse);
-            robotRigidBody.AddTorque(force * Torque, ForceMode2D.Impulse);
+            collisionLogger = new EventLogger(this, false);
+            collisionLogger.Call(log);
+        }
+
+        public float Bounce(Vector2 direction, float enemyVelocity, float myVelocity, SumoController enemy)
+        {
+            float total = enemyVelocity + myVelocity;
+
+            float impact = CollisionBaseForce * enemyVelocity / total;
+
+            if (enemy.Skill.Type == SkillType.Stone && enemy.Skill.IsActive)
+                impact = myVelocity / total;
+
+            impact *= enemy.BounceResistance;
+
+            robotRigidBody.AddForce(impact * direction, ForceMode2D.Impulse);
+            robotRigidBody.AddTorque(impact * Torque, ForceMode2D.Impulse);
+            return impact;
         }
 
         public void FreezeMovement()
@@ -411,9 +404,14 @@ namespace CoreSumo
 
         private void HandleStopping()
         {
+            if (robotRigidBody.linearVelocity.magnitude < StopTreshold)
+            {
+                robotRigidBody.linearVelocity = Vector2.zero;
+                return;
+            }
             if (Time.time > LastDashTime + StopDelay)
             {
-                robotRigidBody.linearVelocity = Vector2.Lerp(robotRigidBody.linearVelocity, Vector2.zero, SlowDownRate * Time.deltaTime); 
+                robotRigidBody.linearVelocity = Vector2.Lerp(robotRigidBody.linearVelocity, Vector2.zero, SlowDownRate * Time.deltaTime);
                 robotRigidBody.angularVelocity = Mathf.Lerp(robotRigidBody.angularVelocity, 0, SlowDownRate * Time.deltaTime);
             }
         }
@@ -429,9 +427,9 @@ namespace CoreSumo
             List<ISumoAction> actions = InputProvider.GetInput();
             foreach (ISumoAction action in actions)
             {
-                OnPlayerAction?.Invoke(Side, action, true);
+                Actions[OnPlayerAction]?.Invoke(new object[] { Side, action, true });
                 action.Execute(this);
-                OnPlayerAction?.Invoke(Side, action, false);
+                Actions[OnPlayerAction]?.Invoke(new object[] { Side, action, false });
             }
         }
         #endregion
