@@ -35,7 +35,9 @@ namespace SumoBot
             new DashAction(InputType.Script),
             new SkillAction(InputType.Script),
             new TurnAction(InputType.Script, ActionType.TurnLeftWithAngle, 15f),
+            new TurnAction(InputType.Script, ActionType.TurnLeftWithAngle, 50f),
             new TurnAction(InputType.Script, ActionType.TurnRightWithAngle, 15f),
+            new TurnAction(InputType.Script, ActionType.TurnRightWithAngle, 50f),
         };
         public int ReinitPerIters = 2;
         public int Iterations = 100;
@@ -142,7 +144,7 @@ namespace SumoBot
                 return null;
             }
 
-            Debug.Log($"[AIBot_EA_MCTS] selected-score: {bestChild.totalReward}, selected-action(s): {bestChild.ID} selected-visits: {bestChild.visits}, ");
+            Debug.Log($"[AIBot_EA_MCTS] selected-score: {bestChild.totalReward}, selected-action(s): {bestChild.ID} selected-visits: {bestChild.visits}, {bestChild.actions.Count}");
 
             lastActionsToEnemy = bestChild.actions;
 

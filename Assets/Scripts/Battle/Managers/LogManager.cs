@@ -21,7 +21,7 @@ namespace SumoManager
     {
         #region Log structures properties
         [Serializable]
-        private class BattleLog
+        public class BattleLog
         {
             public string BattleID;
             public string InputType;
@@ -38,7 +38,7 @@ namespace SumoManager
         }
 
         [Serializable]
-        private class GameLog
+        public class GameLog
         {
             public int Index;
             public string Timestamp;
@@ -47,7 +47,7 @@ namespace SumoManager
         }
 
         [Serializable]
-        private class RoundLog
+        public class RoundLog
         {
             public int Index;
             public string Timestamp;
@@ -57,11 +57,11 @@ namespace SumoManager
         }
 
         [Serializable]
-        private class EventLog
+        public class EventLog
         {
             public string LoggedAt;
-            public string StartedAt;
-            public string UpdatedAt;
+            public float StartedAt;
+            public float UpdatedAt;
             public string Actor;
             public string Target;
             public string Category;
@@ -71,7 +71,7 @@ namespace SumoManager
         }
 
         [Serializable]
-        private class PlayerStats
+        public class PlayerStats
         {
             public string SkillType;
             public string Bot;
@@ -87,6 +87,7 @@ namespace SumoManager
 
         private static BattleLog battleLog;
         private static string logFolderPath;
+        private static bool IsLogEnabled => ReplayManager.Instance == null;
 
         public static int CurrentGameIndex => battleLog.Games.Count > 0 ? battleLog.Games[^1].Index : 0;
         #endregion
@@ -95,6 +96,11 @@ namespace SumoManager
 
         public static void RegisterAction()
         {
+            if (!IsLogEnabled)
+            {
+                return;
+            }
+
             SumoController leftPlayer = BattleManager.Instance.Battle.LeftPlayer;
             SumoController rightPlayer = BattleManager.Instance.Battle.RightPlayer;
 
@@ -131,6 +137,11 @@ namespace SumoManager
         // Therefore, we need manually add to stack
         public static void FlushActionLog()
         {
+            if (!IsLogEnabled)
+            {
+                return;
+            }
+
             foreach (Dictionary<ActionType, EventLogger> actionSide in ActionLoggers.Values)
             {
                 foreach (EventLogger actionLogger in actionSide.Values)
@@ -143,6 +154,11 @@ namespace SumoManager
 
         public static void UpdateActionLog(PlayerSide side)
         {
+            if (!IsLogEnabled)
+            {
+                return;
+            }
+
             BattleState currentState = BattleManager.Instance.CurrentState;
             if (currentState == BattleState.Battle_Ongoing || currentState == BattleState.Battle_End)
                 foreach (EventLogger action in ActionLoggers[side].Values)
@@ -153,6 +169,11 @@ namespace SumoManager
 
         public static void CallActionLog(PlayerSide side, ISumoAction action)
         {
+            if (!IsLogEnabled)
+            {
+                return;
+            }
+
             if (BattleManager.Instance.CurrentState == BattleState.Battle_Ongoing)
             {
                 EventLogger actionLog = ActionLoggers[side][action.Type];
@@ -165,6 +186,11 @@ namespace SumoManager
 
         public static void InitLog()
         {
+            if (!IsLogEnabled)
+            {
+                return;
+            }
+
             string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
             string folderName = $"battle_{timestamp}";
 
@@ -174,6 +200,11 @@ namespace SumoManager
 
         public static void InitBattle()
         {
+            if (!IsLogEnabled)
+            {
+                return;
+            }
+
             BattleManager battleManager = BattleManager.Instance;
 
             battleLog = new()
@@ -280,7 +311,7 @@ namespace SumoManager
             {
                 battleLog.Events.Add(new EventLog
                 {
-                    LoggedAt = DateTime.Now.ToString("o"),
+                    LoggedAt = DateTime.Now.ToString(),
                     Actor = "System",
                     Data = data
                 });
@@ -323,8 +354,8 @@ namespace SumoManager
                     Category = category,
                 };
 
-                eventLog.StartedAt = startedAt != null ? startedAt.ToString() : BattleManager.Instance.ElapsedTime.ToString();
-                eventLog.UpdatedAt = updatedAt != null ? updatedAt.ToString() : eventLog.UpdatedAt = BattleManager.Instance.ElapsedTime.ToString();
+                eventLog.StartedAt = startedAt != null ? (float)startedAt : BattleManager.Instance.ElapsedTime;
+                eventLog.UpdatedAt = updatedAt != null ? (float)updatedAt : eventLog.UpdatedAt = BattleManager.Instance.ElapsedTime;
                 roundLog.PlayerEvents.Add(eventLog);
             }
         }
@@ -361,7 +392,7 @@ namespace SumoManager
         {
             battleLog.Games[CurrentGameIndex].Rounds.ForEach((rounds) =>
             {
-                rounds.PlayerEvents = rounds.PlayerEvents.OrderBy(log => float.Parse(log?.UpdatedAt ?? "0")).ToList();
+                rounds.PlayerEvents = rounds.PlayerEvents.OrderBy(log => log?.UpdatedAt).ToList();
             });
             SaveCurrentGame();
         }
