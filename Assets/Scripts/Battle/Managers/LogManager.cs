@@ -2,337 +2,370 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using CoreSumo;
 using Newtonsoft.Json;
+using SumoBot;
+using SumoCore;
+using SumoHelper;
 using UnityEngine;
 
-public enum LogActorType
+namespace SumoManager
 {
-    System,
-    LeftPlayer,
-    RightPlayer,
-}
-
-public class LogManager
-{
-    #region Log structures properties
-    [Serializable]
-    private class BattleLog
+    public enum LogActorType
     {
-        public string battle_id;
-        public string input_type;
-        public float battle_time;
-        public float countdown_time;
-        public int round_type;
-        public PlayerStats left_player_stats = new();
-        public PlayerStats right_player_stats = new();
-
-        public List<EventLog> events = new();
-
-        [NonSerialized]
-        public List<GameLog> games = new();
+        System,
+        LeftPlayer,
+        RightPlayer,
     }
 
-    [Serializable]
-    private class GameLog
+    public class LogManager
     {
-        public int index;
-        public string timestamp;
-        public string winner = "";
-        public List<RoundLog> rounds = new();
-    }
-
-    [Serializable]
-    private class RoundLog
-    {
-        public int index;
-        public string timestamp;
-        public string winner = "";
-        public List<EventLog> action_events = new();
-        public List<EventLog> state_events = new();
-    }
-
-    [Serializable]
-    private class EventLog
-    {
-        public string logged_at;
-        public string started_at;
-        public string updated_at;
-        public string actor;
-        public string target;
-
-        public Dictionary<string, object> data = new Dictionary<string, object>();
-    }
-
-    [Serializable]
-    private class PlayerStats
-    {
-        public string skill_type;
-        public string bot;
-        public int win_per_game = 0;
-        public int win_per_round = 0;
-        public int actions_taken = 0;
-        public int contact_made = 0;
-    }
-    #endregion
-
-    #region class properties 
-    public static Dictionary<PlayerSide, Dictionary<string, DebouncedLogger>> ActionLoggers = new Dictionary<PlayerSide, Dictionary<string, DebouncedLogger>>();
-
-    private static BattleLog _battleLog;
-    private static string _logFolderPath;
-    
-    public static int CurrentGameIndex => _battleLog.games.Count > 0 ? _battleLog.games[^1].index : 0;
-    #endregion
-
-    #region Action Logging methods
-
-    public static void SetPlayerAction()
-    {
-        SumoController leftPlayer = BattleManager.Instance.Battle.LeftPlayer;
-        SumoController rightPlayer = BattleManager.Instance.Battle.RightPlayer;
-        if (!ActionLoggers.ContainsKey(leftPlayer.Side))
-            ActionLoggers.Add(leftPlayer.Side, InitByController(leftPlayer));
-        if (!ActionLoggers.ContainsKey(rightPlayer.Side))
-            ActionLoggers.Add(rightPlayer.Side, InitByController(rightPlayer));
-
-        static Dictionary<string, DebouncedLogger> InitByController(SumoController controller)
+        #region Log structures properties
+        [Serializable]
+        private class BattleLog
         {
-            return new Dictionary<string, DebouncedLogger>
+            public string BattleID;
+            public string InputType;
+            public float BattleTime;
+            public float CountdownTime;
+            public int RoundType;
+            public PlayerStats LeftPLayerStats = new();
+            public PlayerStats RightPlayerStats = new();
+
+            public List<EventLog> Events = new();
+
+            [NonSerialized]
+            public List<GameLog> Games = new();
+        }
+
+        [Serializable]
+        private class GameLog
+        {
+            public int Index;
+            public string Timestamp;
+            public string Winner;
+            public List<RoundLog> Rounds = new();
+        }
+
+        [Serializable]
+        private class RoundLog
+        {
+            public int Index;
+            public string Timestamp;
+            public string Winner;
+            public List<EventLog> PlayerEvents = new();
+            public List<EventLog> StateEvents = new();
+        }
+
+        [Serializable]
+        private class EventLog
+        {
+            public string LoggedAt;
+            public string StartedAt;
+            public string UpdatedAt;
+            public string Actor;
+            public string Target;
+            public string Category;
+            public bool IsStart;
+
+            public Dictionary<string, object> Data = new();
+        }
+
+        [Serializable]
+        private class PlayerStats
+        {
+            public string SkillType;
+            public string Bot;
+            public int WinPerGame = 0;
+            public int WinPerRound = 0;
+            public int ActionTaken = 0;
+            public int ContactMade = 0;
+        }
+        #endregion
+
+        #region class properties 
+        public static Dictionary<PlayerSide, Dictionary<ActionType, EventLogger>> ActionLoggers = new();
+
+        private static BattleLog battleLog;
+        private static string logFolderPath;
+
+        public static int CurrentGameIndex => battleLog.Games.Count > 0 ? battleLog.Games[^1].Index : 0;
+        #endregion
+
+        #region Action Logging methods
+
+        public static void RegisterAction()
+        {
+            SumoController leftPlayer = BattleManager.Instance.Battle.LeftPlayer;
+            SumoController rightPlayer = BattleManager.Instance.Battle.RightPlayer;
+
+            if (!ActionLoggers.ContainsKey(leftPlayer.Side))
+                ActionLoggers.Add(leftPlayer.Side, InitByController(leftPlayer));
+            if (!ActionLoggers.ContainsKey(rightPlayer.Side))
+                ActionLoggers.Add(rightPlayer.Side, InitByController(rightPlayer));
+
+            static Dictionary<ActionType, EventLogger> InitByController(SumoController controller)
             {
-                { "Accelerate", new DebouncedLogger(controller, 0.1f) },
-                { "TurnRight", new DebouncedLogger(controller, 0.1f) },
-                { "TurnLeft", new DebouncedLogger(controller, 0.1f) },
-                { "TurnLeftAngle", new DebouncedLogger(controller, 0.1f) },
-                { "TurnRightAngle", new DebouncedLogger(controller, 0.1f) },
-                { "TurnAngle", new DebouncedLogger(controller, 0.1f) },
-                { "Dash", new DebouncedLogger(controller, controller.DashDuration) },
-                { "Skill", new DebouncedLogger(controller, controller.Skill.SkillDuration) }
+                Dictionary<ActionType, EventLogger> logs = new();
+                IEnumerable<ActionType> actionTypes = Enum.GetValues(typeof(ActionType)).Cast<ActionType>();
+                foreach (ActionType action in actionTypes)
+                {
+                    switch (action)
+                    {
+                        case ActionType.Dash:
+                            logs.Add(action, new EventLogger(controller, controller.DashDuration));
+                            break;
+                        case ActionType.SkillStone:
+                        case ActionType.SkillBoost:
+                            logs.Add(action, new EventLogger(controller, controller.Skill.TotalDuration));
+                            break;
+                        default:
+                            logs.Add(action, new EventLogger(controller, 0.1f));
+                            break;
+                    }
+                }
+                return logs;
+            }
+        }
+
+        // Some actions maybe still hanging when the state is already ended, (e.g. dash and skill).
+        // Therefore, we need manually add to stack
+        public static void FlushActionLog()
+        {
+            foreach (Dictionary<ActionType, EventLogger> actionSide in ActionLoggers.Values)
+            {
+                foreach (EventLogger actionLogger in actionSide.Values)
+                {
+                    if (actionLogger.IsActive && actionLogger.ForceSave)
+                        actionLogger.ForceStopAndSave();
+                }
+            }
+        }
+
+        public static void UpdateActionLog(PlayerSide side)
+        {
+            BattleState currentState = BattleManager.Instance.CurrentState;
+            if (currentState == BattleState.Battle_Ongoing || currentState == BattleState.Battle_End)
+                foreach (EventLogger action in ActionLoggers[side].Values)
+                {
+                    action.Update();
+                }
+        }
+
+        public static void CallActionLog(PlayerSide side, ISumoAction action)
+        {
+            if (BattleManager.Instance.CurrentState == BattleState.Battle_Ongoing)
+            {
+                EventLogger actionLog = ActionLoggers[side][action.Type];
+                actionLog.Call(action);
+            }
+        }
+        #endregion
+
+        #region Core Battle Log methods
+
+        public static void InitLog()
+        {
+            string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+            string folderName = $"battle_{timestamp}";
+
+            logFolderPath = Path.Combine(Application.persistentDataPath, "Logs", folderName);
+            Directory.CreateDirectory(logFolderPath);
+        }
+
+        public static void InitBattle()
+        {
+            BattleManager battleManager = BattleManager.Instance;
+
+            battleLog = new()
+            {
+                InputType = battleManager.BattleInputType.ToString(),
+                BattleID = battleManager.Battle.BattleID.ToString(),
+                CountdownTime = battleManager.CountdownTime,
+                BattleTime = battleManager.BattleTime,
+                RoundType = (int)battleManager.RoundSystem
             };
+            SaveBattle();
         }
-    }
 
-    // Some actions maybe still hanging when the state is already ended, (e.g. dash and skill).
-    // Therefore, we need manually add to stack
-    public static void CleanIncompletePlayerAction()
-    {
-        foreach (Dictionary<string, DebouncedLogger> actionSide in ActionLoggers.Values)
+        public static void UpdateMetadata()
         {
-            foreach (DebouncedLogger actionLogger in actionSide.Values)
+            if (BattleManager.Instance.Bot.IsEnable)
             {
-                if (actionLogger.IsActive)
-                    actionLogger.ForceStopAndSave();
+                Bot leftBot = BattleManager.Instance.Bot.Left;
+                Bot rightBot = BattleManager.Instance.Bot.Right;
+
+                if (leftBot != null)
+                    battleLog.LeftPLayerStats.Bot = leftBot?.ID ?? "";
+
+                if (rightBot != null)
+                    battleLog.RightPlayerStats.Bot = rightBot?.ID ?? "";
+            }
+
+            battleLog.LeftPLayerStats.SkillType = BattleManager.Instance.Battle.LeftPlayer.Skill.Type.ToString();
+            battleLog.RightPlayerStats.SkillType = BattleManager.Instance.Battle.RightPlayer.Skill.Type.ToString();
+
+            if (battleLog.Games.Count > 0)
+            {
+                RoundLog currRound = GetCurrentRound();
+                if (currRound != null)
+                {
+                    battleLog.LeftPLayerStats.ActionTaken += GetCurrentRound().PlayerEvents.FindAll((x) => x.Actor == "Left" && x.Category == "Action").Count();
+                    battleLog.RightPlayerStats.ActionTaken += GetCurrentRound().PlayerEvents.FindAll((x) => x.Actor == "Right" && x.Category == "Action").Count();
+
+                    battleLog.LeftPLayerStats.ContactMade += GetCurrentRound().PlayerEvents.FindAll((x) => x.Actor == "Left" && x.Category == "Collision").Count();
+                    battleLog.RightPlayerStats.ContactMade += GetCurrentRound().PlayerEvents.FindAll((x) => x.Actor == "Right" && x.Category == "Collision").Count();
+                }
+            }
+
+            SaveBattle();
+        }
+
+        public static void StartGameLog()
+        {
+            int newGameIndex = CurrentGameIndex;
+
+            if (battleLog.Games.Count > 0)
+                newGameIndex += 1;
+
+            GameLog newGame = new()
+            {
+                Index = newGameIndex,
+                Timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss")
+            };
+            battleLog.Games.Add(newGame);
+        }
+
+        public static void StartRound(int index)
+        {
+            RoundLog newRound = new()
+            {
+                Index = index,
+                Timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss")
+            };
+            battleLog.Games[CurrentGameIndex].Rounds.Add(newRound);
+        }
+
+        public static void SetRoundWinner(string winner)
+        {
+            Debug.Log($"Setting eventLog winner {winner}");
+            RoundLog round = GetCurrentRound();
+            if (round != null)
+            {
+                round.Winner = winner;
+                if (round.Winner == "Left")
+                {
+                    battleLog.LeftPLayerStats.WinPerRound += 1;
+                }
+                else if (round.Winner == "Right")
+                {
+                    battleLog.RightPlayerStats.WinPerRound += 1;
+                }
             }
         }
-    }
 
-    public static void UpdatePlayerActionLog(PlayerSide side)
-    {
-        if (BattleManager.Instance.CurrentState == BattleState.Battle_Ongoing || BattleManager.Instance.CurrentState == BattleState.Battle_End)
-            foreach (var action in ActionLoggers[side].Values)
-            {
-                action.Update();
-            }
-    }
-
-    public static void CallPlayerActionLog(PlayerSide side, ISumoAction action)
-    {
-        if (BattleManager.Instance.CurrentState == BattleState.Battle_Ongoing)
+        public static void SetGameWinner(BattleWinner winner)
         {
-            var actionLog = ActionLoggers[side][action.Name];
-            actionLog.Call(action.Name, action?.Param?.ToString(), reason: action.Reason);
+            battleLog.Games[CurrentGameIndex].Winner = winner.ToString();
+            if (winner == BattleWinner.Left)
+                battleLog.LeftPLayerStats.WinPerGame += 1;
+            else if (winner == BattleWinner.Right)
+                battleLog.RightPlayerStats.WinPerGame += 1;
         }
-    }
-    #endregion
 
-    #region Core Battle Log methods
-
-    public static void InitLog()
-    {
-        string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-        var folderName = $"battle_{timestamp}";
-
-        _logFolderPath = Path.Combine(Application.persistentDataPath, "Logs", folderName);
-        Directory.CreateDirectory(_logFolderPath);
-    }
-
-    public static void InitBattle()
-    {
-        BattleManager battleManager = BattleManager.Instance;
-        
-        _battleLog = new BattleLog();
-        _battleLog.input_type = battleManager.BattleInputType.ToString();
-        _battleLog.battle_id = battleManager.Battle.BattleID.ToString();
-        _battleLog.countdown_time = battleManager.CountdownTime;
-        _battleLog.battle_time = battleManager.BattleTime;
-        _battleLog.round_type = (int)battleManager.RoundSystem;
-        SaveBattle();
-    }
-
-    public static void UpdateMetadata()
-    {
-        _battleLog.left_player_stats.bot = BattleManager.Instance.Battle.LeftPlayer.gameObject.GetComponents<Bot>().First((x) => x.enabled)?.Name() ?? "";
-        _battleLog.right_player_stats.bot = BattleManager.Instance.Battle.RightPlayer.gameObject.GetComponents<Bot>().First((x) => x.enabled)?.Name() ?? "";
-        _battleLog.left_player_stats.skill_type = BattleManager.Instance.Battle.LeftPlayer.Skill.Type.ToString();
-        _battleLog.right_player_stats.skill_type = BattleManager.Instance.Battle.RightPlayer.Skill.Type.ToString();
-
-        if (_battleLog.games.Count > 0)
+        public static void LogBattleState(
+            bool includeInCurrentRound = false,
+            Dictionary<string, object> data = null)
         {
-            RoundLog currRound = GetCurrentRound();
-            if (currRound != null)
+            if (!includeInCurrentRound)
             {
-                _battleLog.left_player_stats.actions_taken += GetCurrentRound().action_events.FindAll((x) => x.actor == "Left" && (string)x.data["type"] != "Bounce").Count();
-                _battleLog.right_player_stats.actions_taken += GetCurrentRound().action_events.FindAll((x) => x.actor == "Right" && (string)x.data["type"] != "Bounce").Count();
-                _battleLog.left_player_stats.contact_made += GetCurrentRound().action_events.FindAll((x) => x.actor == "Left" && (string)x.data["type"] == "Bounce").Count();
-                _battleLog.right_player_stats.contact_made += GetCurrentRound().action_events.FindAll((x) => x.actor == "Right" && (string)x.data["type"] == "Bounce").Count();
+                battleLog.Events.Add(new EventLog
+                {
+                    LoggedAt = DateTime.Now.ToString("o"),
+                    Actor = "System",
+                    Data = data
+                });
+            }
+            else
+            {
+                RoundLog roundLog = GetCurrentRound();
+                if (roundLog != null)
+                {
+                    EventLog eventLog = new()
+                    {
+                        LoggedAt = BattleManager.Instance.ElapsedTime.ToString(),
+                        Actor = "System",
+                        Data = data,
+                    };
+                    roundLog.StateEvents.Add(eventLog);
+                }
             }
         }
 
-        SaveBattle();
-    }
-
-    public static void StartGameLog()
-    {
-        int newGameIndex = CurrentGameIndex;
-        
-        if (_battleLog.games.Count > 0)
-            newGameIndex += 1;
-
-        GameLog newGame = new()
-        {
-            index = newGameIndex,
-            timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss")
-        };
-        _battleLog.games.Add(newGame);
-    }
-
-    public static void StartRound(int index)
-    {
-        RoundLog newRound = new()
-        {
-            index = index,
-            timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss")
-        };
-        _battleLog.games[CurrentGameIndex].rounds.Add(newRound);
-    }
-
-    public static void SetRoundWinner(string winner)
-    {
-        Debug.Log($"Setting eventLog winner {winner}");
-        RoundLog round = GetCurrentRound();
-        if (round != null)
-        {
-            round.winner = winner;
-            if (round.winner == "Left")
-            {
-                _battleLog.left_player_stats.win_per_round += 1;
-            }
-            else if (round.winner == "Right")
-            {
-                _battleLog.right_player_stats.win_per_round += 1;
-            }
-        }
-    }
-
-    public static void SetGameWinner(BattleWinner winner)
-    {
-        _battleLog.games[CurrentGameIndex].winner = winner.ToString();
-        if (winner == BattleWinner.Left)
-            _battleLog.left_player_stats.win_per_game += 1;
-        else if (winner == BattleWinner.Right)
-            _battleLog.right_player_stats.win_per_game += 1;
-    }
-
-    public static void LogBattleState(
-        LogActorType actor,
-        bool includeInCurrentRound = false,
-        LogActorType? target = null,
-        Dictionary<string, object> data = null)
-    {
-        if (!includeInCurrentRound)
-        {
-            _battleLog.events.Add(new EventLog
-            {
-                logged_at = DateTime.Now.ToString("o"),
-                actor = actor.ToString(),
-                target = target.ToString() ?? null,
-                data = data
-            });
-        }
-        else
+        public static void LogPlayerEvents(
+            PlayerSide actor,
+            PlayerSide? target = null,
+            string category = "Action",
+            bool isStart = false,
+            float? startedAt = null,
+            float? updatedAt = null,
+            Dictionary<string, object> data = null)
         {
             RoundLog roundLog = GetCurrentRound();
             if (roundLog != null)
             {
                 EventLog eventLog = new()
                 {
-                    logged_at = BattleManager.Instance.ElapsedTime.ToString(),
-                    actor = actor.ToString(),
-                    target = target.ToString() ?? null,
-                    data = data,
+                    LoggedAt = BattleManager.Instance.ElapsedTime.ToString(),
+                    Actor = actor.ToString(),
+                    Target = target.ToString() ?? null,
+                    Data = data,
+                    IsStart = isStart,
+                    Category = category,
                 };
-                roundLog.state_events.Add(eventLog);
+
+                eventLog.StartedAt = startedAt != null ? startedAt.ToString() : BattleManager.Instance.ElapsedTime.ToString();
+                eventLog.UpdatedAt = updatedAt != null ? updatedAt.ToString() : eventLog.UpdatedAt = BattleManager.Instance.ElapsedTime.ToString();
+                roundLog.PlayerEvents.Add(eventLog);
             }
         }
-    }
-
-    public static void LogPlayerEvents(
-        PlayerSide actor,
-        PlayerSide? target = null,
-        float? startedAt = null,
-        float? updatedAt = null,
-        Dictionary<string, object> data = null)
-    {
-        RoundLog roundLog = GetCurrentRound();
-        if (roundLog != null)
+        private static RoundLog GetCurrentRound()
         {
-            EventLog eventLog = new()
+            if (battleLog.Games[CurrentGameIndex].Rounds.Count == 0)
             {
-                logged_at = BattleManager.Instance.ElapsedTime.ToString(),
-                actor = actor.ToString(),
-                target = target.ToString() ?? null,
-                data = data,
-            };
+                Debug.LogWarning("No eventLog started yet.");
+                return null;
+            }
 
-            eventLog.started_at = startedAt != null ? startedAt.ToString(): BattleManager.Instance.ElapsedTime.ToString();
-            eventLog.updated_at = updatedAt != null ? updatedAt.ToString() : eventLog.updated_at = BattleManager.Instance.ElapsedTime.ToString();
-            roundLog.action_events.Add(eventLog);
+            return battleLog.Games[CurrentGameIndex].Rounds[^1];
         }
-    }
-    private static RoundLog GetCurrentRound()
-    {
-        if (_battleLog.games[CurrentGameIndex].rounds.Count == 0)
+        #endregion
+
+        #region Saving methods
+        public static void SaveCurrentGame()
         {
-            Debug.LogWarning("No eventLog started yet.");
-            return null;
+
+            string json = JsonConvert.SerializeObject(battleLog.Games[CurrentGameIndex], Formatting.Indented);
+            string paddedIndex = CurrentGameIndex.ToString("D3"); // D3 = 3-digit padding
+            string savePath = Path.Combine(logFolderPath, $"game_{paddedIndex}.json");
+            File.WriteAllText(savePath, json);
         }
 
-        return _battleLog.games[CurrentGameIndex].rounds[^1];
-    }
-    #endregion
-
-    #region Saving methods
-    public static void SaveCurrentGame()
-    {
-        var json = JsonConvert.SerializeObject(_battleLog.games[CurrentGameIndex], Formatting.Indented);
-        var savePath = Path.Combine(_logFolderPath, $"game_{CurrentGameIndex}.json");
-        File.WriteAllText(savePath, json);
-    }
-
-    public static void SaveBattle()
-    {
-        var json = JsonConvert.SerializeObject(_battleLog, Formatting.Indented);
-        var savePath = Path.Combine(_logFolderPath, "metadata.json");
-        File.WriteAllText(savePath, json);
-    }
-
-    public static void SortAndSave()
-    {
-        _battleLog.games[CurrentGameIndex].rounds.ForEach((rounds) =>
+        public static void SaveBattle()
         {
-            rounds.action_events = rounds.action_events.OrderBy(log => float.Parse(log?.started_at ?? "0")).ToList();
-        });
-        SaveCurrentGame();
+            string json = JsonConvert.SerializeObject(battleLog, Formatting.Indented);
+            string savePath = Path.Combine(logFolderPath, "metadata.json");
+            File.WriteAllText(savePath, json);
+        }
+
+        public static void SortAndSave()
+        {
+            battleLog.Games[CurrentGameIndex].Rounds.ForEach((rounds) =>
+            {
+                rounds.PlayerEvents = rounds.PlayerEvents.OrderBy(log => float.Parse(log?.UpdatedAt ?? "0")).ToList();
+            });
+            SaveCurrentGame();
+        }
+        #endregion
     }
-    #endregion
+
 }

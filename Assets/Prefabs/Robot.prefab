@@ -100,6 +100,8 @@ GameObject:
   - component: {fileID: 1737808453494872349}
   - component: {fileID: 8581006012013900821}
   - component: {fileID: 5583292103176566768}
+  - component: {fileID: 7192337878665551969}
+  - component: {fileID: 1335788416037175078}
   m_Layer: 0
   m_Name: Robot
   m_TagString: Player
@@ -258,36 +260,70 @@ MonoBehaviour:
   DashSpeed: 7
   DashDuration: 0.5
   DashCooldown: 1
+  Skill:
+    Type: 0
+    IsActive: 0
+    TotalCooldown: 0
+    TotalDuration: 0
+    StoneMultiplier: 0
+    BoostMultiplier: 0
   StopDelay: 0.5
   SlowDownRate: 2
   Torque: 0.4
+  TurnRate: 0.5
   BounceResistance: 1
-  ActorBounceMultiplier: 0.9
+  LockReductionMultiplier: 0.9
   CollisionBaseForce: 1.5
-  TurnRate: 1
   BaseLockDurationMultiplier: 0.5
   LockDuration:
     min: 0.8
     max: 1.5
   HalfTurnAngle:
-    min: 0
+    min: 1
     max: 180
   FullTurnAngle:
     min: -360
     max: 360
-  Side: 0
+  Side: 1
+  directionIndicator: {fileID: 4764707064835075653}
+  InputProvider: {fileID: 0}
   isInputDisabled: 0
-  face: {fileID: 4764707064835075653}
+  LastDashTime: 0
   StartPosition: {x: 0, y: 0, z: 0}
   StartRotation: {x: 0, y: 0, z: 0, w: 0}
-  Skill:
-    Type: 0
-    IsActive: 0
-    StoneCooldown: 0
-    StoneDuration: 0
-    StoneBounceBackMultiplier: 0
-    BoostCooldown: 0
-    BoostDuration: 0
-    BoostMultiplier: 0
-  InputProvider: {fileID: 0}
-  LastDashTime: 0
+  IsSkillDisabled: 1
+--- !u!114 &7192337878665551969
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1488574921577525681}
+  m_Enabled: 0
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 08f9a23698d5460408113ac58be1f214, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  EnableSLM: 0
+  SLMApiUrl: http://localhost:5000/predict
+  DecisionInterval: 0.3
+  arenaCenter: {x: 0, y: 0}
+  arenaRadius: 5
+--- !u!114 &1335788416037175078
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1488574921577525681}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 567c7c5eb92f6483a89c16137907cce2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  Name: MCTS
+  ActionInterval: 0.1
+  SimulationTime: 0.25
+  LowestScoreToReInit: -500
+  ReinitPerIters: 2
+  Iterations: 100

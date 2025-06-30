@@ -1,228 +1,173 @@
-using System;
 using System.Collections.Generic;
-using CoreSumo;
+using SumoCore;
+using SumoManager;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-public class ButtonInputHandler : MonoBehaviour
+namespace SumoInput
 {
-    #region UI Lements properties
-    public ButtonPointerHandler Accelerate;
-    public ButtonPointerHandler TurnLeft;
-    public ButtonPointerHandler TurnRight;
-    public ButtonPointerHandler Dash;
-    public ButtonPointerHandler Stone;
-    public ButtonPointerHandler Boost;
-    private InputProvider inputProvider;
-    #endregion
-
-    #region Runtime properties
-    private float delayHoldSeconds = 0.08f;
-    private Dictionary<string, Tuple<GameObject, float, InputType?>> lastInputType = new Dictionary<string, Tuple<GameObject, float, InputType?>>();
-    #endregion
-
-    #region Unity methods
-    void Awake()
+    public class ButtonInputHandler : MonoBehaviour
     {
-        inputProvider = gameObject.GetComponent<InputProvider>();
-    }
+        #region UI Elements properties
+        public ButtonPointerHandler Accelerate;
+        public ButtonPointerHandler TurnLeft;
+        public ButtonPointerHandler TurnRight;
+        public ButtonPointerHandler Dash;
+        public ButtonPointerHandler Skill;
+        private InputProvider inputProvider;
+        #endregion
 
-    void OnEnable()
-    {
-        Accelerate.OnHold += inputProvider.OnAccelerateButtonPressed;
-        TurnLeft.OnHold += inputProvider.OnTurnLeftButtonPressed;
-        TurnRight.OnHold += inputProvider.OnTurnRightButtonPressed;
+        #region Runtime properties
+        private readonly float delayHoldSeconds = 0.08f;
+        private readonly Dictionary<ActionType, float?> actionLastUsedMap = new();
+        private readonly Dictionary<ActionType, InputType?> actionInputTypeMap = new();
+        private Dictionary<ActionType, GameObject> actionButtonMap = new();
 
-        Dash.OnPress += inputProvider.OnDashButtonPressed;
-        Stone.OnPress += inputProvider.OnStoneSkillButtonPressed;
-        Boost.OnPress += inputProvider.OnBoostSkillButtonPressed;
-        
-        BattleManager.Instance.OnBattleChanged += OnBattleChanged;
-        SetUpButtonGuide();
-    }
+        #endregion
 
-    void OnDisable()
-    {
-        Accelerate.OnHold -= inputProvider.OnAccelerateButtonPressed;
-        TurnLeft.OnHold -= inputProvider.OnTurnLeftButtonPressed;
-        TurnRight.OnHold -= inputProvider.OnTurnRightButtonPressed;
-
-        Dash.OnPress -= inputProvider.OnDashButtonPressed;
-        Stone.OnPress -= inputProvider.OnStoneSkillButtonPressed;
-        Boost.OnPress -= inputProvider.OnBoostSkillButtonPressed;
-
-        BattleManager.Instance.OnBattleChanged -= OnBattleChanged;
-    }
-
-    void Update()
-    {
-        foreach (var item in lastInputType)
+        #region Unity methods
+        void Awake()
         {
-            if (item.Value != null)
+            inputProvider = gameObject.GetComponent<InputProvider>();
+
+            if (Accelerate == null || TurnLeft == null || TurnRight == null || Dash == null || Skill == null)
             {
-                bool isHolding = (Time.time - item.Value.Item2 < delayHoldSeconds);
-                UpdateHoldTypeButtonState(item.Value.Item1, isHolding, item.Key, item.Value.Item3);
+                Debug.LogError("One or more ButtonPointerHandler references are not assigned in the Inspector!");
+                return;
+            }
+
+            actionButtonMap = new Dictionary<ActionType, GameObject>
+        {
+            // Note: We use .gameObject because Accelerate, TurnLeft, etc. are ButtonPointerHandler components,
+            // and we need the GameObject they are attached to.
+            { ActionType.Accelerate, Accelerate.gameObject },
+            { ActionType.AccelerateWithTime, Accelerate.gameObject },
+            { ActionType.TurnLeft, TurnLeft.gameObject },
+            { ActionType.TurnLeftWithAngle, TurnLeft.gameObject },
+            { ActionType.TurnRight, TurnRight.gameObject },
+            { ActionType.TurnRightWithAngle, TurnRight.gameObject },
+            { ActionType.Dash, Dash.gameObject },
+            { ActionType.SkillBoost, Skill.gameObject },
+            { ActionType.SkillStone, Skill.gameObject },
+        };
+        }
+
+        void OnEnable()
+        {
+            Accelerate.Actions[ButtonPointerHandler.ActionOnHold].Subscribe(inputProvider.OnAccelerateButtonPressed);
+            TurnLeft.Actions[ButtonPointerHandler.ActionOnHold].Subscribe(inputProvider.OnTurnLeftButtonPressed);
+            TurnRight.Actions[ButtonPointerHandler.ActionOnHold].Subscribe(inputProvider.OnTurnRightButtonPressed);
+
+            Dash.Actions[ButtonPointerHandler.ActionOnPress].Subscribe(inputProvider.OnDashButtonPressed);
+            Skill.Actions[ButtonPointerHandler.ActionOnPress].Subscribe(inputProvider.OnSkillButtonPressed);
+
+            BattleManager.Instance.Actions[BattleManager.OnBattleChanged].Subscribe(OnBattleChanged);
+            SetUpButtonGuide();
+        }
+
+        void OnDisable()
+        {
+            Accelerate.Actions[ButtonPointerHandler.ActionOnHold].Unsubscribe(inputProvider.OnAccelerateButtonPressed);
+            TurnLeft.Actions[ButtonPointerHandler.ActionOnHold].Unsubscribe(inputProvider.OnTurnLeftButtonPressed);
+            TurnRight.Actions[ButtonPointerHandler.ActionOnHold].Unsubscribe(inputProvider.OnTurnRightButtonPressed);
+
+            Dash.Actions[ButtonPointerHandler.ActionOnPress].Unsubscribe(inputProvider.OnDashButtonPressed);
+            Skill.Actions[ButtonPointerHandler.ActionOnPress].Unsubscribe(inputProvider.OnSkillButtonPressed);
+
+            BattleManager.Instance.Actions[BattleManager.OnBattleChanged].Unsubscribe(OnBattleChanged);
+        }
+
+        void Update()
+        {
+            foreach (var item in actionLastUsedMap)
+            {
+                if (item.Value != null)
+                {
+                    bool isHolding = Time.time - item.Value < delayHoldSeconds;
+                    UpdateButtonState(item.Key, isHolding);
+                }
+            }
+
+            if (BattleManager.Instance.CurrentState == BattleState.Battle_Ongoing)
+            {
+                Battle battle = BattleManager.Instance.Battle;
+                SumoController player = inputProvider.PlayerSide == PlayerSide.Left ? battle.LeftPlayer : battle.RightPlayer;
+
+                Skill.GetComponentInChildren<Button>().interactable = !player.Skill.IsSkillOnCooldown;
+                Dash.GetComponentInChildren<Button>().interactable = !player.IsDashOnCooldown;
+            }
+        }
+        #endregion
+
+        #region Button handling methods
+
+        void OnBattleChanged(object[] args)
+        {
+            var battle = (Battle)args[0];
+            SumoController currentPlayer = inputProvider.PlayerSide == PlayerSide.Left ? BattleManager.Instance.Battle.LeftPlayer : BattleManager.Instance.Battle.RightPlayer;
+
+            if (BattleManager.Instance.CurrentState == BattleState.Battle_Countdown)
+                currentPlayer.Actions[SumoController.OnPlayerAction].Subscribe(OnPlayerAction);
+            else if (BattleManager.Instance.CurrentState == BattleState.Battle_End)
+            {
+                currentPlayer.Actions[SumoController.OnPlayerAction].Unsubscribe(OnPlayerAction);
+                Dash.GetComponentInChildren<Button>().interactable = true;
+                Skill.GetComponentInChildren<Button>().interactable = true;
             }
         }
 
-        if (Boost.gameObject.activeSelf)
-            ResetButtonState(Boost.gameObject);
-        if (Stone.gameObject.activeSelf)
-            ResetButtonState(Stone.gameObject);
-        if (BattleManager.Instance.CurrentState == BattleState.Battle_Ongoing)
+        void OnPlayerAction(object[] args)
         {
-            UpdateSkillCooldown();
-            UpdateDashCooldown();
-        }
-    }
-    #endregion
+            ISumoAction action = (ISumoAction)args[1];
+            bool isPostExecute = (bool)args[2] == false;
 
-    #region Button handling methods
-    public GameObject GetSelectedSkillButton()
-    {
-        return Stone.gameObject.activeSelf ? Stone.gameObject : Boost.gameObject;
-    }
-
-    void OnBattleChanged(Battle battle)
-    {
-        if (BattleManager.Instance.CurrentState == BattleState.Battle_End)
-            inputProvider.Me().OnPlayerAction -= OnPlayerAction;
-        if (BattleManager.Instance.CurrentState == BattleState.Battle_Countdown)
-            inputProvider.Me().OnPlayerAction += OnPlayerAction;
-    }
-
-    void OnPlayerAction(PlayerSide side, ISumoAction action, bool isPreExecute)
-    {
-        if (isPreExecute)
-        {
-            string actionName = action.GetType().Name;
-            if (!lastInputType.ContainsKey(actionName))
-                lastInputType.Add(actionName, null);
-            lastInputType[actionName] = new(GetHoldTypeButtonByAction(action), Time.time, action.InputUsed);
-        }
-    }
-
-    private GameObject GetHoldTypeButtonByAction(ISumoAction action)
-    {
-        if ((action is AccelerateAction) || (action is AccelerateTimeAction))
-        {
-            return Accelerate.gameObject;
-        }
-        else if ((action is TurnLeftAction) || (action is TurnLeftAngleAction))
-        {
-            return TurnLeft.gameObject;
-        }
-        else if ((action is TurnRightAction) || (action is TurnRightAngleAction))
-        {
-            return TurnRight.gameObject;
-        }
-        else if (action is DashAction || action is DashTimeAction)
-        {
-            return Dash.gameObject;
-        }
-        else if (action is SkillAction)
-        {
-            return GetSelectedSkillButton();
-        }
-        return null;
-    }
-
-    private void SetUpButtonGuide()
-    {
-        foreach (var item in InputProvider.KeyboardBindings[inputProvider.PlayerSide])
-        {
-            GameObject go = GetHoldTypeButtonByAction(item.Value);
-            if (go != null)
+            if (isPostExecute)
             {
-                TMP_Text text = go.GetComponentInChildren<TMP_Text>();
-                text.SetText($"{go.name}\n({item.Key})");
+                actionLastUsedMap[action.Type] = Time.time;
+                actionInputTypeMap[action.Type] = action.InputUsed;
             }
         }
-    }
 
-    private void UpdateDashCooldown()
-    {
-        Battle battle = BattleManager.Instance.Battle;
-        bool IsCooldown = inputProvider.PlayerSide == PlayerSide.Left ? battle.LeftPlayer.IsDashOnCooldown : battle.RightPlayer.IsDashOnCooldown;
-
-        Dash.GetComponentInChildren<Button>().interactable = !IsCooldown;
-    }
-
-    private void UpdateSkillCooldown()
-    {
-        GameObject selectedSkillButton = GetSelectedSkillButton();
-        if (selectedSkillButton == null) 
-            return;
-
-        Battle battle = BattleManager.Instance.Battle;
-        SumoController player = inputProvider.PlayerSide == PlayerSide.Left ? battle.LeftPlayer : battle.RightPlayer;
-        
-        selectedSkillButton.GetComponentInChildren<Button>().interactable = !player.Skill.IsSkillCooldown;
-    }
-
-    public void ResetCooldown()
-    {
-        // Special Skill
-        GameObject selectedSpecialSkillObj = Stone.gameObject.activeSelf ? Stone.gameObject : Boost.gameObject;
-
-        // GameObject maybe null when the engine detached
-        if (selectedSpecialSkillObj == null) 
-            return;
-
-        Battle battle = BattleManager.Instance.Battle;
-        SumoController player = inputProvider.PlayerSide == PlayerSide.Left ? battle.LeftPlayer : battle.RightPlayer;
-        selectedSpecialSkillObj.GetComponentInChildren<Button>().interactable = true;
-
-        // Dash
-        Dash.GetComponentInChildren<Button>().interactable = true;
-    }
-
-    void ResetButtonState(GameObject button)
-    {
-        button.GetComponent<Button>().interactable = true;
-    }
-
-    // Prevent multiple input
-    void UpdateHoldTypeButtonState(GameObject buttonObject, bool active, string actionName, InputType? inputType)
-    {
-        if (buttonObject == null)
-            return;
-
-        Button button = buttonObject.GetComponent<Button>();
-
-        if (inputType == null)
+        private void SetUpButtonGuide()
         {
-            button.interactable = true;
-            inputProvider.StateKeyboardAction[actionName] = true;
-            return;
+            foreach (var item in InputProvider.KeyboardBindings[inputProvider.PlayerSide])
+            {
+                GameObject go = actionButtonMap[item.Value.Type];
+                if (go != null)
+                {
+                    TMP_Text text = go.GetComponentInChildren<TMP_Text>();
+                    text.SetText($"{go.name}\n({item.Key})");
+                }
+            }
         }
 
-        bool targetState = !active;
-
-        if (inputType == InputType.Keyboard)
-            button.interactable = targetState;
-        else if (inputType == InputType.UI)
-            inputProvider.StateKeyboardAction[actionName] = targetState;
-        else
+        void UpdateButtonState(ActionType actionType, bool active)
         {
-            inputProvider.StateKeyboardAction[actionName] = targetState;
-            button.interactable = targetState;
+            GameObject buttonObject = actionButtonMap[actionType];
+            InputType? inputType = actionInputTypeMap[actionType];
+
+            Button button = buttonObject.GetComponent<Button>();
+
+            if (inputType == null)
+            {
+                button.interactable = true;
+                inputProvider.StateKeyboardAction[actionType] = true;
+                return;
+            }
+
+            bool targetState = !active;
+
+            if (inputType == InputType.Keyboard)
+                button.interactable = targetState;
+            else if (inputType == InputType.UI)
+                inputProvider.StateKeyboardAction[actionType] = targetState;
+            else
+            {
+                inputProvider.StateKeyboardAction[actionType] = targetState;
+                button.interactable = targetState;
+            }
         }
+        #endregion
     }
-
-    public GameObject SetSkillAvailability(SkillType type)
-    {
-        GameObject activatedObject = type == SkillType.Boost ? Boost.gameObject : Stone.gameObject;
-        GameObject deactivatedObject = type == SkillType.Boost ? Stone.gameObject : Boost.gameObject;
-        
-        if (activatedObject.activeSelf == true && type == SkillType.Stone)
-            Stone.transform.position = Boost.gameObject.transform.position;
-
-        activatedObject.SetActive(true);
-        deactivatedObject.SetActive(false);
-
-        return activatedObject;
-    }
-    #endregion
 }

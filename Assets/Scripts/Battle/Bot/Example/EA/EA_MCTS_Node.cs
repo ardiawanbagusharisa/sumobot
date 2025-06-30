@@ -2,11 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
-using CoreSumo;
+using SumoCore;
+using SumoManager;
 using UnityEditor;
 using UnityEngine;
 
-namespace BotAI
+namespace SumoBot
 {
     public class EA_MCTS_Node
     {
@@ -37,8 +38,6 @@ namespace BotAI
                     {distScore,HighestScoreType.Distance},
                     {bonusOrPenalty,HighestScoreType.BonusOrPenalty}
                 };
-                Debug.Log($"GetHighestScoreType {string.Join(", ", highestScore.Select((x) => x.Key.ToString()))}");
-
                 float result = highestScore.Max((i) => i.Key);
                 return highestScore[result];
             }
@@ -65,7 +64,7 @@ namespace BotAI
             foreach (var action in actions)
             {
                 EA_MCTS_Node newNode = new(this, new List<ISumoAction>() { action });
-                newNode.ID = action.NameWithParam;
+                newNode.ID = action.FullName;
                 if (goodAction != null && goodAction.Count > 0)
                 {
                     newNode.totalReward = 10;
@@ -77,7 +76,7 @@ namespace BotAI
                     newNode.visits = 1;
                 }
                 children.Add(newNode);
-                AllNodes.Add(action.NameWithParam, newNode);
+                AllNodes.Add(action.FullName, newNode);
             }
         }
 
@@ -85,31 +84,26 @@ namespace BotAI
         {
             var unexploredActs = AIBot_EA_MCTS.PossibleActions.Where(x =>
             {
-                var newActNames = $"{ID}:{x.NameWithParam}";
+                var newActNames = $"{ID}:{x.FullName}";
                 if (!AllNodes.ContainsKey(newActNames))
-                {
                     return true;
-                }
                 return false;
             }).ToList();
 
             if (unexploredActs.Count() == 0)
-            {
                 return null;
-            }
 
             System.Random random = new();
             var randomAction = unexploredActs[random.Next(unexploredActs.Count())];
             string newActNames;
-            newActNames = $"{ID}:{randomAction.NameWithParam}";
+            newActNames = $"{ID}:{randomAction.FullName}";
 
-            var newActs = new List<ISumoAction>(actions)
-                {
-                    randomAction
-                };
+            var newActs = new List<ISumoAction>(actions) { randomAction };
 
-            EA_MCTS_Node newNode = new(this, newActs);
-            newNode.ID = newActNames;
+            EA_MCTS_Node newNode = new(this, newActs)
+            {
+                ID = newActNames
+            };
             children.Add(newNode);
             AllNodes.Add(newActNames, newNode);
             return newNode;
@@ -125,94 +119,137 @@ namespace BotAI
                 double exploitation = child.totalReward / child.visits;
                 double exploration = C * Math.Sqrt(Math.Log(visits + 1) / child.visits);
                 return exploitation + exploration;
-            }).First();
+            }).FirstOrDefault();
         }
 
-        public Tuple<float, float, float> Simulate(SumoController enemy, SumoController controller, float simulationTime)
+        public Tuple<float, float, float> Simulate(BotAPI api, float simulationTime)
         {
+            var controller = api.Controller;
+
             GameObject arena = BattleManager.Instance.Arena;
             float arenaRadius = arena.GetComponent<CircleCollider2D>().radius * arena.transform.lossyScale.x;
+
             Vector3 arenaCenter = arena.transform.position;
-            Vector3 aiDirection = controller.transform.up;
-            Vector3 aiPosition = controller.transform.position;
+            Vector3 aiDirection = api.MyTransform.up;
+            Vector3 aiPosition = api.MyTransform.position;
 
             float bonusOrPenalty = 0;
             float angleScore = 0;
             float distScore = 0;
 
+            //Before Sim
+            Vector3 toEnemy = api.EnemyTransform.position - aiPosition;
+            float distance = toEnemy.magnitude;
+            float angle = Vector3.SignedAngle(aiDirection, toEnemy.normalized, Vector3.forward);
+
             List<string> actionsInString = actions.Select((a) => a.Name.ToLower()).ToList();
+
+            Debug.Log($"distanceScore before-loop: {distScore}, {string.Join(", ", actionsInString)}");
 
             bool isActionIncludeAccelerating = actionsInString.Contains("accelerate") || actionsInString.Contains("dash") || actionsInString.Contains("skill");
 
+
             foreach (var action in actions)
             {
-                if (action is TurnLeftAngleAction)
+                if (action is TurnAction)
                 {
-                    aiDirection += Quaternion.Euler(0, 0, (float)action.Param) * aiDirection * simulationTime * controller.TurnRate;
-                }
-                else if (action is TurnRightAngleAction rV)
-                {
-                    aiDirection += Quaternion.Euler(0, 0, (float)action.Param) * aiDirection * simulationTime * controller.TurnRate;
+                    Debug.Log($"action.Param ${action.Type} {action.Param}");
+                    if (action.Type == ActionType.TurnLeftWithAngle)
+                    {
+                        aiDirection += Quaternion.Euler(0, 0, (float)action.Param) * aiDirection * simulationTime * controller.TurnRate;
+                    }
+                    else if (action.Type == ActionType.TurnRightWithAngle)
+                    {
+                        aiDirection += Quaternion.Euler(0, 0, -(float)action.Param) * aiDirection * simulationTime * controller.TurnRate;
+                    }
                 }
                 else if (action is AccelerateAction)
                 {
-                    if (controller.IsMovementLocked || controller.IsMoveDisabled)
+                    if (api.CanExecute(action))
                     {
-                        bonusOrPenalty += -0.1f;
+                        var predictionSpeed = controller.MoveSpeed;
+                        if (controller.Skill.Type == SkillType.Boost && controller.Skill.IsActive)
+                        {
+                            predictionSpeed *= controller.Skill.BoostMultiplier;
+                        }
+
+                        aiPosition += aiDirection.normalized * (predictionSpeed * simulationTime);
                     }
                     else
                     {
-                        aiPosition += aiDirection.normalized * controller.MoveSpeed * simulationTime;
+                        bonusOrPenalty -= 0.1f;
                     }
                 }
                 else if (action is DashAction)
                 {
-                    if (controller.IsDashOnCooldown || controller.IsMovementLocked || controller.IsMoveDisabled)
+                    if (api.CanExecute(action))
                     {
-                        bonusOrPenalty += -0.1f;
+                        bonusOrPenalty += 0.1f;
+                        var predictionSpeed = controller.DashSpeed;
+
+                        if (controller.Skill.Type == SkillType.Boost && controller.Skill.IsActive)
+                        {
+                            predictionSpeed *= controller.Skill.BoostMultiplier;
+                        }
+
+                        aiPosition += aiDirection.normalized * (controller.DashDuration * predictionSpeed * simulationTime);
+
+                        // Formula of decelerating / stop-delay
+                        aiPosition *= 0.5f + predictionSpeed * controller.StopDelay;
                     }
                     else
                     {
-                        bonusOrPenalty += 0.1f;
-                        aiPosition += aiDirection.normalized * (controller.DashSpeed * controller.DashDuration) * controller.StopDelay * simulationTime;
+                        bonusOrPenalty -= 0.1f;
                     }
 
                 }
                 else if (action is SkillAction)
                 {
-                    if (controller.Skill.IsSkillCooldown)
-                    {
-                        bonusOrPenalty += -0.5f;
-                    }
-                    else
+                    if (api.CanExecute(action))
                     {
                         if (controller.Skill.Type == SkillType.Boost)
                         {
                             bonusOrPenalty += 0.5f;
-                            aiPosition += aiDirection.normalized * (controller.MoveSpeed * controller.Skill.BoostMultiplier) * simulationTime;
+                            aiPosition += aiDirection.normalized * (controller.MoveSpeed * controller.Skill.BoostMultiplier * simulationTime);
                         }
+                    }
+                    else
+                    {
+                        bonusOrPenalty -= 0.5f;
                     }
                 }
 
-                Vector3 toEnemy = enemy.transform.position - aiPosition;
-                float distance = toEnemy.magnitude;
-                float angle = Vector3.SignedAngle(aiDirection, toEnemy.normalized, Vector3.forward);
+                toEnemy = api.EnemyTransform.transform.position - aiPosition;
+                distance = toEnemy.magnitude;
+                angle = Vector3.SignedAngle(aiDirection, toEnemy.normalized, Vector3.forward);
 
                 angleScore += Mathf.Cos(angle * Mathf.Deg2Rad);
                 distScore += 1f - Mathf.Clamp01(distance / arenaRadius);
 
+                Debug.Log($"distanceScore after-loop: {distScore}");
                 var distanceFromCenter = Vector3.Distance(aiPosition, arenaCenter);
 
-                if ((distanceFromCenter > arenaRadius) && isActionIncludeAccelerating)
+                if (isActionIncludeAccelerating)
                 {
-                    // Penalize heavily if sumo will exits the ring, or any action that makes the Sumo move away from exits, reward instead.
-                    bonusOrPenalty += arenaRadius - distanceFromCenter + (angleScore - 0.9f) * 2;
-                    Debug.Log($"[Simulate][IsPossibleOutFromArena] {ID}, can cause go outside of arena\n Detail: {aiPosition}, {arenaCenter} > {arenaRadius}, resulting: {bonusOrPenalty}");
+                    if (distanceFromCenter > arenaRadius)
+                    {
+                        // Penalize heavily if sumo will exits the ring, or any action that makes the Sumo move away from exits, reward instead.
+                        bonusOrPenalty += (arenaRadius - distanceFromCenter + (angleScore - 0.9f)) * 2;
+                        Debug.Log($"[Simulate][IsPossibleOutFromArena] {ID}, can cause go outside of arena\n Detail: {aiPosition}, {arenaCenter} > {arenaRadius}, resulting: {bonusOrPenalty}");
+                    }
+                    else
+                    {
+                        distScore += (angleScore > 0.95) ? angleScore * 2f : 0;
+                    }
                 }
                 else
                 {
-                    distScore += (angleScore > 0.95 && isActionIncludeAccelerating) ? angleScore * 1.5f : 0;
+                    if (angleScore > 0.9)
+                    {
+                        bonusOrPenalty -= 5f;
+                    }
                 }
+
             }
 
             float normAngleScore = angleScore / actions.Count();
@@ -243,7 +280,7 @@ namespace BotAI
             {
                 double exploitation = child.totalReward / (child.visits + double.Epsilon);
                 return exploitation;
-            }).First();
+            }).FirstOrDefault();
             return highest;
         }
     }

@@ -1,221 +1,214 @@
 using System;
 using System.Collections.Generic;
-using CoreSumo;
+using System.Linq;
+using SumoCore;
+using SumoManager;
 using UnityEngine;
 
-public enum InputType
+namespace SumoInput
 {
-    Keyboard,
-    UI,
-    LiveCommand,
-    Script,
-}
-
-public class InputProvider : MonoBehaviour
-{
-    #region Input properties
-    public bool IncludeKeyboard;
-    public PlayerSide PlayerSide;
-    public SkillType SkillType;
-    #endregion
-
-    #region Runtime properties
-    // AccelerateAction: true, means player can press Accelerate
-    public Dictionary<string, bool> StateKeyboardAction;
-
-    // Store keyboard configurations (keybindings)
-    public static readonly Dictionary<PlayerSide, Dictionary<KeyCode, ISumoAction>> KeyboardBindings
-        = new Dictionary<PlayerSide, Dictionary<KeyCode, ISumoAction>>()
-                        {
-                                {PlayerSide.Left, new Dictionary<KeyCode, ISumoAction>(){
-                                    { KeyCode.W, new AccelerateAction(InputType.Keyboard) },
-                                    { KeyCode.D, new TurnRightAction(InputType.Keyboard) },
-                                    { KeyCode.A, new TurnLeftAction(InputType.Keyboard)},
-                                    { KeyCode.LeftShift, new DashAction(InputType.Keyboard)},
-                                    { KeyCode.C, new SkillAction(InputType.Keyboard)},
-                                }},
-                                {PlayerSide.Right, new Dictionary<KeyCode,ISumoAction>(){
-                                    { KeyCode.O, new AccelerateAction(InputType.Keyboard)},
-                                    { KeyCode.Semicolon, new TurnRightAction(InputType.Keyboard)},
-                                    { KeyCode.K, new TurnLeftAction(InputType.Keyboard)},
-                                    { KeyCode.RightShift, new DashAction(InputType.Keyboard)},
-                                    { KeyCode.M, new SkillAction(InputType.Keyboard)},
-                                }},
-                        };
-
-    private Queue<ISumoAction> commandQueue = new Queue<ISumoAction>();
-    #endregion
-
-    public InputProvider(PlayerSide side, bool includeKeyboard = false)
+    public enum InputType
     {
-        PlayerSide = side;
-        IncludeKeyboard = includeKeyboard;
+        Keyboard,
+        UI,
+        LiveCommand,
+        Script,
     }
 
-    #region Unity methods
-    void OnEnable()
+    public class InputProvider : MonoBehaviour
     {
-        StateKeyboardAction = new Dictionary<string, bool>()
-                                    {
-                                        {"AccelerateAction",true},
-                                        {"TurnRightAction",true},
-                                        {"TurnLeftAction",true},
-                                        {"DashAction",true},
-                                        {"SkillAction",true},
-                                    };
-        commandQueue = new Queue<ISumoAction>();
-    }
-    #endregion
+        #region Input properties
+        public bool IncludeKeyboard;
+        public PlayerSide PlayerSide;
+        public SkillType SkillType;
+        #endregion
 
-    #region Input methods
-    public List<ISumoAction> GetInput()
-    {
-        List<ISumoAction> actions = new List<ISumoAction>();
+        #region Runtime properties
 
-        if (IncludeKeyboard)
-            actions = ReadKeyboardInput();
+        // ActionType.Accelerate -> true, means player can press Accelerate
+        public Dictionary<ActionType, bool> StateKeyboardAction;
 
-        while (commandQueue.Count > 0)
-        {
-            actions.Add(commandQueue.Dequeue());
-        }
-
-        return actions;
-    }
-    #endregion
-
-    #region Public API
-    // Applied for Live Command And AI Script
-    public void EnqueueCommand(ISumoAction action)
-    {
-        if (IsValid(action))
-        {
-            commandQueue.Enqueue(action);
-        }
-    }
-
-    public void ClearCommands()
-    {
-        commandQueue.Clear();
-    }
-    #endregion
-
-    #region Keyboard Input
-    private List<ISumoAction> ReadKeyboardInput()
-    {
-        var actions = new List<ISumoAction>();
-
-        Dictionary<KeyCode, ISumoAction> sideKeyboard = KeyboardBindings[PlayerSide];
-        foreach (var item in sideKeyboard)
-        {
-            // Map input to actions
-            if (Input.GetKey(item.Key) && StateKeyboardAction[item.Value.GetType().Name])
+        // Store keyboard configurations (keybindings)
+        public static readonly Dictionary<PlayerSide, Dictionary<KeyCode, ISumoAction>> KeyboardBindings
+            = new()
             {
-                try
+                {PlayerSide.Left, new Dictionary<KeyCode, ISumoAction>(){
+                    { KeyCode.W, new AccelerateAction(InputType.Keyboard) },
+                    { KeyCode.D, new TurnAction(InputType.Keyboard, ActionType.TurnRight) },
+                    { KeyCode.A, new TurnAction(InputType.Keyboard, ActionType.TurnLeft)},
+                    { KeyCode.LeftShift, new DashAction(InputType.Keyboard)},
+                    { KeyCode.C, new SkillAction(InputType.Keyboard)},
+                }},
+                {PlayerSide.Right, new Dictionary<KeyCode,ISumoAction>(){
+                    { KeyCode.O, new AccelerateAction(InputType.Keyboard)},
+                    { KeyCode.Semicolon, new TurnAction(InputType.Keyboard, ActionType.TurnRight)},
+                    { KeyCode.K, new TurnAction(InputType.Keyboard, ActionType.TurnLeft)},
+                    { KeyCode.RightShift, new DashAction(InputType.Keyboard)},
+                    { KeyCode.M, new SkillAction(InputType.Keyboard)},
+                }},
+            };
+
+        private Queue<ISumoAction> commandQueue = new();
+        #endregion
+
+        public InputProvider(PlayerSide side, bool includeKeyboard = false)
+        {
+            PlayerSide = side;
+            IncludeKeyboard = includeKeyboard;
+        }
+
+        #region Unity methods
+        void OnEnable()
+        {
+            StateKeyboardAction = new();
+            IEnumerable<ActionType> actionTypes = Enum.GetValues(typeof(ActionType)).Cast<ActionType>();
+            foreach (ActionType action in actionTypes)
+            {
+                StateKeyboardAction.Add(action, true);
+            }
+
+            commandQueue = new Queue<ISumoAction>();
+        }
+        #endregion
+
+        #region Input methods
+        public List<ISumoAction> GetInput()
+        {
+            List<ISumoAction> actions = new List<ISumoAction>();
+
+            if (IncludeKeyboard)
+                actions = ReadKeyboardInput();
+
+            while (commandQueue.Count > 0)
+            {
+                actions.Add(commandQueue.Dequeue());
+            }
+
+            return actions;
+        }
+        #endregion
+
+        #region Public API
+        // Applied for Live Command And AI Script
+        public void EnqueueCommand(ISumoAction action)
+        {
+            if (IsValid(action))
+            {
+                commandQueue.Enqueue(action);
+            }
+        }
+
+        public void EnqueueCommands(Queue<ISumoAction> actions)
+        {
+            while (actions.Count > 0)
+            {
+                EnqueueCommand(actions.Dequeue());
+            }
+        }
+
+        public void ClearCommands()
+        {
+            commandQueue.Clear();
+        }
+        #endregion
+
+        #region Keyboard Input
+        private List<ISumoAction> ReadKeyboardInput()
+        {
+            List<ISumoAction> actions = new();
+
+            Dictionary<KeyCode, ISumoAction> sideKeyboard = KeyboardBindings[PlayerSide];
+            foreach (var item in sideKeyboard)
+            {
+                // Map input to actions
+                if (Input.GetKey(item.Key) && StateKeyboardAction[item.Value.Type])
                 {
-                    if (IsValid(item.Value))
-                        actions.Add(item.Value);
+                    try
+                    {
+                        if (IsValid(item.Value))
+                            actions.Add(item.Value);
+                    }
+                    catch (Exception e)
+                    {
+                        Debug.LogError(e);
+                    }
                 }
-                catch (Exception e)
-                {
-                    Debug.LogError(e);
-                }
             }
+            return actions;
         }
-        return actions;
-    }
-    #endregion
+        #endregion
 
-    #region UI Input
-    public void OnAccelerateButtonPressed()
-    {
-        EnqueueCommand(new AccelerateAction(InputType.UI));
-    }
-
-    public void OnDashButtonPressed()
-    {
-        EnqueueCommand(new DashAction(InputType.UI));
-    }
-
-    public void OnTurnLeftButtonPressed()
-    {
-        EnqueueCommand(new TurnLeftAction(InputType.UI));
-    }
-
-    public void OnTurnRightButtonPressed()
-    {
-        EnqueueCommand(new TurnRightAction(InputType.UI));
-    }
-
-    public void OnBoostSkillButtonPressed()
-    {
-        EnqueueCommand(new SkillAction(InputType.UI));
-    }
-
-    public void OnStoneSkillButtonPressed()
-    {
-        EnqueueCommand(new SkillAction(InputType.UI));
-    }
-
-    private bool IsValid(ISumoAction action)
-    {
-        Battle battle = BattleManager.Instance.Battle;
-        SumoController controller = PlayerSide == PlayerSide.Left ? battle.LeftPlayer : battle.RightPlayer;
-
-        if (action.Param is float)
+        #region UI Input
+        public void OnAccelerateButtonPressed(object[] _)
         {
-            float param = (float)action.Param;
-            if (param == float.NaN) 
-                throw new Exception($"parameter can't be NaN when you are using [{action.NameWithParam}] type");
+            EnqueueCommand(new AccelerateAction(InputType.UI));
         }
 
-        if (action is TurnLeftAngleAction || action is TurnRightAngleAction)
+        public void OnDashButtonPressed(object[] _)
         {
-            float param = (float)action.Param;
-            float minAngle = controller.HalfTurnAngle.min;
-            float maxAngle = controller.HalfTurnAngle.max;
-            if (param < 0) 
-                throw new Exception($"parameter can't be < 0 when you are using [{action.NameWithParam}] type");
-            if (param < minAngle || param > maxAngle) 
-                throw new Exception($"parameter can't be < {minAngle} and > {maxAngle} when you are using [{action.NameWithParam}]");
-        }
-        else if (action is TurnAngleAction)
-        {
-            float param = (float)action.Param;
-            float minAngle = controller.FullTurnAngle.min;
-            float maxAngle = controller.FullTurnAngle.max;
-            if (param < minAngle || param > maxAngle) 
-                throw new Exception($"param can't be < {minAngle} and > {maxAngle} when you are using [${action.NameWithParam}] type");
+            EnqueueCommand(new DashAction(InputType.UI));
         }
 
-        if (action is AccelerateAction || action is AccelerateTimeAction || action is DashAction)
+        public void OnTurnLeftButtonPressed(object[] _)
         {
-            if (controller.IsMovementLocked || controller.IsMoveDisabled)
+            EnqueueCommand(new TurnAction(InputType.UI, ActionType.TurnLeft));
+        }
+
+        public void OnTurnRightButtonPressed(object[] _)
+        {
+            EnqueueCommand(new TurnAction(InputType.UI, ActionType.TurnRight));
+        }
+
+        public void OnSkillButtonPressed(object[] _)
+        {
+            EnqueueCommand(new SkillAction(InputType.UI));
+        }
+
+        public bool IsValid(ISumoAction action)
+        {
+            Battle battle = BattleManager.Instance.Battle;
+            SumoController controller = PlayerSide == PlayerSide.Left ? battle.LeftPlayer : battle.RightPlayer;
+
+            if (action.Param is float)
             {
-                // throw new Exception($"can't accept [${action.NameWithParam}] while [IsMovementLocked] or [IsMoveDisabled] is true");
-                return false;
+                float param = (float)action.Param;
+                if (param == float.NaN)
+                    throw new Exception($"parameter can't be NaN when you are using [{action.FullName}] type");
             }
-        }
 
-        if (action is DashAction)
-        {
-            if (controller.IsDashOnCooldown)
+            if (action.Type == ActionType.TurnLeftWithAngle || action.Type == ActionType.TurnRightWithAngle)
             {
-                // throw new Exception($"can't accept [${action.NameWithParam}] while [IsDashCooldown] is true");
-                return false;
+                float param = (float)action.Param;
+                float minAngle = controller.HalfTurnAngle.min;
+                float maxAngle = controller.HalfTurnAngle.max;
+                if (param < minAngle || param > maxAngle)
+                    throw new Exception($"parameter can't be < {minAngle} or > {maxAngle} when you are using [{action.FullName}]");
             }
+            return true;
         }
 
-        if (action is SkillAction)
+        public bool CanExecute(ISumoAction action)
         {
-            if (controller.Skill.IsSkillCooldown)
-            {
-                // throw new Exception($"can't accept [${action.NameWithParam}] while [IsSkillCooldown] is true");
-                return false;
-            }
-        }
+            Battle battle = BattleManager.Instance.Battle;
+            SumoController controller = PlayerSide == PlayerSide.Left ? battle.LeftPlayer : battle.RightPlayer;
 
-        return true;
+            if (action is AccelerateAction)
+            {
+                if (controller.IsDashActive || controller.IsMovementDisabled)
+                    return false;
+            }
+            if (action is DashAction)
+            {
+                if (controller.IsDashOnCooldown || controller.IsMovementDisabled)
+                    return false;
+            }
+            if (action is SkillAction)
+            {
+                if (controller.Skill.IsSkillOnCooldown)
+                    return false;
+            }
+            return true;
+        }
+        #endregion
     }
-    #endregion
 }
