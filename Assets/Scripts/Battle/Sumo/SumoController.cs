@@ -68,11 +68,11 @@ namespace SumoCore
         private EventLogger collisionLogger;
 
         // Derived 
-        public bool IsDashActive => LastDashTime != 0 && (LastDashTime + DashDuration) >= BattleManager.Instance.ElapsedTime;
-        public float DashCooldownTimer => LastDashTime + DashCooldown - BattleManager.Instance.ElapsedTime;
+        public bool IsDashActive => LastDashTime != 0 && (LastDashTime + DashDuration) >= (BattleManager.Instance?.ElapsedTime ?? Time.time);
+        public float DashCooldownTimer => LastDashTime + DashCooldown - BattleManager.Instance?.ElapsedTime ?? Time.time;
         public float DashCooldownNormalized => 1 - DashCooldownTimer / DashCooldown;
         public bool IsDashOnCooldown => DashCooldownTimer >= 0f;
-        public bool IsMovementDisabled => BattleManager.Instance.CurrentState != BattleState.Battle_Ongoing || moveLockTime > 0f;
+        public bool IsMovementDisabled => (BattleManager.Instance != null && BattleManager.Instance.CurrentState != BattleState.Battle_Ongoing) || moveLockTime > 0f;
 
         // Events 
         public ActionRegistry Actions = new();
@@ -91,6 +91,7 @@ namespace SumoCore
             reservedMoveSpeed = MoveSpeed;
             reservedDashSpeed = DashSpeed;
             reserverdBounceResistance = BounceResistance;
+
         }
 
         void Update()
@@ -201,7 +202,7 @@ namespace SumoCore
             if (IsMovementDisabled || IsDashOnCooldown) return;
 
             Log(action);
-            LastDashTime = BattleManager.Instance.ElapsedTime;
+            LastDashTime = BattleManager.Instance?.ElapsedTime ?? Time.time;
             robotRigidBody.linearVelocity = transform.up * DashSpeed;
             Log(action);
         }
@@ -247,7 +248,7 @@ namespace SumoCore
             float turnSpeed = TurnRate * 100;
 
             while (Mathf.Abs(rotatedAngle) < Mathf.Abs(totalAngle) &&
-                   BattleManager.Instance.CurrentState == BattleState.Battle_Ongoing &&
+                   BattleManager.Instance != null && BattleManager.Instance.CurrentState == BattleState.Battle_Ongoing &&
                    !IsMovementDisabled)
             {
                 float delta = turnSpeed * Time.deltaTime;
@@ -271,7 +272,7 @@ namespace SumoCore
 
             Log(action);
 
-            while (elapsedTime < (float)action.Param && BattleManager.Instance.CurrentState == BattleState.Battle_Ongoing && !IsMovementDisabled)
+            while (elapsedTime < (float)action.Param && BattleManager.Instance != null && BattleManager.Instance.CurrentState == BattleState.Battle_Ongoing && !IsMovementDisabled)
             {
                 robotRigidBody.linearVelocity = transform.up.normalized * speed;
                 elapsedTime += Time.deltaTime;

@@ -16,7 +16,7 @@ namespace SumoHelper
         {
             if (subscribers.Add(callback))
                 action += callback;
-            
+
         }
 
         public void Unsubscribe(Action<object[]> callback)
@@ -53,4 +53,9 @@ namespace SumoHelper
             }
         }
     }
+}
+
+public class TrackableActionParameter
+{
+    
 }
