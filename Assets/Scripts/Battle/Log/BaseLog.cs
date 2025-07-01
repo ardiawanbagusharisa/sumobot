@@ -42,7 +42,7 @@ namespace SumoLog
         {
             var robot = (JObject)data["Robot"];
             Vector2 tempLinearVelocity = new((float)(double)robot["LinearVelocity"]["X"], (float)(double)robot["LinearVelocity"]["Y"]);
-            Vector2 temPosition = new((float)(double)robot["Position"]["X"], (float)(double)robot["LinearVelocity"]["Y"]);
+            Vector2 temPosition = new((float)(double)robot["Position"]["X"], (float)(double)robot["Position"]["Y"]);
 
             BaseLog result = new()
             {

@@ -44,6 +44,21 @@ namespace SumoManager
         public TMP_Text RightSkillName;
         #endregion
 
+        [Header("Battle UI - Guide Panel")]
+        public GameObject guidePanel;
+        public GameObject pausePanel;
+        public TMP_Text guideTitleText;
+        public TMP_Text guideContentText;
+        public Button gameplayTab;
+        public Button rulesTab;
+        public Button controlsTab;
+        public ScrollRect guideScrollRect;
+        public Color guideActiveTabColor = new Color(1f, 0.89f, 0.62f);
+        public Color guideInactiveTabColor = new Color(0.88f, 0.88f, 0.88f);
+        [TextArea(2, 6)] public string gameplayContent;
+        [TextArea(2, 6)] public string rulesContent;
+        [TextArea(2, 6)] public string controlsContent;
+
         #region Unity methods
         private void Awake()
         {
@@ -55,13 +70,31 @@ namespace SumoManager
             Instance = this;
         }
 
+        private void Start()
+        {
+            // Setup guide tab listeners
+            if (gameplayTab != null) gameplayTab.onClick.AddListener(() => ShowGuideTab("Gameplay"));
+            if (rulesTab != null) rulesTab.onClick.AddListener(() => ShowGuideTab("Rules"));
+            if (controlsTab != null) controlsTab.onClick.AddListener(() => ShowGuideTab("Controls"));
+            if (guidePanel != null) guidePanel.SetActive(false);
+            if (pausePanel != null) pausePanel.SetActive(false);
+        }
+
         private void OnEnable()
         {
+            if (ReplayManager.Instance.IsEnable)
+            {
+                BattlePanels.ForEach(panel => panel.SetActive(false));
+                return;
+            }
             BattleManager.Instance.Actions[BattleManager.OnBattleChanged].Subscribe(OnBattleChanged);
         }
 
         private void OnDisable()
         {
+            if (ReplayManager.Instance.IsEnable)
+                return;
+
             BattleManager.Instance.Actions[BattleManager.OnBattleChanged].Unsubscribe(OnBattleChanged);
         }
 
@@ -112,7 +145,7 @@ namespace SumoManager
         {
             var battle = (Battle)args[0];
             RoundSystem.SetText($"Best of {(int)battle.RoundSystem}");
-            Round.SetText($"Round {battle.CurrentRound.RoundNumber}");
+            Round.SetText($"Round {battle.CurrentRound?.RoundNumber}");
 
             Round round = battle.CurrentRound;
             BattleState state = BattleManager.Instance.CurrentState;
@@ -184,22 +217,9 @@ namespace SumoManager
         }
         #endregion
 
-        #region Guide Panel
-        // === Guide Panel Fields ===
-        public GameObject guidePanel;
-        public TMP_Text guideTitleText;
-        public TMP_Text guideContentText;
-        public Button gameplayTab;
-        public Button rulesTab;
-        public Button controlsTab;
-        public ScrollRect guideScrollRect;
-        public Color guideActiveTabColor = new Color(1f, 0.89f, 0.62f);
-        public Color guideInactiveTabColor = new Color(0.88f, 0.88f, 0.88f);
-        [TextArea(2, 6)] public string gameplayContent;
-        [TextArea(2, 6)] public string rulesContent;
-        [TextArea(2, 6)] public string controlsContent;
 
-        // === Guide Panel Methods ===
+
+        #region Panel
         public void ShowGuidePanel()
         {
             if (guidePanel != null)
@@ -263,12 +283,7 @@ namespace SumoManager
             if (tabImg != null)
                 tabImg.color = active ? guideActiveTabColor : guideInactiveTabColor;
         }
-        #endregion
 
-        #region Pause Panel
-        public GameObject pausePanel;
-
-        // Methods for pause panel
         public void ShowPause()
         {
             pausePanel.SetActive(true);
@@ -298,18 +313,6 @@ namespace SumoManager
         {
             Time.timeScale = 1;
             SceneManager.LoadScene("MainMenu");
-        }
-        #endregion
-
-        #region Initialization
-        private void Start()
-        {
-            // Setup guide tab listeners
-            if (gameplayTab != null) gameplayTab.onClick.AddListener(() => ShowGuideTab("Gameplay"));
-            if (rulesTab != null) rulesTab.onClick.AddListener(() => ShowGuideTab("Rules"));
-            if (controlsTab != null) controlsTab.onClick.AddListener(() => ShowGuideTab("Controls"));
-            if (guidePanel != null) guidePanel.SetActive(false);
-            if (pausePanel != null) pausePanel.SetActive(false);
         }
         #endregion
     }

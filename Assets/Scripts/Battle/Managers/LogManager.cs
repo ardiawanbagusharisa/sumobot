@@ -6,6 +6,8 @@ using Newtonsoft.Json;
 using SumoBot;
 using SumoCore;
 using SumoHelper;
+using SumoLog;
+using Unity.VisualScripting;
 using UnityEngine;
 
 namespace SumoManager
@@ -28,7 +30,7 @@ namespace SumoManager
             public float BattleTime;
             public float CountdownTime;
             public int RoundType;
-            public PlayerStats LeftPLayerStats = new();
+            public PlayerStats LeftPlayerStats = new();
             public PlayerStats RightPlayerStats = new();
 
             public List<EventLog> Events = new();
@@ -52,6 +54,7 @@ namespace SumoManager
             public int Index;
             public string Timestamp;
             public string Winner;
+            public float Duration;
             public List<EventLog> PlayerEvents = new();
             public List<EventLog> StateEvents = new();
         }
@@ -87,6 +90,7 @@ namespace SumoManager
 
         private static BattleLog battleLog;
         private static string logFolderPath;
+        private static bool IsLogEnabled => !ReplayManager.Instance.IsEnable;
 
         public static int CurrentGameIndex => battleLog.Games.Count > 0 ? battleLog.Games[^1].Index : 0;
         #endregion
@@ -95,6 +99,11 @@ namespace SumoManager
 
         public static void RegisterAction()
         {
+            if (!IsLogEnabled)
+            {
+                return;
+            }
+
             SumoController leftPlayer = BattleManager.Instance.Battle.LeftPlayer;
             SumoController rightPlayer = BattleManager.Instance.Battle.RightPlayer;
 
@@ -131,18 +140,28 @@ namespace SumoManager
         // Therefore, we need manually add to stack
         public static void FlushActionLog()
         {
-            foreach (Dictionary<ActionType, EventLogger> actionSide in ActionLoggers.Values)
+            if (!IsLogEnabled)
             {
-                foreach (EventLogger actionLogger in actionSide.Values)
-                {
-                    if (actionLogger.IsActive && actionLogger.ForceSave)
-                        actionLogger.ForceStopAndSave();
-                }
+                return;
+            }
+
+            foreach (EventLogger actionLogger in ActionLoggers[PlayerSide.Left].Values)
+            {
+                actionLogger.ForceStopAndSave();
+            }
+            foreach (EventLogger actionLogger in ActionLoggers[PlayerSide.Right].Values)
+            {
+                actionLogger.ForceStopAndSave();
             }
         }
 
         public static void UpdateActionLog(PlayerSide side)
         {
+            if (!IsLogEnabled)
+            {
+                return;
+            }
+
             BattleState currentState = BattleManager.Instance.CurrentState;
             if (currentState == BattleState.Battle_Ongoing || currentState == BattleState.Battle_End)
                 foreach (EventLogger action in ActionLoggers[side].Values)
@@ -153,6 +172,11 @@ namespace SumoManager
 
         public static void CallActionLog(PlayerSide side, ISumoAction action)
         {
+            if (!IsLogEnabled)
+            {
+                return;
+            }
+
             if (BattleManager.Instance.CurrentState == BattleState.Battle_Ongoing)
             {
                 EventLogger actionLog = ActionLoggers[side][action.Type];
@@ -165,6 +189,11 @@ namespace SumoManager
 
         public static void InitLog()
         {
+            if (!IsLogEnabled)
+            {
+                return;
+            }
+
             string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
             string folderName = $"battle_{timestamp}";
 
@@ -174,6 +203,11 @@ namespace SumoManager
 
         public static void InitBattle()
         {
+            if (!IsLogEnabled)
+            {
+                return;
+            }
+
             BattleManager battleManager = BattleManager.Instance;
 
             battleLog = new()
@@ -187,7 +221,7 @@ namespace SumoManager
             SaveBattle();
         }
 
-        public static void UpdateMetadata()
+        public static void UpdateMetadata(bool logTakenAction = true)
         {
             if (BattleManager.Instance.Bot.IsEnable)
             {
@@ -195,25 +229,27 @@ namespace SumoManager
                 Bot rightBot = BattleManager.Instance.Bot.Right;
 
                 if (leftBot != null)
-                    battleLog.LeftPLayerStats.Bot = leftBot?.ID ?? "";
+                    battleLog.LeftPlayerStats.Bot = leftBot?.ID ?? "";
 
                 if (rightBot != null)
                     battleLog.RightPlayerStats.Bot = rightBot?.ID ?? "";
             }
 
-            battleLog.LeftPLayerStats.SkillType = BattleManager.Instance.Battle.LeftPlayer.Skill.Type.ToString();
+            battleLog.LeftPlayerStats.SkillType = BattleManager.Instance.Battle.LeftPlayer.Skill.Type.ToString();
             battleLog.RightPlayerStats.SkillType = BattleManager.Instance.Battle.RightPlayer.Skill.Type.ToString();
 
-            if (battleLog.Games.Count > 0)
+            if (battleLog.Games.Count > 0 && logTakenAction)
             {
                 RoundLog currRound = GetCurrentRound();
                 if (currRound != null)
                 {
-                    battleLog.LeftPLayerStats.ActionTaken += GetCurrentRound().PlayerEvents.FindAll((x) => x.Actor == "Left" && x.Category == "Action").Count();
-                    battleLog.RightPlayerStats.ActionTaken += GetCurrentRound().PlayerEvents.FindAll((x) => x.Actor == "Right" && x.Category == "Action").Count();
+                    battleLog.LeftPlayerStats.ActionTaken += GetCurrentRound().PlayerEvents.FindAll((x) => x.Actor == "Left" && x.Category == "Action" && x.IsStart == true).Count();
 
-                    battleLog.LeftPLayerStats.ContactMade += GetCurrentRound().PlayerEvents.FindAll((x) => x.Actor == "Left" && x.Category == "Collision").Count();
-                    battleLog.RightPlayerStats.ContactMade += GetCurrentRound().PlayerEvents.FindAll((x) => x.Actor == "Right" && x.Category == "Collision").Count();
+                    battleLog.RightPlayerStats.ActionTaken += GetCurrentRound().PlayerEvents.FindAll((x) => x.Actor == "Right" && x.Category == "Action" && x.IsStart == true).Count();
+
+                    battleLog.LeftPlayerStats.ContactMade += GetCurrentRound().PlayerEvents.FindAll((x) => x.Actor == "Left" && x.Category == "Collision" && x.IsStart == true).Count();
+
+                    battleLog.RightPlayerStats.ContactMade += GetCurrentRound().PlayerEvents.FindAll((x) => x.Actor == "Right" && x.Category == "Collision" && x.IsStart == true).Count();
                 }
             }
 
@@ -252,9 +288,11 @@ namespace SumoManager
             if (round != null)
             {
                 round.Winner = winner;
+                round.Duration = BattleManager.Instance.ElapsedTime;
+
                 if (round.Winner == "Left")
                 {
-                    battleLog.LeftPLayerStats.WinPerRound += 1;
+                    battleLog.LeftPlayerStats.WinPerRound += 1;
                 }
                 else if (round.Winner == "Right")
                 {
@@ -267,7 +305,7 @@ namespace SumoManager
         {
             battleLog.Games[CurrentGameIndex].Winner = winner.ToString();
             if (winner == BattleWinner.Left)
-                battleLog.LeftPLayerStats.WinPerGame += 1;
+                battleLog.LeftPlayerStats.WinPerGame += 1;
             else if (winner == BattleWinner.Right)
                 battleLog.RightPlayerStats.WinPerGame += 1;
         }

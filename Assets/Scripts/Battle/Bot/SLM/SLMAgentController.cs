@@ -247,12 +247,12 @@ public class SLMAgentController : MonoBehaviour
 
     bool GetSkillReady()
     {
-        return controller != null && controller.isSkillReady;
+        return controller != null && !controller.Skill.IsSkillOnCooldown;
     }
 
     bool GetDashReady()
     {
-        return controller != null && controller.isDashReady;
+        return controller != null && !controller.IsDashOnCooldown;
     }
 
     // === Action Execution ===
