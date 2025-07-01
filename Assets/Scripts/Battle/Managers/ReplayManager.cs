@@ -20,7 +20,7 @@ public class ReplayManager : MonoBehaviour
     [Header("Replay Configuration")]
     public bool IsEnable = false;
 
-    [Range(1f, 5f)]
+    [Range(0f, 5f)]
     public float playbackSpeed = 1f;
     public bool autoStart = true;
     public SumoController leftPlayer;
@@ -122,7 +122,7 @@ public class ReplayManager : MonoBehaviour
         // Playback speed slider
         if (PlaybackSpeedSlider != null)
         {
-            PlaybackSpeedSlider.minValue = 1f;
+            PlaybackSpeedSlider.minValue = 0f;
             PlaybackSpeedSlider.maxValue = 5f;
             PlaybackSpeedSlider.value = playbackSpeed;
 
@@ -346,8 +346,6 @@ public class ReplayManager : MonoBehaviour
             RightSkillType.SetText(metadata.RightPlayerStats.SkillType);
             RightWinCount.SetText(metadata.RightPlayerStats.WinPerGame.ToString());
             RightActionTaken.SetText(metadata.RightPlayerStats.ActionTaken.ToString());
-
-            Debug.Log($"Now Playing - Game {gameLogs[currentGameIndex].Index} | Round {gameLogs[currentGameIndex].Rounds[currentRoundIndex].Index} | {current.Actor} | {current.Category} | {(current.Category == "Action" ? current.Data["Name"] : "")}");
         }
     }
     #endregion
@@ -406,7 +404,6 @@ public class ReplayManager : MonoBehaviour
 
     void OnTimeSliderChanged(float value)
     {
-        Debug.Log($"OnTime: OnTimeSliderChanged {value}");
         if (isDraggingSlider)
         {
             currentTime = value;
@@ -427,13 +424,11 @@ public class ReplayManager : MonoBehaviour
 
     public void OnTimeSliderPointerDown()
     {
-        Debug.Log($"OnTime: OnTimeSliderPointerDown {true} ");
         isDraggingSlider = true;
     }
 
     public void OnTimeSliderPointerUp()
     {
-        Debug.Log($"OnTime: OnTimeSliderPointerUp {false} ");
         isDraggingSlider = false;
 
         isPlaying = false;
