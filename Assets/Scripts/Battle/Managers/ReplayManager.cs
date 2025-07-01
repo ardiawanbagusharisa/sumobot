@@ -332,7 +332,7 @@ public class ReplayManager : MonoBehaviour
             GameUI.SetText($"Game {currentGameIndex + 1}");
             RoundUI.SetText($"Round {currentRoundIndex + 1}");
             GameDurationUI.SetText($"Duration: {metadata.BattleTime}");
-            GameBestOf.SetText($"Duration: {metadata.RoundType}");
+            GameBestOf.SetText($"Best Of: {metadata.RoundType}");
 
             metadata.LeftPlayerStats.ActionTaken = leftEventsMap.Count;
             metadata.RightPlayerStats.ActionTaken = rightEventsMap.Count;
