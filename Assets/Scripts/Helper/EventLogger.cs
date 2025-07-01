@@ -91,7 +91,11 @@ namespace SumoHelper
 
         public void ForceStopAndSave()
         {
+            if (!IsActive || !ForceSave)
+                return;
+
             IsActive = false;
+            
             if (action != null)
                 SaveAction(false);
             if (collision != null)

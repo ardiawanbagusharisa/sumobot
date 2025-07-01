@@ -53,8 +53,6 @@ namespace SumoCore
         #region Runtime (readonly) Properties
         public Bot Bot;
         public bool isInputDisabled = false;
-        public bool isSkillReady => Skill != null && !Skill.IsSkillOnCooldown;
-        public bool isDashReady => !IsDashOnCooldown;
         public Vector2 LastVelocity { get; private set; } = Vector2.zero;
         public float LastAngularVelocity => robotRigidBody.angularVelocity;
         public float LastDashTime = 0;
@@ -190,7 +188,7 @@ namespace SumoCore
             switch (action.Type)
             {
                 case ActionType.Accelerate:
-                    robotRigidBody.linearVelocity = transform.up * (IsDashActive ? DashSpeed : MoveSpeed);
+                    robotRigidBody.linearVelocity = transform.up * MoveSpeed;
                     Log(action);
                     break;
                 case ActionType.AccelerateWithTime:
@@ -337,9 +335,6 @@ namespace SumoCore
                 float actorImpact = Bounce(collisionNormal, enemyVelocity, actorVelocity, enemyRobot);
                 float targetImpact = enemyRobot.Bounce(-collisionNormal, actorVelocity, enemyVelocity, this);
 
-                Actions[OnPlayerBounce]?.Invoke(Side);
-                enemyRobot.Actions[OnPlayerBounce]?.Invoke(Side);
-
                 float actorLockDuration = LockMovement(true, actorImpact);
                 float targetLockDuration = enemyRobot.LockMovement(false, targetImpact);
 
@@ -363,6 +358,9 @@ namespace SumoCore
 
                 LogCollision(actorLog);
                 enemyRobot.LogCollision(targetLog);
+
+                Actions[OnPlayerBounce]?.Invoke(Side);
+                enemyRobot.Actions[OnPlayerBounce]?.Invoke(Side);
 
                 Debug.Log($"[BounceRule]\nActor=>{Side},Target=>{enemyRobot.Side}\nActorVelocity=>{actorVelocity},TargetVelocity=>{enemyVelocity}\nActorCurrentSkill=> {Skill.Type} isActive:{Skill.IsActive}, TargetCurrentSkill=>{enemyRobot.Skill.Type} isActive: {enemyRobot.Skill.IsActive} \nActorImpact=>{actorImpact}, TargetImpact=>{targetImpact}");
             }
@@ -414,7 +412,6 @@ namespace SumoCore
             }
             if (Time.time > LastDashTime + StopDelay)
             {
-                robotRigidBody.linearVelocity = Vector2.Lerp(robotRigidBody.linearVelocity, Vector2.zero, SlowDownRate * Time.deltaTime);
                 robotRigidBody.linearVelocity = Vector2.Lerp(robotRigidBody.linearVelocity, Vector2.zero, SlowDownRate * Time.deltaTime);
                 robotRigidBody.angularVelocity = Mathf.Lerp(robotRigidBody.angularVelocity, 0, SlowDownRate * Time.deltaTime);
             }
