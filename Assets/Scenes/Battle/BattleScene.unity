@@ -4031,7 +4031,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: -12.757019, y: -205}
+  m_AnchoredPosition: {x: -12.75708, y: -205}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0, y: 1}
 --- !u!114 &422259906
@@ -15601,7 +15601,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a74f3dd2ff9984b1c914830cb95c4d9e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  IsEnable: 1
+  IsEnable: 0
   playbackSpeed: 1
   autoStart: 1
   leftPlayer: {fileID: 726563276}
@@ -17959,7 +17959,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3a93addaa694d43528f8eb6ca35b41b4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  BattleInputType: 1
+  BattleInputType: 2
   RoundSystem: 1
   BattleTime: 30
   CountdownTime: 3
@@ -17972,7 +17972,7 @@ MonoBehaviour:
   CurrentState: 0
   ElapsedTime: 0
   Bot:
-    IsEnable: 1
+    IsEnable: 0
     IsScriptable: 0
     Left: {fileID: 0}
     Right: {fileID: 0}
@@ -18056,7 +18056,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2130233538}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: b33ce51748b63457ebe9b59f80ac599c, type: 3}
   m_Name: 
