@@ -122,23 +122,23 @@ namespace SumoBot
             }).FirstOrDefault();
         }
 
-        public Tuple<float, float, float> Simulate(BotAPI api, float simulationTime)
+        public Tuple<float, float, float> Simulate(SumoAPI api, float simulationTime)
         {
-            var controller = api.Controller;
+            var controller = api.MyRobot;
 
             GameObject arena = BattleManager.Instance.Arena;
             float arenaRadius = arena.GetComponent<CircleCollider2D>().radius * arena.transform.lossyScale.x;
 
             Vector3 arenaCenter = arena.transform.position;
-            Vector3 aiDirection = api.MyTransform.up;
-            Vector3 aiPosition = api.MyTransform.position;
+            Vector3 aiDirection = controller.Rotation * Vector2.up;
+            Vector3 aiPosition = controller.Position;
 
             float bonusOrPenalty = 0;
             float angleScore = 0;
             float distScore = 0;
 
             //Before Sim
-            Vector3 toEnemy = api.EnemyTransform.position - aiPosition;
+            Vector3 toEnemy = api.EnemyRobot.Position - aiPosition;
             float distance = toEnemy.magnitude;
             float angle = Vector3.SignedAngle(aiDirection, toEnemy.normalized, Vector3.forward);
 
@@ -219,7 +219,7 @@ namespace SumoBot
                     }
                 }
 
-                toEnemy = api.EnemyTransform.transform.position - aiPosition;
+                toEnemy = api.EnemyRobot.Position - aiPosition;
                 distance = toEnemy.magnitude;
                 angle = Vector3.SignedAngle(aiDirection, toEnemy.normalized, Vector3.forward);
 

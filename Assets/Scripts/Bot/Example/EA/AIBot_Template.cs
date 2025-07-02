@@ -29,7 +29,7 @@ namespace SumoBot
         }
 
         // Initial state of your script
-        public override void OnBotInit(PlayerSide side, BotAPI botAPI)
+        public override void OnBotInit(PlayerSide side, SumoAPI botAPI)
         {
             throw new System.NotImplementedException();
         }

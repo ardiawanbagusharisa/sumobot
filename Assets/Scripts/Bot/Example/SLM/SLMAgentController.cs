@@ -234,7 +234,7 @@ public class SLMAgentController : MonoBehaviour
     {
         if (enemy == null) return false;
         float minSpeed = 0.05f;
-        return enemy.LastVelocity.magnitude < minSpeed;
+        return enemy.LastLinearVelocity.magnitude < minSpeed;
     }
 
     bool GetEnemyBehind()

@@ -24,7 +24,7 @@ namespace SumoBot
         private float evaluationTimer;
         private float actionTimer = 0f;
 
-        private BotAPI api;
+        private SumoAPI api;
         private BattleState currState;
 
         void EvaluateFitness()
@@ -41,7 +41,7 @@ namespace SumoBot
         float CalculateFitness(EA_Basic_Data data)
         {
             // Example: distance to enemy
-            float dist = Vector3.Distance(api.MyTransform.position, api.EnemyTransform.position);
+            float dist = Vector3.Distance(api.MyRobot.Position, api.EnemyRobot.Position);
             return 1f / (dist + 0.01f);
         }
 
@@ -56,8 +56,8 @@ namespace SumoBot
 
         public void Decide()
         {
-            Vector2 toEnemy = api.EnemyTransform.position - api.MyTransform.position;
-            float angleToTarget = Vector2.SignedAngle(api.MyTransform.up, toEnemy.normalized);
+            Vector2 toEnemy = api.EnemyRobot.Position - api.MyRobot.Position;
+            float angleToTarget = Vector2.SignedAngle(api.MyRobot.Rotation * Vector2.up, toEnemy.normalized);
             float normalizedAngle = 1f - Mathf.Abs(angleToTarget) / 180f;
             float normalizedDistance = 1f - Mathf.Abs(toEnemy.magnitude) / 7f;
 
@@ -93,7 +93,7 @@ namespace SumoBot
             ClearCommands();
         }
 
-        public override void OnBotInit(PlayerSide side, BotAPI botAPI)
+        public override void OnBotInit(PlayerSide side, SumoAPI botAPI)
         {
             api = botAPI;
             brain = new EA_Basic_Data();
