@@ -15,7 +15,7 @@ namespace SumoBot
         public string Name = "Primitive";
         private float actionInterval = 0.4f;
         private float actionTimer = 0f;
-        private BotAPI api;
+        private SumoAPI api;
         private InputProvider inputProvider;
         private BattleState currState;
 
@@ -25,7 +25,7 @@ namespace SumoBot
             inputProvider.ClearCommands();
         }
 
-        public override void OnBotInit(PlayerSide side, BotAPI botAPI)
+        public override void OnBotInit(PlayerSide side, SumoAPI botAPI)
         {
             inputProvider = provider;
             api = botAPI;
@@ -41,28 +41,28 @@ namespace SumoBot
             {
                 actionTimer = actionInterval;
 
-                Vector2 toEnemy = (api.EnemyTransform.position - api.MyTransform.position).normalized;
-                float angleDiff = Vector2.SignedAngle(api.MyTransform.up, toEnemy);
+                Vector2 toEnemy = (api.EnemyRobot.Position - api.MyRobot.Position).normalized;
+                float angleDiff = Vector2.SignedAngle(api.MyRobot.Rotation * Vector3.up, toEnemy);
 
                 // When angle is quite enough facing the enemy, run dash, skill, accelerate action
                 if (Mathf.Abs(angleDiff) < 20)
                 {
-                    float distance = Vector2.Distance(api.EnemyTransform.position, api.MyTransform.position);
-                    if (!api.Controller.IsDashOnCooldown && distance < 2.5f)
+                    float distance = Vector2.Distance(api.EnemyRobot.Position, api.MyRobot.Position);
+                    if (!api.MyRobot.IsDashOnCooldown && distance < 2.5f)
                         Enqueue(new DashAction(InputType.Script));
 
-                    if (!api.Controller.Skill.IsSkillOnCooldown)
+                    if (!api.MyRobot.Skill.IsSkillOnCooldown)
                         Enqueue(new SkillAction(InputType.Script));
                 }
                 else
                 {
                     if (angleDiff > 0)
                     {
-                        api.Controller.InputProvider.EnqueueCommand(new TurnAction(InputType.Script, ActionType.TurnLeftWithAngle, Mathf.Abs(angleDiff)));
+                        Enqueue(new TurnAction(InputType.Script, ActionType.TurnLeftWithAngle, Mathf.Abs(angleDiff)));
                     }
                     else
                     {
-                        api.Controller.InputProvider.EnqueueCommand(new TurnAction(InputType.Script, ActionType.TurnRightWithAngle, Mathf.Abs(angleDiff)));
+                        Enqueue(new TurnAction(InputType.Script, ActionType.TurnRightWithAngle, Mathf.Abs(angleDiff)));
                     }
 
                 }

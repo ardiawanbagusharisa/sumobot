@@ -27,7 +27,7 @@ namespace SumoBot
         [Range(0.1f, 10f)]
         public abstract float Interval { get; }
 
-        public abstract void OnBotInit(PlayerSide side, BotAPI botAPI);
+        public abstract void OnBotInit(PlayerSide side, SumoAPI botAPI);
 
         // Called when elapsed time of battle timer is satisfy with the interval
         public virtual void OnBotUpdate()

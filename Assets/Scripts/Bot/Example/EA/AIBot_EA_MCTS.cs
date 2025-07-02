@@ -43,7 +43,7 @@ namespace SumoBot
         public int Iterations = 100;
         #endregion AI
 
-        private BotAPI api;
+        private SumoAPI api;
 
         void OnBattleChanged(BattleState state)
         {
@@ -88,7 +88,7 @@ namespace SumoBot
             InitNode();
         }
 
-        public override void OnBotInit(PlayerSide side, BotAPI botAPI)
+        public override void OnBotInit(PlayerSide side, SumoAPI botAPI)
         {
             api = botAPI;
             InitNode();
@@ -99,7 +99,7 @@ namespace SumoBot
 
         void DeQueueWhenAvailable()
         {
-            while (!api.Controller.IsMovementDisabled && actionsQueue.Count > 0)
+            while (!api.MyRobot.IsMovementDisabled && actionsQueue.Count > 0)
             {
                 Enqueue(actionsQueue.Dequeue());
             }
@@ -132,7 +132,6 @@ namespace SumoBot
                 }
 
             }
-
             EA_MCTS_Node bestChild = root.GetBestChild();
             if (bestChild == null)
                 return null;

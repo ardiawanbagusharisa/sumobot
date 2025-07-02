@@ -15,15 +15,15 @@ namespace SumoCore
     public class SumoSkill
     {
         #region General info properties
-        public SkillType Type = SkillType.Boost;
-        public bool IsActive = false;
+        public SkillType Type { private set; get; } = SkillType.Boost;
+        public bool IsActive { private set; get; } = false;
         #endregion
 
         #region Skill Stat properties
-        public float TotalCooldown = 10f;
-        public float TotalDuration = 5f;
-        public float StoneMultiplier = 10f;
-        public float BoostMultiplier = 1.8f;
+        public float TotalCooldown { private set; get; } = 10f;
+        public float TotalDuration { private set; get; } = 5f;
+        public float StoneMultiplier { private set; get; } = 10f;
+        public float BoostMultiplier { private set; get; } = 1.8f;
         #endregion
 
         #region Runtime (readonly) properties
@@ -128,6 +128,19 @@ namespace SumoCore
             yield return new WaitForSeconds(TotalCooldown);
 
             Debug.Log($"[Skill][{Type}] cooldown end!");
+        }
+
+        public override string ToString()
+        {
+            string typeLabel = Type.ToString().ToUpper();
+            string cooldownStatus = IsSkillOnCooldown ? $"{Cooldown:F1}s ({CooldownNormalized:P0})" : "Ready";
+            string activeStatus = IsActive ? "ACTIVE" : "Inactive";
+
+            return $"[Skill: {typeLabel}]\n" +
+                   $"- Status     : {activeStatus}\n" +
+                   $"- Cooldown   : {cooldownStatus}\n" +
+                   $"- Duration   : {TotalDuration:F1}s\n" +
+                   $"- Multiplier : {(Type == SkillType.Boost ? BoostMultiplier : StoneMultiplier):F1}";
         }
         #endregion
     }

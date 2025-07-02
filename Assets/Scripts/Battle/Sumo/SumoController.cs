@@ -53,7 +53,7 @@ namespace SumoCore
         #region Runtime (readonly) Properties
         public Bot Bot;
         public bool isInputDisabled = false;
-        public Vector2 LastVelocity { get; private set; } = Vector2.zero;
+        public Vector2 LastLinearVelocity { get; private set; } = Vector2.zero;
         public float LastAngularVelocity => robotRigidBody.angularVelocity;
         public float LastDashTime = 0;
         public Vector3 StartPosition;
@@ -98,7 +98,7 @@ namespace SumoCore
         {
             ReadInput();
 
-            LastVelocity = robotRigidBody.linearVelocity;
+            LastLinearVelocity = robotRigidBody.linearVelocity;
 
             if (collisionLogger != null && collisionLogger.IsActive)
                 collisionLogger.Update();
@@ -153,7 +153,7 @@ namespace SumoCore
             robotRigidBody.angularVelocity = 0;
             isOutOfArena = false;
             LastDashTime = 0;
-            LastVelocity = Vector2.zero;
+            LastLinearVelocity = Vector2.zero;
             Skill.Reset();
         }
 
@@ -319,8 +319,8 @@ namespace SumoCore
             if (!collision.gameObject.TryGetComponent<SumoController>(out var enemyRobot))
                 return;
 
-            float actorVelocity = LastVelocity.magnitude + float.Epsilon;
-            float enemyVelocity = enemyRobot.LastVelocity.magnitude + float.Epsilon;
+            float actorVelocity = LastLinearVelocity.magnitude + float.Epsilon;
+            float enemyVelocity = enemyRobot.LastLinearVelocity.magnitude + float.Epsilon;
 
             if ((actorVelocity + enemyVelocity) < 0.01f)
                 return;
