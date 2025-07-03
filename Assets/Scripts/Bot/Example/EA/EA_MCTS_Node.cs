@@ -124,14 +124,14 @@ namespace SumoBot
 
         public Tuple<float, float, float> Simulate(SumoAPI api, float simulationTime)
         {
-            var controller = api.MyRobot;
+            var myRobot = api.MyRobot;
 
             GameObject arena = BattleManager.Instance.Arena;
             float arenaRadius = arena.GetComponent<CircleCollider2D>().radius * arena.transform.lossyScale.x;
 
             Vector3 arenaCenter = arena.transform.position;
-            Vector3 aiDirection = controller.Rotation * Vector2.up;
-            Vector3 aiPosition = controller.Position;
+            Vector3 aiDirection = myRobot.Rotation * Vector2.up;
+            Vector3 aiPosition = myRobot.Position;
 
             float bonusOrPenalty = 0;
             float angleScore = 0;
@@ -156,21 +156,21 @@ namespace SumoBot
                     Debug.Log($"action.Param ${action.Type} {action.Param}");
                     if (action.Type == ActionType.TurnLeftWithAngle)
                     {
-                        aiDirection += Quaternion.Euler(0, 0, (float)action.Param) * aiDirection * simulationTime * controller.TurnRate;
+                        aiDirection += Quaternion.Euler(0, 0, (float)action.Param) * aiDirection * simulationTime * myRobot.TurnRate;
                     }
                     else if (action.Type == ActionType.TurnRightWithAngle)
                     {
-                        aiDirection += Quaternion.Euler(0, 0, -(float)action.Param) * aiDirection * simulationTime * controller.TurnRate;
+                        aiDirection += Quaternion.Euler(0, 0, -(float)action.Param) * aiDirection * simulationTime * myRobot.TurnRate;
                     }
                 }
                 else if (action is AccelerateAction)
                 {
                     if (api.CanExecute(action))
                     {
-                        var predictionSpeed = controller.MoveSpeed;
-                        if (controller.Skill.Type == SkillType.Boost && controller.Skill.IsActive)
+                        var predictionSpeed = myRobot.MoveSpeed;
+                        if (myRobot.Skill.Type == SkillType.Boost && myRobot.Skill.IsActive)
                         {
-                            predictionSpeed *= controller.Skill.BoostMultiplier;
+                            predictionSpeed *= myRobot.Skill.BoostMultiplier;
                         }
 
                         aiPosition += aiDirection.normalized * (predictionSpeed * simulationTime);
@@ -185,17 +185,17 @@ namespace SumoBot
                     if (api.CanExecute(action))
                     {
                         bonusOrPenalty += 0.1f;
-                        var predictionSpeed = controller.DashSpeed;
+                        var predictionSpeed = myRobot.DashSpeed;
 
-                        if (controller.Skill.Type == SkillType.Boost && controller.Skill.IsActive)
+                        if (myRobot.Skill.Type == SkillType.Boost && myRobot.Skill.IsActive)
                         {
-                            predictionSpeed *= controller.Skill.BoostMultiplier;
+                            predictionSpeed *= myRobot.Skill.BoostMultiplier;
                         }
 
-                        aiPosition += aiDirection.normalized * (controller.DashDuration * predictionSpeed * simulationTime);
+                        aiPosition += aiDirection.normalized * (myRobot.DashDuration * predictionSpeed * simulationTime);
 
                         // Formula of decelerating / stop-delay
-                        aiPosition *= 0.5f + predictionSpeed * controller.StopDelay;
+                        aiPosition *= 0.5f + predictionSpeed * myRobot.StopDelay;
                     }
                     else
                     {
@@ -207,10 +207,10 @@ namespace SumoBot
                 {
                     if (api.CanExecute(action))
                     {
-                        if (controller.Skill.Type == SkillType.Boost)
+                        if (myRobot.Skill.Type == SkillType.Boost)
                         {
                             bonusOrPenalty += 0.5f;
-                            aiPosition += aiDirection.normalized * (controller.MoveSpeed * controller.Skill.BoostMultiplier * simulationTime);
+                            aiPosition += aiDirection.normalized * (myRobot.MoveSpeed * myRobot.Skill.BoostMultiplier * simulationTime);
                         }
                     }
                     else

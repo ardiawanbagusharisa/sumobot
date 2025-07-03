@@ -42,6 +42,11 @@ namespace SumoBot
         {
             return myController.InputProvider.CanExecute(action);
         }
+
+        public override string ToString()
+        {
+            return $"{BattleInfo}\n\n{EnemyRobot}\n\n{MyRobot}";
+        }
     }
 }
 
@@ -119,10 +124,10 @@ public readonly struct RobotStateAPI
                $"- Velocity      : {LinearVelocity}\n" +
                $"- AngularVel    : {AngularVelocity:F2}\n" +
                $"- MoveSpeed     : {MoveSpeed:F2}\n" +
-               $"- DashSpeed     : {DashSpeed:F2} (CD: {DashCooldown:F2}s)\n" +
+               $"- DashSpeed     : {DashSpeed:F2} (Cooldown: {DashCooldown:F2}s)\n" +
                $"- RotateSpeed   : {RotateSpeed:F2}, TurnRate: {TurnRate:F2}\n" +
                $"- StopDelay     : {StopDelay:F2}, BounceResist: {BounceResistance:F2}\n" +
-               $"- IsDashingCD   : {IsDashOnCooldown}\n" +
+               $"- IsDashOnCooldown   : {IsDashOnCooldown}\n" +
                $"- IsMovementLock: {IsMovementDisabled}\n" +
                $"- Skill         : {Skill?.ToString() ?? "None"}";
     }

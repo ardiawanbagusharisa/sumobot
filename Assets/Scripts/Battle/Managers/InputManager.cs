@@ -69,7 +69,7 @@ namespace SumoManager
             {
                 if (BattleManager.Instance.Bot.IsEnable)
                 {
-                    var scriptInputProvider = controller.AddComponent<InputProvider>();
+                    InputProvider scriptInputProvider = controller.AddComponent<InputProvider>();
                     scriptInputProvider.PlayerSide = controller.Side;
                     scriptInputProvider.IncludeKeyboard = false;
                     inputProvider = scriptInputProvider;
@@ -92,15 +92,16 @@ namespace SumoManager
             switch (BattleManager.Instance.BattleInputType)
             {
                 case InputType.Script:
-                    // Might be called only when the BattleInputType is Script
-                    // For now, test it whatever on the input type is set
                     SetupBots(controller.Side, inputProvider, api);
                     break;
                 case InputType.UI:
+                    // Enable for test-only
+                    SetupBots(controller.Side, inputProvider, api);
                     break;
                 case InputType.LiveCommand:
-                    LeftLiveCommand.GetComponent<CommandSystem>().InitCommandSystem(api);
-                    RightLiveCommand.GetComponent<CommandSystem>().InitCommandSystem(api);
+                    // Enable for test-only
+                    SetupBots(controller.Side, inputProvider, api);
+                    liveCommandObject.GetComponent<CommandSystem>().InitCommandSystem(api);
                     break;
             }
         }
@@ -122,6 +123,7 @@ namespace SumoManager
             }
             return api;
         }
+
         private void SetupBots(PlayerSide side, InputProvider provider, SumoAPI api)
         {
             if (!BattleManager.Instance.Bot.IsEnable) return;

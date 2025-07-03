@@ -6,10 +6,18 @@ using UnityEngine;
 using UnityEngine.UI;
 using System.Collections;
 using UnityEngine.SceneManagement;
+using SumoInput;
 
 
 namespace SumoManager
 {
+    public enum GuideTab
+    {
+        Gameplay,
+        Rules,
+        Control,
+
+    }
     public class BattleUIManager : MonoBehaviour
     {
         public static BattleUIManager Instance { get; private set; }
@@ -23,6 +31,7 @@ namespace SumoManager
         public TMP_Dropdown RightSkill;
 
         [Header("Battle UI")]
+        public GameObject PausePanel;
         public TMP_Text BattleStateUI;
         public TMP_Text Countdown;
         public TMP_Text RoundSystem;
@@ -42,22 +51,84 @@ namespace SumoManager
         public Image RightDashCooldown;
         public Image RightSkillCooldown;
         public TMP_Text RightSkillName;
+
+        [Header("Battle UI - Guide Menu")]
+        public GameObject GuidePanel;
+        public TMP_Text GuideContent;
+        public Button GuideGameplayTab;
+        public Button GuideRulesTab;
+        public Button GuideControlTab;
+        public ScrollRect GuideScrollRect;
+        public Color GuideActiveTabColor = new Color(1f, 0.89f, 0.62f);
+        public Color GuideInactiveTabColor = new Color(0.88f, 0.88f, 0.88f);
         #endregion
 
-        [Header("Battle UI - Guide Panel")]
-        public GameObject guidePanel;
-        public GameObject pausePanel;
-        public TMP_Text guideTitleText;
-        public TMP_Text guideContentText;
-        public Button gameplayTab;
-        public Button rulesTab;
-        public Button controlsTab;
-        public ScrollRect guideScrollRect;
-        public Color guideActiveTabColor = new Color(1f, 0.89f, 0.62f);
-        public Color guideInactiveTabColor = new Color(0.88f, 0.88f, 0.88f);
-        [TextArea(2, 6)] public string gameplayContent;
-        [TextArea(2, 6)] public string rulesContent;
-        [TextArea(2, 6)] public string controlsContent;
+
+        #region Runtime (readonly) Properties
+        private readonly string gameplayContent = @"
+Sumobot is a robot game that pits strength in a sumo ring. Your
+main goal is to push your opponent out of the ring, while staying in the circle.
+
+1. How to Play
+- Control your sumo robot to move, dodge, and attack your opponent.
+- Use special moves like Dash to make quick attacks or avoid enemy attacks.
+- There are two types of special skills, Boost (for quick movements) and Stone (to freeze and withstand collisions).
+- Each round starts with both robots in their respective positions.
+- The game ends when one of the robots exits the ring.
+- The player who remains in the ring is declared the winner.
+
+2. Playing Tips
+- Use skills and Dash at the right time to avoid collisions or make surprise attacks.
+- Pay attention to your opponent''s position and direction of movement, look for gaps to attack from the side or behind.
+- Avoid being too close to the edge of the ring so that you don''t get pushed out easily.
+";
+
+        private readonly string rulesContent = @"
+1. Win and Lose
+- Players will win if they successfully push their opponent out of the arena (sumo ring).
+- Players will win if they are able to survive in the arena until time runs out.
+- Players are declared the loser if their robot is pushed out first.
+- Players are declared the winner if they are able to win the most rounds
+
+2. Prohibitions
+You are not allowed to exploit bugs to gain an advantage.
+
+3. Round System
+- The game can take place in several rounds (according to the settings).
+- Rounds consists three types, which are Best of one, three, and five.
+- The time for one round is 30-60 seconds
+- The winning score will be calculated after each round is completed.
+
+4. Skills and Cooldown
+- Player can only choose Boost or Stone.
+- Players must wait for the cooldown to finish before they can use the skill again.
+
+5. Penalties
+If a player violates the rules (eg: bug exploit), the round can be disqualified.
+";
+
+        private readonly string controlsContent = @"
+W / O - Forward
+A / K - Turn Left
+D / ; - Turn Right
+C / M - Special Skill
+Left Shift / Right Shift - Dash
+";
+        private Dictionary<GuideTab, Button> guideButtonsMap => new()
+        {
+            {GuideTab.Gameplay,GuideGameplayTab},
+            {GuideTab.Rules,GuideRulesTab},
+            {GuideTab.Control,GuideControlTab},
+        };
+        private Dictionary<GuideTab, string> guideContentsMap => new()
+        {
+            {GuideTab.Gameplay,gameplayContent},
+            {GuideTab.Rules,rulesContent},
+            {GuideTab.Control,controlsContent},
+        };
+
+        #endregion
+
 
         #region Unity methods
         private void Awake()
@@ -68,16 +139,7 @@ namespace SumoManager
                 return;
             }
             Instance = this;
-        }
 
-        private void Start()
-        {
-            // Setup guide tab listeners
-            if (gameplayTab != null) gameplayTab.onClick.AddListener(() => ShowGuideTab("Gameplay"));
-            if (rulesTab != null) rulesTab.onClick.AddListener(() => ShowGuideTab("Rules"));
-            if (controlsTab != null) controlsTab.onClick.AddListener(() => ShowGuideTab("Controls"));
-            if (guidePanel != null) guidePanel.SetActive(false);
-            if (pausePanel != null) pausePanel.SetActive(false);
         }
 
         private void OnEnable()
@@ -87,6 +149,7 @@ namespace SumoManager
                 BattlePanels.ForEach(panel => panel.SetActive(false));
                 return;
             }
+
             BattleManager.Instance.Actions[BattleManager.OnBattleChanged].Subscribe(OnBattleChanged);
         }
 
@@ -154,6 +217,8 @@ namespace SumoManager
             switch (state)
             {
                 case BattleState.PreBatle_Preparing:
+                    GuidePanel?.SetActive(false);
+                    PausePanel?.SetActive(false);
                     BattlePanels.Find((o) => o.CompareTag("BattleState/Pre")).SetActive(true);
                     BattlePanels.Find((o) => o.CompareTag("BattleState/Ongoing")).SetActive(false);
                     BattlePanels.Find((o) => o.CompareTag("BattleState/Post")).SetActive(false);
@@ -217,102 +282,69 @@ namespace SumoManager
         }
         #endregion
 
-
-
-        #region Panel
-        public void ShowGuidePanel()
+        #region Battle menu
+        public void Pause()
         {
-            if (guidePanel != null)
-            {
-                guidePanel.SetActive(true);
-                ShowGuideTab("Gameplay");
-            }
-        }
-
-        public void HideGuidePanel()
-        {
-            if (guidePanel != null)
-                guidePanel.SetActive(false);
-        }
-
-        public void ShowGuideTab(string tab)
-        {
-            switch (tab)
-            {
-                case "Gameplay":
-                    guideTitleText.text = "Gameplay";
-                    guideContentText.text = gameplayContent;
-                    SetGuideTabHighlight(gameplayTab, true);
-                    SetGuideTabHighlight(rulesTab, false);
-                    SetGuideTabHighlight(controlsTab, false);
-                    break;
-                case "Rules":
-                    guideTitleText.text = "Rules";
-                    guideContentText.text = rulesContent;
-                    SetGuideTabHighlight(gameplayTab, false);
-                    SetGuideTabHighlight(rulesTab, true);
-                    SetGuideTabHighlight(controlsTab, false);
-                    break;
-                case "Controls":
-                    guideTitleText.text = "Controls";
-                    guideContentText.text = controlsContent;
-                    SetGuideTabHighlight(gameplayTab, false);
-                    SetGuideTabHighlight(rulesTab, false);
-                    SetGuideTabHighlight(controlsTab, true);
-                    break;
-            }
-            if (guideScrollRect != null)
-                StartCoroutine(ResetGuideScroll());
-        }
-
-        private IEnumerator ResetGuideScroll()
-        {
-            yield return null;
-            guideScrollRect.verticalNormalizedPosition = 1f;
-        }
-
-        private void SetGuideTabHighlight(Button tab, bool active)
-        {
-            if (tab == null) return;
-            var colors = tab.colors;
-            colors.normalColor = active ? guideActiveTabColor : guideInactiveTabColor;
-            colors.selectedColor = active ? guideActiveTabColor : guideInactiveTabColor;
-            tab.colors = colors;
-
-            Image tabImg = tab.GetComponent<Image>();
-            if (tabImg != null)
-                tabImg.color = active ? guideActiveTabColor : guideInactiveTabColor;
-        }
-
-        public void ShowPause()
-        {
-            pausePanel.SetActive(true);
+            PausePanel.SetActive(true);
             Time.timeScale = 0;
         }
 
-        public void OnResume()
+        public void Resume()
         {
-            pausePanel.SetActive(false);
+            PausePanel.SetActive(false);
             Time.timeScale = 1;
         }
 
-        public void OnRestart()
+        public void Restart()
         {
             Time.timeScale = 1;
             SceneManager.LoadScene(SceneManager.GetActiveScene().name);
         }
 
-        public void OnBack()
+        public void ShowPanelGuide()
         {
-            Time.timeScale = 1;
-            SceneManager.LoadScene("campaignScene");
+            if (GuidePanel != null)
+            {
+                GuidePanel.SetActive(true);
+                ShowGameplayGuide();
+            }
         }
 
-
-        public void OnOut()
+        public void HidePanelGuide()
         {
-            Time.timeScale = 1;
-            SceneManager.LoadScene("MainMenu");
+            if (GuidePanel != null)
+                GuidePanel.SetActive(false);
+        }
+
+        public void ShowGameplayGuide() => ShowGuide(GuideTab.Gameplay);
+        public void ShowRulesGuide() => ShowGuide(GuideTab.Rules);
+        public void ShowControlGuide() => ShowGuide(GuideTab.Control);
+
+        private void ShowGuide(GuideTab tab)
+        {
+            GuideContent.text = guideContentsMap[tab].Trim();
+
+            foreach (var button in guideButtonsMap)
+            {
+                bool isActive = tab == button.Key;
+
+                ColorBlock colors = button.Value.colors;
+                colors.normalColor = isActive ? GuideActiveTabColor : GuideInactiveTabColor;
+                colors.selectedColor = isActive ? GuideActiveTabColor : GuideInactiveTabColor;
+                button.Value.colors = colors;
+
+                if (button.Value.TryGetComponent(out Image tabImg))
+                    tabImg.color = isActive ? GuideActiveTabColor : GuideInactiveTabColor;
+            }
+
+            if (GuideScrollRect != null)
+                StartCoroutine(ResetScrollGuide());
+        }
+
+        private IEnumerator ResetScrollGuide()
+        {
+            yield return null;
+            GuideScrollRect.verticalNormalizedPosition = 1f;
         }
         #endregion
     }
