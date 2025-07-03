@@ -356,13 +356,9 @@ namespace SumoInput
 
         private void GetStatus()
         {
-            string log =
-                "> Executing GetStatus.\n\n" +
-                api.BattleInfo.ToString() + "\n\n" +
-                api.MyRobot.ToString() + "\n\n" +
-                api.EnemyRobot.ToString();
+            string status = $"> Executing GetStatus.\n\n {api}";
 
-            AddMessageToDisplay(log);
+            AddMessageToDisplay(status);
         }
         #endregion
 

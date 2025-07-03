@@ -377,14 +377,19 @@ namespace SumoCore
             float total = enemyVelocity + myVelocity;
 
             float impact = CollisionBaseForce * enemyVelocity / total;
-
             if (enemy.Skill.Type == SkillType.Stone && enemy.Skill.IsActive)
                 impact = myVelocity / total;
-
             impact *= enemy.BounceResistance;
 
+            float torque;
+            if (Skill.Type == SkillType.Stone && Skill.IsActive)
+                torque = 0;
+            else
+                torque = impact;
+
+
             robotRigidBody.AddForce(impact * direction, ForceMode2D.Impulse);
-            robotRigidBody.AddTorque(impact * Torque, ForceMode2D.Impulse);
+            robotRigidBody.AddTorque(torque * Torque, ForceMode2D.Impulse);
             return impact;
         }
 
