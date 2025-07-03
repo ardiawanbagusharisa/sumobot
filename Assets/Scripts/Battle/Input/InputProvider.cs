@@ -20,7 +20,6 @@ namespace SumoInput
         #region Input properties
         public bool IncludeKeyboard;
         public PlayerSide PlayerSide;
-        public SkillType SkillType;
         #endregion
 
         #region Runtime properties
