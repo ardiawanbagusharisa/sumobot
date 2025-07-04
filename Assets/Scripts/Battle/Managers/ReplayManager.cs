@@ -359,6 +359,7 @@ public class ReplayManager : MonoBehaviour
             currentGameIndex--;
             currentRoundIndex = 0;
             LoadRound(currentGameIndex, currentRoundIndex);
+            isPlaying = true;
         }
     }
 
@@ -369,6 +370,7 @@ public class ReplayManager : MonoBehaviour
             currentGameIndex++;
             currentRoundIndex = 0;
             LoadRound(currentGameIndex, currentRoundIndex);
+            isPlaying = true;
         }
     }
 
@@ -378,12 +380,14 @@ public class ReplayManager : MonoBehaviour
         {
             currentRoundIndex--;
             LoadRound(currentGameIndex, currentRoundIndex);
+            isPlaying = true;
         }
         else if (currentGameIndex > 0)
         {
             currentGameIndex--;
             currentRoundIndex = gameLogs[currentGameIndex].Rounds.Count - 1;
             LoadRound(currentGameIndex, currentRoundIndex);
+            isPlaying = true;
         }
     }
 
