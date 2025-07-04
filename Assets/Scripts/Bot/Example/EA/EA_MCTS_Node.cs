@@ -126,11 +126,10 @@ namespace SumoBot
         {
             var myRobot = api.MyRobot;
 
-            GameObject arena = BattleManager.Instance.Arena;
-            float arenaRadius = arena.GetComponent<CircleCollider2D>().radius * arena.transform.lossyScale.x;
+            float arenaRadius = api.BattleInfo.ArenaRadius;
 
-            Vector3 arenaCenter = arena.transform.position;
-            Vector3 aiDirection = myRobot.Rotation * Vector2.up;
+            Vector3 arenaCenter = api.BattleInfo.ArenaPosition;
+            Vector3 aiDirection = myRobot.Rotation * Vector3.up;
             Vector3 aiPosition = myRobot.Position;
 
             float bonusOrPenalty = 0;
@@ -138,7 +137,7 @@ namespace SumoBot
             float distScore = 0;
 
             //Before Sim
-            Vector3 toEnemy = api.EnemyRobot.Position - aiPosition;
+            Vector2 toEnemy = api.EnemyRobot.Position - aiPosition;
             float distance = toEnemy.magnitude;
             float angle = Vector3.SignedAngle(aiDirection, toEnemy.normalized, Vector3.forward);
 

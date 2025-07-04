@@ -204,9 +204,9 @@ Left Shift / Right Shift - Dash
         #endregion
 
         #region Battle changes
-        private void OnBattleChanged(object[] args)
+        private void OnBattleChanged(ActionParameter param)
         {
-            var battle = (Battle)args[0];
+            var battle = param.Battle;
             RoundSystem.SetText($"Best of {(int)battle.RoundSystem}");
             Round.SetText($"Round {battle.CurrentRound?.RoundNumber}");
 
@@ -258,9 +258,9 @@ Left Shift / Right Shift - Dash
             UpdateScore(battle);
         }
 
-        private void OnCountdownChanged(object[] args)
+        private void OnCountdownChanged(ActionParameter param)
         {
-            Countdown.SetText(((float)args[0]).ToString());
+            Countdown.SetText(param.Float.ToString());
         }
 
         private void UpdateScore(Battle battleInfo)

@@ -23,7 +23,7 @@ namespace SumoBot
         }
 
         // When your AI is got a collision (bounce)
-        public override void OnBotCollision(object[] args)
+        public override void OnBotCollision(ActionParameter param)
         {
             throw new System.NotImplementedException();
         }

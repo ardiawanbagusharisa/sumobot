@@ -87,12 +87,6 @@ namespace SumoBot
 
             fitness += 1f; // Example: reward for taking an action
         }
-
-        private void OnPlayerBounce(PlayerSide side)
-        {
-            ClearCommands();
-        }
-
         public override void OnBotInit(PlayerSide side, SumoAPI botAPI)
         {
             api = botAPI;
@@ -121,9 +115,9 @@ namespace SumoBot
             base.OnBotUpdate();
         }
 
-        public override void OnBotCollision(object[] args)
+        public override void OnBotCollision(ActionParameter param)
         {
-            OnPlayerBounce((PlayerSide)args[0]);
+            ClearCommands();
         }
 
         public override void OnBattleStateChanged(BattleState state)
