@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.EventSystems;
 
-public class SliderDragHandler : MonoBehaviour, IPointerDownHandler, IPointerUpHandler
+public class ReplaySliderHandler : MonoBehaviour, IPointerDownHandler, IPointerUpHandler
 {
     public void OnPointerDown(PointerEventData eventData)
     {
