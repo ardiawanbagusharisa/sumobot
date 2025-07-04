@@ -13,7 +13,7 @@ public class SLMAgentController : Bot
     [Header("SLM Integration")]
     public bool EnableSLM = false;
     public string SLMApiUrl = "http://localhost:5000/predict";
-    public float DecisionInterval = 0.3f;
+    public float DecisionInterval = 0.1f;
     public int contextWindow = 3;
     private Queue<string> contextBuffer;
     private float timer;
