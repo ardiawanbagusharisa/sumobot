@@ -178,18 +178,17 @@ public class ReplayManager : MonoBehaviour
 
             if (currentRoundIndex >= gameLogs[currentGameIndex].Rounds.Count)
             {
-                leftEventsMap.Clear();
-                rightEventsMap.Clear();
-                metadata.LeftPlayerStats.ActionTaken = 0;
-                metadata.LeftPlayerStats.WinPerGame = 0;
-                metadata.RightPlayerStats.ActionTaken = 0;
-                metadata.RightPlayerStats.WinPerGame = 0;
-
                 currentGameIndex++;
+
+                var games = gameLogs.Take(currentGameIndex).ToList();
+                metadata.LeftPlayerStats.WinPerGame = games.Select((i) => i.Winner == "Left").Count();
+                metadata.LeftPlayerStats.WinPerGame = games.Select((i) => i.Winner == "Right").Count();
+
                 currentRoundIndex = 0;
 
                 if (currentGameIndex >= gameLogs.Count)
                 {
+                    DisplayCurrentEventInfo();
                     isPlaying = false;
                     Debug.Log("Replay finished.");
                     return;
@@ -203,11 +202,7 @@ public class ReplayManager : MonoBehaviour
     #region Core Logics
     void LoadRound(int gameIdx, int roundIdx)
     {
-        currentTime = 0f;
-        currentRoundEvents.Clear();
-        leftEvents.Clear();
-        rightEvents.Clear();
-        ResetMetadata();
+        ResetReplay(includePlayer: roundIdx == 0);
 
         var round = gameLogs[gameIdx].Rounds[roundIdx];
 
@@ -411,19 +406,29 @@ public class ReplayManager : MonoBehaviour
         if (isDraggingSlider)
         {
             currentTime = value;
-            ResetMetadata();
+            ResetReplay(includeEvents: false);
         }
     }
-    void ResetMetadata()
+    void ResetReplay(bool includePlayer = true, bool includeEvents = true)
     {
+        if (includeEvents)
+        {
+            currentRoundEvents.Clear();
+            leftEvents.Clear();
+            rightEvents.Clear();
+        }
+
+        currentTime = 0f;
         leftEventIndex = 0;
         rightEventIndex = 0;
-        leftEventsMap.Clear();
-        rightEventsMap.Clear();
-        metadata.LeftPlayerStats.ActionTaken = 0;
-        metadata.LeftPlayerStats.WinPerGame = 0;
-        metadata.RightPlayerStats.ActionTaken = 0;
-        metadata.RightPlayerStats.WinPerGame = 0;
+
+        if (includePlayer)
+        {
+            leftEventsMap.Clear();
+            rightEventsMap.Clear();
+            metadata.LeftPlayerStats.ActionTaken = 0;
+            metadata.RightPlayerStats.ActionTaken = 0;
+        }
     }
 
     public void OnTimeSliderPointerDown()
@@ -439,7 +444,7 @@ public class ReplayManager : MonoBehaviour
 
         currentTime = TimeSliderUI.value;
 
-        ResetMetadata();
+        ResetReplay(includeEvents: false);
 
         InterpolateBot(leftPlayer, leftEvents, ref leftEventIndex);
         InterpolateBot(rightPlayer, rightEvents, ref rightEventIndex);
