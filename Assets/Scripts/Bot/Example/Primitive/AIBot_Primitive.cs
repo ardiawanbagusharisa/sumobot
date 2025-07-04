@@ -71,9 +71,9 @@ namespace SumoBot
             base.OnBotUpdate();
         }
 
-        public override void OnBotCollision(object[] args)
+        public override void OnBotCollision(ActionParameter param)
         {
-            OnPlayerBounce((PlayerSide)args[0]);
+            OnPlayerBounce(param.Side);
         }
 
         public override void OnBattleStateChanged(BattleState state)

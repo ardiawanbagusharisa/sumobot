@@ -79,9 +79,9 @@ namespace SumoBot
             OnBattleChanged(state);
         }
 
-        public override void OnBotCollision(object[] args)
+        public override void OnBotCollision(ActionParameter param)
         {
-            if (side == (PlayerSide)args[0])
+            if (side == param.Side)
                 lastActionsFromEnemy = null;
             else
                 lastActionsToEnemy = null;

@@ -63,7 +63,7 @@ namespace SumoManager
 
             SumoAPI api = CreateAPI(controller.Side);
             InputProvider inputProvider = GetInputProvider(controller, selectedInputObject);
-            
+
             controller.InputProvider = inputProvider;
 
             // Additional initialization

@@ -99,7 +99,7 @@ namespace SumoManager
         {
             if (ReplayManager.Instance.IsEnable)
                 return;
-                
+
             TransitionToState(BattleState.PreBatle_Preparing);
         }
 
@@ -187,7 +187,7 @@ namespace SumoManager
             float timer = CountdownTime;
             while (timer > 0 && CurrentState == BattleState.Battle_Countdown)
             {
-                Actions[OnCountdownChanged].Invoke(timer);
+                Actions[OnCountdownChanged].Invoke(new ActionParameter(floatParam: timer));
                 yield return new WaitForSeconds(1f);
                 timer -= 1f;
             }
@@ -219,12 +219,12 @@ namespace SumoManager
             yield return new WaitForSeconds(1f);
         }
 
-        private void OnPlayerOutOfArena(object[] args)
+        private void OnPlayerOutOfArena(ActionParameter param)
         {
             if (CurrentState != BattleState.Battle_Ongoing)
                 return;
             Debug.Log("OnPlayerOutOfArena");
-            PlayerSide Side = (PlayerSide)args[0];
+            PlayerSide Side = param.Side;
             SumoController winner = Side == PlayerSide.Left ? Battle.RightPlayer : Battle.LeftPlayer;
 
             if (winner == null)
@@ -363,7 +363,7 @@ namespace SumoManager
         private void BroadcastBattleData()
         {
             Bot.OnBattleStateChanged(CurrentState);
-            Actions[OnBattleChanged].Invoke(Battle);
+            Actions[OnBattleChanged].Invoke(new ActionParameter(battleParam: Battle));
         }
         #endregion
     }

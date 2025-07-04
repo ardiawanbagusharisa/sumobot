@@ -55,12 +55,18 @@ public readonly struct BattleInfoAPI
     public float TimeLeft { get; }
     public float Duration { get; }
     public BattleState CurrentState { get; }
+    public float ArenaRadius { get; }
+    public Vector3 ArenaPosition { get; }
 
     public BattleInfoAPI(BattleManager manager)
     {
         TimeLeft = manager.TimeLeft;
         Duration = manager.BattleTime;
         CurrentState = manager.CurrentState;
+
+        GameObject arena = manager.Arena;
+        ArenaPosition = manager.Arena.transform.position;
+        ArenaRadius = arena.GetComponent<CircleCollider2D>().radius * arena.transform.lossyScale.x;
     }
 
     public override string ToString()

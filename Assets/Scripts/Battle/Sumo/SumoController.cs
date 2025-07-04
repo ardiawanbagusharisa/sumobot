@@ -122,7 +122,7 @@ namespace SumoCore
         {
             if (collision.CompareTag("Arena/Floor") && !isOutOfArena)
             {
-                Actions[OnPlayerOutOfArena]?.Invoke(Side);
+                Actions[OnPlayerOutOfArena]?.Invoke(new ActionParameter(sideParam: Side));
                 isOutOfArena = true;
             }
         }
@@ -359,8 +359,9 @@ namespace SumoCore
                 LogCollision(actorLog);
                 enemyRobot.LogCollision(targetLog);
 
-                Actions[OnPlayerBounce]?.Invoke(Side);
-                enemyRobot.Actions[OnPlayerBounce]?.Invoke(Side);
+                ActionParameter sideParam = new(sideParam: Side);
+                Actions[OnPlayerBounce]?.Invoke(sideParam);
+                enemyRobot.Actions[OnPlayerBounce]?.Invoke(sideParam);
 
                 Debug.Log($"[BounceRule]\nActor=>{Side},Target=>{enemyRobot.Side}\nActorVelocity=>{actorVelocity},TargetVelocity=>{enemyVelocity}\nActorCurrentSkill=> {Skill.Type} isActive:{Skill.IsActive}, TargetCurrentSkill=>{enemyRobot.Skill.Type} isActive: {enemyRobot.Skill.IsActive} \nActorImpact=>{actorImpact}, TargetImpact=>{targetImpact}");
             }
@@ -433,9 +434,11 @@ namespace SumoCore
             List<ISumoAction> actions = InputProvider.GetInput();
             foreach (ISumoAction action in actions)
             {
-                Actions[OnPlayerAction]?.Invoke(new object[] { Side, action, true });
+                ActionParameter actionParam = new(sideParam: Side, actionParam: action, boolParam: true);
+                Actions[OnPlayerAction]?.Invoke(actionParam);
                 action.Execute(this);
-                Actions[OnPlayerAction]?.Invoke(new object[] { Side, action, false });
+                actionParam.Bool = false;
+                Actions[OnPlayerAction]?.Invoke(actionParam);
             }
         }
         #endregion

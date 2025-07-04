@@ -4,11 +4,11 @@ using System.Text;
 using UnityEngine.Networking;
 using System.Linq;
 using System.Collections.Generic;
-using SumoInput;
 using SumoCore;
 using SumoManager;
+using SumoBot;
 
-public class SLMAgentController : MonoBehaviour
+public class SLMAgentController : Bot
 {
     [Header("SLM Integration")]
     public bool EnableSLM = false;
@@ -16,44 +16,48 @@ public class SLMAgentController : MonoBehaviour
     public float DecisionInterval = 0.3f;
     public int contextWindow = 3;
     private Queue<string> contextBuffer;
-    private SumoController controller;
-    private InputProvider inputProvider;
-    private SumoController enemy;
     private float timer;
     private Queue<string> pendingActions;
+    private SumoAPI api;
+    private BattleState currentState;
 
-    // === Unity Lifecycle Methods ===
-    void Awake()
+    public override string ID => "SLM";
+
+    public override float Interval => DecisionInterval;
+
+    #region Bot methods
+    public override void OnBotInit(PlayerSide side, SumoAPI botAPI)
     {
-        controller = GetComponent<SumoController>();
-        inputProvider = controller?.InputProvider;
+        api = botAPI;
         contextBuffer = new Queue<string>();
         pendingActions = new Queue<string>();
         timer = 0f;
     }
 
-    void Start()
+    public override void OnBotCollision(ActionParameter param)
     {
-        TryAssignEnemy();
+
     }
-    void Update()
+
+    public override void OnBattleStateChanged(BattleState state)
+    {
+        currentState = state;
+    }
+
+    public override void OnBotUpdate()
+    {
+        RunSLM();
+        base.OnBotUpdate();
+    }
+    #endregion
+
+    #region SLM methods
+    void RunSLM()
     {
         if (!EnableSLM) return;
 
-        if (controller == null || inputProvider == null)
-        {
-            controller = GetComponent<SumoController>();
-            inputProvider = controller?.InputProvider;
-            if (controller == null || inputProvider == null) return;
-        }
 
-        if (enemy == null)
-        {
-            TryAssignEnemy();
-            if (enemy == null) return;
-        }
-
-        if (BattleManager.Instance.CurrentState != BattleState.Battle_Ongoing)
+        if (currentState != BattleState.Battle_Ongoing)
             return;
 
         timer += Time.deltaTime;
@@ -63,13 +67,13 @@ public class SLMAgentController : MonoBehaviour
 
             if (pendingActions.Count > 0)
             {
-                inputProvider.ClearCommands();
+                ClearCommands();
                 while (pendingActions.Count > 0)
                 {
                     string nextAction = pendingActions.Dequeue();
                     ISumoAction sumoAction = StrategyToActionMapper.Map(nextAction);
                     if (sumoAction != null)
-                        inputProvider.EnqueueCommand(sumoAction);
+                        Enqueue(sumoAction);
                     else
                         Debug.LogWarning("SLMAgentController: Unknown strategy: " + nextAction);
                 }
@@ -81,19 +85,6 @@ public class SLMAgentController : MonoBehaviour
         }
     }
 
-    // === SLM & Enemy Setup ===
-    void TryAssignEnemy()
-    {
-        var bm = BattleManager.Instance;
-        if (bm != null && bm.Battle != null)
-        {
-            enemy = controller.Side == PlayerSide.Left
-                ? bm.Battle.RightPlayer
-                : bm.Battle.LeftPlayer;
-        }
-    }
-
-    // === SLM Strategy Request Logic ===
     IEnumerator RequestStrategy()
     {
         string response = "";
@@ -108,50 +99,48 @@ public class SLMAgentController : MonoBehaviour
 
         byte[] bodyRaw = Encoding.UTF8.GetBytes(jsonPayload);
 
-        using (UnityWebRequest req = new UnityWebRequest(SLMApiUrl, "POST"))
+        using UnityWebRequest req = new UnityWebRequest(SLMApiUrl, "POST");
+        req.uploadHandler = new UploadHandlerRaw(bodyRaw);
+        req.downloadHandler = new DownloadHandlerBuffer();
+        req.SetRequestHeader("Content-Type", "application/json");
+        yield return req.SendWebRequest();
+
+        if (req.result == UnityWebRequest.Result.Success)
         {
-            req.uploadHandler = new UploadHandlerRaw(bodyRaw);
-            req.downloadHandler = new DownloadHandlerBuffer();
-            req.SetRequestHeader("Content-Type", "application/json");
-            yield return req.SendWebRequest();
+            response = req.downloadHandler.text;
 
-            if (req.result == UnityWebRequest.Result.Success)
+            // === Parsing response strategy ===
+            string[] strategies = ParseStrategiesFromJson(response);
+
+            // Split combo actions, order priority (turn > dash > accelerate > boost)
+            var actions = strategies
+                .SelectMany(strat => strat.Contains("+")
+                    ? strat.Split('+').Select(s => s.Trim().ToLower())
+                    : new string[] { strat.Trim().ToLower() })
+                .ToList();
+
+            actions.Sort((a, b) =>
             {
-                response = req.downloadHandler.text;
+                if (a.StartsWith("turn") && !b.StartsWith("turn")) return -1;
+                if (!a.StartsWith("turn") && b.StartsWith("turn")) return 1;
+                if (a.StartsWith("dash") && !b.StartsWith("dash")) return -1;
+                if (!a.StartsWith("dash") && b.StartsWith("dash")) return 1;
+                if (a.StartsWith("accelerate") && !b.StartsWith("accelerate")) return -1;
+                if (!a.StartsWith("accelerate") && b.StartsWith("accelerate")) return 1;
+                return 0;
+            });
 
-                // === Parsing response strategy ===
-                string[] strategies = ParseStrategiesFromJson(response);
+            pendingActions = new Queue<string>(actions);
 
-                // Split combo actions, order priority (turn > dash > accelerate > boost)
-                var actions = strategies
-                    .SelectMany(strat => strat.Contains("+")
-                        ? strat.Split('+').Select(s => s.Trim().ToLower())
-                        : new string[] { strat.Trim().ToLower() })
-                    .ToList();
-
-                actions.Sort((a, b) =>
-                {
-                    if (a.StartsWith("turn") && !b.StartsWith("turn")) return -1;
-                    if (!a.StartsWith("turn") && b.StartsWith("turn")) return 1;
-                    if (a.StartsWith("dash") && !b.StartsWith("dash")) return -1;
-                    if (!a.StartsWith("dash") && b.StartsWith("dash")) return 1;
-                    if (a.StartsWith("accelerate") && !b.StartsWith("accelerate")) return -1;
-                    if (!a.StartsWith("accelerate") && b.StartsWith("accelerate")) return 1;
-                    return 0;
-                });
-
-                pendingActions = new Queue<string>(actions);
-
-                Debug.Log("[SLM] Queued actions: " + string.Join(", ", actions));
-            }
-            else
-            {
-                Debug.LogWarning("SLMAgentController: Request failed: " + req.error + " " + req.downloadHandler.text);
-            }
-
-            Debug.Log("[SLM] Payload: " + jsonPayload);
-            Debug.Log("[SLM] Response: " + response);
+            Debug.Log("[SLM] Queued actions: " + string.Join(", ", actions));
         }
+        else
+        {
+            Debug.LogWarning("SLMAgentController: Request failed: " + req.error + " " + req.downloadHandler.text);
+        }
+
+        Debug.Log("[SLM] Payload: " + jsonPayload);
+        Debug.Log("[SLM] Response: " + response);
     }
 
     string BuildSituationString()
@@ -166,14 +155,6 @@ public class SLMAgentController : MonoBehaviour
         bool dash_ready = GetDashReady();
 
         return $"Enemy is {enemy_distance:F2} meters ahead, angle {enemy_angle:F1} degrees, edge distance {edge_distance:F2}, center distance {center_distance:F2}, enemy stuck: {(enemy_stuck ? 1 : 0)}, enemy behind: {(enemy_behind ? 1 : 0)}, skill ready: {(skill_ready ? 1 : 0)}, dash ready: {(dash_ready ? 1 : 0)}";
-    }
-
-    // === Buffer Context Window Logic ===
-    void UpdateBuffer(string currentSituation)
-    {
-        contextBuffer.Enqueue(currentSituation);
-        if (contextBuffer.Count > contextWindow)
-            contextBuffer.Dequeue();
     }
 
     // === Parsing & Action Mapping ===
@@ -201,76 +182,6 @@ public class SLMAgentController : MonoBehaviour
         return new string[0];
     }
 
-    // === Game State Feature Extraction ===
-    float GetEnemyDistance()
-    {
-        if (controller == null || enemy == null) return 0f;
-        return Vector3.Distance(controller.transform.position, enemy.transform.position);
-    }
-
-    float GetEnemyAngle()
-    {
-        if (controller == null || enemy == null) return 0f;
-        Vector3 toEnemy = (enemy.transform.position - controller.transform.position).normalized;
-        float angle = Vector3.SignedAngle(controller.transform.forward, toEnemy, Vector3.up);
-        return angle;
-    }
-
-    float GetEdgeDistance()
-    {
-        if (controller == null) return 0f;
-        float arenaRadius = 5f;
-        float distanceFromCenter = new Vector2(controller.transform.position.x, controller.transform.position.z).magnitude;
-        return Mathf.Max(0f, arenaRadius - distanceFromCenter);
-    }
-
-    float GetCenterDistance()
-    {
-        if (controller == null) return 0f;
-        return new Vector2(controller.transform.position.x, controller.transform.position.z).magnitude;
-    }
-
-    bool GetEnemyStuck()
-    {
-        if (enemy == null) return false;
-        float minSpeed = 0.05f;
-        return enemy.LastLinearVelocity.magnitude < minSpeed;
-    }
-
-    bool GetEnemyBehind()
-    {
-        if (controller == null || enemy == null) return false;
-        Vector2 toEnemy = (enemy.transform.position - controller.transform.position).normalized;
-        float angle = Vector2.Angle(controller.transform.up, toEnemy);
-        return angle > 120f;
-    }
-
-    bool GetSkillReady()
-    {
-        return controller != null && !controller.Skill.IsSkillOnCooldown;
-    }
-
-    bool GetDashReady()
-    {
-        return controller != null && !controller.IsDashOnCooldown;
-    }
-
-    // === Action Execution ===
-    void EnqueueAction(string action)
-    {
-        ISumoAction sumoAction = StrategyToActionMapper.Map(action);
-        if (sumoAction != null)
-        {
-            inputProvider.EnqueueCommand(sumoAction);
-            Debug.Log("[SLM] Action enqueued: " + action);
-        }
-        else
-        {
-            Debug.LogWarning("[SLM] Unknown strategy action: " + action);
-        }
-    }
-
-    // === Debugging & Logging ===
     void LogSLMRequest(string jsonPayload)
     {
         Debug.Log("[SLM] Request payload: " + jsonPayload);
@@ -280,4 +191,54 @@ public class SLMAgentController : MonoBehaviour
     {
         Debug.Log("[SLM] Response from API: " + response);
     }
+    #endregion
+
+    #region Robot utility methods
+    float GetEnemyDistance()
+    {
+        return Vector3.Distance(api.MyRobot.Position, api.EnemyRobot.Position);
+    }
+
+    float GetEnemyAngle()
+    {
+        Vector3 toEnemy = (api.EnemyRobot.Position - api.MyRobot.Position).normalized;
+        float angle = Vector3.SignedAngle(api.MyRobot.Rotation * Vector3.forward, toEnemy, Vector3.up);
+        return angle;
+    }
+
+    float GetEdgeDistance()
+    {
+        float arenaRadius = api.BattleInfo.ArenaRadius;
+        float distanceFromCenter = new Vector2(api.MyRobot.Position.x, api.MyRobot.Position.z).magnitude;
+        return Mathf.Max(0f, arenaRadius - distanceFromCenter);
+    }
+
+    float GetCenterDistance()
+    {
+        return new Vector2(api.MyRobot.Position.x, api.MyRobot.Position.z).magnitude;
+    }
+
+    bool GetEnemyStuck()
+    {
+        float minSpeed = 0.05f;
+        return api.EnemyRobot.LinearVelocity.magnitude < minSpeed;
+    }
+
+    bool GetEnemyBehind()
+    {
+        Vector2 toEnemy = (api.EnemyRobot.Position - api.MyRobot.Position).normalized;
+        float angle = Vector2.Angle(api.MyRobot.Rotation * Vector3.up, toEnemy);
+        return angle > 120f;
+    }
+
+    bool GetSkillReady()
+    {
+        return !api.MyRobot.Skill.IsSkillOnCooldown;
+    }
+
+    bool GetDashReady()
+    {
+        return !api.MyRobot.IsDashOnCooldown;
+    }
+    #endregion
 }

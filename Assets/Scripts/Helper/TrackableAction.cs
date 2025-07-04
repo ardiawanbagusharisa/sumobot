@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using SumoCore;
+using SumoManager;
 
 namespace SumoHelper
 {
@@ -7,37 +9,32 @@ namespace SumoHelper
     public class TrackableAction
     {
         [NonSerialized]
-        private Action<object[]> action;
+        private Action<ActionParameter> action;
 
         [NonSerialized]
         private readonly HashSet<Delegate> subscribers = new();
 
-        public void Subscribe(Action<object[]> callback)
+        public void Subscribe(Action<ActionParameter> callback)
         {
             if (subscribers.Add(callback))
                 action += callback;
 
         }
 
-        public void Unsubscribe(Action<object[]> callback)
+        public void Unsubscribe(Action<ActionParameter> callback)
         {
             if (subscribers.Remove(callback))
                 action -= callback;
         }
 
-        public void Invoke(object[] param)
+        public void Invoke(ActionParameter param)
         {
             action?.Invoke(param);
         }
 
-        public void Invoke(object arg)
-        {
-            Invoke(new object[] { arg });
-        }
-
         public void Invoke()
         {
-            Invoke(new object[] { });
+            Invoke(new ActionParameter());
         }
 
         public IReadOnlyCollection<Delegate> Subscribers => subscribers;
@@ -55,7 +52,28 @@ namespace SumoHelper
     }
 }
 
-public class TrackableActionParameter
+
+[Serializable]
+public class ActionParameter
 {
-    
+    public ISumoAction Action;
+    public PlayerSide Side;
+    public bool Bool;
+    public float Float;
+    public Battle Battle;
+
+    public ActionParameter(ISumoAction actionParam = null, PlayerSide? sideParam = null, bool? boolParam = null, float? floatParam = null, Battle battleParam = null)
+    {
+
+        if (sideParam != null)
+            Action = actionParam;
+        if (sideParam != null)
+            Side = (PlayerSide)sideParam;
+        if (boolParam != null)
+            Bool = (bool)boolParam;
+        if (floatParam != null)
+            Float = (float)floatParam;
+        if (battleParam != null)
+            Battle = battleParam;
+    }
 }

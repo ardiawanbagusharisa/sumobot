@@ -36,7 +36,7 @@ namespace SumoBot
         }
 
         // Called when two robots get into collision (Bounce), [side] is the collider.
-        public abstract void OnBotCollision(object[] side);
+        public abstract void OnBotCollision(ActionParameter param);
 
         // Called whenever battle state ischanged
         public abstract void OnBattleStateChanged(BattleState state);
