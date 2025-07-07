@@ -36,8 +36,8 @@ namespace SumoInput
                     { KeyCode.W, new AccelerateAction(InputType.Keyboard) },
                     { KeyCode.D, new TurnAction(InputType.Keyboard, ActionType.TurnRight) },
                     { KeyCode.A, new TurnAction(InputType.Keyboard, ActionType.TurnLeft)},
-                    { KeyCode.LeftShift, new DashAction(InputType.Keyboard)},
-                    { KeyCode.C, new SkillAction(InputType.Keyboard)},
+                    { KeyCode.E, new DashAction(InputType.Keyboard)},
+                    { KeyCode.Q, new SkillAction(InputType.Keyboard)},
                 }},
                 {PlayerSide.Right, new Dictionary<KeyCode,ISumoAction>(){
                     { KeyCode.O, new AccelerateAction(InputType.Keyboard)},

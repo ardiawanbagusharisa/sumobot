@@ -33,6 +33,9 @@ namespace SumoManager
         public Image LeftDashCooldown;
         public Image LeftSkillCooldown;
         public TMP_Text LeftSkillName;
+        // [Todo] Temporary
+        public GameObject LeftDashBuff;
+        public GameObject LeftSkillBuff;
 
         [Header("Battle UI - Right Player")]
         public TMP_Text RightScore;
@@ -40,6 +43,9 @@ namespace SumoManager
         public Image RightDashCooldown;
         public Image RightSkillCooldown;
         public TMP_Text RightSkillName;
+        // [Todo] Temporary
+        public GameObject RightDashBuff;
+        public GameObject RightSkillBuff;
         #endregion
 
         #region Unity methods
@@ -78,6 +84,10 @@ namespace SumoManager
                 RightDashCooldown.GetComponent<Image>().fillAmount = rightPlayer.DashCooldownNormalized;
 
                 Timer.SetText(Mathf.CeilToInt(BattleManager.Instance.TimeLeft).ToString());
+
+                // [Todo] Temporary 
+                LeftDashBuff.SetActive(leftPlayer.IsDashActive);
+                LeftSkillBuff.SetActive(leftPlayer.Skill.IsActive);
             }
             else
             {
