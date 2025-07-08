@@ -274,7 +274,6 @@ GameObject:
   - component: {fileID: 1737808453494872349}
   - component: {fileID: 8581006012013900821}
   - component: {fileID: 5583292103176566768}
-  - component: {fileID: 7192337878665551969}
   - component: {fileID: 1335788416037175078}
   m_Layer: 0
   m_Name: Robot
@@ -469,23 +468,6 @@ MonoBehaviour:
   StartPosition: {x: 0, y: 0, z: 0}
   StartRotation: {x: 0, y: 0, z: 0, w: 0}
   IsSkillDisabled: 1
---- !u!114 &7192337878665551969
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1488574921577525681}
-  m_Enabled: 0
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 08f9a23698d5460408113ac58be1f214, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  EnableSLM: 0
-  SLMApiUrl: http://localhost:5000/predict
-  DecisionInterval: 0.3
-  arenaCenter: {x: 0, y: 0}
-  arenaRadius: 5
 --- !u!114 &1335788416037175078
 MonoBehaviour:
   m_ObjectHideFlags: 0

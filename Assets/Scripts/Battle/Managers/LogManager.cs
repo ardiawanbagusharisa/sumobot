@@ -90,7 +90,6 @@ namespace SumoManager
 
         private static BattleLog battleLog;
         private static string logFolderPath;
-        private static bool IsLogEnabled => !ReplayManager.Instance.IsEnable;
 
         public static int CurrentGameIndex => battleLog.Games.Count > 0 ? battleLog.Games[^1].Index : 0;
         #endregion
@@ -99,10 +98,6 @@ namespace SumoManager
 
         public static void RegisterAction()
         {
-            if (!IsLogEnabled)
-            {
-                return;
-            }
 
             SumoController leftPlayer = BattleManager.Instance.Battle.LeftPlayer;
             SumoController rightPlayer = BattleManager.Instance.Battle.RightPlayer;
@@ -140,11 +135,6 @@ namespace SumoManager
         // Therefore, we need manually add to stack
         public static void FlushActionLog()
         {
-            if (!IsLogEnabled)
-            {
-                return;
-            }
-
             foreach (EventLogger actionLogger in ActionLoggers[PlayerSide.Left].Values)
             {
                 actionLogger.ForceStopAndSave();
@@ -157,11 +147,6 @@ namespace SumoManager
 
         public static void UpdateActionLog(PlayerSide side)
         {
-            if (!IsLogEnabled)
-            {
-                return;
-            }
-
             BattleState currentState = BattleManager.Instance.CurrentState;
             if (currentState == BattleState.Battle_Ongoing || currentState == BattleState.Battle_End)
                 foreach (EventLogger action in ActionLoggers[side].Values)
@@ -172,11 +157,6 @@ namespace SumoManager
 
         public static void CallActionLog(PlayerSide side, ISumoAction action)
         {
-            if (!IsLogEnabled)
-            {
-                return;
-            }
-
             if (BattleManager.Instance.CurrentState == BattleState.Battle_Ongoing)
             {
                 EventLogger actionLog = ActionLoggers[side][action.Type];
@@ -189,11 +169,6 @@ namespace SumoManager
 
         public static void InitLog()
         {
-            if (!IsLogEnabled)
-            {
-                return;
-            }
-
             string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
             string folderName = $"battle_{timestamp}";
 
@@ -203,11 +178,6 @@ namespace SumoManager
 
         public static void InitBattle()
         {
-            if (!IsLogEnabled)
-            {
-                return;
-            }
-
             BattleManager battleManager = BattleManager.Instance;
 
             battleLog = new()
