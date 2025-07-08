@@ -152,20 +152,11 @@ Left Shift / Right Shift - Dash
 
         private void OnEnable()
         {
-            if (ReplayManager.Instance.IsEnable)
-            {
-                BattlePanels.ForEach(panel => panel.SetActive(false));
-                return;
-            }
-
             BattleManager.Instance.Actions[BattleManager.OnBattleChanged].Subscribe(OnBattleChanged);
         }
 
         private void OnDisable()
         {
-            if (ReplayManager.Instance.IsEnable)
-                return;
-
             BattleManager.Instance.Actions[BattleManager.OnBattleChanged].Unsubscribe(OnBattleChanged);
         }
 
@@ -238,6 +229,8 @@ Left Shift / Right Shift - Dash
                 case BattleState.Battle_Preparing:
                     BattlePanels.Find((o) => o.CompareTag("BattleState/Ongoing")).SetActive(true);
                     ClearScore();
+                    LeftSkillName.SetText(battle.LeftPlayer.Skill.Type.ToString());
+                    RightSkillName.SetText(battle.RightPlayer.Skill.Type.ToString());
                     Countdown.SetText("");
                     RoundSystem.SetText("");
                     Round.SetText("");
@@ -245,8 +238,6 @@ Left Shift / Right Shift - Dash
                     BattlePanels.Find((o) => o.CompareTag("BattleState/Post")).SetActive(false);
                     break;
                 case BattleState.Battle_Countdown:
-                    LeftSkillName.SetText(battle.LeftPlayer.Skill.Type.ToString());
-                    RightSkillName.SetText(battle.RightPlayer.Skill.Type.ToString());
                     BattleManager.Instance.Actions[BattleManager.OnCountdownChanged].Subscribe(OnCountdownChanged);
                     break;
                 case BattleState.Battle_Ongoing:

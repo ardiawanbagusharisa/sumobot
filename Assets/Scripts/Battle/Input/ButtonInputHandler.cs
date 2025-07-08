@@ -129,18 +129,18 @@ namespace SumoInput
             }
         }
 
-        private void SetUpButtonGuide()
-        {
-            foreach (var item in InputProvider.KeyboardBindings[inputProvider.PlayerSide])
-            {
-                GameObject go = actionButtonMap[item.Value.Type];
-                if (go != null)
-                {
-                    TMP_Text text = go.GetComponentInChildren<TMP_Text>();
-                    text.SetText($"{go.name}\n({item.Key})");
-                }
-            }
-        }
+        // private void SetUpButtonGuide()
+        // {
+        //     foreach (var item in InputProvider.KeyboardBindings[inputProvider.PlayerSide])
+        //     {
+        //         GameObject go = actionButtonMap[item.Value.Type];
+        //         if (go != null)
+        //         {
+        //             TMP_Text text = go.GetComponentInChildren<TMP_Text>();
+        //             text.SetText($"{go.name}\n({item.Key})");
+        //         }
+        //     }
+        // }
 
         void UpdateButtonState(ActionType actionType, bool active)
         {
