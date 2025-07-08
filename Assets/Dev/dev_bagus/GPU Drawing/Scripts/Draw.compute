@@ -1,0 +1,97 @@
+﻿// Draw.compute
+
+#pragma kernel InitBackground
+#pragma kernel Update
+
+RWTexture2D<float4> _Canvas;
+uint _CanvasWidth;
+uint _CanvasHeight;
+float4 _PreviousMousePosition;
+float4 _MousePosition;
+float _BrushSize;
+float _WiggleSize;
+float4 _BrushColour;
+float4 _BackgroundColour;
+bool _UseSoftBrush;
+bool _MouseDown;
+float _SoftnessLevel; // [0..1] 0 = hard edge, 1 = full soft
+bool _IsEraser;
+
+
+// Continuous, anti-aliased brush stroke via distance-to-segment
+float4 Brush(
+    float2 pixelPos,
+    float4 currentColor,
+    float4 brushColor,
+    float brushSize,
+    float2 prevPos,
+    float2 currPos,
+    bool useSoftBrush,
+    float softness)
+{
+    // Add wiggle: consistent pseudo-random offset per-pixel
+    float2 randVec = float2(
+        frac(sin(dot(pixelPos , float2(12.9898,78.233))) * 43758.5453),
+        frac(sin(dot(pixelPos , float2(39.3468,11.135))) * 12345.6789)
+    );
+    randVec = (randVec - 0.5) * _WiggleSize; // range: -wiggleSize/2 .. +wiggleSize/2
+
+    prevPos += randVec;
+    currPos += randVec;
+
+    float2 seg = currPos - prevPos;
+    float segLen2 = dot(seg, seg);
+
+    float t = segLen2 > 0
+        ? clamp(dot(pixelPos - prevPos, seg) / segLen2, 0.0, 1.0)
+        : 0.0;
+    float2 closest = prevPos + seg * t;
+    float dist = length(pixelPos - closest);
+
+    float cov = (dist < brushSize)
+        ? (useSoftBrush
+            ? smoothstep(brushSize, brushSize * (1 - softness), dist)
+            : 1.0)
+        : 0.0;
+    
+    // If eraser   
+    if (_IsEraser)
+    {
+        float3 col = lerp(currentColor.rgb, _BackgroundColour.rgb, cov);
+        float a = lerp(currentColor.a, 0.0, cov); // gradually reduce alpha
+        return float4(col, a);
+    }
+    
+    // Blend RGB, max alpha
+    float3 col = lerp(currentColor.rgb, brushColor.rgb, cov);
+    float a = max(currentColor.a, cov);
+    return float4(col, a);
+}
+
+[numthreads(8, 8, 1)]
+void InitBackground(uint3 id : SV_DispatchThreadID)
+{
+    if (id.x >= _CanvasWidth || id.y >= _CanvasHeight)
+        return;
+    _Canvas[id.xy] = float4(_BackgroundColour.rgb, 0.0);
+}
+
+[numthreads(8, 8, 1)]
+void Update(uint3 id : SV_DispatchThreadID)
+{
+    if (!_MouseDown)
+        return;
+    if (id.x >= _CanvasWidth || id.y >= _CanvasHeight)
+        return;
+
+    _Canvas[id.xy] = Brush(
+        id.xy,
+        _Canvas[id.xy],
+        _BrushColour,
+        _BrushSize,
+        _PreviousMousePosition.xy,
+        _MousePosition.xy,
+        _UseSoftBrush,
+        _SoftnessLevel
+    );
+}

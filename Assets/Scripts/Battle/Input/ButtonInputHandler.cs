@@ -63,7 +63,7 @@ namespace SumoInput
             Skill.Actions[ButtonPointerHandler.ActionOnPress].Subscribe(inputProvider.OnSkillButtonPressed);
 
             BattleManager.Instance.Actions[BattleManager.OnBattleChanged].Subscribe(OnBattleChanged);
-            SetUpButtonGuide();
+            //SetUpButtonGuide();
         }
 
         void OnDisable()

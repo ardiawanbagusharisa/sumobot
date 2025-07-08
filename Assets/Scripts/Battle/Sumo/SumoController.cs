@@ -68,8 +68,8 @@ namespace SumoCore
         private EventLogger collisionLogger;
 
         // Derived 
-        public bool IsDashActive => LastDashTime != 0 && (LastDashTime + DashDuration) >= (BattleManager.Instance?.ElapsedTime ?? Time.time);
-        public float DashCooldownTimer => LastDashTime + DashCooldown - BattleManager.Instance?.ElapsedTime ?? Time.time;
+        public bool IsDashActive => LastDashTime != 0 && (LastDashTime + DashDuration) >= time;
+        public float DashCooldownTimer => LastDashTime + DashCooldown - time;
         public float DashCooldownNormalized => 1 - DashCooldownTimer / DashCooldown;
         public bool IsDashOnCooldown => DashCooldownTimer >= 0f;
         public bool IsMovementDisabled => (BattleManager.Instance != null && BattleManager.Instance.CurrentState != BattleState.Battle_Ongoing) || moveLockTime > 0f;
@@ -81,6 +81,7 @@ namespace SumoCore
         public const string OnPlayerAction = "OnPlayerAction"; // [Side, ISumoAction, bool]
         private Coroutine accelerateOverTimeCoroutine;
         private Coroutine turnOverAngleCoroutine;
+        private float time => BattleManager.Instance?.ElapsedTime ?? Time.time;
         #endregion
 
         #region Unity Methods
@@ -201,7 +202,7 @@ namespace SumoCore
             if (IsMovementDisabled || IsDashOnCooldown) return;
 
             Log(action);
-            LastDashTime = BattleManager.Instance?.ElapsedTime ?? Time.time;
+            LastDashTime = time;
             robotRigidBody.linearVelocity = transform.up * DashSpeed;
             Log(action);
         }

@@ -44,6 +44,9 @@ namespace SumoManager
         public Image LeftDashCooldown;
         public Image LeftSkillCooldown;
         public TMP_Text LeftSkillName;
+        // [Todo] Temporary
+        public GameObject LeftDashBuff;
+        public GameObject LeftSkillBuff;
 
         [Header("Battle UI - Right Player")]
         public TMP_Text RightScore;
@@ -51,6 +54,10 @@ namespace SumoManager
         public Image RightDashCooldown;
         public Image RightSkillCooldown;
         public TMP_Text RightSkillName;
+
+        // [Todo] Temporary
+        public GameObject RightDashBuff;
+        public GameObject RightSkillBuff;
 
         [Header("Battle UI - Guide Menu")]
         public GameObject GuidePanel;
@@ -61,6 +68,7 @@ namespace SumoManager
         public ScrollRect GuideScrollRect;
         public Color GuideActiveTabColor = new Color(1f, 0.89f, 0.62f);
         public Color GuideInactiveTabColor = new Color(0.88f, 0.88f, 0.88f);
+
         #endregion
 
 
@@ -177,13 +185,13 @@ Left Shift / Right Shift - Dash
                 RightSkillCooldown.GetComponent<Image>().fillAmount = rightPlayer.Skill.CooldownNormalized;
                 RightDashCooldown.GetComponent<Image>().fillAmount = rightPlayer.DashCooldownNormalized;
 
-                if (rightPlayer != null)
-                {
-                    if (RightSkillCooldown != null)
-                        RightSkillCooldown.fillAmount = rightPlayer.Skill.CooldownNormalized;
-                    if (RightDashCooldown != null)
-                        RightDashCooldown.fillAmount = rightPlayer.DashCooldownNormalized;
-                }
+                Timer.SetText(Mathf.CeilToInt(BattleManager.Instance.TimeLeft).ToString());
+
+                // [Todo] Temporary 
+                LeftDashBuff.SetActive(leftPlayer.IsDashActive);
+                LeftSkillBuff.SetActive(leftPlayer.Skill.IsActive);
+                RightDashBuff.SetActive(rightPlayer.IsDashActive);
+                RightSkillBuff.SetActive(rightPlayer.Skill.IsActive);
             }
             else
             {
@@ -301,7 +309,7 @@ Left Shift / Right Shift - Dash
             SceneManager.LoadScene(SceneManager.GetActiveScene().name);
         }
 
-        public void ShowPanelGuide()
+        public void ShowGuide()
         {
             if (GuidePanel != null)
             {
@@ -310,7 +318,7 @@ Left Shift / Right Shift - Dash
             }
         }
 
-        public void HidePanelGuide()
+        public void HideGuide()
         {
             if (GuidePanel != null)
                 GuidePanel.SetActive(false);
