@@ -26,6 +26,7 @@ namespace SumoBot
 
         [Range(0.1f, 10f)]
         public abstract float Interval { get; }
+        public abstract SkillType SkillType { get; }
 
         public abstract void OnBotInit(PlayerSide side, SumoAPI botAPI);
 

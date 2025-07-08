@@ -15,15 +15,16 @@ namespace SumoCore
     public class SumoSkill
     {
         #region General info properties
-        public SkillType Type { private set; get; } = SkillType.Boost;
-        public bool IsActive { private set; get; } = false;
+
+        public SkillType Type = SkillType.Boost;
+        public bool IsActive = false;
         #endregion
 
         #region Skill Stat properties
-        public float TotalCooldown { private set; get; } = 10f;
-        public float TotalDuration { private set; get; } = 5f;
-        public float StoneMultiplier { private set; get; } = 10f;
-        public float BoostMultiplier { private set; get; } = 1.8f;
+        public float TotalCooldown = 10f;
+        public float TotalDuration = 5f;
+        public float StoneMultiplier = 10f;
+        public float BoostMultiplier = 1.8f;
         #endregion
 
         #region Runtime (readonly) properties

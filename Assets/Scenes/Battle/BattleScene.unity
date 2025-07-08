@@ -3350,7 +3350,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &356688602
 RectTransform:
   m_ObjectHideFlags: 0
@@ -6809,7 +6809,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 1335788416037175078, guid: e48db3198e16346af866a9419a1964cc, type: 3}
       propertyPath: m_Enabled
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1488574921577525681, guid: e48db3198e16346af866a9419a1964cc, type: 3}
       propertyPath: m_Name
@@ -6858,6 +6858,10 @@ PrefabInstance:
     - target: {fileID: 2277774823940732167, guid: e48db3198e16346af866a9419a1964cc, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: -90
+      objectReference: {fileID: 0}
+    - target: {fileID: 5583292103176566768, guid: e48db3198e16346af866a9419a1964cc, type: 3}
+      propertyPath: Skill.Type
+      value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents:
     - {fileID: 7192337878665551969, guid: e48db3198e16346af866a9419a1964cc, type: 3}
@@ -14632,7 +14636,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1749723879}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 48e6bdb4e714bb540837f68ebf609d36, type: 3}
   m_Name: 
@@ -17617,9 +17621,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3a93addaa694d43528f8eb6ca35b41b4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  BattleInputType: 1
-  RoundSystem: 3
-  BattleTime: 30
+  BattleInputType: 2
+  RoundSystem: 1
+  BattleTime: 120
   CountdownTime: 3
   StartPositions:
   - {fileID: 1987440270}
@@ -17736,7 +17740,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &2133437840
 RectTransform:
   m_ObjectHideFlags: 0

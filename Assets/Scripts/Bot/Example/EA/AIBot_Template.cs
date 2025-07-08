@@ -16,6 +16,8 @@ namespace SumoBot
         // Ranged between 0.1f to 10f
         public override float Interval => 0.1f;
 
+        public override SkillType SkillType => SkillType.Boost;
+
         // Where the battle state changes
         public override void OnBattleStateChanged(BattleState state)
         {
