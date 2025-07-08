@@ -25,6 +25,8 @@ public class SLMAgentController : Bot
 
     public override float Interval => DecisionInterval;
 
+    public override SkillType SkillType => SkillType.Boost;
+
     #region Bot methods
     public override void OnBotInit(PlayerSide side, SumoAPI botAPI)
     {

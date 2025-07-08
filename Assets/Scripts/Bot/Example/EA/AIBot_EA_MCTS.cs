@@ -12,6 +12,7 @@ namespace SumoBot
     {
         public override string ID => Name;
         public override float Interval => ActionInterval;
+        public override SkillType SkillType => SkillType.Boost;
 
         public string Name = "MCTS";
         public float ActionInterval = 0.1f;

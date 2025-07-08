@@ -11,6 +11,7 @@ using System;
 using System.Collections;
 using UnityEngine.UI;
 using SumoCore;
+using NUnit.Framework.Interfaces;
 
 public class ReplayManager : MonoBehaviour
 {
@@ -353,9 +354,10 @@ public class ReplayManager : MonoBehaviour
         {
             currentGameIndex--;
             currentRoundIndex = 0;
-            LoadRound(currentGameIndex, currentRoundIndex);
-            isPlaying = true;
         }
+
+        LoadRound(currentGameIndex, currentRoundIndex);
+        isPlaying = true;
     }
 
     void GoToNextGame()
@@ -364,41 +366,28 @@ public class ReplayManager : MonoBehaviour
         {
             currentGameIndex++;
             currentRoundIndex = 0;
-            LoadRound(currentGameIndex, currentRoundIndex);
-            isPlaying = true;
         }
+
+        LoadRound(currentGameIndex, currentRoundIndex);
+        isPlaying = true;
     }
 
     void GoToPreviousRound()
     {
         if (currentRoundIndex > 0)
-        {
             currentRoundIndex--;
-            LoadRound(currentGameIndex, currentRoundIndex);
-            isPlaying = true;
-        }
-        else if (currentGameIndex > 0)
-        {
-            currentGameIndex--;
-            currentRoundIndex = gameLogs[currentGameIndex].Rounds.Count - 1;
-            LoadRound(currentGameIndex, currentRoundIndex);
-            isPlaying = true;
-        }
+
+        LoadRound(currentGameIndex, currentRoundIndex);
+        isPlaying = true;
     }
 
     void GoToNextRound()
     {
         if (currentRoundIndex < gameLogs[currentGameIndex].Rounds.Count - 1)
-        {
             currentRoundIndex++;
-            LoadRound(currentGameIndex, currentRoundIndex);
-        }
-        else if (currentGameIndex < gameLogs.Count - 1)
-        {
-            currentGameIndex++;
-            currentRoundIndex = 0;
-            LoadRound(currentGameIndex, currentRoundIndex);
-        }
+
+        LoadRound(currentGameIndex, currentRoundIndex);
+        isPlaying = true;
     }
 
     void OnTimeSliderChanged(float value)

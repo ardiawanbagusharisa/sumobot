@@ -91,7 +91,6 @@ namespace SumoCore
             reservedMoveSpeed = MoveSpeed;
             reservedDashSpeed = DashSpeed;
             reserverdBounceResistance = BounceResistance;
-
         }
 
         void Update()

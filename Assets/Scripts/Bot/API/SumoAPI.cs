@@ -95,7 +95,7 @@ public readonly struct RobotStateAPI
     public Quaternion Rotation { get; }
     public Vector2 LinearVelocity { get; }
     public float AngularVelocity { get; }
-    public SumoSkill Skill { get; }
+    public SkillStateAPI Skill { get; }
 
     public bool IsDashOnCooldown { get; }
     public bool IsMovementDisabled { get; }
@@ -111,7 +111,7 @@ public readonly struct RobotStateAPI
         TurnRate = controller.TurnRate;
         StopDelay = controller.StopDelay;
         BounceResistance = controller.BounceResistance;
-        Skill = controller.Skill;
+        Skill = new(controller.Skill);
 
         Position = controller.transform.position;
         Rotation = controller.transform.rotation;
@@ -135,6 +135,45 @@ public readonly struct RobotStateAPI
                $"- StopDelay     : {StopDelay:F2}, BounceResist: {BounceResistance:F2}\n" +
                $"- IsDashOnCooldown   : {IsDashOnCooldown}\n" +
                $"- IsMovementLock: {IsMovementDisabled}\n" +
-               $"- Skill         : {Skill?.ToString() ?? "None"}";
+               $"- Skill         : {Skill.ToString() ?? "None"}";
+    }
+}
+
+public readonly struct SkillStateAPI
+{
+    public SkillType Type { get; }
+    public float StoneMultiplier { get; }
+    public float BoostMultiplier { get; }
+    public bool IsActive { get; }
+    public bool IsSkillOnCooldown { get; }
+    public float TotalCooldown { get; }
+    public float TotalDuration { get; }
+    public float Cooldown { get; }
+    public float CooldownNormalized { get; }
+
+    public SkillStateAPI(SumoSkill skill)
+    {
+        Type = skill.Type;
+        BoostMultiplier = skill.BoostMultiplier;
+        StoneMultiplier = skill.StoneMultiplier;
+        IsActive = skill.IsActive;
+        IsSkillOnCooldown = skill.IsSkillOnCooldown;
+        TotalCooldown = skill.TotalCooldown;
+        TotalDuration = skill.TotalDuration;
+        Cooldown = skill.Cooldown;
+        CooldownNormalized = skill.CooldownNormalized;
+    }
+
+    public override string ToString()
+    {
+        string typeLabel = Type.ToString().ToUpper();
+        string cooldownStatus = IsSkillOnCooldown ? $"{Cooldown:F1}s ({CooldownNormalized:P0})" : "Ready";
+        string activeStatus = IsActive ? "Active" : "Inactive";
+
+        return $"[Skill: {typeLabel}]\n" +
+               $"- Status     : {activeStatus}\n" +
+               $"- Cooldown   : {cooldownStatus}\n" +
+               $"- Duration   : {TotalDuration:F1}s\n" +
+               $"- Multiplier : {(Type == SkillType.Boost ? BoostMultiplier : StoneMultiplier):F1}";
     }
 }
