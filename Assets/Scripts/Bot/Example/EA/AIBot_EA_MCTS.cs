@@ -33,8 +33,8 @@ namespace SumoBot
         private int decisionIntervalCount = 0;
         public static List<ISumoAction> PossibleActions = new List<ISumoAction>() {
             new AccelerateAction(InputType.Script),
-            // new DashAction(InputType.Script),
-            // new SkillAction(InputType.Script),
+            new DashAction(InputType.Script),
+            new SkillAction(InputType.Script),
             new TurnAction(InputType.Script, ActionType.TurnLeftWithAngle, 15f),
             new TurnAction(InputType.Script, ActionType.TurnLeftWithAngle, 50f),
             new TurnAction(InputType.Script, ActionType.TurnRightWithAngle, 15f),
