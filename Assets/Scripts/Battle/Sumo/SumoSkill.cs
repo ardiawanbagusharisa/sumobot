@@ -15,6 +15,7 @@ namespace SumoCore
     public class SumoSkill
     {
         #region General info properties
+
         public SkillType Type = SkillType.Boost;
         public bool IsActive = false;
         #endregion
@@ -28,7 +29,7 @@ namespace SumoCore
 
         #region Runtime (readonly) properties
         private float usedAt;
-        private SumoController controller;
+        private readonly SumoController controller;
         #endregion
 
         public SumoSkill(SumoController controller)
@@ -40,8 +41,7 @@ namespace SumoCore
             SumoController controller,
             SkillType type,
             float cooldown = 10f,
-            float duration = 5f
-            )
+            float duration = 5f)
         {
             SumoSkill skill = new(controller)
             {
@@ -68,6 +68,7 @@ namespace SumoCore
         public bool Activate(ISumoAction action)
         {
             action.Type = (Type == SkillType.Boost) ? ActionType.SkillBoost : ActionType.SkillStone;
+
             if (IsSkillOnCooldown)
             {
                 Debug.Log($"[Skill][{Type}] is on cooldown");
@@ -128,6 +129,19 @@ namespace SumoCore
             yield return new WaitForSeconds(TotalCooldown);
 
             Debug.Log($"[Skill][{Type}] cooldown end!");
+        }
+
+        public override string ToString()
+        {
+            string typeLabel = Type.ToString().ToUpper();
+            string cooldownStatus = IsSkillOnCooldown ? $"{Cooldown:F1}s ({CooldownNormalized:P0})" : "Ready";
+            string activeStatus = IsActive ? "Active" : "Inactive";
+
+            return $"[Skill: {typeLabel}]\n" +
+                   $"- Status     : {activeStatus}\n" +
+                   $"- Cooldown   : {cooldownStatus}\n" +
+                   $"- Duration   : {TotalDuration:F1}s\n" +
+                   $"- Multiplier : {(Type == SkillType.Boost ? BoostMultiplier : StoneMultiplier):F1}";
         }
         #endregion
     }

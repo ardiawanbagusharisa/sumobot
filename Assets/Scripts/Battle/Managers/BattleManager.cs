@@ -62,7 +62,6 @@ namespace SumoManager
 
         public BotPlayerHandler Bot = new();
         public Battle Battle;
-        public Round CurrentRound = null;
         #endregion
 
         #region Events properties 
@@ -78,7 +77,7 @@ namespace SumoManager
         #region Unity methods 
         private void Awake()
         {
-            if (Instance != null)
+            if (Instance != null && Instance != this)
             {
                 Destroy(gameObject);
                 return;
@@ -88,6 +87,9 @@ namespace SumoManager
 
         void OnEnable()
         {
+            if (ReplayManager.Instance.IsEnable)
+                return;
+
             LogManager.InitLog();
             Battle = new Battle(Guid.NewGuid().ToString(), RoundSystem);
             LogManager.InitBattle();
@@ -95,18 +97,27 @@ namespace SumoManager
 
         void Start()
         {
+            if (ReplayManager.Instance.IsEnable)
+                return;
+
             TransitionToState(BattleState.PreBatle_Preparing);
         }
 
         void OnDisable()
         {
+            if (ReplayManager.Instance.IsEnable)
+                return;
+
             Battle.LeftPlayer.Actions[SumoController.OnPlayerOutOfArena].Unsubscribe(OnPlayerOutOfArena);
             Battle.RightPlayer.Actions[SumoController.OnPlayerOutOfArena].Unsubscribe(OnPlayerOutOfArena);
         }
 
         void Update()
         {
-            if (CurrentRound != null && CurrentState == BattleState.Battle_Ongoing)
+            if (ReplayManager.Instance.IsEnable)
+                return;
+
+            if (Battle.CurrentRound != null && CurrentState == BattleState.Battle_Ongoing)
             {
                 ElapsedTime += Time.deltaTime;
                 Bot.OnUpdate(ElapsedTime);
@@ -176,7 +187,7 @@ namespace SumoManager
             float timer = CountdownTime;
             while (timer > 0 && CurrentState == BattleState.Battle_Countdown)
             {
-                Actions[OnCountdownChanged].Invoke(timer);
+                Actions[OnCountdownChanged].Invoke(new ActionParameter(floatParam: timer));
                 yield return new WaitForSeconds(1f);
                 timer -= 1f;
             }
@@ -193,8 +204,8 @@ namespace SumoManager
             }
 
             LogManager.SetRoundWinner("Draw");
-            CurrentRound.RoundWinner = null;
-            Battle.Winners[CurrentRound.RoundNumber] = null;
+            Battle.CurrentRound.RoundWinner = null;
+            Battle.Winners[Battle.CurrentRound.RoundNumber] = null;
             LogManager.FlushActionLog();
             TransitionToState(BattleState.Battle_End);
         }
@@ -208,12 +219,12 @@ namespace SumoManager
             yield return new WaitForSeconds(1f);
         }
 
-        private void OnPlayerOutOfArena(object[] args)
+        private void OnPlayerOutOfArena(ActionParameter param)
         {
             if (CurrentState != BattleState.Battle_Ongoing)
                 return;
             Debug.Log("OnPlayerOutOfArena");
-            PlayerSide Side = (PlayerSide)args[0];
+            PlayerSide Side = param.Side;
             SumoController winner = Side == PlayerSide.Left ? Battle.RightPlayer : Battle.LeftPlayer;
 
             if (winner == null)
@@ -232,7 +243,7 @@ namespace SumoManager
             Debug.Log($"State Transition: {CurrentState} → {newState}");
             CurrentState = newState;
 
-            if (CurrentRound.RoundNumber == 0)
+            if (Battle.CurrentRound == null || Battle.CurrentRound.RoundNumber == 0)
             {
                 LogManager.LogBattleState(
                     data: new Dictionary<string, object>()
@@ -275,12 +286,12 @@ namespace SumoManager
 
                 // Battle
                 case BattleState.Battle_Preparing:
-                    LogManager.UpdateMetadata();
+                    LogManager.UpdateMetadata(logTakenAction: false);
                     LogManager.StartGameLog();
 
                     Battle.ClearWinner();
-                    CurrentRound = new Round(1, Mathf.CeilToInt(BattleTime));
-                    LogManager.StartRound(CurrentRound.RoundNumber);
+                    Battle.CurrentRound = new Round(1, Mathf.CeilToInt(BattleTime));
+                    LogManager.StartRound(Battle.CurrentRound.RoundNumber);
 
                     Battle.LeftPlayer.Reset();
                     Battle.RightPlayer.Reset();
@@ -305,7 +316,7 @@ namespace SumoManager
                     Battle.RightPlayer.SetSkillEnabled(true);
                     break;
                 case BattleState.Battle_End:
-                    CurrentRound.FinishTime = ElapsedTime;
+                    Battle.CurrentRound.FinishTime = ElapsedTime;
 
                     if (!gameObject.IsDestroyed())
                         StopCoroutine(battleTimerCoroutine);
@@ -328,10 +339,10 @@ namespace SumoManager
                         LogManager.SortAndSave();
 
                         int previousRound = Battle.CurrentRound.RoundNumber;
-                        CurrentRound = new Round(previousRound + 1, Mathf.CeilToInt(BattleTime));
-                        LogManager.StartRound(CurrentRound.RoundNumber);
+                        Battle.CurrentRound = new Round(previousRound + 1, Mathf.CeilToInt(BattleTime));
+                        LogManager.StartRound(Battle.CurrentRound.RoundNumber);
 
-                        Debug.Log($"CurrentRound.RoundNumber {CurrentRound.RoundNumber}");
+                        Debug.Log($"CurrentRound.RoundNumber {Battle.CurrentRound.RoundNumber}");
 
                         TransitionToState(BattleState.Battle_Countdown);
                     }
@@ -345,20 +356,14 @@ namespace SumoManager
                     break;
             }
 
-            UpdateBattleData();
+            BroadcastBattleData();
         }
 
         // Call this when we need to trigger OnBattleChanged immediately
-        private void UpdateBattleData()
+        private void BroadcastBattleData()
         {
-            if (CurrentRound != null)
-            {
-                Battle.CurrentRound = CurrentRound;
-                Battle.Rounds[CurrentRound.RoundNumber] = CurrentRound;
-            }
-
             Bot.OnBattleStateChanged(CurrentState);
-            Actions[OnBattleChanged].Invoke(Battle);
+            Actions[OnBattleChanged].Invoke(new ActionParameter(battleParam: Battle));
         }
         #endregion
     }

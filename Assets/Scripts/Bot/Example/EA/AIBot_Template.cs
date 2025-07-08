@@ -16,6 +16,8 @@ namespace SumoBot
         // Ranged between 0.1f to 10f
         public override float Interval => 0.1f;
 
+        public override SkillType SkillType => SkillType.Boost;
+
         // Where the battle state changes
         public override void OnBattleStateChanged(BattleState state)
         {
@@ -23,13 +25,13 @@ namespace SumoBot
         }
 
         // When your AI is got a collision (bounce)
-        public override void OnBotCollision(object[] args)
+        public override void OnBotCollision(ActionParameter param)
         {
             throw new System.NotImplementedException();
         }
 
         // Initial state of your script
-        public override void OnBotInit(PlayerSide side, BotAPI botAPI)
+        public override void OnBotInit(PlayerSide side, SumoAPI botAPI)
         {
             throw new System.NotImplementedException();
         }

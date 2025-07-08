@@ -33,10 +33,11 @@ namespace SumoManager
         #region Input methods
         public void InitializeInput(SumoController controller)
         {
-            GameObject selectedInputObject;
 
             GameObject liveCommandObject = controller.Side == PlayerSide.Left ? LeftLiveCommand : RightLiveCommand;
             GameObject UIButtonsObject = controller.Side == PlayerSide.Left ? LeftButton : RightButton;
+
+            GameObject selectedInputObject;
 
             switch (BattleManager.Instance.BattleInputType)
             {
@@ -55,20 +56,43 @@ namespace SumoManager
                 // UI button & keyboard 
                 default:
                     UIButtonsObject.SetActive(true);
-                    // UIButtonsObject.GetComponent<ButtonInputHandler>().SetSkillAvailability(controller.Skill.Type);
                     selectedInputObject = UIButtonsObject;
                     liveCommandObject.SetActive(false);
                     break;
             }
 
-            InputProvider inputProvider;
-            InputType battleInputType = BattleManager.Instance.BattleInputType;
+            SumoAPI api = CreateAPI(controller.Side);
+            InputProvider inputProvider = GetInputProvider(controller, selectedInputObject);
 
+            controller.InputProvider = inputProvider;
+
+            // Additional initialization
+            switch (BattleManager.Instance.BattleInputType)
+            {
+                case InputType.Script:
+                    SetupBots(controller.Side, inputProvider, api);
+                    break;
+                case InputType.UI:
+                    // Enable for test-only
+                    SetupBots(controller.Side, inputProvider, api);
+                    break;
+                case InputType.LiveCommand:
+                    // Enable for test-only
+                    SetupBots(controller.Side, inputProvider, api);
+                    liveCommandObject.GetComponent<CommandSystem>().InitCommandSystem(api);
+                    break;
+            }
+        }
+
+        private InputProvider GetInputProvider(SumoController controller, GameObject selectedInputObject)
+        {
+            InputType battleInputType = BattleManager.Instance.BattleInputType;
+            InputProvider inputProvider;
             if (battleInputType == InputType.Script)
             {
                 if (BattleManager.Instance.Bot.IsEnable)
                 {
-                    var scriptInputProvider = controller.AddComponent<InputProvider>();
+                    InputProvider scriptInputProvider = controller.AddComponent<InputProvider>();
                     scriptInputProvider.PlayerSide = controller.Side;
                     scriptInputProvider.IncludeKeyboard = false;
                     inputProvider = scriptInputProvider;
@@ -80,49 +104,48 @@ namespace SumoManager
             {
                 if (selectedInputObject == null)
                     throw new Exception($"One of [{battleInputType}]'s object must be used");
-                    
+
                 inputProvider = selectedInputObject.GetComponent<InputProvider>();
             }
 
-            inputProvider.SkillType = controller.Skill.Type;
-            controller.InputProvider = inputProvider;
-
-            // Might be called only when the BattleInputType is Script
-            // For now, test it whatever on the input type is set
-            SetupBots(controller.Side, inputProvider);
-
-            // Additional initialization
-            switch (BattleManager.Instance.BattleInputType)
-            {
-                case InputType.Script:
-                    break;
-                case InputType.UI:
-                    break;
-                case InputType.LiveCommand:
-                    break;
-            }
+            return inputProvider;
         }
 
-        private void SetupBots(PlayerSide side, InputProvider provider)
+        private SumoAPI CreateAPI(PlayerSide side)
+        {
+            SumoController leftPlayer = BattleManager.Instance.Battle.LeftPlayer;
+            SumoController rightPlayer = BattleManager.Instance.Battle.RightPlayer;
+
+            SumoAPI api;
+
+            if (side == PlayerSide.Left)
+            {
+                api = new SumoAPI(leftPlayer, rightPlayer);
+            }
+            else
+            {
+                api = new SumoAPI(rightPlayer, leftPlayer);
+            }
+            return api;
+        }
+
+        private void SetupBots(PlayerSide side, InputProvider provider, SumoAPI api)
         {
             if (!BattleManager.Instance.Bot.IsEnable) return;
 
             SumoController leftPlayer = BattleManager.Instance.Battle.LeftPlayer;
             SumoController rightPlayer = BattleManager.Instance.Battle.RightPlayer;
 
-            var me = side == PlayerSide.Left ? leftPlayer : rightPlayer;
-            var enemy = side == PlayerSide.Left ? rightPlayer : leftPlayer;
-
             if (leftPlayer.Bot != null && side == PlayerSide.Left)
             {
                 leftPlayer.Bot.SetProvider(provider);
-                leftPlayer.Bot.OnBotInit(side, new BotAPI(me, enemy.transform));
+                leftPlayer.Bot.OnBotInit(side, api);
                 leftPlayer.Actions[SumoController.OnPlayerBounce].Subscribe(leftPlayer.Bot.OnBotCollision);
             }
             else if (rightPlayer.Bot != null && side == PlayerSide.Right)
             {
                 rightPlayer.Bot.SetProvider(provider);
-                rightPlayer.Bot.OnBotInit(side, new BotAPI(me, enemy.transform));
+                rightPlayer.Bot.OnBotInit(side, api);
                 rightPlayer.Actions[SumoController.OnPlayerBounce].Subscribe(rightPlayer.Bot.OnBotCollision);
             }
         }

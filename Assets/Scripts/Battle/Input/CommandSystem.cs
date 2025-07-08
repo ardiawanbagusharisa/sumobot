@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Collections;
 using System.Linq;
 using SumoCore;
+using SumoBot;
 
 namespace SumoInput
 {
@@ -28,12 +29,32 @@ namespace SumoInput
         #region Runtime properties 
         private bool isUnfolded = false;
         private InputProvider inputProvider;
+        private SumoAPI api;
         #endregion
 
         #region Unity methods
-        private void Start()
+
+        void OnEnable()
         {
-            InitCommandSystem();
+            allCommands = new Dictionary<string, Action<string>>()
+                {
+                    // [Todo] Consider to put "()" for correct format.
+                    { "accelerate", CommandAccelerate },
+                    { "turnleft", CommandTurnLeft },
+                    { "turnright", CommandTurnRight },
+                    { "dash", (s) => Dash() },
+                    { "skill", (s) => Skill() },
+                    { "clear", (s) => ClearTerminal() },
+                    { "help", (s) => AddMessageToDisplay(helperTexts) },
+                    { "open", (s) => OpenTerminal() },
+                    { "close", (s) => CloseTerminal() },
+                    { "getstatus", (s) => GetStatus() },   //[Todo] Implement get log from log manager. 
+                };
+
+            inputField.onValueChanged.AddListener(OnTyping);
+            inputField.onSubmit.AddListener(OnSubmit);
+
+            DisplayMessage(defaultText);
         }
 
         private void Update()
@@ -43,30 +64,11 @@ namespace SumoInput
         #endregion
 
         #region Command system methods
-        private void InitCommandSystem()
+        public void InitCommandSystem(SumoAPI api)
         {
             //[Todo] Handle null later. 
             inputProvider = GetComponent<InputProvider>();
-
-            allCommands = new Dictionary<string, Action<string>>()
-        {
-            // [Todo] Consider to put "()" for correct format.
-            { "accelerate", CommandAccelerate },
-            { "turnleft", CommandTurnLeft },
-            { "turnright", CommandTurnRight },
-            { "dash", (s) => Dash() },
-            { "skill", (s) => Skill() },
-            { "clear", (s) => ClearTerminal() },
-            { "help", (s) => AddMessageToDisplay(helperTexts) },
-            { "open", (s) => OpenTerminal() },
-            { "close", (s) => CloseTerminal() },
-            { "getstatus", (s) => AddMessageToDisplay("Executing getstatus()") },   //[Todo] Implement get log from log manager. 
-        };
-
-            inputField.onValueChanged.AddListener(OnTyping);
-            inputField.onSubmit.AddListener(OnSubmit);
-
-            DisplayMessage(defaultText);
+            this.api = api;
         }
 
         private void CheckPlayerInput()
@@ -354,7 +356,9 @@ namespace SumoInput
 
         private void GetStatus()
         {
-            //[Todo] Implement get log from log manager.
+            string status = $"> Executing GetStatus.\n\n {api}";
+
+            AddMessageToDisplay(status);
         }
         #endregion
 
