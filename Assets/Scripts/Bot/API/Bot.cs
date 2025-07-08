@@ -26,8 +26,9 @@ namespace SumoBot
 
         [Range(0.1f, 10f)]
         public abstract float Interval { get; }
+        public abstract SkillType SkillType { get; }
 
-        public abstract void OnBotInit(PlayerSide side, BotAPI botAPI);
+        public abstract void OnBotInit(PlayerSide side, SumoAPI botAPI);
 
         // Called when elapsed time of battle timer is satisfy with the interval
         public virtual void OnBotUpdate()
@@ -36,7 +37,7 @@ namespace SumoBot
         }
 
         // Called when two robots get into collision (Bounce), [side] is the collider.
-        public abstract void OnBotCollision(object[] side);
+        public abstract void OnBotCollision(ActionParameter param);
 
         // Called whenever battle state ischanged
         public abstract void OnBattleStateChanged(BattleState state);

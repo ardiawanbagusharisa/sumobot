@@ -102,9 +102,9 @@ namespace SumoInput
 
         #region Button handling methods
 
-        void OnBattleChanged(object[] args)
+        void OnBattleChanged(ActionParameter param)
         {
-            var battle = (Battle)args[0];
+            var battle = param.Battle;
             SumoController currentPlayer = inputProvider.PlayerSide == PlayerSide.Left ? BattleManager.Instance.Battle.LeftPlayer : BattleManager.Instance.Battle.RightPlayer;
 
             if (BattleManager.Instance.CurrentState == BattleState.Battle_Countdown)
@@ -117,10 +117,10 @@ namespace SumoInput
             }
         }
 
-        void OnPlayerAction(object[] args)
+        void OnPlayerAction(ActionParameter param)
         {
-            ISumoAction action = (ISumoAction)args[1];
-            bool isPostExecute = (bool)args[2] == false;
+            ISumoAction action = param.Action;
+            bool isPostExecute = param.Bool == false;
 
             if (isPostExecute)
             {

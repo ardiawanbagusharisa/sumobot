@@ -122,23 +122,22 @@ namespace SumoBot
             }).FirstOrDefault();
         }
 
-        public Tuple<float, float, float> Simulate(BotAPI api, float simulationTime)
+        public Tuple<float, float, float> Simulate(SumoAPI api, float simulationTime)
         {
-            var controller = api.Controller;
+            var myRobot = api.MyRobot;
 
-            GameObject arena = BattleManager.Instance.Arena;
-            float arenaRadius = arena.GetComponent<CircleCollider2D>().radius * arena.transform.lossyScale.x;
+            float arenaRadius = api.BattleInfo.ArenaRadius;
 
-            Vector3 arenaCenter = arena.transform.position;
-            Vector3 aiDirection = api.MyTransform.up;
-            Vector3 aiPosition = api.MyTransform.position;
+            Vector3 arenaCenter = api.BattleInfo.ArenaPosition;
+            Vector3 aiDirection = myRobot.Rotation * Vector3.up;
+            Vector3 aiPosition = myRobot.Position;
 
             float bonusOrPenalty = 0;
             float angleScore = 0;
             float distScore = 0;
 
             //Before Sim
-            Vector3 toEnemy = api.EnemyTransform.position - aiPosition;
+            Vector2 toEnemy = api.EnemyRobot.Position - aiPosition;
             float distance = toEnemy.magnitude;
             float angle = Vector3.SignedAngle(aiDirection, toEnemy.normalized, Vector3.forward);
 
@@ -156,21 +155,21 @@ namespace SumoBot
                     Debug.Log($"action.Param ${action.Type} {action.Param}");
                     if (action.Type == ActionType.TurnLeftWithAngle)
                     {
-                        aiDirection += Quaternion.Euler(0, 0, (float)action.Param) * aiDirection * simulationTime * controller.TurnRate;
+                        aiDirection += Quaternion.Euler(0, 0, (float)action.Param) * aiDirection * simulationTime * myRobot.TurnRate;
                     }
                     else if (action.Type == ActionType.TurnRightWithAngle)
                     {
-                        aiDirection += Quaternion.Euler(0, 0, -(float)action.Param) * aiDirection * simulationTime * controller.TurnRate;
+                        aiDirection += Quaternion.Euler(0, 0, -(float)action.Param) * aiDirection * simulationTime * myRobot.TurnRate;
                     }
                 }
                 else if (action is AccelerateAction)
                 {
                     if (api.CanExecute(action))
                     {
-                        var predictionSpeed = controller.MoveSpeed;
-                        if (controller.Skill.Type == SkillType.Boost && controller.Skill.IsActive)
+                        var predictionSpeed = myRobot.MoveSpeed;
+                        if (myRobot.Skill.Type == SkillType.Boost && myRobot.Skill.IsActive)
                         {
-                            predictionSpeed *= controller.Skill.BoostMultiplier;
+                            predictionSpeed *= myRobot.Skill.BoostMultiplier;
                         }
 
                         aiPosition += aiDirection.normalized * (predictionSpeed * simulationTime);
@@ -185,17 +184,17 @@ namespace SumoBot
                     if (api.CanExecute(action))
                     {
                         bonusOrPenalty += 0.1f;
-                        var predictionSpeed = controller.DashSpeed;
+                        var predictionSpeed = myRobot.DashSpeed;
 
-                        if (controller.Skill.Type == SkillType.Boost && controller.Skill.IsActive)
+                        if (myRobot.Skill.Type == SkillType.Boost && myRobot.Skill.IsActive)
                         {
-                            predictionSpeed *= controller.Skill.BoostMultiplier;
+                            predictionSpeed *= myRobot.Skill.BoostMultiplier;
                         }
 
-                        aiPosition += aiDirection.normalized * (controller.DashDuration * predictionSpeed * simulationTime);
+                        aiPosition += aiDirection.normalized * (myRobot.DashDuration * predictionSpeed * simulationTime);
 
                         // Formula of decelerating / stop-delay
-                        aiPosition *= 0.5f + predictionSpeed * controller.StopDelay;
+                        aiPosition *= 0.5f + predictionSpeed * myRobot.StopDelay;
                     }
                     else
                     {
@@ -207,10 +206,10 @@ namespace SumoBot
                 {
                     if (api.CanExecute(action))
                     {
-                        if (controller.Skill.Type == SkillType.Boost)
+                        if (myRobot.Skill.Type == SkillType.Boost)
                         {
                             bonusOrPenalty += 0.5f;
-                            aiPosition += aiDirection.normalized * (controller.MoveSpeed * controller.Skill.BoostMultiplier * simulationTime);
+                            aiPosition += aiDirection.normalized * (myRobot.MoveSpeed * myRobot.Skill.BoostMultiplier * simulationTime);
                         }
                     }
                     else
@@ -219,7 +218,7 @@ namespace SumoBot
                     }
                 }
 
-                toEnemy = api.EnemyTransform.transform.position - aiPosition;
+                toEnemy = api.EnemyRobot.Position - aiPosition;
                 distance = toEnemy.magnitude;
                 angle = Vector3.SignedAngle(aiDirection, toEnemy.normalized, Vector3.forward);
 

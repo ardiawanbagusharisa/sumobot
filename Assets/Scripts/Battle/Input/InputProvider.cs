@@ -20,7 +20,6 @@ namespace SumoInput
         #region Input properties
         public bool IncludeKeyboard;
         public PlayerSide PlayerSide;
-        public SkillType SkillType;
         #endregion
 
         #region Runtime properties
@@ -139,27 +138,27 @@ namespace SumoInput
         #endregion
 
         #region UI Input
-        public void OnAccelerateButtonPressed(object[] _)
+        public void OnAccelerateButtonPressed(ActionParameter _)
         {
             EnqueueCommand(new AccelerateAction(InputType.UI));
         }
 
-        public void OnDashButtonPressed(object[] _)
+        public void OnDashButtonPressed(ActionParameter _)
         {
             EnqueueCommand(new DashAction(InputType.UI));
         }
 
-        public void OnTurnLeftButtonPressed(object[] _)
+        public void OnTurnLeftButtonPressed(ActionParameter _)
         {
             EnqueueCommand(new TurnAction(InputType.UI, ActionType.TurnLeft));
         }
 
-        public void OnTurnRightButtonPressed(object[] _)
+        public void OnTurnRightButtonPressed(ActionParameter _)
         {
             EnqueueCommand(new TurnAction(InputType.UI, ActionType.TurnRight));
         }
 
-        public void OnSkillButtonPressed(object[] _)
+        public void OnSkillButtonPressed(ActionParameter _)
         {
             EnqueueCommand(new SkillAction(InputType.UI));
         }

@@ -43,7 +43,7 @@ namespace SumoHelper
                 this.action.Action = action;
                 this.action.Position = controller.transform.position;
                 this.action.Rotation = controller.transform.rotation.eulerAngles.z;
-                this.action.LinearVelocity = controller.LastVelocity;
+                this.action.LinearVelocity = controller.LastLinearVelocity;
                 this.action.AngularVelocity = controller.LastAngularVelocity;
 
                 SaveAction(true);
@@ -67,7 +67,7 @@ namespace SumoHelper
 
                 collision.Position = controller.transform.position;
                 collision.Rotation = controller.transform.rotation.eulerAngles.z;
-                collision.LinearVelocity = controller.LastVelocity;
+                collision.LinearVelocity = controller.LastLinearVelocity;
                 collision.AngularVelocity = controller.LastAngularVelocity;
 
                 SaveCollision(true);
@@ -91,7 +91,11 @@ namespace SumoHelper
 
         public void ForceStopAndSave()
         {
+            if (!IsActive || !ForceSave)
+                return;
+
             IsActive = false;
+            
             if (action != null)
                 SaveAction(false);
             if (collision != null)
@@ -104,7 +108,7 @@ namespace SumoHelper
             {
                 action.Rotation = controller.transform.rotation.eulerAngles.z;
                 action.Position = controller.transform.position;
-                action.LinearVelocity = controller.LastVelocity;
+                action.LinearVelocity = controller.LastLinearVelocity;
                 action.AngularVelocity = controller.LastAngularVelocity;
 
                 float duration = BattleManager.Instance.ElapsedTime - startTime;
@@ -130,7 +134,7 @@ namespace SumoHelper
             {
                 collision.Rotation = controller.transform.rotation.eulerAngles.z;
                 collision.Position = controller.transform.position;
-                collision.LinearVelocity = controller.LastVelocity;
+                collision.LinearVelocity = controller.LastLinearVelocity;
                 collision.AngularVelocity = controller.LastAngularVelocity;
 
                 float duration = BattleManager.Instance.ElapsedTime - startTime;

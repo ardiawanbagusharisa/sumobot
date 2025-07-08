@@ -12,6 +12,7 @@ namespace SumoBot
     {
         public override string ID => Name;
         public override float Interval => ActionInterval;
+        public override SkillType SkillType => SkillType.Boost;
 
         public string Name = "MCTS";
         public float ActionInterval = 0.1f;
@@ -35,13 +36,15 @@ namespace SumoBot
             new DashAction(InputType.Script),
             new SkillAction(InputType.Script),
             new TurnAction(InputType.Script, ActionType.TurnLeftWithAngle, 15f),
+            new TurnAction(InputType.Script, ActionType.TurnLeftWithAngle, 50f),
             new TurnAction(InputType.Script, ActionType.TurnRightWithAngle, 15f),
+            new TurnAction(InputType.Script, ActionType.TurnRightWithAngle, 50f),
         };
         public int ReinitPerIters = 2;
         public int Iterations = 100;
         #endregion AI
 
-        private BotAPI api;
+        private SumoAPI api;
 
         void OnBattleChanged(BattleState state)
         {
@@ -77,16 +80,16 @@ namespace SumoBot
             OnBattleChanged(state);
         }
 
-        public override void OnBotCollision(object[] args)
+        public override void OnBotCollision(ActionParameter param)
         {
-            if (side == (PlayerSide)args[0])
+            if (side == param.Side)
                 lastActionsFromEnemy = null;
             else
                 lastActionsToEnemy = null;
             InitNode();
         }
 
-        public override void OnBotInit(PlayerSide side, BotAPI botAPI)
+        public override void OnBotInit(PlayerSide side, SumoAPI botAPI)
         {
             api = botAPI;
             InitNode();
@@ -97,7 +100,7 @@ namespace SumoBot
 
         void DeQueueWhenAvailable()
         {
-            while (!api.Controller.IsMovementDisabled && actionsQueue.Count > 0)
+            while (!api.MyRobot.IsMovementDisabled && actionsQueue.Count > 0)
             {
                 Enqueue(actionsQueue.Dequeue());
             }
@@ -130,7 +133,6 @@ namespace SumoBot
                 }
 
             }
-
             EA_MCTS_Node bestChild = root.GetBestChild();
             if (bestChild == null)
                 return null;
@@ -142,7 +144,7 @@ namespace SumoBot
                 return null;
             }
 
-            Debug.Log($"[AIBot_EA_MCTS] selected-score: {bestChild.totalReward}, selected-action(s): {bestChild.ID} selected-visits: {bestChild.visits}, ");
+            Debug.Log($"[AIBot_EA_MCTS] selected-score: {bestChild.totalReward}, selected-action(s): {bestChild.ID} selected-visits: {bestChild.visits}, {bestChild.actions.Count}");
 
             lastActionsToEnemy = bestChild.actions;
 

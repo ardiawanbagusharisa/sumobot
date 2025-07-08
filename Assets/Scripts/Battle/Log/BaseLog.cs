@@ -1,5 +1,6 @@
 
 using System.Collections.Generic;
+using Newtonsoft.Json.Linq;
 using UnityEngine;
 
 namespace SumoLog
@@ -34,6 +35,23 @@ namespace SumoLog
                 }
             },
         };
+        }
+    
+
+    public static BaseLog FromMap(Dictionary<string, object> data)
+        {
+            var robot = (JObject)data["Robot"];
+            Vector2 tempLinearVelocity = new((float)(double)robot["LinearVelocity"]["X"], (float)(double)robot["LinearVelocity"]["Y"]);
+            Vector2 temPosition = new((float)(double)robot["Position"]["X"], (float)(double)robot["Position"]["Y"]);
+
+            BaseLog result = new()
+            {
+                AngularVelocity = (float)robot?["AngularVelocity"],
+                LinearVelocity = tempLinearVelocity,
+                Position = temPosition,
+                Rotation = (float)(double)robot?["Rotation"]?["Z"]
+            };
+            return result;
         }
     }
 }
