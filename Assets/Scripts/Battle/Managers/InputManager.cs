@@ -69,11 +69,12 @@ namespace SumoManager
             // Additional initialization
             switch (BattleManager.Instance.BattleInputType)
             {
-                case InputType.Script:
+                case InputType.UI:
+                case InputType.Keyboard:
+                    // Enable for test-only
                     SetupBots(controller.Side, inputProvider, api);
                     break;
-                case InputType.UI:
-                    // Enable for test-only
+                case InputType.Script:
                     SetupBots(controller.Side, inputProvider, api);
                     break;
                 case InputType.LiveCommand:
