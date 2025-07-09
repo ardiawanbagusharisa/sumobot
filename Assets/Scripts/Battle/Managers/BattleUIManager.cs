@@ -41,19 +41,19 @@ namespace SumoManager
         [Header("Battle UI - Left Player")]
         public TMP_Text LeftScore;
         public TMP_Text LeftFinalScore;
-        public Image LeftDashCooldown;
-        public Image LeftSkillCooldown;
-        public TMP_Text LeftSkillName;
+        public CooldownUIGroupSet LeftSkillUI;
+        public CooldownUIGroupSet LeftDashUI;
+
         // [Todo] Temporary
         public GameObject LeftDashBuff;
         public GameObject LeftSkillBuff;
 
+
         [Header("Battle UI - Right Player")]
         public TMP_Text RightScore;
         public TMP_Text RightFinalScore;
-        public Image RightDashCooldown;
-        public Image RightSkillCooldown;
-        public TMP_Text RightSkillName;
+        public CooldownUIGroupSet RightSkillUI;
+        public CooldownUIGroupSet RightDashUI;
 
         // [Todo] Temporary
         public GameObject RightDashBuff;
@@ -162,23 +162,18 @@ Left Shift / Right Shift - Dash
 
         private void FixedUpdate()
         {
-            BattleManager battleTime = BattleManager.Instance;
-            if (battleTime.CurrentState == BattleState.Battle_Ongoing ||
-            battleTime.CurrentState == BattleState.Battle_End ||
-            battleTime.CurrentState == BattleState.Battle_Reset)
+            BattleManager battle = BattleManager.Instance;
+            if (battle.CurrentState == BattleState.Battle_Ongoing ||
+            battle.CurrentState == BattleState.Battle_End ||
+            battle.CurrentState == BattleState.Battle_Reset)
             {
-                Timer.SetText(Mathf.CeilToInt(battleTime.TimeLeft).ToString());
-                SumoController leftPlayer = battleTime.Battle.LeftPlayer;
-                LeftSkillCooldown.GetComponent<Image>().fillAmount = leftPlayer.Skill.CooldownNormalized;
-                LeftDashCooldown.GetComponent<Image>().fillAmount = leftPlayer.DashCooldownNormalized;
+                Timer.SetText(Mathf.CeilToInt(battle.TimeLeft).ToString());
+                SumoController leftPlayer = battle.Battle.LeftPlayer;
+                SumoController rightPlayer = battle.Battle.RightPlayer;
 
-                SumoController rightPlayer = battleTime.Battle.RightPlayer;
-                RightSkillCooldown.GetComponent<Image>().fillAmount = rightPlayer.Skill.CooldownNormalized;
-                RightDashCooldown.GetComponent<Image>().fillAmount = rightPlayer.DashCooldownNormalized;
+                UpdateActionUI(leftPlayer, LeftSkillUI, LeftDashUI);
+                UpdateActionUI(rightPlayer, RightSkillUI, RightDashUI);
 
-                Timer.SetText(Mathf.CeilToInt(BattleManager.Instance.TimeLeft).ToString());
-
-                // [Todo] Temporary 
                 LeftDashBuff.SetActive(leftPlayer.IsDashActive);
                 LeftSkillBuff.SetActive(leftPlayer.Skill.IsActive);
                 RightDashBuff.SetActive(rightPlayer.IsDashActive);
@@ -186,18 +181,12 @@ Left Shift / Right Shift - Dash
             }
             else
             {
-                if (RightSkillCooldown != null)
-                    RightSkillCooldown.fillAmount = 0;
-                if (RightDashCooldown != null)
-                    RightDashCooldown.fillAmount = 0;
-                if (LeftSkillCooldown != null)
-                    LeftSkillCooldown.fillAmount = 0;
-                if (LeftDashCooldown != null)
-                    LeftDashCooldown.fillAmount = 0;
+                ResetActionUI(LeftSkillUI, LeftDashUI);
+                ResetActionUI(RightSkillUI, RightDashUI);
 
                 // Reset timer UI
                 if (Timer != null)
-                    Timer.SetText(battleTime.BattleTime.ToString());
+                    Timer.SetText(battle.BattleTime.ToString());
             }
         }
         #endregion
@@ -221,16 +210,18 @@ Left Shift / Right Shift - Dash
                     BattlePanels.Find((o) => o.CompareTag("BattleState/Pre")).SetActive(true);
                     BattlePanels.Find((o) => o.CompareTag("BattleState/Ongoing")).SetActive(false);
                     BattlePanels.Find((o) => o.CompareTag("BattleState/Post")).SetActive(false);
-                    LeftSkill.value = (int)BattleManager.Instance.Battle.LeftPlayer.Skill.Type;
-                    RightSkill.value = (int)BattleManager.Instance.Battle.LeftPlayer.Skill.Type;
+                    LeftSkill.value = (int)battle.LeftPlayer.Skill.Type;
+                    RightSkill.value = (int)battle.LeftPlayer.Skill.Type;
                     LeftFinalScore.SetText("");
                     RightFinalScore.SetText("");
                     break;
                 case BattleState.Battle_Preparing:
                     BattlePanels.Find((o) => o.CompareTag("BattleState/Ongoing")).SetActive(true);
+                    InitActionUI(LeftSkillUI, LeftDashUI);
+                    InitActionUI(RightSkillUI, RightDashUI);
                     ClearScore();
-                    LeftSkillName.SetText(battle.LeftPlayer.Skill.Type.ToString());
-                    RightSkillName.SetText(battle.RightPlayer.Skill.Type.ToString());
+                    LeftSkillUI.SetText(battle.LeftPlayer.Skill.Type.ToString());
+                    RightSkillUI.SetText(battle.RightPlayer.Skill.Type.ToString());
                     Countdown.SetText("");
                     RoundSystem.SetText("");
                     Round.SetText("");
@@ -260,6 +251,30 @@ Left Shift / Right Shift - Dash
         private void OnCountdownChanged(ActionParameter param)
         {
             Countdown.SetText(param.Float.ToString());
+        }
+
+        private void InitActionUI(CooldownUIGroupSet skill, CooldownUIGroupSet dash)
+        {
+            InputType inputType = BattleManager.Instance.BattleInputType;
+
+            skill.SetVisible(inputType);
+            dash.SetVisible(inputType);
+        }
+
+        private void UpdateActionUI(SumoController player, CooldownUIGroupSet skill, CooldownUIGroupSet dash)
+        {
+            InputType inputType = BattleManager.Instance.BattleInputType;
+
+            skill.SetCooldown(player.Skill.CooldownNormalized, inputType);
+            dash.SetCooldown(player.DashCooldownNormalized, inputType);
+        }
+
+        private void ResetActionUI(CooldownUIGroupSet skill, CooldownUIGroupSet dash)
+        {
+            InputType inputType = BattleManager.Instance.BattleInputType;
+
+            skill.Reset(inputType);
+            dash.Reset(inputType);
         }
 
         private void UpdateScore(Battle battleInfo)
