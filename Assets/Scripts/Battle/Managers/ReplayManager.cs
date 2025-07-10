@@ -11,7 +11,6 @@ using System;
 using System.Collections;
 using UnityEngine.UI;
 using SumoCore;
-using NUnit.Framework.Interfaces;
 
 public class ReplayManager : MonoBehaviour
 {
@@ -24,8 +23,8 @@ public class ReplayManager : MonoBehaviour
     [Range(0f, 5f)]
     public float playbackSpeed = 1f;
     public bool autoStart = true;
-    public SumoController leftPlayer;
-    public SumoController rightPlayer;
+    public Transform leftPlayer;
+    public Transform rightPlayer;
     #endregion
 
     [Header("Replay Configuration")]
@@ -106,11 +105,6 @@ public class ReplayManager : MonoBehaviour
         LoadAllGameLogs(folder);
         LoadMetadata(folder);
         LoadRound(currentGameIndex, currentRoundIndex);
-
-        leftPlayer.Side = PlayerSide.Left;
-        rightPlayer.Side = PlayerSide.Right;
-        leftPlayer.UpdateDirectionColor();
-        rightPlayer.UpdateDirectionColor();
 
         if (autoStart)
             isPlaying = true;
@@ -234,7 +228,7 @@ public class ReplayManager : MonoBehaviour
         rightEventIndex = 0;
     }
 
-    void InterpolateBot(SumoController controller, List<EventLog> events, ref int index)
+    void InterpolateBot(Transform player, List<EventLog> events, ref int index)
     {
         if (index >= events.Count)
             return;
@@ -288,8 +282,8 @@ public class ReplayManager : MonoBehaviour
             var start = BaseLog.FromMap(currentEvent.Data);
             var end = BaseLog.FromMap(nextEvent.Data);
 
-            controller.transform.position = Vector3.Lerp(start.Position, end.Position, t);
-            controller.transform.rotation = Quaternion.Lerp(
+            player.transform.position = Vector3.Lerp(start.Position, end.Position, t);
+            player.transform.rotation = Quaternion.Lerp(
                 Quaternion.Euler(0, 0, start.Rotation),
                 Quaternion.Euler(0, 0, end.Rotation),
                 t

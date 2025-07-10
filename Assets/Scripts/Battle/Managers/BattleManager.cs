@@ -87,9 +87,6 @@ namespace SumoManager
 
         void OnEnable()
         {
-            if (ReplayManager.Instance.IsEnable)
-                return;
-
             LogManager.InitLog();
             Battle = new Battle(Guid.NewGuid().ToString(), RoundSystem);
             LogManager.InitBattle();
@@ -97,26 +94,17 @@ namespace SumoManager
 
         void Start()
         {
-            if (ReplayManager.Instance.IsEnable)
-                return;
-
             TransitionToState(BattleState.PreBatle_Preparing);
         }
 
         void OnDisable()
         {
-            if (ReplayManager.Instance.IsEnable)
-                return;
-
             Battle.LeftPlayer.Actions[SumoController.OnPlayerOutOfArena].Unsubscribe(OnPlayerOutOfArena);
             Battle.RightPlayer.Actions[SumoController.OnPlayerOutOfArena].Unsubscribe(OnPlayerOutOfArena);
         }
 
         void Update()
         {
-            if (ReplayManager.Instance.IsEnable)
-                return;
-
             if (Battle.CurrentRound != null && CurrentState == BattleState.Battle_Ongoing)
             {
                 ElapsedTime += Time.deltaTime;
