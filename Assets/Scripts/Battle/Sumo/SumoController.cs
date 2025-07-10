@@ -66,7 +66,7 @@ namespace SumoCore
         private float moveLockTime = 0f;
         private bool isOutOfArena = false;
         private EventLogger collisionLogger;
-
+        private float time => BattleManager.Instance.ElapsedTime;
         // Derived 
         public bool IsDashActive => LastDashTime != 0 && (LastDashTime + DashDuration) >= time;
         public float DashCooldownTimer => LastDashTime + DashCooldown - time;
@@ -81,7 +81,6 @@ namespace SumoCore
         public const string OnPlayerAction = "OnPlayerAction"; // [Side, ISumoAction, bool]
         private Coroutine accelerateOverTimeCoroutine;
         private Coroutine turnOverAngleCoroutine;
-        private float time => BattleManager.Instance?.ElapsedTime ?? Time.time;
         #endregion
 
         #region Unity Methods
