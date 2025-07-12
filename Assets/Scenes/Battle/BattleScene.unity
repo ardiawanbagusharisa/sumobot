@@ -16006,7 +16006,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   TotalSimulations: 2
   TimeScale: 1.5
-  SimulationOnStart: 1
+  SimulationOnStart: 0
 --- !u!114 &2130233545
 MonoBehaviour:
   m_ObjectHideFlags: 0
