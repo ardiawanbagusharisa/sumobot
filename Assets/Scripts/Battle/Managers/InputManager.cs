@@ -81,14 +81,14 @@ namespace SumoManager
                 case InputType.UI:
                 case InputType.Keyboard:
                     // Enable for test-only
-                    SetupBots(controller.Side, inputProvider, api);
+                    SetupBots(controller, api);
                     break;
                 case InputType.Script:
-                    SetupBots(controller.Side, inputProvider, api);
+                    SetupBots(controller, api);
                     break;
                 case InputType.LiveCommand:
                     // Enable for test-only
-                    SetupBots(controller.Side, inputProvider, api);
+                    SetupBots(controller, api);
                     liveCommandObject.GetComponent<CommandSystem>().InitCommandSystem(api);
                     break;
             }
@@ -139,7 +139,7 @@ namespace SumoManager
             return api;
         }
 
-        private void SetupBots(PlayerSide side, InputProvider provider, SumoAPI api)
+        private void SetupBots(SumoController controller, SumoAPI api)
         {
             if (!botManager.IsEnable) return;
 
@@ -153,16 +153,16 @@ namespace SumoManager
                 botManager.Right = rightPlayer.GetComponentInChildren<Bot>();
             }
 
-            if (botManager.Left != null && side == PlayerSide.Left)
+            if (botManager.Left != null && controller.Side == PlayerSide.Left)
             {
-                botManager.Left.SetProvider(provider);
-                botManager.Left.OnBotInit(side, api);
+                botManager.Left.SetProvider(controller.InputProvider);
+                botManager.Left.OnBotInit(controller.Side, api);
                 leftPlayer.Actions[SumoController.OnPlayerBounce].Subscribe(botManager.Left.OnBotCollision);
             }
-            else if (botManager.Right != null && side == PlayerSide.Right)
+            else if (botManager.Right != null && controller.Side == PlayerSide.Right)
             {
-                botManager.Right.SetProvider(provider);
-                botManager.Right.OnBotInit(side, api);
+                botManager.Right.SetProvider(controller.InputProvider);
+                botManager.Right.OnBotInit(controller.Side, api);
                 rightPlayer.Actions[SumoController.OnPlayerBounce].Subscribe(botManager.Right.OnBotCollision);
             }
         }
