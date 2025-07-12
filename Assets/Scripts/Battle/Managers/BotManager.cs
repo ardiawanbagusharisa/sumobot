@@ -5,21 +5,28 @@ using UnityEngine;
 
 namespace SumoBot
 {
-    [Serializable]
-    public class BotPlayerHandler
+    public class BotManager : MonoBehaviour
     {
         public bool IsEnable;
-        public bool IsScriptable = false;
+        public bool IsScriptable = true;
+
         public Bot Left;
         public Bot Right;
 
-        public void Init(GameObject leftGameObject, GameObject rightGameObject)
-        {
-            if (!IsEnable) return;
-            if (IsScriptable) return;
+        [HideInInspector] public int leftBotIndex = 0;
+        [HideInInspector] public int rightBotIndex = 0;
 
-            Left = leftGameObject.GetComponent<SumoController>().Bot;
-            Right = rightGameObject.GetComponent<SumoController>().Bot;
+        void Start()
+        {
+            if (!IsScriptable) return;
+
+            var allTypes = BotUtility.GetAllBotTypes();
+
+            if (leftBotIndex >= 0 && leftBotIndex < allTypes.Count)
+                Left = ScriptableObject.CreateInstance(allTypes[leftBotIndex]) as Bot;
+
+            if (rightBotIndex >= 0 && rightBotIndex < allTypes.Count)
+                Right = ScriptableObject.CreateInstance(allTypes[rightBotIndex]) as Bot;
         }
 
         public void OnUpdate(float ElapsedTime)

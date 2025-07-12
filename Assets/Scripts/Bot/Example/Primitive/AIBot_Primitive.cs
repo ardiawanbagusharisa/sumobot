@@ -17,18 +17,16 @@ namespace SumoBot
         private float actionInterval = 0.4f;
         private float actionTimer = 0f;
         private SumoAPI api;
-        private InputProvider inputProvider;
         private BattleState currState;
 
 
         void OnPlayerBounce(PlayerSide side)
         {
-            inputProvider.ClearCommands();
+            ClearCommands();
         }
 
         public override void OnBotInit(PlayerSide side, SumoAPI botAPI)
         {
-            inputProvider = provider;
             api = botAPI;
         }
 

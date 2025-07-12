@@ -18,6 +18,10 @@ namespace SumoManager
         public GameObject RightLiveCommand;
         #endregion
 
+        #region Runtimep properties
+        private BotManager botManager;
+        #endregion
+
         #region Unity methods
         private void Awake()
         {
@@ -27,6 +31,11 @@ namespace SumoManager
                 return;
             }
             Instance = this;
+        }
+
+        void OnEnable()
+        {
+            botManager = GetComponent<BotManager>();
         }
         #endregion
 
@@ -91,7 +100,7 @@ namespace SumoManager
             InputProvider inputProvider;
             if (battleInputType == InputType.Script)
             {
-                if (BattleManager.Instance.Bot.IsEnable)
+                if (GetComponent<BotManager>().IsEnable)
                 {
                     InputProvider scriptInputProvider = controller.AddComponent<InputProvider>();
                     scriptInputProvider.PlayerSide = controller.Side;
@@ -132,22 +141,29 @@ namespace SumoManager
 
         private void SetupBots(PlayerSide side, InputProvider provider, SumoAPI api)
         {
-            if (!BattleManager.Instance.Bot.IsEnable) return;
+            if (!botManager.IsEnable) return;
 
             SumoController leftPlayer = BattleManager.Instance.Battle.LeftPlayer;
             SumoController rightPlayer = BattleManager.Instance.Battle.RightPlayer;
 
-            if (leftPlayer.Bot != null && side == PlayerSide.Left)
+            // Handle if the Bot is attached to left and right player (MonoBehaviour)
+            if (!botManager.IsScriptable)
             {
-                leftPlayer.Bot.SetProvider(provider);
-                leftPlayer.Bot.OnBotInit(side, api);
-                leftPlayer.Actions[SumoController.OnPlayerBounce].Subscribe(leftPlayer.Bot.OnBotCollision);
+                botManager.Left = leftPlayer.GetComponentInChildren<Bot>();
+                botManager.Right = rightPlayer.GetComponentInChildren<Bot>();
             }
-            else if (rightPlayer.Bot != null && side == PlayerSide.Right)
+
+            if (botManager.Left != null && side == PlayerSide.Left)
             {
-                rightPlayer.Bot.SetProvider(provider);
-                rightPlayer.Bot.OnBotInit(side, api);
-                rightPlayer.Actions[SumoController.OnPlayerBounce].Subscribe(rightPlayer.Bot.OnBotCollision);
+                botManager.Left.SetProvider(provider);
+                botManager.Left.OnBotInit(side, api);
+                leftPlayer.Actions[SumoController.OnPlayerBounce].Subscribe(botManager.Left.OnBotCollision);
+            }
+            else if (botManager.Right != null && side == PlayerSide.Right)
+            {
+                botManager.Right.SetProvider(provider);
+                botManager.Right.OnBotInit(side, api);
+                rightPlayer.Actions[SumoController.OnPlayerBounce].Subscribe(botManager.Right.OnBotCollision);
             }
         }
         #endregion

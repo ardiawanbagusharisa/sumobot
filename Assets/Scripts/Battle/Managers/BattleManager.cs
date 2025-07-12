@@ -51,7 +51,6 @@ namespace SumoManager
         // public GameObject SumoPrefab;
         public GameObject LeftPlayerObject;
         public GameObject RightPlayerObject;
-
         public GameObject Arena;
         #endregion
 
@@ -60,16 +59,15 @@ namespace SumoManager
         public float ElapsedTime = 0;
         public float TimeLeft => BattleTime - ElapsedTime;
 
-        public BotPlayerHandler Bot = new();
         public Battle Battle;
+        private BotManager botManager;
         #endregion
 
         #region Events properties 
         public ActionRegistry Actions = new();
-        // [float]
-        public static string OnCountdownChanged = "OnCountdownChanged";
-        // [Battle]
-        public static string OnBattleChanged = "OnBattleChanged";
+        public static string OnCountdownChanged = "OnCountdownChanged";  // [float]
+        public static string OnBattleChanged = "OnBattleChanged"; // [Battle]
+
         private Coroutine battleTimerCoroutine;
         private Coroutine countdownCoroutine;
         #endregion
@@ -87,6 +85,7 @@ namespace SumoManager
 
         void OnEnable()
         {
+            botManager = GetComponent<BotManager>();
             LogManager.InitLog();
             Battle = new Battle(Guid.NewGuid().ToString(), RoundSystem);
             LogManager.InitBattle();
@@ -108,7 +107,7 @@ namespace SumoManager
             if (Battle.CurrentRound != null && CurrentState == BattleState.Battle_Ongoing)
             {
                 ElapsedTime += Time.deltaTime;
-                Bot.OnUpdate(ElapsedTime);
+                GetComponent<BotManager>()?.OnUpdate(ElapsedTime);
             }
         }
 
@@ -269,11 +268,11 @@ namespace SumoManager
                     //         InitializePlayer(player.GetComponent<SumoController>());
                     //     });
                     // }
-                    Bot.Init(LeftPlayerObject, RightPlayerObject);
                     break;
 
                 // Battle
                 case BattleState.Battle_Preparing:
+                    LogManager.SetPlayerBots(botManager.Left, botManager.Right);
                     LogManager.UpdateMetadata(logTakenAction: false);
                     LogManager.StartGameLog();
 
@@ -350,7 +349,7 @@ namespace SumoManager
         // Call this when we need to trigger OnBattleChanged immediately
         private void BroadcastBattleData()
         {
-            Bot.OnBattleStateChanged(CurrentState);
+            GetComponent<BotManager>()?.OnBattleStateChanged(CurrentState);
             Actions[OnBattleChanged].Invoke(new ActionParameter(battleParam: Battle));
         }
         #endregion

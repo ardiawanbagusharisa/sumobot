@@ -19,7 +19,7 @@ namespace SumoManager
         RightPlayer,
     }
 
-    public class LogManager
+    public class LogManager : MonoBehaviour
     {
         #region Log structures properties
         [Serializable]
@@ -191,20 +191,14 @@ namespace SumoManager
             SaveBattle();
         }
 
+        public static void SetPlayerBots(Bot left, Bot right)
+        {
+            battleLog.LeftPlayerStats.Bot = left.ID;
+            battleLog.RightPlayerStats.Bot = right.ID;
+        }
+
         public static void UpdateMetadata(bool logTakenAction = true)
         {
-            if (BattleManager.Instance.Bot.IsEnable)
-            {
-                Bot leftBot = BattleManager.Instance.Bot.Left;
-                Bot rightBot = BattleManager.Instance.Bot.Right;
-
-                if (leftBot != null)
-                    battleLog.LeftPlayerStats.Bot = leftBot?.ID ?? "";
-
-                if (rightBot != null)
-                    battleLog.RightPlayerStats.Bot = rightBot?.ID ?? "";
-            }
-
             battleLog.LeftPlayerStats.SkillType = BattleManager.Instance.Battle.LeftPlayer.Skill.Type.ToString();
             battleLog.RightPlayerStats.SkillType = BattleManager.Instance.Battle.RightPlayer.Skill.Type.ToString();
 

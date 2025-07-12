@@ -13,6 +13,7 @@ namespace SumoBot
         public override SkillType SkillType => SkillType.Boost;
 
         public string Name => "GA";
+
         public float EvaluationInterval = 5f;
         public float ActionInterval = 0.4f;
 
