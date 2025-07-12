@@ -51,7 +51,6 @@ namespace SumoCore
         #endregion
 
         #region Runtime (readonly) Properties
-        public Bot Bot;
         public bool isInputDisabled = false;
         public Vector2 LastLinearVelocity { get; private set; } = Vector2.zero;
         public float LastAngularVelocity => robotRigidBody.angularVelocity;
@@ -86,7 +85,6 @@ namespace SumoCore
         #region Unity Methods
         private void Awake()
         {
-            Bot = GetComponents<Bot>()?.FirstOrDefault((x) => x.enabled);
             robotRigidBody = GetComponent<Rigidbody2D>();
             reservedMoveSpeed = MoveSpeed;
             reservedDashSpeed = DashSpeed;

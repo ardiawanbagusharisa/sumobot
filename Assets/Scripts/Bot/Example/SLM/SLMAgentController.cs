@@ -1,4 +1,3 @@
-using System.Collections;
 using UnityEngine;
 using System.Text;
 using UnityEngine.Networking;
@@ -7,6 +6,7 @@ using System.Collections.Generic;
 using SumoCore;
 using SumoManager;
 using SumoBot;
+using System.Threading.Tasks;
 
 public class SLMAgentController : Bot
 {
@@ -82,16 +82,13 @@ public class SLMAgentController : Bot
             }
             else
             {
-                StartCoroutine(RequestStrategy());
+                _ = RequestStrategyAsync();
             }
         }
     }
 
-    IEnumerator RequestStrategy()
+    async Task RequestStrategyAsync()
     {
-        string response = "";
-
-        // === Build context window: concatenation of last N instructions ===
         string situationStr = BuildSituationString();
         contextBuffer.Enqueue(situationStr);
         if (contextBuffer.Count > contextWindow)
@@ -100,27 +97,28 @@ public class SLMAgentController : Bot
         string jsonPayload = "{\"context_input\": \"" + contextInput + "\"}";
 
         byte[] bodyRaw = Encoding.UTF8.GetBytes(jsonPayload);
-
         using UnityWebRequest req = new UnityWebRequest(SLMApiUrl, "POST");
         req.uploadHandler = new UploadHandlerRaw(bodyRaw);
         req.downloadHandler = new DownloadHandlerBuffer();
         req.SetRequestHeader("Content-Type", "application/json");
-        yield return req.SendWebRequest();
+
+        var operation = req.SendWebRequest();
+
+        while (!operation.isDone)
+            await Task.Yield(); // wait for completion
 
         if (req.result == UnityWebRequest.Result.Success)
         {
-            response = req.downloadHandler.text;
-
-            // === Parsing response strategy ===
+            string response = req.downloadHandler.text;
             string[] strategies = ParseStrategiesFromJson(response);
 
-            // Split combo actions, order priority (turn > dash > accelerate > boost)
             var actions = strategies
                 .SelectMany(strat => strat.Contains("+")
                     ? strat.Split('+').Select(s => s.Trim().ToLower())
                     : new string[] { strat.Trim().ToLower() })
                 .ToList();
 
+            // Sort by priority
             actions.Sort((a, b) =>
             {
                 if (a.StartsWith("turn") && !b.StartsWith("turn")) return -1;
@@ -133,16 +131,14 @@ public class SLMAgentController : Bot
             });
 
             pendingActions = new Queue<string>(actions);
-
             Debug.Log("[SLM] Queued actions: " + string.Join(", ", actions));
         }
         else
         {
-            Debug.LogWarning("SLMAgentController: Request failed: " + req.error + " " + req.downloadHandler.text);
+            Debug.LogWarning("SLM request failed: " + req.error + " " + req.downloadHandler.text);
         }
 
         Debug.Log("[SLM] Payload: " + jsonPayload);
-        Debug.Log("[SLM] Response: " + response);
     }
 
     string BuildSituationString()

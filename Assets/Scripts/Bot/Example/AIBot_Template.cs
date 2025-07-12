@@ -5,10 +5,6 @@ using SumoManager;
 
 namespace SumoBot
 {
-    // [CreateAssetMenu(fileName = "BOT_Template", menuName = "Bot/Template")]
-    // 1. Uncomment the above line if you are ready with this script
-    // 2. Generate this script via Assets -> Create -> Bot -> Template
-    // 3. Then assign the generated ScriptableObject to [LeftBot] or [RightBot] in [BattleManager] scene object via Unity Inspector
     public class AIBot_Template : Bot
     {
         public override string ID => "Dummy";
