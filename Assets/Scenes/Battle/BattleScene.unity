@@ -16019,7 +16019,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 01a1d4e8448fd40dda16697ad78845aa, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  IsEnable: 1
+  IsEnable: 0
   IsScriptable: 1
   Left: {fileID: 715032728}
   Right: {fileID: 1709403126}
