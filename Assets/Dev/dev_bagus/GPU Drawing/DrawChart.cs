@@ -119,13 +119,15 @@ public class Chart : MonoBehaviour
             {
                 Vector2 start = new Vector2(x, _paddingBottom);
                 Vector2 end = new Vector2(x, y);
-                DrawLine(start, end, _brushColour, _brushSize, _wiggleSize);
+                if(i > 0 && i < dataCount - 1)
+                    DrawLine(start, end, _brushColour, _brushSize, _wiggleSize);
             }
             else if (_chartType == ChartType.Line && i > 0)
             {
                 float x0 = _paddingLeft + (i - 1) / (float)(dataCount - 1) * chartWidth;
                 float y0 = _paddingBottom + (_chartData[i - 1] - minValue) / (maxValue - minValue) * chartHeight;
-                DrawLine(new Vector2(x0, y0), new Vector2(x, y), _brushColour, _brushSize, _wiggleSize);
+                if (i > 1 && i < dataCount - 1)
+                    DrawLine(new Vector2(x0, y0), new Vector2(x, y), _brushColour, _brushSize, _wiggleSize);
             }
         }
     }

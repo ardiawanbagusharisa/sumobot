@@ -172,7 +172,7 @@ MonoBehaviour:
   _backgroundColour: {r: 0.0627451, g: 0.8509804, b: 0.7607843, a: 1}
   _brushColour: {r: 0.0627451, g: 0.8509804, b: 0.7607843, a: 1}
   _gridColour: {r: 1, g: 1, b: 1, a: 1}
-  _brushSize: 4
+  _brushSize: 3
   _wiggleSize: 1
   _fontSize: 12
   _chartType: 0
