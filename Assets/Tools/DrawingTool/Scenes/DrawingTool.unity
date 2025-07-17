@@ -170,7 +170,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 0.90139884, g: 1, b: 0.740566, a: 1}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -699,25 +699,13 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 5327479153424619098}
-        m_TargetAssemblyTypeName: ColorPaletteGenerator, Assembly-CSharp
-        m_MethodName: GeneratePalette
+      - m_Target: {fileID: 6406439514804638057}
+        m_TargetAssemblyTypeName: DrawManager, Assembly-CSharp
+        m_MethodName: InitPalette
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
           m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
-      - m_Target: {fileID: 448685882755912692}
-        m_TargetAssemblyTypeName: ColorPaletteGenerator, Assembly-CSharp
-        m_MethodName: 
-        m_Mode: 1
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: 
           m_IntArgument: 0
           m_FloatArgument: 0
           m_StringArgument: 
@@ -1239,7 +1227,7 @@ GameObject:
   - component: {fileID: 1973611537}
   - component: {fileID: 1973611536}
   m_Layer: 5
-  m_Name: Grid
+  m_Name: CanvasGrid
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1258,7 +1246,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 0.54901963, g: 0.70980394, b: 0.9607843, a: 1}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -1697,7 +1685,6 @@ GameObject:
   m_Component:
   - component: {fileID: 6705066562332490451}
   - component: {fileID: 4160039186343359663}
-  - component: {fileID: 5327479153424619098}
   m_Layer: 5
   m_Name: ColorPalette
   m_TagString: Untagged
@@ -1778,19 +1765,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 912094324747825620}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 6406439514804638057}
-        m_TargetAssemblyTypeName: DrawManager, Assembly-CSharp
-        m_MethodName: ClickingButton
-        m_Mode: 6
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 1
-        m_CallState: 2
+      m_Calls: []
 --- !u!1 &698855116807161964
 GameObject:
   m_ObjectHideFlags: 0
@@ -1940,19 +1915,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 3217159883011088348}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 6406439514804638057}
-        m_TargetAssemblyTypeName: DrawManager, Assembly-CSharp
-        m_MethodName: ClickingButton
-        m_Mode: 6
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 1
-        m_CallState: 2
+      m_Calls: []
 --- !u!222 &952280547438292810
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -2176,19 +2139,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 4393079124775907527}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 6406439514804638057}
-        m_TargetAssemblyTypeName: DrawManager, Assembly-CSharp
-        m_MethodName: ClickingButton
-        m_Mode: 6
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 1
-        m_CallState: 2
+      m_Calls: []
 --- !u!222 &1190158304854112919
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -2270,19 +2221,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 114014833221169867}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 6406439514804638057}
-        m_TargetAssemblyTypeName: DrawManager, Assembly-CSharp
-        m_MethodName: ClickingButton
-        m_Mode: 6
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 1
-        m_CallState: 2
+      m_Calls: []
 --- !u!1 &1407783400655349226
 GameObject:
   m_ObjectHideFlags: 0
@@ -2391,19 +2330,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 3674136225499438047}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 6406439514804638057}
-        m_TargetAssemblyTypeName: DrawManager, Assembly-CSharp
-        m_MethodName: ClickingButton
-        m_Mode: 6
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 1
-        m_CallState: 2
+      m_Calls: []
 --- !u!224 &1687295489972103404
 RectTransform:
   m_ObjectHideFlags: 0
@@ -2467,19 +2394,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 2478575021890813116}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 6406439514804638057}
-        m_TargetAssemblyTypeName: DrawManager, Assembly-CSharp
-        m_MethodName: ClickingButton
-        m_Mode: 6
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 1
-        m_CallState: 2
+      m_Calls: []
 --- !u!222 &1740385043950094990
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -2531,19 +2446,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 4712405572943876007}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 6406439514804638057}
-        m_TargetAssemblyTypeName: DrawManager, Assembly-CSharp
-        m_MethodName: ClickingButton
-        m_Mode: 6
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 1
-        m_CallState: 2
+      m_Calls: []
 --- !u!114 &1778224537175124395
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2636,19 +2539,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 8016934011787527990}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 6406439514804638057}
-        m_TargetAssemblyTypeName: DrawManager, Assembly-CSharp
-        m_MethodName: ClickingButton
-        m_Mode: 6
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 1
-        m_CallState: 2
+      m_Calls: []
 --- !u!114 &1931857277754064905
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2782,19 +2673,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 2972299965312273700}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 6406439514804638057}
-        m_TargetAssemblyTypeName: DrawManager, Assembly-CSharp
-        m_MethodName: ClickingButton
-        m_Mode: 6
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 1
-        m_CallState: 2
+      m_Calls: []
 --- !u!114 &2314711303617107987
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2838,19 +2717,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 5729870670454449834}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 6406439514804638057}
-        m_TargetAssemblyTypeName: DrawManager, Assembly-CSharp
-        m_MethodName: ClickingButton
-        m_Mode: 6
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 1
-        m_CallState: 2
+      m_Calls: []
 --- !u!222 &2329123847134258755
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -2997,19 +2864,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 871763946903372964}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 6406439514804638057}
-        m_TargetAssemblyTypeName: DrawManager, Assembly-CSharp
-        m_MethodName: ClickingButton
-        m_Mode: 6
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 1
-        m_CallState: 2
+      m_Calls: []
 --- !u!224 &2649839476695632233
 RectTransform:
   m_ObjectHideFlags: 0
@@ -3127,7 +2982,6 @@ GameObject:
   m_Component:
   - component: {fileID: 4654952825097034954}
   - component: {fileID: 3414392405979634011}
-  - component: {fileID: 4892412329023490741}
   m_Layer: 5
   m_Name: SliderWiggle
   m_TagString: Untagged
@@ -3755,19 +3609,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 1778224537175124395}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 6406439514804638057}
-        m_TargetAssemblyTypeName: DrawManager, Assembly-CSharp
-        m_MethodName: ClickingButton
-        m_Mode: 6
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 1
-        m_CallState: 2
+      m_Calls: []
 --- !u!114 &4160039186343359663
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3854,19 +3696,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 7037668509115736009}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 6406439514804638057}
-        m_TargetAssemblyTypeName: DrawManager, Assembly-CSharp
-        m_MethodName: ClickingButton
-        m_Mode: 6
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 1
-        m_CallState: 2
+      m_Calls: []
 --- !u!114 &4393079124775907527
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4105,20 +3935,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &4892412329023490741
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2865636367618096088}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 40e66fe5dd82a134eb67f3076a92448d, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  isInUse: 0
-  slider: {fileID: 3414392405979634011}
 --- !u!222 &4934146706733955359
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -4227,19 +4043,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 2949439716032354819}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 6406439514804638057}
-        m_TargetAssemblyTypeName: DrawManager, Assembly-CSharp
-        m_MethodName: ClickingButton
-        m_Mode: 6
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 1
-        m_CallState: 2
+      m_Calls: []
 --- !u!224 &5138131752147829551
 RectTransform:
   m_ObjectHideFlags: 0
@@ -4299,49 +4103,6 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 45, y: 17.0468}
   m_Pivot: {x: 0.5, y: 0.5}
---- !u!114 &5327479153424619098
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 448685882755912692}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: ceb63ac403201134dacecfcfc7b23141, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  inputTexture: {fileID: 2800000, guid: 7380a57273b890f41914b17540683323, type: 3}
-  colorPreview: {fileID: 82757220}
-  colorPalette:
-  - {fileID: 8085930307895506675}
-  - {fileID: 4041658802357187094}
-  - {fileID: 6472692580430227473}
-  - {fileID: 8869843792983702142}
-  - {fileID: 505486086258810016}
-  - {fileID: 8228533667427109009}
-  - {fileID: 950326815553413188}
-  - {fileID: 7908678831317996797}
-  - {fileID: 5519204168587826840}
-  - {fileID: 6028414243777256505}
-  - {fileID: 6972466410617121096}
-  - {fileID: 2314711303617107987}
-  - {fileID: 6885894839643671368}
-  - {fileID: 2615371795305264999}
-  - {fileID: 8776028042018897888}
-  - {fileID: 1859586971704323801}
-  - {fileID: 4230400981996278436}
-  - {fileID: 1196669246945256882}
-  - {fileID: 5123593879605031634}
-  - {fileID: 5710915933993272399}
-  - {fileID: 7895139520585078222}
-  - {fileID: 1736021435786495741}
-  - {fileID: 1651044726217633611}
-  - {fileID: 2295532400270544154}
-  - {fileID: 1759985089917599272}
-  - {fileID: 8586467593508854256}
-  - {fileID: 1153336792677250720}
-  - {fileID: 8042054151149021894}
 --- !u!224 &5364210658493836888
 RectTransform:
   m_ObjectHideFlags: 0
@@ -4470,19 +4231,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 2664275125597270765}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 6406439514804638057}
-        m_TargetAssemblyTypeName: DrawManager, Assembly-CSharp
-        m_MethodName: ClickingButton
-        m_Mode: 6
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 1
-        m_CallState: 2
+      m_Calls: []
 --- !u!114 &5710915933993272399
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4526,19 +4275,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 8333901519368107817}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 6406439514804638057}
-        m_TargetAssemblyTypeName: DrawManager, Assembly-CSharp
-        m_MethodName: ClickingButton
-        m_Mode: 6
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 1
-        m_CallState: 2
+      m_Calls: []
 --- !u!114 &5729870670454449834
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4650,19 +4387,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 6999366979297360373}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 6406439514804638057}
-        m_TargetAssemblyTypeName: DrawManager, Assembly-CSharp
-        m_MethodName: ClickingButton
-        m_Mode: 6
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 1
-        m_CallState: 2
+      m_Calls: []
 --- !u!222 &6066438138995430855
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -4762,12 +4487,10 @@ MonoBehaviour:
   _drawComputeShader: {fileID: 7200000, guid: b7693c64b34d47349b558fab0883549a, type: 3}
   _backgroundColour: {r: 0.41509432, g: 0.41509432, b: 0.41509432, a: 1}
   _brushColour: {r: 0, g: 0, b: 0, a: 1}
-  _brushSizeSlider: {fileID: 8600657235060944584}
-  _wiggleSldier: {fileID: 4892412329023490741}
+  _brushSizeSlider: {fileID: 975088491955651752}
+  _wiggleSldier: {fileID: 3414392405979634011}
   _brushSize: 5
-  _wiggleSize: 0.9
-  _useSoftBrush: 0
-  _softnessLevel: 0.5
+  _wiggleSize: 1
   _isEraser: 0
   _isGridOn: 1
   _rawImage: {fileID: 7273371208057360871}
@@ -4776,12 +4499,44 @@ MonoBehaviour:
   _gridButton: {fileID: 1523765293}
   _pointerBrush: {fileID: 5231582790848978973}
   _rawImageGrid: {fileID: 1973611536}
-  _gridSpacing: 100
-  _paddingLeft: 20
-  _paddingRight: 20
-  _paddingTop: 20
-  _paddingBottom: 20
+  _gridSpacing: 75
+  _paddingLeft: 15
+  _paddingRight: 15
+  _paddingTop: 15
+  _paddingBottom: 15
   _gridColour: {r: 1, g: 1, b: 1, a: 1}
+  _paletteSourceTexture: {fileID: 2800000, guid: 7380a57273b890f41914b17540683323, type: 3}
+  _colorPreviewImage: {fileID: 82757220}
+  _numFixColors: 3
+  _paletteButtons:
+  - {fileID: 8085930307895506675}
+  - {fileID: 4041658802357187094}
+  - {fileID: 6472692580430227473}
+  - {fileID: 8869843792983702142}
+  - {fileID: 505486086258810016}
+  - {fileID: 8228533667427109009}
+  - {fileID: 950326815553413188}
+  - {fileID: 7908678831317996797}
+  - {fileID: 5519204168587826840}
+  - {fileID: 6028414243777256505}
+  - {fileID: 6972466410617121096}
+  - {fileID: 2314711303617107987}
+  - {fileID: 6885894839643671368}
+  - {fileID: 2615371795305264999}
+  - {fileID: 8776028042018897888}
+  - {fileID: 1859586971704323801}
+  - {fileID: 4230400981996278436}
+  - {fileID: 1196669246945256882}
+  - {fileID: 5123593879605031634}
+  - {fileID: 5710915933993272399}
+  - {fileID: 7895139520585078222}
+  - {fileID: 1736021435786495741}
+  - {fileID: 1651044726217633611}
+  - {fileID: 2295532400270544154}
+  - {fileID: 1759985089917599272}
+  - {fileID: 8586467593508854256}
+  - {fileID: 1153336792677250720}
+  - {fileID: 8042054151149021894}
 --- !u!224 &6421561805239934228
 RectTransform:
   m_ObjectHideFlags: 0
@@ -4902,19 +4657,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 7597652560967796285}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 6406439514804638057}
-        m_TargetAssemblyTypeName: DrawManager, Assembly-CSharp
-        m_MethodName: ClickingButton
-        m_Mode: 6
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 1
-        m_CallState: 2
+      m_Calls: []
 --- !u!224 &6585139904887453357
 RectTransform:
   m_ObjectHideFlags: 0
@@ -5221,19 +4964,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 6638498895055771258}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 6406439514804638057}
-        m_TargetAssemblyTypeName: DrawManager, Assembly-CSharp
-        m_MethodName: ClickingButton
-        m_Mode: 6
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 1
-        m_CallState: 2
+      m_Calls: []
 --- !u!1 &6934498255294933969
 GameObject:
   m_ObjectHideFlags: 0
@@ -5296,19 +5027,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 5484173925489554077}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 6406439514804638057}
-        m_TargetAssemblyTypeName: DrawManager, Assembly-CSharp
-        m_MethodName: ClickingButton
-        m_Mode: 6
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 1
-        m_CallState: 2
+      m_Calls: []
 --- !u!114 &6998239704174578364
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5469,7 +5188,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 0.54901963, g: 0.70980394, b: 0.9607843, a: 1}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -5610,19 +5329,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 6635143677438865800}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 6406439514804638057}
-        m_TargetAssemblyTypeName: DrawManager, Assembly-CSharp
-        m_MethodName: ClickingButton
-        m_Mode: 6
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 1
-        m_CallState: 2
+      m_Calls: []
 --- !u!114 &7908678831317996797
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5666,19 +5373,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 468292270540014024}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 6406439514804638057}
-        m_TargetAssemblyTypeName: DrawManager, Assembly-CSharp
-        m_MethodName: ClickingButton
-        m_Mode: 6
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 1
-        m_CallState: 2
+      m_Calls: []
 --- !u!114 &8016934011787527990
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5752,19 +5447,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 6737964413471905326}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 6406439514804638057}
-        m_TargetAssemblyTypeName: DrawManager, Assembly-CSharp
-        m_MethodName: ClickingButton
-        m_Mode: 6
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 1
-        m_CallState: 2
+      m_Calls: []
 --- !u!114 &8085930307895506675
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5808,19 +5491,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 8330400139153386858}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 6406439514804638057}
-        m_TargetAssemblyTypeName: DrawManager, Assembly-CSharp
-        m_MethodName: ClickingButton
-        m_Mode: 6
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 1
-        m_CallState: 2
+      m_Calls: []
 --- !u!1 &8117804867566731158
 GameObject:
   m_ObjectHideFlags: 0
@@ -5902,19 +5573,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 8608285587844461500}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 6406439514804638057}
-        m_TargetAssemblyTypeName: DrawManager, Assembly-CSharp
-        m_MethodName: ClickingButton
-        m_Mode: 6
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 1
-        m_CallState: 2
+      m_Calls: []
 --- !u!222 &8279067046942913998
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -6098,19 +5757,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 3769907915800003040}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 6406439514804638057}
-        m_TargetAssemblyTypeName: DrawManager, Assembly-CSharp
-        m_MethodName: ClickingButton
-        m_Mode: 6
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 1
-        m_CallState: 2
+      m_Calls: []
 --- !u!224 &8593698290839911738
 RectTransform:
   m_ObjectHideFlags: 0
@@ -6140,7 +5787,6 @@ GameObject:
   m_Component:
   - component: {fileID: 6625145302073176165}
   - component: {fileID: 975088491955651752}
-  - component: {fileID: 8600657235060944584}
   m_Layer: 5
   m_Name: SliderBrush
   m_TagString: Untagged
@@ -6148,20 +5794,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &8600657235060944584
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8600657235060944583}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 40e66fe5dd82a134eb67f3076a92448d, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  isInUse: 0
-  slider: {fileID: 975088491955651752}
 --- !u!114 &8608285587844461500
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6281,19 +5913,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 1931857277754064905}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 6406439514804638057}
-        m_TargetAssemblyTypeName: DrawManager, Assembly-CSharp
-        m_MethodName: ClickingButton
-        m_Mode: 6
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 1
-        m_CallState: 2
+      m_Calls: []
 --- !u!222 &8789253504615471970
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -6364,19 +5984,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 1026869073272205331}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 6406439514804638057}
-        m_TargetAssemblyTypeName: DrawManager, Assembly-CSharp
-        m_MethodName: ClickingButton
-        m_Mode: 6
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 1
-        m_CallState: 2
+      m_Calls: []
 --- !u!222 &8951120443954547673
 CanvasRenderer:
   m_ObjectHideFlags: 0
