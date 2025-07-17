@@ -169,25 +169,28 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _drawComputeShader: {fileID: 7200000, guid: b7693c64b34d47349b558fab0883549a, type: 3}
   _rawImage: {fileID: 4271651368565074784}
-  _backgroundColour: {r: 0.0627451, g: 0.8509804, b: 0.7607843, a: 1}
-  _brushColour: {r: 0.0627451, g: 0.8509804, b: 0.7607843, a: 1}
+  _backgroundColour: {r: 1, g: 1, b: 1, a: 1}
   _gridColour: {r: 1, g: 1, b: 1, a: 1}
-  _brushSize: 3
+  _brushSize: 2
   _wiggleSize: 1
-  _fontSize: 12
-  _chartType: 0
-  _chartData: []
+  _fontSize: 18
   _drawAxes: 1
   _drawGrid: 1
   _drawLabels: 1
   _labelFont: {fileID: 12800000, guid: e0e99e628350d7044928c4b687b38743, type: 3}
   _labelParent: {fileID: 604154051211063919}
-  _gridSpacing: 100
+  _xGridDataSpacing: 10
+  _yGridSpacing: 100
   _paddingLeft: 20
   _paddingRight: 20
   _paddingTop: 20
   _paddingBottom: 20
   _labelOffset: 10
+  _sidePanelParent: {fileID: 0}
+  _togglePrefab: {fileID: 3703373728151572334, guid: fb89e76dd405c784caed80b96f9e94af, type: 3}
+  _chartSeriesList: []
+  _paletteSourceTexture: {fileID: 2800000, guid: 7380a57273b890f41914b17540683323, type: 3}
+  _numFixColors: 0
 --- !u!1 &7289547368975962269
 GameObject:
   m_ObjectHideFlags: 0

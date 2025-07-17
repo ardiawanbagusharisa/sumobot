@@ -1,4 +1,6 @@
-﻿using UnityEngine;
+﻿using System;
+using System.Collections.Generic;
+using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
@@ -33,6 +35,13 @@ public class DrawManager : MonoBehaviour
     [SerializeField] private float _paddingBottom = 20f;
     [SerializeField] Color _gridColour = Color.white;
 
+    [Header("Color Palette Integration")]
+    [SerializeField] private Texture2D _paletteSourceTexture;
+    [SerializeField] private Image _colorPreviewImage;
+    [SerializeField] private int _numFixColors = 3;
+    [SerializeField] private List<Button> _paletteButtons = new List<Button>();
+
+    ColorPalette _colorPalette;
     Vector4 _previousMousePos;
     bool _isDrawing = false;
     RenderTexture _canvasRT;
@@ -67,7 +76,12 @@ public class DrawManager : MonoBehaviour
         if (_isGridOn) 
             DrawGrid();
         _gridButton.GetComponent<Image>().color = _isGridOn ? Color.white : Color.grey;
-    }
+
+        InitPalette();
+
+        _colorPreviewImage.color = _paletteButtons[0].GetComponent<Image>().color;
+        SetBrushColor(_colorPreviewImage.color);
+    }   
 
     void Update()
     {
@@ -267,5 +281,51 @@ public class DrawManager : MonoBehaviour
 #if UNITY_EDITOR
         UnityEditor.AssetDatabase.Refresh();
 #endif
+    }
+
+    // Also called from the button. 
+    public void InitPalette()
+    {
+        if (_paletteSourceTexture == null)
+        {
+            Debug.LogError("Drawing Color Source Texture is missing! Cannot generate palette.");
+            SetBrushColor(Color.black);
+            return;
+        }
+
+        _colorPalette = new ColorPalette(_paletteSourceTexture, _numFixColors);
+
+        if (_paletteButtons.Count == 0)
+        {
+            Debug.LogWarning("No color palette buttons assigned. Skipping palette assignment.");
+            SetBrushColor(Color.black);
+            return;
+        }
+
+        List<Color> generatedColors = _colorPalette.GenerateColors(_paletteButtons.Count);
+
+        for (int i = 0; i < _paletteButtons.Count; i++)
+        {
+            int index = i;
+            if (i >= generatedColors.Count) break;
+
+            Image btnImage = _paletteButtons[i].GetComponent<Image>();
+            btnImage.color = generatedColors[i];
+
+            _paletteButtons[i].onClick.RemoveAllListeners();
+            _paletteButtons[i].onClick.AddListener(() =>
+            {
+                _colorPreviewImage.color = generatedColors[index];
+                SetBrushColor(generatedColors[index]);
+                Debug.Log($"Picked color: {_paletteButtons[index]}");
+            });
+        }
+
+        if (generatedColors.Count > 0) 
+            SetBrushColor(generatedColors[0]); 
+        else 
+            SetBrushColor(Color.black); 
+
+        Debug.Log("Drawing tool palette initialized.");
     }
 }
