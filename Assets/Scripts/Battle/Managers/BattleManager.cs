@@ -362,8 +362,9 @@ namespace SumoManager
         // Call this when we need to trigger OnBattleChanged immediately
         private void BroadcastBattleData()
         {
-            GetComponent<BotManager>()?.OnBattleStateChanged(CurrentState);
-            Actions[OnBattleChanged].Invoke(new ActionParameter(battleParam: Battle));
+            Actions[OnBattleChanged].Invoke(new ActionParameter(
+                battleParam: Battle,
+                battleStateParam: CurrentState));
         }
         #endregion
     }
