@@ -16,11 +16,6 @@ namespace SumoInput
         Script,
     }
 
-    public class ExecuteResponse
-    {
-        
-    }
-
     public class InputProvider : MonoBehaviour
     {
         #region Input properties
@@ -172,25 +167,12 @@ namespace SumoInput
 
         public bool IsValid(ISumoAction action)
         {
-            Battle battle = BattleManager.Instance.Battle;
-            SumoController controller = PlayerSide == PlayerSide.Left ? battle.LeftPlayer : battle.RightPlayer;
-
             if (action is not DashAction && action is not SkillAction)
             {
                 float duration = action.Duration;
                 if (duration < ISumoAction.MinDuration)
                     throw new Exception($"Duration can't be < {ISumoAction.MinDuration} when you are using [{action.FullName}]");
             }
-
-            // if (action.Type == ActionType.TurnLeftWithAngle || action.Type == ActionType.TurnRightWithAngle)
-            // {
-            //     float param = (float)action.Angle;
-            //     float minAngle = controller.HalfTurnAngle.min;
-            //     float maxAngle = controller.HalfTurnAngle.max;
-            //     if (param < minAngle || param > maxAngle)
-            //         throw new Exception($"parameter can't be < {minAngle} or > {maxAngle} when you are using [{action.FullName}]");
-            // }
-
             return true;
         }
 

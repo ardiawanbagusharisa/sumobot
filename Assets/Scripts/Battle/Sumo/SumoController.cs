@@ -65,28 +65,13 @@ namespace SumoCore
         private EventLogger collisionLogger;
         private float time => BattleManager.Instance.ElapsedTime;
         // Derived 
-        public bool IsDashActive => LastActionTime[ActionType.Dash] != 0f && (LastActionTime[ActionType.Dash] + DashDuration) >= time;
-        public float DashCooldownTimer => LastActionTime[ActionType.Dash] + DashCooldown - time;
+        public bool IsDashActive => LastDashTime != 0f && (LastDashTime + DashDuration) >= time;
+        public float DashCooldownTimer => LastDashTime + DashCooldown - time;
         public float DashCooldownNormalized => 1 - DashCooldownTimer / DashCooldown;
         public bool IsDashOnCooldown => DashCooldownTimer >= 0f;
         public bool IsMovementDisabled => (BattleManager.Instance != null && BattleManager.Instance.CurrentState != BattleState.Battle_Ongoing) || moveLockTime > 0f;
+        public float LastDashTime = 0;
 
-        public Dictionary<ActionType, float> ActionLockTime { private set; get; } = new()
-        {
-            {ActionType.Accelerate,0f},
-            {ActionType.TurnLeft,0f},
-            {ActionType.TurnRight,0f},
-            {ActionType.Dash,0f}
-        };
-
-        public Dictionary<ActionType, float> LastActionTime { private set; get; } = new()
-        {
-            {ActionType.Accelerate,0f},
-            {ActionType.TurnLeft,0f},
-            {ActionType.TurnRight,0f},
-            {ActionType.Dash,0f}
-        };
- 
         // Events 
         public ActionRegistry Actions = new();
         public const string OnBounce = "OnBounce"; // [Side]
@@ -119,12 +104,6 @@ namespace SumoCore
 
             if (IsMovementDisabled)
                 moveLockTime -= Time.deltaTime;
-
-            foreach (var action in ActionLockTime.ToList())
-            {
-                if (action.Value > 0f)
-                    ActionLockTime[action.Key] = action.Value - Time.deltaTime;
-            }
         }
 
         void FixedUpdate()
@@ -175,7 +154,7 @@ namespace SumoCore
             robotRigidBody.angularVelocity = 0;
             isOutOfArena = false;
             LastLinearVelocity = Vector2.zero;
-            LastActionTime.ToList().ForEach((x) => LastActionTime[x.Key] = 0);
+            LastDashTime = 0;
             Skill.Reset();
         }
         #endregion
@@ -184,12 +163,6 @@ namespace SumoCore
         public void Log(ISumoAction action)
         {
             LogManager.CallActionLog(Side, action);
-        }
-
-        public void SetLockTime(ISumoAction action)
-        {
-            ActionLockTime[action.Type] = action.Duration;
-            LastActionTime[action.Type] = time;
         }
 
         public void StopCoroutineAction()
@@ -205,26 +178,26 @@ namespace SumoCore
             if (IsMovementDisabled || IsDashActive)
                 return;
 
-            SetLockTime(action);
-
             if (accelerateOverTimeCoroutine != null)
             {
                 StopCoroutine(accelerateOverTimeCoroutine);
                 accelerateOverTimeCoroutine = null;
             }
 
+            Log(action);
+
             accelerateOverTimeCoroutine = StartCoroutine(AccelerateRoutine(action));
         }
 
         public void Turn(ISumoAction action)
         {
-            SetLockTime(action);
-
             if (turnOverAngleCoroutine != null)
             {
                 StopCoroutine(turnOverAngleCoroutine);
                 turnOverAngleCoroutine = null;
             }
+
+            Log(action);
 
             turnOverAngleCoroutine = StartCoroutine(TurnRoutine(action));
         }
@@ -234,17 +207,17 @@ namespace SumoCore
             if (IsMovementDisabled || IsDashOnCooldown)
                 return;
 
-            SetLockTime(action);
 
             Log(action);
 
+            LastDashTime = time;
             if (accelerateOverTimeCoroutine != null)
             {
                 StopCoroutine(accelerateOverTimeCoroutine);
                 accelerateOverTimeCoroutine = null;
             }
-
             robotRigidBody.linearVelocity = transform.up * DashSpeed;
+
             Log(action);
         }
 
@@ -268,8 +241,6 @@ namespace SumoCore
 
             float startAngle = robotRigidBody.rotation;
             float rotatedAngle = 0f;
-
-            Log(action);
 
             while (Mathf.Abs(rotatedAngle) < Mathf.Abs(totalAngle) &&
                    BattleManager.Instance != null && BattleManager.Instance.CurrentState == BattleState.Battle_Ongoing &&
@@ -295,7 +266,6 @@ namespace SumoCore
             float elapsedTime = 0f;
             float speed = MoveSpeed;
 
-            Log(action);
             while (elapsedTime < action.Duration && BattleManager.Instance.CurrentState == BattleState.Battle_Ongoing && !IsMovementDisabled)
             {
                 robotRigidBody.linearVelocity = transform.up.normalized * speed;
@@ -441,7 +411,7 @@ namespace SumoCore
                 return;
             }
 
-            if (Time.time > LastActionTime[ActionType.Dash] + StopDelay)
+            if (Time.time > LastDashTime + StopDelay)
             {
                 robotRigidBody.linearVelocity = Vector2.Lerp(robotRigidBody.linearVelocity, Vector2.zero, SlowDownRate * Time.deltaTime);
                 robotRigidBody.angularVelocity = Mathf.Lerp(robotRigidBody.angularVelocity, 0, SlowDownRate * Time.deltaTime);
