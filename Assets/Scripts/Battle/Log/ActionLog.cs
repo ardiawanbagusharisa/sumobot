@@ -12,17 +12,14 @@ namespace SumoLog
     {
         [DoNotSerialize]
         public ISumoAction Action;
-        public float Duration;
 
         public new Dictionary<string, dynamic> ToMap()
         {
             return new()
             {
                 { "Name", Action.Name},
-                { "Parameter", Action.Param},
+                { "Duration", Action.Duration},
                 { "Reason", Action.Reason},
-
-                { "Duration", Duration},
                 { "Robot", base.ToMap()},
             };
         }
@@ -33,13 +30,13 @@ namespace SumoLog
             Vector2 temPosition = new((float)(double)robot["Position"]["X"], (float)(double)robot["LinearVelocity"]["Y"]);
 
             var name = (string)map?["Name"];
-            var param = (float?)(double?)map?["Parameter"] ?? null;
+            var angle = (float?)(double?)map?["Angle"] ?? null;
+            var duration = (float?)(double?)map?["Duration"] ?? 0f;
 
-            Debug.Log($"name {name} | {param}");
+            Debug.Log($"{name} | {duration} | {angle}");
             ActionLog result = new()
             {
-                Action = ActionFactory.Parse(name, param),
-                Duration = (float)(double)map?["Duration"],
+                Action = ActionFactory.Parse(name, duration, angle),
                 AngularVelocity = (float)robot?["AngularVelocity"],
                 LinearVelocity = tempLinearVelocity,
                 Position = temPosition,
@@ -50,7 +47,7 @@ namespace SumoLog
 
         public static class ActionFactory
         {
-            public static ISumoAction Parse(string name, float? parameter)
+            public static ISumoAction Parse(string name, float duration, float? angle)
             {
                 if (string.IsNullOrEmpty(name))
                     return null;
@@ -59,22 +56,24 @@ namespace SumoLog
                 if (parts.Length != 2)
                     return null;
 
-                string action = parts[1];    // e.g., "TurnLeftWithAngle"
+                string action = parts[1];
 
                 if (Enum.TryParse(action, out ActionType type))
                 {
                     switch (type)
                     {
-                        case ActionType.TurnLeftWithAngle:
-                            return new TurnAction(InputType.Script, ActionType.TurnLeftWithAngle, parameter ?? 0f);
-                        case ActionType.TurnRightWithAngle:
-                            return new TurnAction(InputType.Script, ActionType.TurnRightWithAngle, parameter ?? 0f);
+                        case ActionType.TurnRight:
+                            return new TurnAction(InputType.Script, ActionType.TurnLeft, duration);
+                        case ActionType.TurnLeft:
+                            return new TurnAction(InputType.Script, ActionType.TurnRight, duration);
                         case ActionType.Accelerate:
-                            return new AccelerateAction(InputType.Script);
-                        case ActionType.AccelerateWithTime:
-                            return new AccelerateAction(InputType.Script, parameter ?? 0f);
+                            return new AccelerateAction(InputType.Script, duration);
                         case ActionType.Dash:
                             return new DashAction(InputType.Script);
+                        case ActionType.SkillBoost:
+                            return new SkillAction(InputType.Script, ActionType.SkillBoost);
+                        case ActionType.SkillStone:
+                            return new SkillAction(InputType.Script, ActionType.SkillStone);
                         default:
                             Debug.LogWarning($"Unhandled action type: {type}");
                             break;

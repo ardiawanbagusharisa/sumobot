@@ -61,14 +61,23 @@ public class ActionParameter
     public bool Bool;
     public float Float;
     public Battle Battle;
+    public SkillType SkillType;
 
-    public ActionParameter(ISumoAction actionParam = null, PlayerSide? sideParam = null, bool? boolParam = null, float? floatParam = null, Battle battleParam = null)
+    public ActionParameter(
+        ISumoAction actionParam = null,
+        PlayerSide? sideParam = null,
+        bool? boolParam = null,
+        float? floatParam = null,
+        Battle battleParam = null,
+        SkillType? skillType = null)
     {
 
         if (sideParam != null)
-            Action = actionParam;
-        if (sideParam != null)
             Side = (PlayerSide)sideParam;
+        if (skillType != null)
+            SkillType = (SkillType)skillType;
+        if (sideParam != null)
+            Action = actionParam;
         if (boolParam != null)
             Bool = (bool)boolParam;
         if (floatParam != null)

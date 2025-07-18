@@ -15,6 +15,11 @@ TagManager:
   - Button/Dash
   - Button/Stone
   - Button/Boost
+  - Robot/Triangle
+  - Robot/Wheel
+  - Robot/Body
+  - Robot/Eye
+  - Robot/Accessory
   layers:
   - Default
   - TransparentFX

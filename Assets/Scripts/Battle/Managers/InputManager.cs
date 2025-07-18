@@ -71,8 +71,9 @@ namespace SumoManager
             }
 
             SumoAPI api = CreateAPI(controller.Side);
-            InputProvider inputProvider = GetInputProvider(controller, selectedInputObject);
 
+            InputProvider inputProvider = GetInputProvider(controller, selectedInputObject);
+            inputProvider.API = api;
             controller.InputProvider = inputProvider;
 
             // Additional initialization
@@ -80,15 +81,15 @@ namespace SumoManager
             {
                 case InputType.UI:
                 case InputType.Keyboard:
-                    // Enable for test-only
-                    SetupBots(controller, api);
+                    // Test Onyl
+                    botManager.Init(controller);
                     break;
                 case InputType.Script:
-                    SetupBots(controller, api);
+                    botManager.Init(controller);
                     break;
                 case InputType.LiveCommand:
-                    // Enable for test-only
-                    SetupBots(controller, api);
+                    // Test Onyl
+                    botManager.Init(controller);
                     liveCommandObject.GetComponent<CommandSystem>().InitCommandSystem(api);
                     break;
             }
@@ -100,7 +101,7 @@ namespace SumoManager
             InputProvider inputProvider;
             if (battleInputType == InputType.Script)
             {
-                if (GetComponent<BotManager>().IsEnable)
+                if (botManager.IsEnable)
                 {
                     InputProvider scriptInputProvider = controller.AddComponent<InputProvider>();
                     scriptInputProvider.PlayerSide = controller.Side;
@@ -130,41 +131,13 @@ namespace SumoManager
 
             if (side == PlayerSide.Left)
             {
-                api = new SumoAPI(leftPlayer, rightPlayer);
+                api = new(leftPlayer, rightPlayer);
             }
             else
             {
-                api = new SumoAPI(rightPlayer, leftPlayer);
+                api = new(rightPlayer, leftPlayer);
             }
             return api;
-        }
-
-        private void SetupBots(SumoController controller, SumoAPI api)
-        {
-            if (!botManager.IsEnable) return;
-
-            SumoController leftPlayer = BattleManager.Instance.Battle.LeftPlayer;
-            SumoController rightPlayer = BattleManager.Instance.Battle.RightPlayer;
-
-            // Handle if the Bot is attached to left and right player (MonoBehaviour)
-            if (!botManager.IsScriptable)
-            {
-                botManager.Left = leftPlayer.GetComponentInChildren<Bot>();
-                botManager.Right = rightPlayer.GetComponentInChildren<Bot>();
-            }
-
-            if (botManager.Left != null && controller.Side == PlayerSide.Left)
-            {
-                botManager.Left.SetProvider(controller.InputProvider);
-                botManager.Left.OnBotInit(controller.Side, api);
-                leftPlayer.Actions[SumoController.OnPlayerBounce].Subscribe(botManager.Left.OnBotCollision);
-            }
-            else if (botManager.Right != null && controller.Side == PlayerSide.Right)
-            {
-                botManager.Right.SetProvider(controller.InputProvider);
-                botManager.Right.OnBotInit(controller.Side, api);
-                rightPlayer.Actions[SumoController.OnPlayerBounce].Subscribe(botManager.Right.OnBotCollision);
-            }
         }
         #endregion
     }

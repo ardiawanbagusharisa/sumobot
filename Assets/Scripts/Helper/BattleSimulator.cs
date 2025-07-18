@@ -23,6 +23,7 @@ namespace SumoHelper
 
             Time.timeScale = TimeScale;
             Application.runInBackground = true;
+            LogManager.UpdateMetadata();
             // Time.fixedDeltaTime = 0.02f / TimeScale;
             StartCoroutine(RunSimulations());
         }

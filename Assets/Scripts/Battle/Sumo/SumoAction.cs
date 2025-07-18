@@ -1,13 +1,18 @@
 using SumoInput;
+using UnityEngine;
 
 namespace SumoCore
 {
     #region Action abstract class and Enums 
     public abstract class ISumoAction
     {
+        public const float MinDuration = 0.1f;
+
         public InputType InputUsed;
         public string Reason;
-        public object Param;
+
+        [Min(MinDuration)]
+        public float Duration = MinDuration;
         public ActionType Type;
 
         public abstract void Execute(SumoController controller);
@@ -16,9 +21,7 @@ namespace SumoCore
         {
             get
             {
-                var className = GetType().Name;
-                var name = className.EndsWith("Action") ? className.Remove(className.Length - "Action".Length) : className;
-                return $"{name}_{Type}";
+                return $"{Type}";
             }
         }
 
@@ -26,9 +29,10 @@ namespace SumoCore
         {
             get
             {
-                if (Param == null)
+                if (this is not DashAction || this is not SkillAction)
+                    return $"{Name}_{Duration}";
+                else
                     return Name;
-                return $"{Name}_({Param})";
             }
         }
     }
@@ -36,12 +40,9 @@ namespace SumoCore
     public enum ActionType
     {
         Accelerate,
-        AccelerateWithTime,
         Dash,
         TurnLeft,
         TurnRight,
-        TurnLeftWithAngle,
-        TurnRightWithAngle,
         SkillBoost,
         SkillStone,
     }
@@ -51,17 +52,13 @@ namespace SumoCore
     public class AccelerateAction : ISumoAction
     {
 
-        public AccelerateAction(InputType inputType, float? time = null)
+        public AccelerateAction(InputType inputType, float? duration = null)
         {
             InputUsed = inputType;
+            Type = ActionType.Accelerate;
 
-            if (time != null)
-            {
-                Type = ActionType.AccelerateWithTime;
-                Param = time;
-            }
-            else
-                Type = ActionType.Accelerate;
+            if (duration != null)
+                Duration = (float)duration;
         }
 
         public override void Execute(SumoController controller)
@@ -73,11 +70,13 @@ namespace SumoCore
     public class TurnAction : ISumoAction
     {
 
-        public TurnAction(InputType inputType, ActionType type, float? angle = null)
+        public TurnAction(InputType inputType, ActionType type, float? duration = null)
         {
-            Param = angle;
             Type = type;
             InputUsed = inputType;
+
+            if (duration != null)
+                Duration = (float)duration;
         }
 
         public override void Execute(SumoController controller)
