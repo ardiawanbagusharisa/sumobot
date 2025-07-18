@@ -246,7 +246,7 @@ GameObject:
   - component: {fileID: 22014465}
   m_Layer: 5
   m_Name: Body
-  m_TagString: Untagged
+  m_TagString: Robot/Body
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -895,7 +895,7 @@ GameObject:
   - component: {fileID: 116250961}
   m_Layer: 5
   m_Name: Accessory
-  m_TagString: Untagged
+  m_TagString: Robot/Accessory
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -1803,7 +1803,7 @@ GameObject:
   - component: {fileID: 269909112}
   m_Layer: 5
   m_Name: Accessory
-  m_TagString: Untagged
+  m_TagString: Robot/Accessory
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -4808,12 +4808,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   ElapsedTime: 0
-  Name: MCTS
-  ActionInterval: 0.1
-  SimulationTime: 0.25
-  LowestScoreToReInit: -500
-  ReinitPerIters: 2
-  Iterations: 100
+  config:
+    ScriptInterval: 0.2
+    SimulationTime: 0.3
+    ResetIterationAt: 10
+    Iterations: 80
+    ScoreLimit: -100
+    Name: MCTS Example
+    DefaultSkillType: 0
 --- !u!1 &723693306
 GameObject:
   m_ObjectHideFlags: 0
@@ -4939,7 +4941,7 @@ MonoBehaviour:
   m_margin: {x: 0, y: 0, z: 0, w: 0}
   m_isUsingLegacyAnimationComponent: 0
   m_isVolumetricText: 0
-  m_hasFontAssetChanged: 1
+  m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
 --- !u!222 &723693309
@@ -5018,16 +5020,27 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: -90
       objectReference: {fileID: 0}
+    - target: {fileID: 4608653794038210764, guid: e48db3198e16346af866a9419a1964cc, type: 3}
+      propertyPath: m_Sprite
+      value: 
+      objectReference: {fileID: 21300000, guid: 20854f7a39a8e354e9afec79c7f8f51a, type: 3}
+    - target: {fileID: 5583292103176566768, guid: e48db3198e16346af866a9419a1964cc, type: 3}
+      propertyPath: DashSpeed
+      value: 7
+      objectReference: {fileID: 0}
     - target: {fileID: 6772123260480660960, guid: e48db3198e16346af866a9419a1964cc, type: 3}
       propertyPath: m_Sprite
       value: 
-      objectReference: {fileID: 21300000, guid: 86f78b9317f88e44596424924b6655a4, type: 3}
+      objectReference: {fileID: 21300000, guid: 494ae397be5bc634eb90c50e21ea1750, type: 3}
     m_RemovedComponents:
     - {fileID: 7192337878665551969, guid: e48db3198e16346af866a9419a1964cc, type: 3}
     - {fileID: 1335788416037175078, guid: e48db3198e16346af866a9419a1964cc, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 1488574921577525681, guid: e48db3198e16346af866a9419a1964cc, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 726563279}
   m_SourcePrefab: {fileID: 100100000, guid: e48db3198e16346af866a9419a1964cc, type: 3}
 --- !u!4 &726563273 stripped
 Transform:
@@ -5039,6 +5052,20 @@ GameObject:
   m_CorrespondingSourceObject: {fileID: 1488574921577525681, guid: e48db3198e16346af866a9419a1964cc, type: 3}
   m_PrefabInstance: {fileID: 726563272}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &726563279
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 726563274}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 51d33e70b8b564b4bbdb1d7183b1dd97, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  Side: 0
+  UI: 0
 --- !u!1 &728913078
 GameObject:
   m_ObjectHideFlags: 0
@@ -5808,6 +5835,7 @@ GameObject:
   - component: {fileID: 844236639}
   - component: {fileID: 844236641}
   - component: {fileID: 844236640}
+  - component: {fileID: 844236642}
   m_Layer: 5
   m_Name: PlayerHUD
   m_TagString: Untagged
@@ -5877,6 +5905,20 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 844236638}
   m_CullTransparentMesh: 1
+--- !u!114 &844236642
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 844236638}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 51d33e70b8b564b4bbdb1d7183b1dd97, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  Side: 2
+  UI: 1
 --- !u!1 &846794195
 GameObject:
   m_ObjectHideFlags: 0
@@ -6171,7 +6213,7 @@ MonoBehaviour:
   m_margin: {x: 0, y: 0, z: 0, w: 0}
   m_isUsingLegacyAnimationComponent: 0
   m_isVolumetricText: 0
-  m_hasFontAssetChanged: 1
+  m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
 --- !u!222 &874083790
@@ -7100,7 +7142,7 @@ GameObject:
   - component: {fileID: 998728124}
   m_Layer: 5
   m_Name: Body
-  m_TagString: Untagged
+  m_TagString: Robot/Body
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -7583,7 +7625,7 @@ GameObject:
   - component: {fileID: 1104582365}
   m_Layer: 5
   m_Name: Body
-  m_TagString: Untagged
+  m_TagString: Robot/Body
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -8280,7 +8322,7 @@ GameObject:
   - component: {fileID: 1163918603}
   m_Layer: 5
   m_Name: Eye
-  m_TagString: Untagged
+  m_TagString: Robot/Eye
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -8701,7 +8743,7 @@ GameObject:
   - component: {fileID: 1197948194}
   m_Layer: 5
   m_Name: Accessory
-  m_TagString: Untagged
+  m_TagString: Robot/Accessory
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -10916,7 +10958,7 @@ GameObject:
   - component: {fileID: 1520274149}
   m_Layer: 5
   m_Name: Wheel
-  m_TagString: Untagged
+  m_TagString: Robot/Wheel
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -11263,7 +11305,7 @@ GameObject:
   - component: {fileID: 1566820444}
   m_Layer: 5
   m_Name: Wheel
-  m_TagString: Untagged
+  m_TagString: Robot/Wheel
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -12518,7 +12560,7 @@ GameObject:
   - component: {fileID: 1680939038}
   m_Layer: 5
   m_Name: Wheel
-  m_TagString: Untagged
+  m_TagString: Robot/Wheel
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -12593,12 +12635,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   ElapsedTime: 0
-  Name: MCTS
-  ActionInterval: 0.1
-  SimulationTime: 0.25
-  LowestScoreToReInit: -500
-  ReinitPerIters: 2
-  Iterations: 100
+  config:
+    ScriptInterval: 0.1
+    SimulationTime: 0.3
+    ResetIterationAt: 3
+    Iterations: 100
+    ScoreLimit: -500
+    Name: MCTS Example
+    DefaultSkillType: 0
 --- !u!1 &1717946834
 GameObject:
   m_ObjectHideFlags: 0
@@ -13011,11 +13055,18 @@ PrefabInstance:
       propertyPath: m_Color.r
       value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: 5549000176310372618, guid: e48db3198e16346af866a9419a1964cc, type: 3}
+      propertyPath: m_Sprite
+      value: 
+      objectReference: {fileID: 21300000, guid: 051498862d7e59d4f8e435586631724f, type: 3}
     m_RemovedComponents:
     - {fileID: 7192337878665551969, guid: e48db3198e16346af866a9419a1964cc, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 1488574921577525681, guid: e48db3198e16346af866a9419a1964cc, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1749723884}
   m_SourcePrefab: {fileID: 100100000, guid: e48db3198e16346af866a9419a1964cc, type: 3}
 --- !u!4 &1749723878 stripped
 Transform:
@@ -13027,6 +13078,20 @@ GameObject:
   m_CorrespondingSourceObject: {fileID: 1488574921577525681, guid: e48db3198e16346af866a9419a1964cc, type: 3}
   m_PrefabInstance: {fileID: 1749723877}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &1749723884
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1749723879}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 51d33e70b8b564b4bbdb1d7183b1dd97, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  Side: 1
+  UI: 0
 --- !u!1 &1757629780
 GameObject:
   m_ObjectHideFlags: 0
@@ -14188,7 +14253,7 @@ GameObject:
   - component: {fileID: 1833913766}
   m_Layer: 5
   m_Name: Eye
-  m_TagString: Untagged
+  m_TagString: Robot/Eye
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -15190,7 +15255,7 @@ GameObject:
   - component: {fileID: 2022952306}
   m_Layer: 5
   m_Name: Eye
-  m_TagString: Untagged
+  m_TagString: Robot/Eye
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -15901,7 +15966,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3a93addaa694d43528f8eb6ca35b41b4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  BattleInputType: 0
+  BattleInputType: 1
   RoundSystem: 1
   BattleTime: 60
   CountdownTime: 3
@@ -15948,6 +16013,10 @@ MonoBehaviour:
   RoundSystem: {fileID: 1017925513}
   Round: {fileID: 2044528550}
   Timer: {fileID: 1546003330}
+  PlayerHUD:
+  - {fileID: 7188255028259075495}
+  - {fileID: 8648238628232289763}
+  - {fileID: 844236642}
   LeftScore: {fileID: 513906849}
   LeftFinalScore: {fileID: 5964918650161667861}
   LeftSkillUI:
@@ -16019,12 +16088,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 01a1d4e8448fd40dda16697ad78845aa, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  IsEnable: 0
-  IsScriptable: 1
+  LeftEnabled: 1
   Left: {fileID: 715032728}
+  RightEnabled: 1
   Right: {fileID: 1709403126}
   leftBotIndex: 1
-  rightBotIndex: 1
+  rightBotIndex: 2
 --- !u!1 &2132169806
 GameObject:
   m_ObjectHideFlags: 0
@@ -20438,6 +20507,7 @@ GameObject:
   - component: {fileID: 2053452139058316169}
   - component: {fileID: 1536013882985271310}
   - component: {fileID: 2933263802470169869}
+  - component: {fileID: 7188255028259075495}
   m_Layer: 5
   m_Name: PlayerHUD 1
   m_TagString: Untagged
@@ -20445,6 +20515,20 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
+--- !u!114 &7188255028259075495
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7188255028259075494}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 51d33e70b8b564b4bbdb1d7183b1dd97, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  Side: 0
+  UI: 1
 --- !u!224 &7249369561250749025
 RectTransform:
   m_ObjectHideFlags: 0
@@ -21084,6 +21168,7 @@ GameObject:
   - component: {fileID: 1128149494167772650}
   - component: {fileID: 5142385695107116085}
   - component: {fileID: 4126811237379182337}
+  - component: {fileID: 8648238628232289763}
   m_Layer: 5
   m_Name: PlayerHUD 2
   m_TagString: Untagged
@@ -21091,6 +21176,20 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
+--- !u!114 &8648238628232289763
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8648238628232289762}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 51d33e70b8b564b4bbdb1d7183b1dd97, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  Side: 1
+  UI: 1
 --- !u!222 &8649383956166160684
 CanvasRenderer:
   m_ObjectHideFlags: 0

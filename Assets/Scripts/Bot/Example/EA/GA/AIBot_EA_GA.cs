@@ -5,8 +5,7 @@ using UnityEngine;
 
 namespace SumoBot
 {
-    // [CreateAssetMenu(fileName = "BOT_GA", menuName = "Bot/GA")]
-    public class AIBot_EA_Basic : Bot
+    public class AIBot_EA_GA : Bot
     {
         public override string ID => Name;
         public override float Interval => ActionInterval;
@@ -14,17 +13,16 @@ namespace SumoBot
 
         public string Name => "GA";
 
-        public float EvaluationInterval = 5f;
-        public float ActionInterval = 0.4f;
+        public float EvaluationInterval = 2f;
+        public float ActionInterval = 0.5f;
 
         [HideInInspector]
-        public EA_Basic_Data brain;
+        public EA_GA_Data brain;
         [HideInInspector]
-        public EA_Basic_Data memory;
+        public EA_GA_Data memory;
 
         private float fitness;
         private float evaluationTimer;
-        private float actionTimer = 0f;
 
         private SumoAPI api;
         private BattleState currState;
@@ -34,20 +32,18 @@ namespace SumoBot
             if (memory == null || fitness > CalculateFitness(memory))
                 memory = brain.Clone();
             else
-                brain = EA_Basic_Data.Crossover(brain, memory);
+                brain = EA_GA_Data.Crossover(brain, memory);
             brain.Mutate(0.1f);
 
             fitness = 0f;
         }
 
-        float CalculateFitness(EA_Basic_Data data)
+        float CalculateFitness(EA_GA_Data data)
         {
-            // Example: distance to enemy
-            float dist = Vector3.Distance(api.MyRobot.Position, api.EnemyRobot.Position);
-            return 1f / (dist + 0.01f);
+            return api.DistanceNormalized();
         }
 
-        void RandomizeBrain(EA_Basic_Data data)
+        void RandomizeBrain(EA_GA_Data data)
         {
             data.weightAngle = Random.Range(-1f, 1f);
             data.weightDistance = Random.Range(-1f, 1f);
@@ -58,18 +54,14 @@ namespace SumoBot
 
         public void Decide()
         {
-            Vector2 toEnemy = api.EnemyRobot.Position - api.MyRobot.Position;
-            float angleToTarget = Vector2.SignedAngle(api.MyRobot.Rotation * Vector2.up, toEnemy.normalized);
-            float normalizedAngle = 1f - Mathf.Abs(angleToTarget) / 180f;
-            float normalizedDistance = 1f - Mathf.Abs(toEnemy.magnitude) / 7f;
+            float value = brain.weightDistance * api.DistanceNormalized();
 
-            float value = brain.weightDistance * normalizedDistance;
-
-            Debug.Log($"[AIBot_EA_Basic] value: {value}, weightAngle: {brain.weightAngle}, normalizedAngle: {normalizedAngle}, weightDistance: {brain.weightAngle}, normalizedDistance: {normalizedDistance}");
+            Debug.Log($"[AIBot_EA_Basic] value: {value}, weightAngle: {brain.weightAngle}, normalizedAngle: {api.Angle(normalized: true)}, weightDistance: {brain.weightAngle}, normalizedDistance: {api.DistanceNormalized()}");
 
             float accelDuration = 0.3f;
+            float signedAngleToEnemy = api.Angle();
 
-            if (Mathf.Abs(angleToTarget) < 20f)
+            if (Mathf.Abs(signedAngleToEnemy) < 20f)
             {
                 if (Mathf.Abs(value) > 0.6f)
                     Enqueue(new SkillAction(InputType.Script));
@@ -81,10 +73,10 @@ namespace SumoBot
             else
             {
 
-                if (angleToTarget < 0)
-                    Enqueue(new TurnAction(InputType.Script, ActionType.TurnLeftWithAngle, Mathf.Abs(angleToTarget)));
+                if (signedAngleToEnemy < 0)
+                    Enqueue(new TurnAction(InputType.Script, ActionType.TurnLeft, ActionInterval));
                 else
-                    Enqueue(new TurnAction(InputType.Script, ActionType.TurnRightWithAngle, Mathf.Abs(angleToTarget)));
+                    Enqueue(new TurnAction(InputType.Script, ActionType.TurnRight, ActionInterval));
             }
 
             fitness += 1f; // Example: reward for taking an action
@@ -92,27 +84,19 @@ namespace SumoBot
         public override void OnBotInit(PlayerSide side, SumoAPI botAPI)
         {
             api = botAPI;
-            brain = new EA_Basic_Data();
+            brain = new EA_GA_Data();
             RandomizeBrain(brain);
         }
 
         public override void OnBotUpdate()
         {
-            if (currState != BattleState.Battle_Ongoing) return;
-
-            evaluationTimer += Time.deltaTime;
             if (evaluationTimer >= EvaluationInterval)
             {
                 EvaluateFitness();
                 evaluationTimer = 0f;
             }
 
-            actionTimer += Time.deltaTime;
-            if (actionTimer >= ActionInterval)
-            {
-                actionTimer = 0f;
-                Decide();
-            }
+            Decide();
 
             base.OnBotUpdate();
         }

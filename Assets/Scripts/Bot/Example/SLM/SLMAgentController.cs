@@ -73,7 +73,7 @@ public class SLMAgentController : Bot
                 while (pendingActions.Count > 0)
                 {
                     string nextAction = pendingActions.Dequeue();
-                    ISumoAction sumoAction = StrategyToActionMapper.Map(nextAction);
+                    ISumoAction sumoAction = StrategyToActionMapper.Map(nextAction, api);
                     if (sumoAction != null)
                         Enqueue(sumoAction);
                     else

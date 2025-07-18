@@ -330,14 +330,14 @@ namespace SumoInput
 
         private void CommandTurnLeft(string arg)
         {
-            ISumoAction turnLeft = new TurnAction(InputType.LiveCommand, ActionType.TurnLeftWithAngle, float.Parse(arg));
+            ISumoAction turnLeft = new TurnAction(InputType.LiveCommand, ActionType.TurnLeft, float.Parse(arg));
             inputProvider.EnqueueCommand(turnLeft);
             AddMessageToDisplay("> Executing TurnLeft(" + arg + ").");
         }
 
         private void CommandTurnRight(string arg)
         {
-            ISumoAction turnRight = new TurnAction(InputType.LiveCommand, ActionType.TurnRightWithAngle, float.Parse(arg));
+            ISumoAction turnRight = new TurnAction(InputType.LiveCommand, ActionType.TurnRight, float.Parse(arg));
             inputProvider.EnqueueCommand(turnRight);
             AddMessageToDisplay("> Executing TurnRight(" + arg + ").");
         }

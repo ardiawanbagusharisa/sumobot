@@ -7,7 +7,6 @@ using SumoBot;
 using SumoCore;
 using SumoHelper;
 using SumoLog;
-using Unity.VisualScripting;
 using UnityEngine;
 
 namespace SumoManager
@@ -15,8 +14,8 @@ namespace SumoManager
     public enum LogActorType
     {
         System,
-        LeftPlayer,
-        RightPlayer,
+        Left,
+        Right,
     }
 
     public class LogManager : MonoBehaviour
@@ -30,6 +29,8 @@ namespace SumoManager
             public float BattleTime;
             public float CountdownTime;
             public int RoundType;
+            public int SimulationAmount;
+            public float SimulationTimeScale;
             public PlayerStats LeftPlayerStats = new();
             public PlayerStats RightPlayerStats = new();
 
@@ -67,10 +68,13 @@ namespace SumoManager
             public float UpdatedAt;
             public string Actor;
             public string Target;
+            public float Duration;
             public string Category;
             public bool IsStart;
 
             public Dictionary<string, object> Data = new();
+
+
         }
 
         [Serializable]
@@ -113,19 +117,7 @@ namespace SumoManager
                 IEnumerable<ActionType> actionTypes = Enum.GetValues(typeof(ActionType)).Cast<ActionType>();
                 foreach (ActionType action in actionTypes)
                 {
-                    switch (action)
-                    {
-                        case ActionType.Dash:
-                            logs.Add(action, new EventLogger(controller, controller.DashDuration));
-                            break;
-                        case ActionType.SkillStone:
-                        case ActionType.SkillBoost:
-                            logs.Add(action, new EventLogger(controller, controller.Skill.TotalDuration));
-                            break;
-                        default:
-                            logs.Add(action, new EventLogger(controller, 0.1f));
-                            break;
-                    }
+                    logs.Add(action, new EventLogger(controller));
                 }
                 return logs;
             }
@@ -140,6 +132,14 @@ namespace SumoManager
                 actionLogger.ForceStopAndSave();
             }
             foreach (EventLogger actionLogger in ActionLoggers[PlayerSide.Right].Values)
+            {
+                actionLogger.ForceStopAndSave();
+            }
+        }
+
+        public static void FlushActionLog(PlayerSide side, ISumoAction action)
+        {
+            if (ActionLoggers[side].TryGetValue(action.Type, out EventLogger actionLogger))
             {
                 actionLogger.ForceStopAndSave();
             }
@@ -176,7 +176,7 @@ namespace SumoManager
             Directory.CreateDirectory(logFolderPath);
         }
 
-        public static void InitBattle()
+        public static void InitBattle(int simAmount = 0, float simTimeScale = 0)
         {
             BattleManager battleManager = BattleManager.Instance;
 
@@ -186,8 +186,11 @@ namespace SumoManager
                 BattleID = battleManager.Battle.BattleID.ToString(),
                 CountdownTime = battleManager.CountdownTime,
                 BattleTime = battleManager.BattleTime,
-                RoundType = (int)battleManager.RoundSystem
+                RoundType = (int)battleManager.RoundSystem,
+                SimulationAmount = simAmount,
+                SimulationTimeScale = simTimeScale
             };
+
             SaveBattle();
         }
 
@@ -202,18 +205,18 @@ namespace SumoManager
             battleLog.LeftPlayerStats.SkillType = BattleManager.Instance.Battle.LeftPlayer.Skill.Type.ToString();
             battleLog.RightPlayerStats.SkillType = BattleManager.Instance.Battle.RightPlayer.Skill.Type.ToString();
 
-            if (battleLog.Games.Count > 0 && logTakenAction)
+            if (logTakenAction && battleLog.Games.Count > 0)
             {
                 RoundLog currRound = GetCurrentRound();
                 if (currRound != null)
                 {
-                    battleLog.LeftPlayerStats.ActionTaken += GetCurrentRound().PlayerEvents.FindAll((x) => x.Actor == "Left" && x.Category == "Action" && x.IsStart == true).Count();
+                    battleLog.LeftPlayerStats.ActionTaken += GetCurrentRound().PlayerEvents.FindAll((x) => x.Actor == "Left" && x.Category == "Action" && !x.IsStart).Count();
 
-                    battleLog.RightPlayerStats.ActionTaken += GetCurrentRound().PlayerEvents.FindAll((x) => x.Actor == "Right" && x.Category == "Action" && x.IsStart == true).Count();
+                    battleLog.RightPlayerStats.ActionTaken += GetCurrentRound().PlayerEvents.FindAll((x) => x.Actor == "Right" && x.Category == "Action" && !x.IsStart).Count();
 
-                    battleLog.LeftPlayerStats.ContactMade += GetCurrentRound().PlayerEvents.FindAll((x) => x.Actor == "Left" && x.Category == "Collision" && x.IsStart == true).Count();
+                    battleLog.LeftPlayerStats.ContactMade += GetCurrentRound().PlayerEvents.FindAll((x) => x.Actor == "Left" && x.Category == "Collision" && !x.IsStart).Count();
 
-                    battleLog.RightPlayerStats.ContactMade += GetCurrentRound().PlayerEvents.FindAll((x) => x.Actor == "Right" && x.Category == "Collision" && x.IsStart == true).Count();
+                    battleLog.RightPlayerStats.ContactMade += GetCurrentRound().PlayerEvents.FindAll((x) => x.Actor == "Right" && x.Category == "Collision" && !x.IsStart).Count();
                 }
             }
 
@@ -324,9 +327,9 @@ namespace SumoManager
                     IsStart = isStart,
                     Category = category,
                 };
-
                 eventLog.StartedAt = startedAt != null ? (float)startedAt : BattleManager.Instance.ElapsedTime;
                 eventLog.UpdatedAt = updatedAt != null ? (float)updatedAt : eventLog.UpdatedAt = BattleManager.Instance.ElapsedTime;
+                eventLog.Duration = eventLog.UpdatedAt - eventLog.StartedAt;
                 roundLog.PlayerEvents.Add(eventLog);
             }
         }
@@ -366,6 +369,22 @@ namespace SumoManager
                 rounds.PlayerEvents = rounds.PlayerEvents.OrderBy(log => log?.UpdatedAt).ToList();
             });
             SaveCurrentGame();
+        }
+
+        public static void LogLastPosition()
+        {
+            RoundLog roundLog = GetCurrentRound();
+            if (roundLog != null)
+            {
+                Battle battle = BattleManager.Instance.Battle;
+
+                EventLogger leftLog = new(battle.LeftPlayer, isAction: false);
+                EventLogger rightLog = new(battle.RightPlayer, isAction: false);
+
+                leftLog.Save("LastPosition", roundLog.Duration);
+                rightLog.Save("LastPosition", roundLog.Duration);
+            }
+
         }
         #endregion
     }

@@ -11,6 +11,7 @@ using System;
 using System.Collections;
 using UnityEngine.UI;
 using SumoCore;
+using static UnityEngine.UI.Slider;
 
 public class ReplayManager : MonoBehaviour
 {
@@ -73,10 +74,10 @@ public class ReplayManager : MonoBehaviour
     private int rightEventIndex = 0;
     private bool isDraggingSlider = false;
     private BattleLog metadata;
-    private readonly Dictionary<string, EventLog> leftEventsMap = new();
-    private readonly Dictionary<string, EventLog> rightEventsMap = new();
-    private readonly List<EventLog> leftEvents = new();
-    private readonly List<EventLog> rightEvents = new();
+    private Dictionary<string, EventLog> leftEventsMap = new();
+    private Dictionary<string, EventLog> rightEventsMap = new();
+    private List<EventLog> leftEvents = new();
+    private List<EventLog> rightEvents = new();
     #endregion
 
     #region Unity methods
@@ -114,23 +115,17 @@ public class ReplayManager : MonoBehaviour
         PreviousRoundButton?.onClick.AddListener(GoToPreviousRound);
         NextRoundButton?.onClick.AddListener(GoToNextRound);
 
-        // Playback speed slider
-        if (PlaybackSpeedSlider != null)
-        {
-            PlaybackSpeedSlider.minValue = 0f;
-            PlaybackSpeedSlider.maxValue = 5f;
-            PlaybackSpeedSlider.value = playbackSpeed;
+        if (PlaybackSpeedSlider == null)
+            return;
 
-            PlaybackSpeedSlider.onValueChanged.AddListener(value =>
-            {
-                playbackSpeed = value;
-                if (PlaybackSpeedLabel != null)
-                    PlaybackSpeedLabel.text = $"Playback Speed: {value:0.#}x";
-            });
+        PlaybackSpeedSlider.minValue = 0f;
+        PlaybackSpeedSlider.maxValue = 5f;
+        PlaybackSpeedSlider.value = playbackSpeed;
 
-            if (PlaybackSpeedLabel != null)
-                PlaybackSpeedLabel.text = $"Playback Speed: {playbackSpeed:0.#}x";
-        }
+        PlaybackSpeedSlider.onValueChanged.AddListener(OnPlayBackSpeedChanged);
+
+        if (PlaybackSpeedLabel != null)
+            PlaybackSpeedLabel.text = $"Playback Speed: {playbackSpeed:0.#}x";
     }
 
     void OnEnable()
@@ -141,11 +136,23 @@ public class ReplayManager : MonoBehaviour
         }
     }
 
+    void OnPlayBackSpeedChanged(float value)
+    {
+        playbackSpeed = value;
+        if (PlaybackSpeedLabel != null)
+            PlaybackSpeedLabel.text = $"Playback Speed: {value:0.#}x";
+    }
+
     void OnDisable()
     {
         if (TimeSliderUI != null)
         {
             TimeSliderUI.onValueChanged.RemoveListener(OnTimeSliderChanged);
+        }
+
+        if (PlaybackSpeedSlider != null)
+        {
+            PlaybackSpeedSlider.onValueChanged.RemoveListener(OnPlayBackSpeedChanged);
         }
     }
 
@@ -169,7 +176,16 @@ public class ReplayManager : MonoBehaviour
 
         if (currentTime > currentRoundDuration)
         {
-            currentRoundIndex++;
+
+            if (gameLogs[currentGameIndex].Rounds.Count - 1 == currentRoundIndex)
+            {
+                DisplayCurrentEventInfo();
+                isPlaying = false;
+                Debug.Log("Replay finished.");
+                return;
+            }
+            else
+                currentRoundIndex++;
 
             if (currentRoundIndex >= gameLogs[currentGameIndex].Rounds.Count)
             {
@@ -203,17 +219,8 @@ public class ReplayManager : MonoBehaviour
 
         currentRoundEvents = round.PlayerEvents.OrderBy(e => e.UpdatedAt).ToList();
 
-        var left = currentRoundEvents.Where(x => x.Actor == "Left").ToList();
-        var right = currentRoundEvents.Where(x => x.Actor == "Right").ToList();
-
-        for (int i = 0; i < left.Count - 1; i++)
-        {
-            leftEvents.Add(left[i]);
-        }
-        for (int i = 0; i < right.Count - 1; i++)
-        {
-            rightEvents.Add(right[i]);
-        }
+        leftEvents = currentRoundEvents.Where(x => x.Actor == "Left").ToList();
+        rightEvents = currentRoundEvents.Where(x => x.Actor == "Right").ToList();
 
         currentRoundDuration = currentRoundEvents.Max(e => e.UpdatedAt);
 
@@ -230,6 +237,8 @@ public class ReplayManager : MonoBehaviour
 
     void InterpolateBot(Transform player, List<EventLog> events, ref int index)
     {
+        if (!isPlaying) return;
+
         if (index >= events.Count)
             return;
 
@@ -257,15 +266,15 @@ public class ReplayManager : MonoBehaviour
 
         if (currentEvent.Category == "Action")
         {
+            var key = currentEvent.GetKey();
+
             if (currentEvent.Actor == "Left")
             {
-                string key = $"Action_{currentEvent.Data["Name"]}_{currentEvent.Data?["Parameter"] ?? null}_{currentEvent.StartedAt}";
                 if (!leftEventsMap.ContainsKey(key))
                     leftEventsMap.Add(key, currentEvent);
             }
             else if (currentEvent.Actor == "Right")
             {
-                string key = $"Action_{currentEvent.Data["Name"]}_{currentEvent.Data?["Parameter"] ?? null}_{currentEvent.StartedAt}";
                 if (!rightEventsMap.ContainsKey(key))
                     rightEventsMap.Add(key, currentEvent);
             }
@@ -277,18 +286,15 @@ public class ReplayManager : MonoBehaviour
             currentTime
         );
 
-        if (t >= 0.0f && t <= 1.0)
-        {
-            var start = BaseLog.FromMap(currentEvent.Data);
-            var end = BaseLog.FromMap(nextEvent.Data);
+        var start = BaseLog.FromMap(currentEvent.Data);
+        var end = BaseLog.FromMap(nextEvent.Data);
 
-            player.transform.position = Vector3.Lerp(start.Position, end.Position, t);
-            player.transform.rotation = Quaternion.Lerp(
-                Quaternion.Euler(0, 0, start.Rotation),
-                Quaternion.Euler(0, 0, end.Rotation),
-                t
-            );
-        }
+        player.transform.position = Vector3.Lerp(start.Position, end.Position, t);
+        player.transform.rotation = Quaternion.Slerp(
+            Quaternion.Euler(0, 0, start.Rotation),
+            Quaternion.Euler(0, 0, end.Rotation),
+            t
+        );
     }
 
 
@@ -422,12 +428,25 @@ public class ReplayManager : MonoBehaviour
     public void OnTimeSliderPointerUp()
     {
         isDraggingSlider = false;
-
         isPlaying = false;
+
+        ResetReplay(includeEvents: false);
 
         currentTime = TimeSliderUI.value;
 
-        ResetReplay(includeEvents: false);
+        IEnumerable<EventLog> lastLeft = leftEvents.TakeWhile((x) => x.UpdatedAt < currentTime);
+        IEnumerable<EventLog> lastRight = rightEvents.TakeWhile((x) => x.UpdatedAt < currentTime);
+
+        if (lastLeft.Count() > 0 && lastRight.Count() > 0)
+        {
+            leftEventIndex = leftEvents.IndexOf(lastLeft.LastOrDefault());
+            rightEventIndex = rightEvents.IndexOf(lastRight.LastOrDefault());
+
+            leftEventsMap.Clear();
+            rightEventsMap.Clear();
+            leftEventsMap = lastLeft.Where((x) => x.Category == "Action" && !x.IsStart).ToDictionary((x) => x.GetKey());
+            rightEventsMap = lastRight.Where((x) => x.Category == "Action" && !x.IsStart).ToDictionary((x) => x.GetKey());
+        }
 
         InterpolateBot(leftPlayer, leftEvents, ref leftEventIndex);
         InterpolateBot(rightPlayer, rightEvents, ref rightEventIndex);
@@ -451,6 +470,19 @@ public class ReplayManager : MonoBehaviour
         int seconds = Mathf.CeilToInt(time % 60f);
         return $"{minutes:00}:{seconds:00}";
     }
+}
 
-
+public static class ExtReplayManager
+{
+    public static string GetKey(this EventLog log)
+    {
+        if (log.Category == "Action")
+        {
+            return $"Action_{log.Data["Name"]}_{log.Data["Duration"] ?? null}_{log.StartedAt}";
+        }
+        else
+        {
+            return $"{log.Category}_{log.StartedAt}";
+        }
+    }
 }

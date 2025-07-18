@@ -10,9 +10,14 @@ namespace SumoBot
     public abstract class Bot : ScriptableObject
     {
         #region Runtime properties
+
+        [HideInInspector]
         public float ElapsedTime = 0;
+        
         private InputProvider provider;
+
         private Queue<ISumoAction> actions;
+
         internal void SetProvider(InputProvider provider)
         {
             actions = new Queue<ISumoAction>();
@@ -24,9 +29,11 @@ namespace SumoBot
 
         public abstract string ID { get; }
 
-        [Range(0.1f, 10f)]
+        [Min(0.1f)]
         public abstract float Interval { get; }
+
         public abstract SkillType SkillType { get; }
+
         public abstract void OnBotInit(PlayerSide side, SumoAPI botAPI);
 
         // Called when elapsed time of battle timer is satisfy with the interval
