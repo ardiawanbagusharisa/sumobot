@@ -212,10 +212,9 @@ namespace SumoBot
                         continue;
                     }
                 }
-
-                // Penalize robot from trying to rotate farther than before
-                if (!approachWithPosition)
+                else
                 {
+                    // Penalize robot from trying to rotate farther than before
                     float originalAngle = api.Angle(normalized: true);
                     if (originalAngle > preAngleScore)
                     {

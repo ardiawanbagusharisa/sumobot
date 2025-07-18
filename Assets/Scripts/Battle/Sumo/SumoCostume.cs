@@ -13,6 +13,7 @@ namespace SumoCore
         Right,
         Winner,
     }
+    
     [Serializable]
     public class SumoCostume : MonoBehaviour
     {

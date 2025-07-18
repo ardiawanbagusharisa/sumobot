@@ -10,10 +10,8 @@ namespace SumoHelper
     {
         public bool IsActive;
         public bool ForceSave = true;
-
         private float debounceTime;
         private float lastCallTime;
-
         private float startTime;
         private CollisionLog collision;
         private readonly ActionLog action;

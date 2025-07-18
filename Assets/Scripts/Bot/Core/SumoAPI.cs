@@ -43,24 +43,6 @@ namespace SumoBot
             return myController.InputProvider.CanExecute(action);
         }
 
-        public float? ActionLockTime(ActionType type)
-        {
-            if (myController.ActionLockTime.TryGetValue(type, out var time))
-            {
-                return time;
-            }
-            return null;
-        }
-
-        public float? LastActionTime(ActionType type)
-        {
-            if (myController.LastActionTime.TryGetValue(type, out var time))
-            {
-                return time;
-            }
-            return null;
-        }
-
         public Vector3 Distance(
             Vector3? myPos = null,
             Vector3? enemyPos = null)
