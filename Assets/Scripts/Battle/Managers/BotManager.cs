@@ -19,6 +19,11 @@ namespace SumoBot
 
         public bool IsEnable => LeftEnabled || RightEnabled;
 
+        private void OnEnable()
+        {
+            BattleManager.Instance.Actions[BattleManager.OnBattleChanged].Subscribe(OnBattleStateChanged);
+        }
+
         void Start()
         {
             var allTypes = BotUtility.GetAllBotTypes();
@@ -57,18 +62,18 @@ namespace SumoBot
         }
 
 
-        public void OnBattleStateChanged(BattleState currState)
+        public void OnBattleStateChanged(ActionParameter param)
         {
             if (!IsEnable)
                 return;
 
             if (LeftEnabled && Left != null)
             {
-                Left.OnBattleStateChanged(currState);
+                Left.OnBattleStateChanged(param.BattleState);
             }
             if (LeftEnabled && Right != null)
             {
-                Right.OnBattleStateChanged(currState);
+                Right.OnBattleStateChanged(param.BattleState);
             }
         }
 

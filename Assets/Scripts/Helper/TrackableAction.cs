@@ -61,6 +61,7 @@ public class ActionParameter
     public bool Bool;
     public float Float;
     public Battle Battle;
+    public BattleState BattleState;
     public SkillType SkillType;
 
     public ActionParameter(
@@ -69,6 +70,7 @@ public class ActionParameter
         bool? boolParam = null,
         float? floatParam = null,
         Battle battleParam = null,
+        BattleState? battleStateParam = null,
         SkillType? skillType = null)
     {
 
@@ -76,6 +78,8 @@ public class ActionParameter
             Side = (PlayerSide)sideParam;
         if (skillType != null)
             SkillType = (SkillType)skillType;
+        if (battleStateParam != null)
+            BattleState = (BattleState)battleStateParam;
         if (sideParam != null)
             Action = actionParam;
         if (boolParam != null)

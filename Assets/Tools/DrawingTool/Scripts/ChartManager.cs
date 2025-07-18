@@ -15,6 +15,8 @@ public class ChartManager : MonoBehaviour
     [Range(12f, 24f)][SerializeField] int _fontSize = 12;
 
     [Header("ChartManager Settings")]
+    [SerializeField] private bool _enableDebugData = true;
+    [SerializeField] private bool _enablePallete = true;
     [SerializeField] private bool _drawAxes = true;
     [SerializeField] private bool _drawGrid = true;
     [SerializeField] private bool _drawLabels = true;
@@ -33,36 +35,40 @@ public class ChartManager : MonoBehaviour
     [SerializeField] private GameObject _togglePrefab;
     [SerializeField] private List<ChartSeries> _chartSeriesList = new List<ChartSeries>();
 
-    [Header("Chart Colors Source")] 
-    [SerializeField] private Texture2D _paletteSourceTexture; 
+    [Header("Chart Colors Source")]
+    [SerializeField] private Texture2D _paletteSourceTexture;
     [SerializeField] private int _numFixColors = 0;
 
     ColorPalette _colorPalette;
     RenderTexture _canvasRenderTexture;
 
+    System.Func<float, string> _onXLabelCreated;
+
     private void DebugPopulateSeries()
     {
         _chartSeriesList.Clear();
 
-        for (int i = 0; i < 3; i++)
+        for (int i = 0; i < 2; i++)
         {
             float[] data = new float[52];
-            
+
             // Add 0 values to first and last index. 
-            data[0] = data[data.Length - 1] = 0; 
+            data[0] = data[data.Length - 1] = 0;
 
-            for (int j = 1; j < data.Length - 1; j++) 
-                data[j] = Random.Range(0f, 50f); 
+            for (int j = 1; j < data.Length - 1; j++)
+                data[j] = Random.Range(0f, 50f);
 
-            _chartSeriesList.Add(new ChartSeries($"Series {i + 1}", data, (ChartSeries.ChartType)(i % 2), Random.ColorHSV()));
+            _chartSeriesList.Add(new ChartSeries($"Series {i + 1}", data, ChartSeries.ChartType.Bar, Random.ColorHSV()));
         }
     }
 
     private void Start()
     {
         Init();
-        DebugPopulateSeries();
-        InitPalette();
+        if (_enableDebugData)
+            DebugPopulateSeries();
+        if (_enablePallete)
+            InitPalette();
         InitSidePanel();
         DrawChart();
     }
@@ -128,6 +134,20 @@ public class ChartManager : MonoBehaviour
         Debug.Log("Drawing tool palette initialized.");
     }
 
+    public void Setup(int? xGridSpacing = null, float? yGridSpacing = null, System.Func<int, string> onXLabelCreated = null)
+    {
+        if (xGridSpacing != null)
+            _xGridDataSpacing = (int)xGridSpacing;
+        if (yGridSpacing != null)
+            _yGridSpacing = (float)yGridSpacing;
+    }
+
+    public void AddChartSeries(ChartSeries chart)
+    {
+        if (!_chartSeriesList.Exists((x) => x.name == chart.name))
+            _chartSeriesList.Add(chart);
+    }
+
     public void InitSidePanel()
     {
         if (_sidePanelParent == null || _togglePrefab == null || _chartSeriesList == null)
@@ -188,7 +208,7 @@ public class ChartManager : MonoBehaviour
 
         foreach (var series in _chartSeriesList)
         {
-            if (!series.isVisible || series.data == null || series.data.Length == 0) 
+            if (!series.isVisible || series.data == null || series.data.Length == 0)
                 continue;
 
             globalMin = Mathf.Min(globalMin, series.data.Min());
@@ -196,8 +216,8 @@ public class ChartManager : MonoBehaviour
             hasVisibleData = true;
         }
 
-        if (!hasVisibleData) 
-            return; 
+        if (!hasVisibleData)
+            return;
 
         if (Mathf.Approximately(globalMax, globalMin))
         {
@@ -212,13 +232,13 @@ public class ChartManager : MonoBehaviour
         if (_drawGrid)
             DrawGrid(globalMin, globalMax, chartWidth, chartHeight);
 
-        if (_drawLabels) 
+        if (_drawLabels)
             DrawLabels(globalMin, globalMax, chartWidth, chartHeight,
                     _chartSeriesList.Where(s => s.isVisible && s.data != null).Select(s => s.data.Length).DefaultIfEmpty(0).Max());
-        
+
         foreach (ChartSeries series in _chartSeriesList)
         {
-            if (!series.isVisible || series.data == null || series.data.Length == 0) 
+            if (!series.isVisible || series.data == null || series.data.Length == 0)
                 continue;
 
             float[] data = series.data;
@@ -237,6 +257,7 @@ public class ChartManager : MonoBehaviour
                     Vector2 start = new Vector2(x, _paddingBottom);
                     Vector2 end = new Vector2(x, y);
                     DrawLine(start, end, series.color, _brushSize, _wiggleSize);
+
                 }
                 else if (series.chartType == ChartSeries.ChartType.Line && i > 1)
                 {
@@ -331,7 +352,7 @@ public class ChartManager : MonoBehaviour
         float top = _canvasRenderTexture.height - _paddingTop;
 
         int maxLen = _chartSeriesList.Where(s => s.isVisible && s.data != null).Select(s => s.data.Length).DefaultIfEmpty(0).Max();
-        if (maxLen == 0) 
+        if (maxLen == 0)
             return;
 
         var yPoints = CalculateYAxisGridPoints(minVal, maxVal, chartHeight);
@@ -359,7 +380,11 @@ public class ChartManager : MonoBehaviour
 
         var xPoints = CalculateXAxisGridPoints(maxLen, chartWidth);
         foreach (var (index, x) in xPoints)
-            if (index != 0) CreateLabel(index.ToString(), new Vector2(x, _paddingBottom - _labelOffset));
+            if (index != 0)
+            {
+                string xLabel = _onXLabelCreated != null ? _onXLabelCreated(x) : index.ToString();
+                CreateLabel(xLabel, new Vector2(x, _paddingBottom - _labelOffset));
+            }
 
         CreateLabel("0", new Vector2(_paddingLeft - _labelOffset, _paddingBottom - _labelOffset));
     }
@@ -386,7 +411,7 @@ public class ChartManager : MonoBehaviour
         rt.sizeDelta = new Vector2(100, 30);
 
         RectTransform rawImageRectTransform = _rawImage.rectTransform;
-        Vector2 rawImageLocalPoint = canvasPos; 
+        Vector2 rawImageLocalPoint = canvasPos;
         Vector3 worldPointOfCanvasPos = rawImageRectTransform.TransformPoint(rawImageLocalPoint + rawImageRectTransform.rect.min);
         Vector2 screenPoint = RectTransformUtility.WorldToScreenPoint(null, worldPointOfCanvasPos);
 

@@ -8,7 +8,6 @@ using System.Collections;
 using UnityEngine.SceneManagement;
 using SumoInput;
 
-
 namespace SumoManager
 {
     public enum GuideTab
@@ -38,6 +37,8 @@ namespace SumoManager
         public TMP_Text Round;
         public TMP_Text Timer;
         public List<SumoCostume> PlayerHUD = new();
+        public ChartManager PostBattleChart;
+        public TMP_Text PostBattleChartTitle;
 
 
         [Header("Battle UI - Left Player")]
@@ -267,9 +268,57 @@ Left Shift / Right Shift - Dash
                         SumoController winner = battle.GetBattleWinner().GetRobotWinner(battle);
                         winnerHUD?.AttachToHUD(winner.Costume);
                     }
+
+                    ShowActionChart(battle);
                     break;
             }
             UpdateScore(battle);
+        }
+
+        private void ShowActionChart(Battle _)
+        {
+            Debug.Log("ShowGameSummary Called");
+            for (int gameIdx = 0; gameIdx < LogManager.Log.Games.Count; gameIdx++)
+            {
+                LogManager.GameLog gameLog = LogManager.Log.Games[gameIdx];
+
+                for (int roundIdx = 0; roundIdx < gameLog.Rounds.Count; roundIdx++)
+                {
+                    Dictionary<int, (int, int)> actionTakenCountMap = new();
+
+                    LogManager.RoundLog roundLog = gameLog.Rounds[roundIdx];
+
+                    float avgTimeFrame = roundLog.Duration / 12;
+
+                    int timeRange = 1;
+
+                    for (float i = 0; i < roundLog.Duration; i += avgTimeFrame)
+                    {
+                        int leftActionTaken = roundLog.PlayerEvents.Where((x) => x.UpdatedAt < (i + avgTimeFrame) && x.UpdatedAt >= i && x.Category == "Action" && x.Actor == "Left" && x.IsStart).Count();
+
+                        int rightActionTaken = roundLog.PlayerEvents.Where((x) => x.UpdatedAt < (i + avgTimeFrame) && x.UpdatedAt > i && x.Category == "Action" && x.Actor == "Right" && x.IsStart).Count();
+
+                        actionTakenCountMap[timeRange] = (leftActionTaken, rightActionTaken);
+
+                        timeRange += 1;
+                    }
+
+                    var leftC = actionTakenCountMap.Select((x) => (float)x.Value.Item1).ToArray();
+                    var rightC = actionTakenCountMap.Select((x) => (float)x.Value.Item2).ToArray();
+
+
+                    ChartSeries chartLeft = new ChartSeries($"Left_Round_{roundIdx + 1}", actionTakenCountMap.Select((x) => (float)x.Value.Item1).ToArray(), ChartSeries.ChartType.Bar, Color.green);
+
+                    ChartSeries chartRight = new ChartSeries($"Right_Round_{roundIdx + 1}", actionTakenCountMap.Select((x) => (float)x.Value.Item2).ToArray(), ChartSeries.ChartType.Bar, Color.red);
+
+                    PostBattleChart.Setup(xGridSpacing: (int)avgTimeFrame);
+                    PostBattleChart.AddChartSeries(chartLeft);
+                    PostBattleChart.AddChartSeries(chartRight);
+                    PostBattleChart.DrawChart();
+                }
+            }
+
+            // PostBattleChart.AddChartSeries
         }
 
         private void OnCountdownChanged(ActionParameter param)
