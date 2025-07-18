@@ -60,8 +60,8 @@ namespace SumoBot
 
         public float Angle(
             Vector3? myPos = null,
-            Vector3? enemyPos = null,
             Vector3? myRot = null,
+            Vector3? enemyPos = null,
             bool normalized = false)
         {
             Vector3 dist = Distance(myPos, enemyPos);
