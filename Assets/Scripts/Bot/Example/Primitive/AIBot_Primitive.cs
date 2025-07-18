@@ -35,7 +35,6 @@ namespace SumoBot
             RobotStateAPI myState = api.MyRobot;
             float angleInDur = Mathf.Abs(angleToEnemy) / myState.RotateSpeed * myState.TurnRate;
 
-
             // When angle is quite enough facing the enemy, run dash, skill, accelerate action
             if (Mathf.Abs(angleToEnemy) < 20)
             {
