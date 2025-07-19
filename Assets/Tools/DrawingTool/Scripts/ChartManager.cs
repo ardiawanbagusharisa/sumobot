@@ -48,7 +48,7 @@ public class ChartManager : MonoBehaviour
     {
         _chartSeriesList.Clear();
 
-        for (int i = 0; i < 2; i++)
+        for (int i = 0; i < 3; i++)
         {
             float[] data = new float[52];
 
@@ -58,7 +58,8 @@ public class ChartManager : MonoBehaviour
             for (int j = 1; j < data.Length - 1; j++)
                 data[j] = Random.Range(0f, 50f);
 
-            _chartSeriesList.Add(new ChartSeries($"Series {i + 1}", data, ChartSeries.ChartType.Bar, Random.ColorHSV()));
+            _chartSeriesList.Add(new ChartSeries($"Series {i + 1}", data, (ChartSeries.ChartType)(i % 2), Random.ColorHSV()));
+
         }
     }
 
@@ -172,7 +173,7 @@ public class ChartManager : MonoBehaviour
             label.color = series.color;
             label.font = _labelFont;
             label.fontSize = _sidePanelFontSize;
-            
+
             series.OnVisibilityChanged(series.isVisible);
 
             toggle.onValueChanged.AddListener(isOn =>
@@ -447,7 +448,7 @@ public class ChartSeries
     public Color color;
     public bool isVisible = true;
     public ChartType chartType;
-    public System.Action<bool> OnVisibilityChanged; 
+    public System.Action<bool> OnVisibilityChanged;
 
     public ChartSeries(string name, float[] data, ChartType chartType, Color color)
     {
