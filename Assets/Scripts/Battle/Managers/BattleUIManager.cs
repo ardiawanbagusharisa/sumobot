@@ -7,6 +7,7 @@ using UnityEngine.UI;
 using System.Collections;
 using UnityEngine.SceneManagement;
 using SumoInput;
+using System;
 
 namespace SumoManager
 {
@@ -38,8 +39,6 @@ namespace SumoManager
         public TMP_Text Timer;
         public List<SumoCostume> PlayerHUD = new();
         public ChartManager PostBattleChart;
-        public TMP_Text PostBattleChartTitle;
-
 
         [Header("Battle UI - Left Player")]
         public TMP_Text LeftScore;
@@ -266,21 +265,21 @@ Left Shift / Right Shift - Dash
                     if (winnerHUD)
                     {
                         SumoController winner = battle.GetBattleWinner().GetRobotWinner(battle);
-                        winnerHUD?.AttachToHUD(winner.Costume);
+                        if (winner != null)
+                            winnerHUD?.AttachToHUD(winner.Costume);
                     }
 
-                    ShowActionChart(battle);
+                    ShowActionChart(LogManager.Log);
                     break;
             }
             UpdateScore(battle);
         }
 
-        private void ShowActionChart(Battle _)
+        private void ShowActionChart(LogManager.BattleLog Log)
         {
-            Debug.Log("ShowGameSummary Called");
-            for (int gameIdx = 0; gameIdx < LogManager.Log.Games.Count; gameIdx++)
+            for (int gameIdx = 0; gameIdx < Log.Games.Count; gameIdx++)
             {
-                LogManager.GameLog gameLog = LogManager.Log.Games[gameIdx];
+                LogManager.GameLog gameLog = Log.Games[gameIdx];
 
                 for (int roundIdx = 0; roundIdx < gameLog.Rounds.Count; roundIdx++)
                 {
@@ -288,7 +287,7 @@ Left Shift / Right Shift - Dash
 
                     LogManager.RoundLog roundLog = gameLog.Rounds[roundIdx];
 
-                    float avgTimeFrame = roundLog.Duration / 12;
+                    float avgTimeFrame = roundLog.Duration / (Log.BattleTime / 5);
 
                     int timeRange = 1;
 
@@ -306,14 +305,42 @@ Left Shift / Right Shift - Dash
                     var leftC = actionTakenCountMap.Select((x) => (float)x.Value.Item1).ToArray();
                     var rightC = actionTakenCountMap.Select((x) => (float)x.Value.Item2).ToArray();
 
+                    ChartSeries chartLeft = new(
+                        $"Left_Round_{roundIdx + 1}",
+                        actionTakenCountMap.Select((x) => (float)x.Value.Item1).ToArray(), ChartSeries.ChartType.Bar, Color.green);
 
-                    ChartSeries chartLeft = new ChartSeries($"Left_Round_{roundIdx + 1}", actionTakenCountMap.Select((x) => (float)x.Value.Item1).ToArray(), ChartSeries.ChartType.Bar, Color.green);
+                    ChartSeries chartRight = new(
+                        $"Right_Round_{roundIdx + 1}",
+                        actionTakenCountMap.Select((x) => (float)x.Value.Item2).ToArray(), ChartSeries.ChartType.Bar, Color.red);
 
-                    ChartSeries chartRight = new ChartSeries($"Right_Round_{roundIdx + 1}", actionTakenCountMap.Select((x) => (float)x.Value.Item2).ToArray(), ChartSeries.ChartType.Bar, Color.red);
+                    void onVisibilityChanged(bool isVisible)
+                    {
+                        if (isVisible)
+                            PostBattleChart.Setup(
+                                xGridSpacing: (int)avgTimeFrame,
+                                onXLabelCreated: (index) =>
+                                {
+                                    if (avgTimeFrame > 1.0f)
+                                    {
+                                        float xlabel = index * avgTimeFrame;
+                                        return Mathf.Floor(xlabel).ToString("0.#");
+                                    }
+                                    return index.ToString();
+                                });
+                    }
 
-                    PostBattleChart.Setup(xGridSpacing: (int)avgTimeFrame);
+                    chartLeft.OnVisibilityChanged = onVisibilityChanged;
+                    chartRight.OnVisibilityChanged = onVisibilityChanged;
+
+                    if (roundIdx < gameLog.Rounds.Count - 1)
+                    {
+                        chartLeft.isVisible = false;
+                        chartRight.isVisible = false;
+                    }
+
                     PostBattleChart.AddChartSeries(chartLeft);
                     PostBattleChart.AddChartSeries(chartRight);
+                    PostBattleChart.InitSidePanel();
                     PostBattleChart.DrawChart();
                 }
             }

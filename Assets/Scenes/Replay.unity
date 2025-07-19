@@ -5037,7 +5037,7 @@ MonoBehaviour:
   autoStart: 1
   leftPlayer: {fileID: 2277774824289782991}
   rightPlayer: {fileID: 2277774823266066402}
-  mainPanel: {fileID: 4572778336502026516}
+  LoadFromPath: 1
   TimeSliderUI: {fileID: 4433264065820114394}
   TimeLabel: {fileID: 1789844038278628782}
   PreviousGameButton: {fileID: 8664789870355638680}
