@@ -14651,6 +14651,14 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 6930594686332527008, guid: 6bb05384eaab28e49b0dbe041f18a9f4, type: 3}
+      propertyPath: _paddingLeft
+      value: 25
+      objectReference: {fileID: 0}
+    - target: {fileID: 6930594686332527008, guid: 6bb05384eaab28e49b0dbe041f18a9f4, type: 3}
+      propertyPath: _yGridSpacing
+      value: 50
+      objectReference: {fileID: 0}
+    - target: {fileID: 6930594686332527008, guid: 6bb05384eaab28e49b0dbe041f18a9f4, type: 3}
       propertyPath: _enablePallete
       value: 0
       objectReference: {fileID: 0}
