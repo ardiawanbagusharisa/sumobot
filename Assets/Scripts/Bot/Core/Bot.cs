@@ -7,25 +7,31 @@ using UnityEngine;
 
 namespace SumoBot
 {
-    // For test / debug, switch between ScriptableObject / Component
-    public abstract class Bot : MonoBehaviour
+    public abstract class Bot : ScriptableObject
     {
-        // [Todo]: Inherited Bot script shouldn't be able to access internal attributes
-        // Need to configure asmdef (assembly scope)
-        internal float ElapsedTime = 0;
-        internal InputProvider provider;
-        internal Queue<ISumoAction> actions;
+        #region Runtime properties
+
+        [HideInInspector]
+        public float ElapsedTime = 0;
+        
+        private InputProvider provider;
+
+        private Queue<ISumoAction> actions;
 
         internal void SetProvider(InputProvider provider)
         {
             actions = new Queue<ISumoAction>();
             this.provider = provider;
         }
+        #endregion
+
+        #region Abstract properties & method
 
         public abstract string ID { get; }
 
-        [Range(0.1f, 10f)]
+        [Min(0.1f)]
         public abstract float Interval { get; }
+
         public abstract SkillType SkillType { get; }
 
         public abstract void OnBotInit(PlayerSide side, SumoAPI botAPI);
@@ -52,5 +58,6 @@ namespace SumoBot
         {
             actions.Clear();
         }
+        #endregion
     }
 }

@@ -10,33 +10,29 @@ namespace SumoHelper
     {
         public bool IsActive;
         public bool ForceSave = true;
-
         private float debounceTime;
         private float lastCallTime;
-
         private float startTime;
         private CollisionLog collision;
         private readonly ActionLog action;
         private readonly SumoController controller;
 
-        public EventLogger(SumoController controller, float debounceTime, bool forceSave = true)
+        public EventLogger(SumoController controller, bool forceSave = true, bool isAction = true)
         {
             this.controller = controller;
-            this.debounceTime = debounceTime;
             ForceSave = forceSave;
-            action = new();
-        }
-
-        public EventLogger(SumoController controller, bool forceSave)
-        {
-            ForceSave = forceSave;
-            this.controller = controller;
+            if (isAction)
+            {
+                action = new();
+            }
         }
 
         public void Call(ISumoAction action)
         {
             if (!IsActive)
             {
+                debounceTime = action.Duration;
+
                 IsActive = true;
                 startTime = BattleManager.Instance.ElapsedTime;
 
@@ -78,7 +74,7 @@ namespace SumoHelper
 
         public void Update()
         {
-            if (IsActive && BattleManager.Instance.ElapsedTime - lastCallTime >= debounceTime)
+            if (IsActive && debounceTime != 0f && BattleManager.Instance.ElapsedTime - lastCallTime >= debounceTime)
             {
                 IsActive = false;
 
@@ -95,7 +91,7 @@ namespace SumoHelper
                 return;
 
             IsActive = false;
-            
+
             if (action != null)
                 SaveAction(false);
             if (collision != null)
@@ -110,9 +106,6 @@ namespace SumoHelper
                 action.Position = controller.transform.position;
                 action.LinearVelocity = controller.LastLinearVelocity;
                 action.AngularVelocity = controller.LastAngularVelocity;
-
-                float duration = BattleManager.Instance.ElapsedTime - startTime;
-                action.Duration = duration;
             }
 
             LogManager.LogPlayerEvents(
@@ -160,6 +153,29 @@ namespace SumoHelper
                 isStart: isStart,
                 category: "Collision",
                 data: collision.ToMap()
+            );
+        }
+
+        public void Save(string customCategory, float time)
+        {
+            BaseLog log = new()
+            {
+                Rotation = controller.transform.rotation.eulerAngles.z,
+                Position = controller.transform.position,
+                LinearVelocity = controller.LastLinearVelocity,
+                AngularVelocity = controller.LastAngularVelocity
+            };
+
+            LogManager.LogPlayerEvents(
+                actor: controller.Side,
+                startedAt: time,
+                updatedAt: time,
+                isStart: false,
+                category: customCategory,
+                data: new()
+                {
+                    {"Robot", log.ToMap()}
+                }
             );
         }
     }

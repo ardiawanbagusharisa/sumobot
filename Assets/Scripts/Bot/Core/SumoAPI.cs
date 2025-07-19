@@ -43,6 +43,80 @@ namespace SumoBot
             return myController.InputProvider.CanExecute(action);
         }
 
+        public Vector3 Distance(
+            Vector3? oriPos = null,
+            Vector3? targetPos = null)
+        {
+            return (targetPos ?? EnemyRobot.Position) - (oriPos ?? MyRobot.Position);
+        }
+
+        public float DistanceNormalized(
+            Vector3? oriPos = null,
+            Vector3? targetPos = null)
+        {
+            Vector3 dist = Distance(oriPos, targetPos);
+            return 1f - Mathf.Clamp01(dist.magnitude / BattleInfo.ArenaRadius);
+        }
+
+        public float DistanceFromArena(
+            bool isEnemy = false)
+        {
+            Vector3 dist = Distance(BattleInfo.ArenaPosition, isEnemy ? EnemyRobot.Position : MyRobot.Position);
+            return dist.magnitude;
+        }
+
+        public float Angle(
+            Vector3? oriPos = null,
+            Vector3? oriRot = null,
+            Vector3? targetPos = null,
+            bool normalized = false)
+        {
+            Vector3 dist = Distance(oriPos, targetPos);
+            float signedAngle = Vector3.SignedAngle(oriRot ?? (MyRobot.Rotation * Vector3.up), dist.normalized, Vector3.forward);
+
+            if (normalized)
+                return Mathf.Cos(signedAngle * Mathf.Deg2Rad);
+            else
+                return signedAngle;
+        }
+
+        public SimulateResultAPI Simulate(ISumoAction action, bool isEnemy = false)
+        {
+            RobotStateAPI robot = isEnemy ? EnemyRobot : MyRobot;
+            Vector3 position = robot.Position;
+            Vector3 direction = robot.Rotation * Vector3.up;
+
+            if (action is AccelerateAction || action is DashAction)
+            {
+                var predictionSpeed = action.Type == ActionType.Dash ? robot.DashSpeed : robot.MoveSpeed;
+
+                if (robot.Skill.Type == SkillType.Boost && robot.Skill.IsActive)
+                    predictionSpeed *= robot.Skill.BoostMultiplier;
+
+                if (action.Type == ActionType.Dash)
+                {
+                    position += robot.DashDuration * predictionSpeed * direction.normalized;
+                    position *= robot.StopDelay + (predictionSpeed * robot.StopDelay);
+                }
+                else
+                {
+                    position += direction.normalized * (predictionSpeed * action.Duration);
+                }
+            }
+            else if (action is TurnAction)
+            {
+                float totalAngle = robot.RotateSpeed * action.Duration * robot.RotateSpeed;
+                float turnSpeed = totalAngle / action.Duration;
+
+                if (action.Type is ActionType.TurnRight)
+                    totalAngle = -totalAngle;
+
+                direction += Quaternion.Euler(0, 0, totalAngle) * direction * turnSpeed;
+            }
+
+            return new(position, direction);
+        }
+
         public override string ToString()
         {
             return $"{BattleInfo}\n\n{EnemyRobot}\n\n{MyRobot}";
@@ -175,5 +249,17 @@ public readonly struct SkillStateAPI
                $"- Cooldown   : {cooldownStatus}\n" +
                $"- Duration   : {TotalDuration:F1}s\n" +
                $"- Multiplier : {(Type == SkillType.Boost ? BoostMultiplier : StoneMultiplier):F1}";
+    }
+}
+
+public readonly struct SimulateResultAPI
+{
+    public Vector3 Position { get; }
+    public Vector3 Rotation { get; }
+
+    public SimulateResultAPI(Vector3 position, Vector3 direction)
+    {
+        Position = position;
+        Rotation = direction;
     }
 }

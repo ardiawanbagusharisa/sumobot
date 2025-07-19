@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using SumoBot;
 using SumoCore;
 using SumoManager;
 using UnityEngine;
@@ -20,6 +21,7 @@ namespace SumoInput
         #region Input properties
         public bool IncludeKeyboard;
         public PlayerSide PlayerSide;
+        public SumoAPI API;
         #endregion
 
         #region Runtime properties
@@ -165,23 +167,11 @@ namespace SumoInput
 
         public bool IsValid(ISumoAction action)
         {
-            Battle battle = BattleManager.Instance.Battle;
-            SumoController controller = PlayerSide == PlayerSide.Left ? battle.LeftPlayer : battle.RightPlayer;
-
-            if (action.Param is float)
+            if (action is not DashAction && action is not SkillAction)
             {
-                float param = (float)action.Param;
-                if (param == float.NaN)
-                    throw new Exception($"parameter can't be NaN when you are using [{action.FullName}] type");
-            }
-
-            if (action.Type == ActionType.TurnLeftWithAngle || action.Type == ActionType.TurnRightWithAngle)
-            {
-                float param = (float)action.Param;
-                float minAngle = controller.HalfTurnAngle.min;
-                float maxAngle = controller.HalfTurnAngle.max;
-                if (param < minAngle || param > maxAngle)
-                    throw new Exception($"parameter can't be < {minAngle} or > {maxAngle} when you are using [{action.FullName}]");
+                float duration = action.Duration;
+                if (duration < ISumoAction.MinDuration)
+                    throw new Exception($"Duration can't be < {ISumoAction.MinDuration} when you are using [{action.FullName}]");
             }
             return true;
         }
@@ -190,6 +180,7 @@ namespace SumoInput
         {
             Battle battle = BattleManager.Instance.Battle;
             SumoController controller = PlayerSide == PlayerSide.Left ? battle.LeftPlayer : battle.RightPlayer;
+
 
             if (action is AccelerateAction)
             {

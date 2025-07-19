@@ -23,7 +23,7 @@ namespace SumoCore
         #region Skill Stat properties
         public float TotalCooldown = 10f;
         public float TotalDuration = 5f;
-        public float StoneMultiplier = 10f;
+        public float StoneMultiplier = 7f;
         public float BoostMultiplier = 1.8f;
         #endregion
 
@@ -67,13 +67,17 @@ namespace SumoCore
 
         public bool Activate(ISumoAction action)
         {
-            action.Type = (Type == SkillType.Boost) ? ActionType.SkillBoost : ActionType.SkillStone;
+            if (controller.IsMovementDisabled)
+                return false;
 
             if (IsSkillOnCooldown)
             {
                 Debug.Log($"[Skill][{Type}] is on cooldown");
                 return false;
             }
+
+            action.Type = (Type == SkillType.Boost) ? ActionType.SkillBoost : ActionType.SkillStone;
+            action.Duration = TotalDuration;
 
             Debug.Log($"[Skill][{Type}] activated!");
             IsActive = true;

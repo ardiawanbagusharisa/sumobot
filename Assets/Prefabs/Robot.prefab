@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 4764707064835075653}
   m_Layer: 3
   m_Name: Triangle
-  m_TagString: Player
+  m_TagString: Robot/Triangle
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -99,7 +99,7 @@ GameObject:
   - component: {fileID: 4608653794038210764}
   m_Layer: 3
   m_Name: Eye
-  m_TagString: Player
+  m_TagString: Robot/Eye
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -186,7 +186,7 @@ GameObject:
   - component: {fileID: 4964555814960858567}
   m_Layer: 3
   m_Name: Body
-  m_TagString: Player
+  m_TagString: Robot/Body
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -274,7 +274,6 @@ GameObject:
   - component: {fileID: 1737808453494872349}
   - component: {fileID: 8581006012013900821}
   - component: {fileID: 5583292103176566768}
-  - component: {fileID: 1335788416037175078}
   m_Layer: 0
   m_Name: Robot
   m_TagString: Player
@@ -448,7 +447,7 @@ MonoBehaviour:
   StopTreshold: 0.05
   SlowDownRate: 2
   Torque: 0.4
-  TurnRate: 0.5
+  TurnRate: 1.5
   BounceResistance: 1
   LockReductionMultiplier: 0.9
   CollisionBaseForce: 1.5
@@ -462,30 +461,10 @@ MonoBehaviour:
   Side: 1
   directionIndicator: {fileID: 4764707064835075653}
   InputProvider: {fileID: 0}
-  Bot: {fileID: 0}
   isInputDisabled: 0
-  LastDashTime: 0
   StartPosition: {x: 0, y: 0, z: 0}
   StartRotation: {x: 0, y: 0, z: 0, w: 0}
   IsSkillDisabled: 1
---- !u!114 &1335788416037175078
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1488574921577525681}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 567c7c5eb92f6483a89c16137907cce2, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  Name: MCTS
-  ActionInterval: 0.1
-  SimulationTime: 0.25
-  LowestScoreToReInit: -500
-  ReinitPerIters: 2
-  Iterations: 100
 --- !u!1 &4604185279569046188
 GameObject:
   m_ObjectHideFlags: 0
@@ -498,7 +477,7 @@ GameObject:
   - component: {fileID: 6772123260480660960}
   m_Layer: 3
   m_Name: Accessory
-  m_TagString: Player
+  m_TagString: Robot/Accessory
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -585,7 +564,7 @@ GameObject:
   - component: {fileID: 5549000176310372618}
   m_Layer: 3
   m_Name: Wheel
-  m_TagString: Player
+  m_TagString: Robot/Wheel
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
