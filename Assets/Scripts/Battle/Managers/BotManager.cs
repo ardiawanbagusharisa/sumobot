@@ -2,6 +2,7 @@ using Mono.Cecil.Cil;
 using SumoCore;
 using SumoManager;
 using Unity.Collections;
+using Unity.VisualScripting;
 using UnityEngine;
 
 namespace SumoBot
@@ -9,10 +10,14 @@ namespace SumoBot
     public class BotManager : MonoBehaviour
     {
         public bool LeftEnabled = true;
-        [ReadOnly] public Bot Left;
+
+        [HideInInspector]
+        public Bot Left;
 
         public bool RightEnabled = true;
-        [ReadOnly] public Bot Right;
+
+        [HideInInspector]
+        public Bot Right;
 
         [HideInInspector] public int leftBotIndex = 0;
         [HideInInspector] public int rightBotIndex = 0;
