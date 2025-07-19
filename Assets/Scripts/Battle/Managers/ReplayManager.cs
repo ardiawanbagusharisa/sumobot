@@ -10,8 +10,6 @@ using TMPro;
 using System;
 using System.Collections;
 using UnityEngine.UI;
-using SumoCore;
-using static UnityEngine.UI.Slider;
 
 public class ReplayManager : MonoBehaviour
 {
@@ -29,7 +27,7 @@ public class ReplayManager : MonoBehaviour
     #endregion
 
     [Header("Replay Configuration")]
-    public GameObject mainPanel;
+    public bool LoadFromPath = true;
 
     #region Replay control properties
     [Header("Replay Controls")]
@@ -96,36 +94,8 @@ public class ReplayManager : MonoBehaviour
         if (!IsEnable)
             return;
 
-        mainPanel.SetActive(true);
-
-        string basePath = Path.Combine(Application.persistentDataPath, "Logs");
-        string folder = EditorUtility.OpenFolderPanel("Select Replay Folder", basePath, "");
-
-        if (string.IsNullOrEmpty(folder)) return;
-
-        LoadAllGameLogs(folder);
-        LoadMetadata(folder);
-        LoadRound(currentGameIndex, currentRoundIndex);
-
-        if (autoStart)
-            isPlaying = true;
-
-        PreviousGameButton?.onClick.AddListener(GoToPreviousGame);
-        NextGameButton?.onClick.AddListener(GoToNextGame);
-        PreviousRoundButton?.onClick.AddListener(GoToPreviousRound);
-        NextRoundButton?.onClick.AddListener(GoToNextRound);
-
-        if (PlaybackSpeedSlider == null)
-            return;
-
-        PlaybackSpeedSlider.minValue = 0f;
-        PlaybackSpeedSlider.maxValue = 5f;
-        PlaybackSpeedSlider.value = playbackSpeed;
-
-        PlaybackSpeedSlider.onValueChanged.AddListener(OnPlayBackSpeedChanged);
-
-        if (PlaybackSpeedLabel != null)
-            PlaybackSpeedLabel.text = $"Playback Speed: {playbackSpeed:0.#}x";
+        if (LoadFromPath)
+            LoadGameFromPath();
     }
 
     void OnEnable()
@@ -136,12 +106,6 @@ public class ReplayManager : MonoBehaviour
         }
     }
 
-    void OnPlayBackSpeedChanged(float value)
-    {
-        playbackSpeed = value;
-        if (PlaybackSpeedLabel != null)
-            PlaybackSpeedLabel.text = $"Playback Speed: {value:0.#}x";
-    }
 
     void OnDisable()
     {
@@ -209,6 +173,37 @@ public class ReplayManager : MonoBehaviour
         }
     }
     #endregion
+
+    void Init()
+    {
+        LoadRound(currentGameIndex, currentRoundIndex);
+        if (autoStart)
+            isPlaying = true;
+
+        PreviousGameButton?.onClick.AddListener(GoToPreviousGame);
+        NextGameButton?.onClick.AddListener(GoToNextGame);
+        PreviousRoundButton?.onClick.AddListener(GoToPreviousRound);
+        NextRoundButton?.onClick.AddListener(GoToNextRound);
+
+        if (PlaybackSpeedSlider == null)
+            return;
+
+        PlaybackSpeedSlider.minValue = 0f;
+        PlaybackSpeedSlider.maxValue = 5f;
+        PlaybackSpeedSlider.value = playbackSpeed;
+
+        PlaybackSpeedSlider.onValueChanged.AddListener(OnPlayBackSpeedChanged);
+
+        if (PlaybackSpeedLabel != null)
+            PlaybackSpeedLabel.text = $"Playback Speed: {playbackSpeed:0.#}x";
+    }
+
+    void OnPlayBackSpeedChanged(float value)
+    {
+        playbackSpeed = value;
+        if (PlaybackSpeedLabel != null)
+            PlaybackSpeedLabel.text = $"Playback Speed: {value:0.#}x";
+    }
 
     #region Core Logics
     void LoadRound(int gameIdx, int roundIdx)
@@ -298,26 +293,48 @@ public class ReplayManager : MonoBehaviour
     }
 
 
-    void LoadAllGameLogs(string folderPath)
+    public void LoadGameFromPath()
     {
-        string[] files = Directory.GetFiles(folderPath, "game_*.json");
+        string basePath = Path.Combine(Application.persistentDataPath, "Logs");
+        string folder = EditorUtility.OpenFolderPanel("Select Replay Folder", basePath, "");
+
+        if (string.IsNullOrEmpty(folder)) return;
+
+        string[] files = Directory.GetFiles(folder, "game_*.json");
         foreach (var file in files)
         {
             string json = File.ReadAllText(file);
             var log = JsonConvert.DeserializeObject<GameLog>(json);
             gameLogs.Add(log);
         }
-    }
-    void LoadMetadata(string folderPath)
-    {
-        string[] metadataFile = Directory.GetFiles(folderPath, "metadata.json");
-        string json = File.ReadAllText(metadataFile[0]);
-        metadata = JsonConvert.DeserializeObject<BattleLog>(json);
+
+        string[] metadataFile = Directory.GetFiles(folder, "metadata.json");
+        string jsonMetaData = File.ReadAllText(metadataFile[0]);
+        metadata = JsonConvert.DeserializeObject<BattleLog>(jsonMetaData);
 
         metadata.LeftPlayerStats.WinPerGame = 0;
         metadata.RightPlayerStats.WinPerGame = 0;
         metadata.LeftPlayerStats.ActionTaken = 0;
         metadata.RightPlayerStats.ActionTaken = 0;
+
+        Init();
+    }
+
+    public void LoadGameFromBattle(BattleLog battleLog)
+    {
+        foreach (var game in battleLog.Games)
+        {
+            gameLogs.Add(game);
+        }
+
+        metadata = battleLog;
+
+        metadata.LeftPlayerStats.WinPerGame = 0;
+        metadata.RightPlayerStats.WinPerGame = 0;
+        metadata.LeftPlayerStats.ActionTaken = 0;
+        metadata.RightPlayerStats.ActionTaken = 0;
+
+        Init();
     }
 
     void DisplayCurrentEventInfo()

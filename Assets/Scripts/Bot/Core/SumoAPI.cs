@@ -44,28 +44,35 @@ namespace SumoBot
         }
 
         public Vector3 Distance(
-            Vector3? myPos = null,
-            Vector3? enemyPos = null)
+            Vector3? oriPos = null,
+            Vector3? targetPos = null)
         {
-            return (enemyPos ?? EnemyRobot.Position) - (myPos ?? MyRobot.Position);
+            return (targetPos ?? EnemyRobot.Position) - (oriPos ?? MyRobot.Position);
         }
 
         public float DistanceNormalized(
-            Vector3? myPos = null,
-            Vector3? enemyPos = null)
+            Vector3? oriPos = null,
+            Vector3? targetPos = null)
         {
-            Vector3 dist = Distance(myPos, enemyPos);
+            Vector3 dist = Distance(oriPos, targetPos);
             return 1f - Mathf.Clamp01(dist.magnitude / BattleInfo.ArenaRadius);
         }
 
+        public float DistanceFromArena(
+            bool isEnemy = false)
+        {
+            Vector3 dist = Distance(BattleInfo.ArenaPosition, isEnemy ? EnemyRobot.Position : MyRobot.Position);
+            return dist.magnitude;
+        }
+
         public float Angle(
-            Vector3? myPos = null,
-            Vector3? myRot = null,
-            Vector3? enemyPos = null,
+            Vector3? oriPos = null,
+            Vector3? oriRot = null,
+            Vector3? targetPos = null,
             bool normalized = false)
         {
-            Vector3 dist = Distance(myPos, enemyPos);
-            float signedAngle = Vector3.SignedAngle(myRot ?? (MyRobot.Rotation * Vector3.up), dist.normalized, Vector3.forward);
+            Vector3 dist = Distance(oriPos, targetPos);
+            float signedAngle = Vector3.SignedAngle(oriRot ?? (MyRobot.Rotation * Vector3.up), dist.normalized, Vector3.forward);
 
             if (normalized)
                 return Mathf.Cos(signedAngle * Mathf.Deg2Rad);

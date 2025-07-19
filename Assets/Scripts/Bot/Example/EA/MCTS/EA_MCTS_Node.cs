@@ -64,12 +64,12 @@ namespace SumoBot
                 newNode.ID = action.FullName;
                 if (goodAction != null && goodAction.Count > 0)
                 {
-                    newNode.totalReward = 10;
+                    newNode.totalReward = 1;
                     newNode.visits = 1;
                 }
                 if (badAction != null && badAction.Count > 0)
                 {
-                    newNode.totalReward = -10;
+                    newNode.totalReward = -1;
                     newNode.visits = 1;
                 }
                 children.Add(newNode);
@@ -152,27 +152,25 @@ namespace SumoBot
                 aiPos += result.Position;
                 aiRot += result.Rotation;
 
-                var preAngleScore = api.Angle(myPos: aiPos, myRot: aiRot, normalized: true);
-                var preDistScore = api.DistanceNormalized(myPos: aiPos);
+                bool approachWithPosition = action is AccelerateAction || action is DashAction;
+                float preAngleScore = api.Angle(oriPos: aiPos, oriRot: aiRot, normalized: true);
+                float preDistScore = api.DistanceNormalized(oriPos: aiPos);
 
                 angleScore += preAngleScore;
                 distScore += preDistScore;
 
-                bool approachWithPosition = action is AccelerateAction || action is DashAction;
-
-                // If Robot near arena (75%), reward the action to activate skill stone (depend on skill-type)
                 if (action.Type == ActionType.SkillStone)
                 {
                     if (api.CanExecute(action))
                     {
-                        bonusOrPenalty += 5f;
+                        bonusOrPenalty += 2f;
 
-                        if (api.DistanceNormalized(myPos: aiPos) >= (api.BattleInfo.ArenaRadius * 0.75))
+                        if (api.DistanceNormalized(oriPos: aiPos) >= (api.BattleInfo.ArenaRadius * 0.75))
                         {
-                            bonusOrPenalty += 5f;
+                            bonusOrPenalty += 2f;
 
                             if (api.EnemyRobot.Skill.Type == SkillType.Boost && api.EnemyRobot.Skill.IsActive)
-                                bonusOrPenalty += 5f;
+                                bonusOrPenalty += 2f;
 
                         }
                         continue;
@@ -186,7 +184,7 @@ namespace SumoBot
                 {
                     if (api.CanExecute(action))
                     {
-                        bonusOrPenalty += 10f;
+                        bonusOrPenalty += 2f;
                     }
                     else
                     {
@@ -198,17 +196,40 @@ namespace SumoBot
                 if (approachWithPosition)
                 {
                     float avg = (preAngleScore + preAngleScore) / 2;
+                    float distFromArena = api.DistanceFromArena();
+                    float nearArenaRadius = api.BattleInfo.ArenaRadius * 0.8f;
+
+                    if (distFromArena > nearArenaRadius)
+                    {
+                        float angleToArena = api.Angle(targetPos: api.BattleInfo.ArenaPosition, normalized: true);
+                        Debug.Log($"robot near arena {distFromArena} > {nearArenaRadius}: angle {angleToArena}");
+                        // If robot near arena radius by 70%, reward approachWithPosition action to make closer to the center of arena
+                        if (angleToArena >= 0.7f)
+                        {
+                            bonusOrPenalty += 2f;
+                        }
+                        else
+                        {
+                            bonusOrPenalty -= 1f;
+                        }
+                    }
 
                     if (avg > 0.90f)
                     {
                         // Reward robot if Enemy is in front of face (by rotation and by distance)
-                        bonusOrPenalty += 10f;
+                        bonusOrPenalty += 3f;
+
+                        if (action.Type == ActionType.Dash)
+                            bonusOrPenalty += 0.5f;
                         continue;
                     }
                     else if (preAngleScore > 0.90f && api.MyRobot.Skill.Type == SkillType.Boost && api.MyRobot.Skill.IsActive)
                     {
                         // Reward robot if Enemy is in front of face (by rotation and by boost-skill)
-                        bonusOrPenalty += 10f;
+                        bonusOrPenalty += 2f;
+
+                        if (action.Type == ActionType.Dash)
+                            bonusOrPenalty += 0.5f;
                         continue;
                     }
                 }

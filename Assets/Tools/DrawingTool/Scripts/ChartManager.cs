@@ -13,6 +13,7 @@ public class ChartManager : MonoBehaviour
     [Range(1f, 20f)][SerializeField] float _brushSize = 3f;
     [Range(0f, 2f)][SerializeField] float _wiggleSize = 1f;
     [Range(12f, 24f)][SerializeField] int _fontSize = 12;
+    [Range(12f, 24f)][SerializeField] int _sidePanelFontSize = 14;
 
     [Header("ChartManager Settings")]
     [SerializeField] private bool _enableDebugData = true;
@@ -43,7 +44,6 @@ public class ChartManager : MonoBehaviour
     RenderTexture _canvasRenderTexture;
 
     System.Func<float, string> _onXLabelCreated;
-
     private void DebugPopulateSeries()
     {
         _chartSeriesList.Clear();
@@ -134,12 +134,17 @@ public class ChartManager : MonoBehaviour
         Debug.Log("Drawing tool palette initialized.");
     }
 
-    public void Setup(int? xGridSpacing = null, float? yGridSpacing = null, System.Func<int, string> onXLabelCreated = null)
+    public void Setup(
+        int? xGridSpacing = null,
+        float? yGridSpacing = null,
+        System.Func<float, string> onXLabelCreated = null)
     {
         if (xGridSpacing != null)
             _xGridDataSpacing = (int)xGridSpacing;
         if (yGridSpacing != null)
             _yGridSpacing = (float)yGridSpacing;
+        if (onXLabelCreated != null)
+            _onXLabelCreated = onXLabelCreated;
     }
 
     public void AddChartSeries(ChartSeries chart)
@@ -166,10 +171,14 @@ public class ChartManager : MonoBehaviour
             label.text = series.name;
             label.color = series.color;
             label.font = _labelFont;
+            label.fontSize = _sidePanelFontSize;
+            
+            series.OnVisibilityChanged(series.isVisible);
 
             toggle.onValueChanged.AddListener(isOn =>
             {
                 series.isVisible = isOn;
+                series.OnVisibilityChanged(isOn);
                 DrawChart();
             });
         }
@@ -382,7 +391,7 @@ public class ChartManager : MonoBehaviour
         foreach (var (index, x) in xPoints)
             if (index != 0)
             {
-                string xLabel = _onXLabelCreated != null ? _onXLabelCreated(x) : index.ToString();
+                string xLabel = _onXLabelCreated != null ? _onXLabelCreated(index).ToString() : index.ToString();
                 CreateLabel(xLabel, new Vector2(x, _paddingBottom - _labelOffset));
             }
 
@@ -438,6 +447,7 @@ public class ChartSeries
     public Color color;
     public bool isVisible = true;
     public ChartType chartType;
+    public System.Action<bool> OnVisibilityChanged; 
 
     public ChartSeries(string name, float[] data, ChartType chartType, Color color)
     {
