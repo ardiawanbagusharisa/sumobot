@@ -306,11 +306,11 @@ Left Shift / Right Shift - Dash
                     var rightC = actionTakenCountMap.Select((x) => (float)x.Value.Item2).ToArray();
 
                     ChartSeries chartLeft = new(
-                        $"Left_Round_{roundIdx + 1}",
+                        $"P1_Round_{roundIdx + 1}",
                         actionTakenCountMap.Select((x) => (float)x.Value.Item1).ToArray(), ChartSeries.ChartType.Bar, Color.green);
 
                     ChartSeries chartRight = new(
-                        $"Right_Round_{roundIdx + 1}",
+                        $"P2_Round_{roundIdx + 1}",
                         actionTakenCountMap.Select((x) => (float)x.Value.Item2).ToArray(), ChartSeries.ChartType.Bar, Color.red);
 
                     void onVisibilityChanged(bool isVisible)
