@@ -105,7 +105,7 @@ namespace SumoBot
             }
             else if (action is TurnAction)
             {
-                float totalAngle = robot.RotateSpeed * action.Duration * robot.RotateSpeed;
+                float totalAngle = robot.RotateSpeed * action.Duration * robot.TurnRate;
                 float turnSpeed = totalAngle / action.Duration;
 
                 if (action.Type is ActionType.TurnRight)
