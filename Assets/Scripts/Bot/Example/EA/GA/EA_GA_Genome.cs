@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Linq;
 using SumoCore;
 using UnityEngine;
 
@@ -36,9 +38,9 @@ namespace SumoBot
             return child;
         }
 
-        public ISumoAction GetBestActionIndex()
+        public List<ISumoAction> GetBestAction(int amount = 1)
         {
-            int bestIndex = 0;
+            List<ISumoAction> actions = new() { };
             float bestValue = float.MinValue;
 
             for (int i = 0; i < weights.Length; i++)
@@ -46,10 +48,11 @@ namespace SumoBot
                 if (weights[i] > bestValue)
                 {
                     bestValue = weights[i];
-                    bestIndex = i;
+                    actions.Add(AIBot_EA_GA.PossibleActions[i]);
                 }
             }
-            return AIBot_EA_GA.PossibleActions[bestIndex];
+            
+            return actions.TakeLast(amount).ToList();
         }
 
     }
