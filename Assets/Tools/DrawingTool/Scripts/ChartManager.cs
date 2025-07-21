@@ -152,6 +152,16 @@ public class ChartManager : MonoBehaviour
     {
         if (!_chartSeriesList.Exists((x) => x.name == chart.name))
             _chartSeriesList.Add(chart);
+        else
+            UpdateChartSeries(chart);
+    }
+    public void UpdateChartSeries(ChartSeries chart)
+    {
+        int chartIndex = _chartSeriesList.FindIndex((x) => x.name == chart.name);
+        if (chartIndex != -1)
+        {
+            _chartSeriesList[chartIndex] = chart;
+        }
     }
 
     public void InitSidePanel()
@@ -174,12 +184,9 @@ public class ChartManager : MonoBehaviour
             label.font = _labelFont;
             label.fontSize = _sidePanelFontSize;
 
-            series.OnVisibilityChanged(series.isVisible);
-
             toggle.onValueChanged.AddListener(isOn =>
             {
                 series.isVisible = isOn;
-                series.OnVisibilityChanged(isOn);
                 DrawChart();
             });
         }
@@ -199,6 +206,11 @@ public class ChartManager : MonoBehaviour
             Destroy(child.gameObject);
     }
 
+    public void ClearChartSeries()
+    {
+        _chartSeriesList.Clear();
+    }
+    
     public void DrawChart()
     {
         ClearCanvas(_canvasRenderTexture, _backgroundColour);
@@ -218,8 +230,25 @@ public class ChartManager : MonoBehaviour
 
         foreach (var series in _chartSeriesList)
         {
+
             if (!series.isVisible || series.data == null || series.data.Length == 0)
                 continue;
+
+            // Add zero at first and end index
+            if (series.data[0] != 0)
+            {
+                var temp = series.data.ToList();
+                temp.Insert(0, 0);
+                series.data = temp.ToArray();
+            }
+            if (series.data.Last() != 0)
+            {
+                var temp = series.data.ToList();
+                temp.Add(0);
+                series.data = temp.ToArray();
+            }
+
+            series.OnPrepareToDraw?.Invoke();
 
             globalMin = Mathf.Min(globalMin, series.data.Min());
             globalMax = Mathf.Max(globalMax, series.data.Max());
@@ -448,7 +477,8 @@ public class ChartSeries
     public Color color;
     public bool isVisible = true;
     public ChartType chartType;
-    public System.Action<bool> OnVisibilityChanged;
+
+    public System.Action OnPrepareToDraw;
 
     public ChartSeries(string name, float[] data, ChartType chartType, Color color)
     {

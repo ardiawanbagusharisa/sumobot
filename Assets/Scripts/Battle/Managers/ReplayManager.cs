@@ -10,6 +10,7 @@ using TMPro;
 using System;
 using System.Collections;
 using UnityEngine.UI;
+using SumoCore;
 
 public class ReplayManager : MonoBehaviour
 {
@@ -57,6 +58,15 @@ public class ReplayManager : MonoBehaviour
     public TMP_Text RightWinCount;
     public TMP_Text RightSkillType;
     public TMP_Text RightActionTaken;
+    #endregion
+
+    #region Replay Charts
+    [Header("Replay Charts")]
+    public GameObject SidebarPanel;
+    public ChartManager ActionPerSecondChart;
+    public float ActionTimeInterval = 2f;
+    public ChartManager MostActionChartLeft;
+    public ChartManager MostActionChartRight;
     #endregion
 
     #region Runtime (readonly) properties 
@@ -171,6 +181,14 @@ public class ReplayManager : MonoBehaviour
             }
             LoadRound(currentGameIndex, currentRoundIndex);
         }
+    }
+
+    void FixedUpdate()
+    {
+        if (!isPlaying || !IsEnable) return;
+        ShowActionChart();
+        ShowMostActionChart(PlayerSide.Left);
+        ShowMostActionChart(PlayerSide.Right);
     }
     #endregion
 
@@ -427,11 +445,13 @@ public class ReplayManager : MonoBehaviour
         currentTime = 0f;
         leftEventIndex = 0;
         rightEventIndex = 0;
+        leftEventsMap.Clear();
+        rightEventsMap.Clear();
+        ActionPerSecondChart.ClearChartSeries();
+        MostActionChartLeft.ClearChartSeries();
 
         if (includePlayer)
         {
-            leftEventsMap.Clear();
-            rightEventsMap.Clear();
             metadata.LeftPlayerStats.ActionTaken = 0;
             metadata.RightPlayerStats.ActionTaken = 0;
         }
@@ -486,6 +506,110 @@ public class ReplayManager : MonoBehaviour
         int minutes = Mathf.FloorToInt(time / 60f);
         int seconds = Mathf.CeilToInt(time % 60f);
         return $"{minutes:00}:{seconds:00}";
+    }
+
+    private void ShowActionChart()
+    {
+        int timeFrame = 1;
+
+        Dictionary<int, (float, float)> actionTakensMap = new();
+
+        for (float i = 0; i < currentTime; i += ActionTimeInterval)
+        {
+            int leftActionAmount = leftEventsMap.Values.Where((x) => x.UpdatedAt >= i && x.UpdatedAt < (i + ActionTimeInterval)).Count();
+
+            int rightActionAmount = rightEventsMap.Values.Where((x) => x.UpdatedAt >= i && x.UpdatedAt < (i + ActionTimeInterval)).Count();
+
+            actionTakensMap[timeFrame] = (leftActionAmount, rightActionAmount);
+
+            timeFrame += 1;
+        }
+
+        var leftAmount = actionTakensMap.Select((x) => x.Value.Item1).ToArray();
+        var rightAmount = actionTakensMap.Select((x) => x.Value.Item2).ToArray();
+
+        ChartSeries chartLeft = new(
+            $"P1_Round_{currentRoundIndex + 1}",
+            leftAmount, ChartSeries.ChartType.Line, Color.green);
+
+        ChartSeries chartRight = new(
+            $"P2_Round_{currentRoundIndex + 1}",
+            rightAmount, ChartSeries.ChartType.Line, Color.red);
+
+        void setup()
+        {
+            ActionPerSecondChart.Setup(
+                xGridSpacing: (int)ActionTimeInterval,
+                onXLabelCreated: (index) =>
+                {
+                    if (ActionTimeInterval > 1.0f)
+                    {
+                        float xlabel = index * ActionTimeInterval;
+                        return Mathf.Floor(xlabel).ToString("0.#");
+                    }
+                    return index.ToString();
+                });
+        }
+
+        chartLeft.OnPrepareToDraw = setup;
+        chartRight.OnPrepareToDraw = setup;
+
+        ActionPerSecondChart.AddChartSeries(chartLeft);
+        ActionPerSecondChart.AddChartSeries(chartRight);
+        ActionPerSecondChart.DrawChart();
+    }
+
+    private void ShowMostActionChart(PlayerSide side)
+    {
+        ChartManager chartManager = side == PlayerSide.Left ? MostActionChartLeft : MostActionChartRight;
+        if (chartManager == null) return;
+        
+        Dictionary<string, float> mostActions = new();
+
+        foreach (var action in side == PlayerSide.Left ? leftEventsMap : rightEventsMap)
+        {
+            string key = (string)action.Value.Data["Name"];
+
+            if (mostActions.ContainsKey(key))
+            {
+                mostActions[key] += 1;
+            }
+            else
+            {
+                mostActions.Add(key, 0);
+            }
+        }
+
+        var mostActionList = mostActions.ToList();
+        mostActionList.Sort((a, b) => b.Value.CompareTo(a.Value));
+        mostActionList = mostActionList.Take(3).ToList();
+
+        ChartSeries chart = new(
+            $"P1_Round_{currentRoundIndex + 1}",
+            mostActionList.Select((x) => x.Value).ToArray(),
+            ChartSeries.ChartType.Bar,
+            side == PlayerSide.Left ? Color.green : Color.red);
+
+        void setup()
+        {
+            chartManager.Setup(
+                xGridSpacing: 0,
+                onXLabelCreated: (index) =>
+                {
+                    if (index <= mostActionList.Count)
+                    {
+                        return mostActionList[(int)index - 1].Key;
+                    }
+                    else
+                    {
+                        return "";
+                    }
+                });
+        }
+        chart.OnPrepareToDraw = setup;
+
+        chartManager.AddChartSeries(chart);
+        chartManager.DrawChart();
     }
 }
 

@@ -38,7 +38,6 @@ namespace SumoManager
         public TMP_Text Round;
         public TMP_Text Timer;
         public List<SumoCostume> PlayerHUD = new();
-        public ChartManager PostBattleChart;
 
         [Header("Battle UI - Left Player")]
         public TMP_Text LeftScore;
@@ -218,6 +217,7 @@ Left Shift / Right Shift - Dash
                     RightSkill.value = (int)rightPlayer.Skill.Type;
                     LeftFinalScore.SetText("");
                     RightFinalScore.SetText("");
+                    
                     PlayerHUD.ForEach((x) =>
                     {
                         if (x.Side == Placement.Left)
@@ -269,83 +269,9 @@ Left Shift / Right Shift - Dash
                             winnerHUD?.AttachToHUD(winner.Costume);
                     }
 
-                    ShowActionChart(LogManager.Log);
                     break;
             }
             UpdateScore(battle);
-        }
-
-        private void ShowActionChart(LogManager.BattleLog Log)
-        {
-            for (int gameIdx = 0; gameIdx < Log.Games.Count; gameIdx++)
-            {
-                LogManager.GameLog gameLog = Log.Games[gameIdx];
-
-                for (int roundIdx = 0; roundIdx < gameLog.Rounds.Count; roundIdx++)
-                {
-                    Dictionary<int, (int, int)> actionTakenCountMap = new();
-
-                    LogManager.RoundLog roundLog = gameLog.Rounds[roundIdx];
-
-                    float avgTimeFrame = roundLog.Duration / (Log.BattleTime / 5);
-
-                    int timeRange = 1;
-
-                    for (float i = 0; i < roundLog.Duration; i += avgTimeFrame)
-                    {
-                        int leftActionTaken = roundLog.PlayerEvents.Where((x) => x.UpdatedAt < (i + avgTimeFrame) && x.UpdatedAt >= i && x.Category == "Action" && x.Actor == "Left" && x.IsStart).Count();
-
-                        int rightActionTaken = roundLog.PlayerEvents.Where((x) => x.UpdatedAt < (i + avgTimeFrame) && x.UpdatedAt > i && x.Category == "Action" && x.Actor == "Right" && x.IsStart).Count();
-
-                        actionTakenCountMap[timeRange] = (leftActionTaken, rightActionTaken);
-
-                        timeRange += 1;
-                    }
-
-                    var leftC = actionTakenCountMap.Select((x) => (float)x.Value.Item1).ToArray();
-                    var rightC = actionTakenCountMap.Select((x) => (float)x.Value.Item2).ToArray();
-
-                    ChartSeries chartLeft = new(
-                        $"P1_Round_{roundIdx + 1}",
-                        actionTakenCountMap.Select((x) => (float)x.Value.Item1).ToArray(), ChartSeries.ChartType.Bar, Color.green);
-
-                    ChartSeries chartRight = new(
-                        $"P2_Round_{roundIdx + 1}",
-                        actionTakenCountMap.Select((x) => (float)x.Value.Item2).ToArray(), ChartSeries.ChartType.Bar, Color.red);
-
-                    void onVisibilityChanged(bool isVisible)
-                    {
-                        if (isVisible)
-                            PostBattleChart.Setup(
-                                xGridSpacing: (int)avgTimeFrame,
-                                onXLabelCreated: (index) =>
-                                {
-                                    if (avgTimeFrame > 1.0f)
-                                    {
-                                        float xlabel = index * avgTimeFrame;
-                                        return Mathf.Floor(xlabel).ToString("0.#");
-                                    }
-                                    return index.ToString();
-                                });
-                    }
-
-                    chartLeft.OnVisibilityChanged = onVisibilityChanged;
-                    chartRight.OnVisibilityChanged = onVisibilityChanged;
-
-                    if (roundIdx < gameLog.Rounds.Count - 1)
-                    {
-                        chartLeft.isVisible = false;
-                        chartRight.isVisible = false;
-                    }
-
-                    PostBattleChart.AddChartSeries(chartLeft);
-                    PostBattleChart.AddChartSeries(chartRight);
-                    PostBattleChart.InitSidePanel();
-                    PostBattleChart.DrawChart();
-                }
-            }
-
-            // PostBattleChart.AddChartSeries
         }
 
         private void OnCountdownChanged(ActionParameter param)
