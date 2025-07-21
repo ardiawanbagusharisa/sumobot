@@ -255,7 +255,7 @@ namespace SumoCore
                 rotatedAngle += step;
 
                 float currentRotation = startAngle + rotatedAngle;
-                transform.rotation = Quaternion.Euler(0, 0, currentRotation);
+                robotRigidBody.MoveRotation(currentRotation);
                 yield return null;
                 Log(action);
             }

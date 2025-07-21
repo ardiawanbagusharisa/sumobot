@@ -37,7 +37,7 @@ namespace SumoBot
             }
             return child;
         }
-
+        
         public List<ISumoAction> GetBestAction(int amount = 1)
         {
             List<ISumoAction> actions = new() { };
@@ -51,7 +51,7 @@ namespace SumoBot
                     actions.Add(AIBot_EA_GA.PossibleActions[i]);
                 }
             }
-            
+
             return actions.TakeLast(amount).ToList();
         }
 
