@@ -22,7 +22,7 @@ namespace SumoBot
         [HideInInspector] public int leftBotIndex = 0;
         [HideInInspector] public int rightBotIndex = 0;
 
-        public bool IsEnable => LeftEnabled || RightEnabled;
+        public bool BotEnabled => LeftEnabled || RightEnabled;
 
         private void OnEnable()
         {
@@ -31,6 +31,9 @@ namespace SumoBot
 
         void Start()
         {
+            if (!enabled)
+                return;
+
             var allTypes = BotUtility.GetAllBotTypes();
 
             if (LeftEnabled && leftBotIndex >= 0 && leftBotIndex < allTypes.Count)
@@ -42,7 +45,7 @@ namespace SumoBot
 
         public void OnUpdate(float ElapsedTime)
         {
-            if (!IsEnable)
+            if (!BotEnabled || !enabled)
                 return;
 
             if (LeftEnabled && Left != null)
@@ -69,7 +72,7 @@ namespace SumoBot
 
         public void OnBattleStateChanged(ActionParameter param)
         {
-            if (!IsEnable)
+            if (!BotEnabled || !enabled)
                 return;
 
             if (LeftEnabled && Left != null)
@@ -103,7 +106,7 @@ namespace SumoBot
 
         public void Init(SumoController controller)
         {
-            if (!IsEnable)
+            if (!BotEnabled || !enabled)
                 return;
 
             if (LeftEnabled && Left != null && controller.Side == PlayerSide.Left)
@@ -125,7 +128,7 @@ namespace SumoBot
 
         public void UnInit(SumoController controller)
         {
-            if (!IsEnable)
+            if (!BotEnabled || !enabled)
                 return;
 
             if (LeftEnabled && Left != null && controller.Side == PlayerSide.Left)

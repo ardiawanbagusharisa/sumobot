@@ -27,7 +27,7 @@ public class BotSelector : Editor
 
         DrawDefaultInspector();
 
-        if (!selector.IsEnable) return;
+        if (!selector.BotEnabled) return;
 
 
         EditorGUILayout.LabelField("Select Bots for Match", EditorStyles.boldLabel);

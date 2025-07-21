@@ -104,6 +104,7 @@ namespace SumoManager
 
         void Start()
         {
+            Application.targetFrameRate = 5;
             TransitionToState(BattleState.PreBatle_Preparing);
         }
 
