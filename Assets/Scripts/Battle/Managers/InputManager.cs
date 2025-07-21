@@ -101,7 +101,7 @@ namespace SumoManager
             InputProvider inputProvider;
             if (battleInputType == InputType.Script)
             {
-                if (botManager.IsEnable)
+                if (botManager.BotEnabled)
                 {
                     InputProvider scriptInputProvider = controller.AddComponent<InputProvider>();
                     scriptInputProvider.PlayerSide = controller.Side;
