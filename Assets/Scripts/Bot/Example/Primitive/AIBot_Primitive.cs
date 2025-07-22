@@ -23,7 +23,7 @@ namespace SumoBot
             ClearCommands();
         }
 
-        public override void OnBotInit(PlayerSide side, SumoAPI botAPI)
+        public override void OnBotInit(SumoAPI botAPI)
         {
             api = botAPI;
         }
@@ -60,7 +60,7 @@ namespace SumoBot
 
             Enqueue(new AccelerateAction(InputType.Script));
 
-            base.OnBotUpdate();
+            Submit();
         }
 
         public override void OnBotCollision(EventParameter param)

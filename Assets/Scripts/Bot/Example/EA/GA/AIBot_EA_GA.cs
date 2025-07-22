@@ -50,10 +50,11 @@ namespace SumoBot
             brain = Run();
             List<ISumoAction> actions = brain.GetBestAction(config.ActionsPerInterval);
             actions.ForEach(action => Enqueue(action));
-            base.OnBotUpdate();
+
+            Submit();
         }
 
-        public override void OnBotInit(PlayerSide side, SumoAPI botAPI)
+        public override void OnBotInit(SumoAPI botAPI)
         {
             api = botAPI;
         }

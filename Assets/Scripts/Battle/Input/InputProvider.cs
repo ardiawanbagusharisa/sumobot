@@ -90,7 +90,7 @@ namespace SumoInput
             }
         }
 
-        public void EnqueueCommands(Queue<ISumoAction> actions)
+        public void EnqueueCommand(Queue<ISumoAction> actions)
         {
             while (actions.Count > 0)
             {

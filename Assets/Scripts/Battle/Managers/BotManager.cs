@@ -26,7 +26,7 @@ namespace SumoBot
 
         private void OnEnable()
         {
-            BattleManager.Instance.Actions[BattleManager.OnBattleChanged].Subscribe(OnBattleStateChanged);
+            BattleManager.Instance.Events[BattleManager.OnBattleChanged].Subscribe(OnBattleStateChanged);
         }
 
         void Start()
@@ -104,7 +104,7 @@ namespace SumoBot
                 controller.AssignSkill(Left.SkillType);
                 controller.Events[SumoController.OnBounce].Subscribe(Left.OnBotCollision);
                 Left.SetProvider(controller.InputProvider);
-                Left.OnBotInit(controller.Side, controller.InputProvider.API);
+                Left.OnBotInit(controller.InputProvider.API);
             }
 
             if (RightEnabled && Right != null && controller.Side == PlayerSide.Right)
@@ -112,7 +112,7 @@ namespace SumoBot
                 controller.AssignSkill(Right.SkillType);
                 controller.Events[SumoController.OnBounce].Subscribe(Right.OnBotCollision);
                 Right.SetProvider(controller.InputProvider);
-                Right.OnBotInit(controller.Side, controller.InputProvider.API);
+                Right.OnBotInit(controller.InputProvider.API);
             }
         }
 

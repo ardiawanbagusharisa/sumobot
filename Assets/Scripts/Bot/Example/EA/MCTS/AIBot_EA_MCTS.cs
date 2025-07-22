@@ -71,7 +71,7 @@ namespace SumoBot
 
             DeQueueWhenAvailable();
 
-            base.OnBotUpdate();
+            Submit();
         }
 
         public override void OnBattleStateChanged(BattleState state)
@@ -89,7 +89,7 @@ namespace SumoBot
             InitNode();
         }
 
-        public override void OnBotInit(PlayerSide side, SumoAPI botAPI)
+        public override void OnBotInit(SumoAPI botAPI)
         {
             api = botAPI;
 

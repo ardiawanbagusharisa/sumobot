@@ -10,9 +10,8 @@ namespace SumoBot
     public abstract class Bot : ScriptableObject
     {
         #region Runtime properties
-        
-        private InputProvider provider;
 
+        private InputProvider provider;
         private Queue<ISumoAction> actions;
 
         internal void SetProvider(InputProvider provider)
@@ -28,26 +27,33 @@ namespace SumoBot
 
         public abstract SkillType SkillType { get; }
 
-        public abstract void OnBotInit(PlayerSide side, SumoAPI botAPI);
+        // Called once Bot initialized (BattleState.preparing)
+        public abstract void OnBotInit(SumoAPI botAPI);
 
-        // Called when elapsed time of battle timer is satisfy with the interval
-        public virtual void OnBotUpdate()
-        {
-            provider.EnqueueCommands(actions);
-        }
+        // Called every battle tick is satisfied.
+        public abstract void OnBotUpdate();
 
-        // Called when two robots get into collision (Bounce), [side] is the collider.
+        // Called every two robots get a collision (Bounce).
+        // [param.Side] -> hitter.
         public abstract void OnBotCollision(EventParameter param);
 
-        // Called whenever battle state ischanged
+        // Called every battle state is changing
         public abstract void OnBattleStateChanged(BattleState state);
 
-        // Actions will be dequeued / invoked when the interval is set
+        // Add one action to local queue
         public virtual void Enqueue(ISumoAction action)
         {
             actions.Enqueue(action);
         }
 
+        // Send your local queue to game's queue
+        // actions that already sent will be executed in order every battle tick
+        public void Submit()
+        {
+            provider.EnqueueCommand(actions);
+        }
+
+        // Clear your queue locally.
         public virtual void ClearCommands()
         {
             actions.Clear();
