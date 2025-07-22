@@ -66,7 +66,7 @@ namespace SumoManager
         #endregion
 
         #region Events properties 
-        public EventRegistry Actions = new();
+        public EventRegistry Events = new();
         public static string OnCountdownChanged = "OnCountdownChanged";  // [float]
         public static string OnBattleChanged = "OnBattleChanged"; // [Battle]
 
@@ -125,7 +125,7 @@ namespace SumoManager
                 if (elapsedActionTime >= ActionInterval)
                 {
                     elapsedActionTime = 0;
-                    
+
                     SumoController left = Battle.LeftPlayer;
                     SumoController right = Battle.RightPlayer;
 
@@ -203,7 +203,7 @@ namespace SumoManager
             float timer = CountdownTime;
             while (timer > 0 && CurrentState == BattleState.Battle_Countdown)
             {
-                Actions[OnCountdownChanged].Invoke(new EventParameter(floatParam: timer));
+                Events[OnCountdownChanged].Invoke(new EventParameter(floatParam: timer));
                 yield return new WaitForSeconds(1f);
                 timer -= 1f;
             }
@@ -380,7 +380,7 @@ namespace SumoManager
         // Call this when we need to trigger OnBattleChanged immediately
         private void BroadcastBattleData()
         {
-            Actions[OnBattleChanged].Invoke(new EventParameter(
+            Events[OnBattleChanged].Invoke(new EventParameter(
                 battleParam: Battle,
                 battleStateParam: CurrentState));
         }

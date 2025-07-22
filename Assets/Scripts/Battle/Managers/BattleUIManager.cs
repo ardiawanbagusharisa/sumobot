@@ -153,12 +153,12 @@ Left Shift / Right Shift - Dash
 
         private void OnEnable()
         {
-            BattleManager.Instance.Actions[BattleManager.OnBattleChanged].Subscribe(OnBattleChanged);
+            BattleManager.Instance.Events[BattleManager.OnBattleChanged].Subscribe(OnBattleChanged);
         }
 
         private void OnDisable()
         {
-            BattleManager.Instance.Actions[BattleManager.OnBattleChanged].Unsubscribe(OnBattleChanged);
+            BattleManager.Instance.Events[BattleManager.OnBattleChanged].Unsubscribe(OnBattleChanged);
         }
 
         private void FixedUpdate()
@@ -243,11 +243,11 @@ Left Shift / Right Shift - Dash
                     BattlePanels.Find((o) => o.CompareTag("BattleState/Post")).SetActive(false);
                     break;
                 case BattleState.Battle_Countdown:
-                    BattleManager.Instance.Actions[BattleManager.OnCountdownChanged].Subscribe(OnCountdownChanged);
+                    BattleManager.Instance.Events[BattleManager.OnCountdownChanged].Subscribe(OnCountdownChanged);
                     break;
                 case BattleState.Battle_Ongoing:
                     Countdown.SetText("");
-                    BattleManager.Instance.Actions[BattleManager.OnCountdownChanged].Unsubscribe(OnCountdownChanged);
+                    BattleManager.Instance.Events[BattleManager.OnCountdownChanged].Unsubscribe(OnCountdownChanged);
                     break;
                 case BattleState.Battle_End:
                     leftPlayer.Events[SumoController.OnSkillAssigned].Unsubscribe(OnSkillAssigned);

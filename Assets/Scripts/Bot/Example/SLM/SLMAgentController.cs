@@ -26,7 +26,7 @@ public class SLMAgentController : Bot
     public override SkillType SkillType => SkillType.Boost;
 
     #region Bot methods
-    public override void OnBotInit(PlayerSide side, SumoAPI botAPI)
+    public override void OnBotInit(SumoAPI botAPI)
     {
         api = botAPI;
         contextBuffer = new Queue<string>();
@@ -47,7 +47,7 @@ public class SLMAgentController : Bot
     public override void OnBotUpdate()
     {
         RunSLM();
-        base.OnBotUpdate();
+        Submit();
     }
     #endregion
 

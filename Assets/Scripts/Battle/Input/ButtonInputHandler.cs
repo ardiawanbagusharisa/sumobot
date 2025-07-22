@@ -54,27 +54,27 @@ namespace SumoInput
 
         void OnEnable()
         {
-            Accelerate.Actions[ButtonPointerHandler.ActionOnHold].Subscribe(inputProvider.OnAccelerateButtonPressed);
-            TurnLeft.Actions[ButtonPointerHandler.ActionOnHold].Subscribe(inputProvider.OnTurnLeftButtonPressed);
-            TurnRight.Actions[ButtonPointerHandler.ActionOnHold].Subscribe(inputProvider.OnTurnRightButtonPressed);
+            Accelerate.Events[ButtonPointerHandler.OnHold].Subscribe(inputProvider.OnAccelerateButtonPressed);
+            TurnLeft.Events[ButtonPointerHandler.OnHold].Subscribe(inputProvider.OnTurnLeftButtonPressed);
+            TurnRight.Events[ButtonPointerHandler.OnHold].Subscribe(inputProvider.OnTurnRightButtonPressed);
 
-            Dash.Actions[ButtonPointerHandler.ActionOnPress].Subscribe(inputProvider.OnDashButtonPressed);
-            Skill.Actions[ButtonPointerHandler.ActionOnPress].Subscribe(inputProvider.OnSkillButtonPressed);
+            Dash.Events[ButtonPointerHandler.OnPress].Subscribe(inputProvider.OnDashButtonPressed);
+            Skill.Events[ButtonPointerHandler.OnPress].Subscribe(inputProvider.OnSkillButtonPressed);
 
-            BattleManager.Instance.Actions[BattleManager.OnBattleChanged].Subscribe(OnBattleChanged);
+            BattleManager.Instance.Events[BattleManager.OnBattleChanged].Subscribe(OnBattleChanged);
             //SetUpButtonGuide();
         }
 
         void OnDisable()
         {
-            Accelerate.Actions[ButtonPointerHandler.ActionOnHold].Unsubscribe(inputProvider.OnAccelerateButtonPressed);
-            TurnLeft.Actions[ButtonPointerHandler.ActionOnHold].Unsubscribe(inputProvider.OnTurnLeftButtonPressed);
-            TurnRight.Actions[ButtonPointerHandler.ActionOnHold].Unsubscribe(inputProvider.OnTurnRightButtonPressed);
+            Accelerate.Events[ButtonPointerHandler.OnHold].Unsubscribe(inputProvider.OnAccelerateButtonPressed);
+            TurnLeft.Events[ButtonPointerHandler.OnHold].Unsubscribe(inputProvider.OnTurnLeftButtonPressed);
+            TurnRight.Events[ButtonPointerHandler.OnHold].Unsubscribe(inputProvider.OnTurnRightButtonPressed);
 
-            Dash.Actions[ButtonPointerHandler.ActionOnPress].Unsubscribe(inputProvider.OnDashButtonPressed);
-            Skill.Actions[ButtonPointerHandler.ActionOnPress].Unsubscribe(inputProvider.OnSkillButtonPressed);
+            Dash.Events[ButtonPointerHandler.OnPress].Unsubscribe(inputProvider.OnDashButtonPressed);
+            Skill.Events[ButtonPointerHandler.OnPress].Unsubscribe(inputProvider.OnSkillButtonPressed);
 
-            BattleManager.Instance.Actions[BattleManager.OnBattleChanged].Unsubscribe(OnBattleChanged);
+            BattleManager.Instance.Events[BattleManager.OnBattleChanged].Unsubscribe(OnBattleChanged);
         }
 
         void Update()
