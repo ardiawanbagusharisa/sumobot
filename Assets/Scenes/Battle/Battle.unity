@@ -4807,7 +4807,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 567c7c5eb92f6483a89c16137907cce2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  ElapsedTime: 0
   config:
     ScriptInterval: 0.2
     SimulationTime: 0.3
@@ -12410,7 +12409,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 567c7c5eb92f6483a89c16137907cce2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  ElapsedTime: 0
   config:
     ScriptInterval: 0.1
     SimulationTime: 0.3
@@ -15608,8 +15606,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   BattleInputType: 1
   RoundSystem: 3
-  BattleTime: 60
+  BattleTime: 1000
   CountdownTime: 3
+  ActionInterval: 0.1
   StartPositions:
   - {fileID: 1987440270}
   - {fileID: 1757629781}
@@ -15728,9 +15727,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 01a1d4e8448fd40dda16697ad78845aa, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  LeftEnabled: 1
+  LeftEnabled: 0
   Left: {fileID: 715032728}
-  RightEnabled: 1
+  RightEnabled: 0
   Right: {fileID: 1709403126}
   leftBotIndex: 1
   rightBotIndex: 0

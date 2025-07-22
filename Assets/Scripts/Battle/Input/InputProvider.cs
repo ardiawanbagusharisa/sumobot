@@ -49,7 +49,7 @@ namespace SumoInput
                 }},
             };
 
-        private Queue<ISumoAction> commandQueue = new();
+        private Queue<ISumoAction> actionQueue = new();
         #endregion
 
         public InputProvider(PlayerSide side, bool includeKeyboard = false)
@@ -68,34 +68,25 @@ namespace SumoInput
                 StateKeyboardAction.Add(action, true);
             }
 
-            commandQueue = new Queue<ISumoAction>();
+            actionQueue = new Queue<ISumoAction>();
         }
         #endregion
 
         #region Input methods
-        public List<ISumoAction> GetInput()
+
+        public List<ISumoAction> FlushAction()
         {
-            List<ISumoAction> actions = new List<ISumoAction>();
-
-            if (IncludeKeyboard)
-                actions = ReadKeyboardInput();
-
-            while (commandQueue.Count > 0)
-            {
-                actions.Add(commandQueue.Dequeue());
-            }
-
-            return actions;
+            var result = actionQueue.ToList();
+            actionQueue.Clear();
+            return result;
         }
-        #endregion
-
-        #region Public API
+    
         // Applied for Live Command And AI Script
         public void EnqueueCommand(ISumoAction action)
         {
             if (IsValid(action))
             {
-                commandQueue.Enqueue(action);
+                actionQueue.Enqueue(action);
             }
         }
 
@@ -109,25 +100,23 @@ namespace SumoInput
 
         public void ClearCommands()
         {
-            commandQueue.Clear();
+            actionQueue.Clear();
         }
         #endregion
 
         #region Keyboard Input
-        private List<ISumoAction> ReadKeyboardInput()
+        public void ReadKeyboardInput()
         {
-            List<ISumoAction> actions = new();
+            if (!IncludeKeyboard) return;
 
             Dictionary<KeyCode, ISumoAction> sideKeyboard = KeyboardBindings[PlayerSide];
             foreach (var item in sideKeyboard)
             {
-                // Map input to actions
                 if (Input.GetKey(item.Key) && StateKeyboardAction[item.Value.Type])
                 {
                     try
                     {
-                        if (IsValid(item.Value))
-                            actions.Add(item.Value);
+                        EnqueueCommand(item.Value);
                     }
                     catch (Exception e)
                     {
@@ -135,32 +124,31 @@ namespace SumoInput
                     }
                 }
             }
-            return actions;
         }
         #endregion
 
         #region UI Input
-        public void OnAccelerateButtonPressed(ActionParameter _)
+        public void OnAccelerateButtonPressed(EventParameter _)
         {
             EnqueueCommand(new AccelerateAction(InputType.UI));
         }
 
-        public void OnDashButtonPressed(ActionParameter _)
+        public void OnDashButtonPressed(EventParameter _)
         {
             EnqueueCommand(new DashAction(InputType.UI));
         }
 
-        public void OnTurnLeftButtonPressed(ActionParameter _)
+        public void OnTurnLeftButtonPressed(EventParameter _)
         {
             EnqueueCommand(new TurnAction(InputType.UI, ActionType.TurnLeft));
         }
 
-        public void OnTurnRightButtonPressed(ActionParameter _)
+        public void OnTurnRightButtonPressed(EventParameter _)
         {
             EnqueueCommand(new TurnAction(InputType.UI, ActionType.TurnRight));
         }
 
-        public void OnSkillButtonPressed(ActionParameter _)
+        public void OnSkillButtonPressed(EventParameter _)
         {
             EnqueueCommand(new SkillAction(InputType.UI));
         }

@@ -9,9 +9,6 @@ namespace SumoBot
     {
         public override string ID => "Template";
 
-        // Ranged between 0.1f to 10f
-        public override float Interval => 1f;
-
         public override SkillType SkillType => SkillType.Boost;
 
         // Where the battle state changes
@@ -20,7 +17,7 @@ namespace SumoBot
         }
 
         // When your AI is got a collision (bounce)
-        public override void OnBotCollision(ActionParameter param)
+        public override void OnBotCollision(EventParameter param)
         {
         }
 

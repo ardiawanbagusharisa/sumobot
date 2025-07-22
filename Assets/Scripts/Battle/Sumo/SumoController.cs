@@ -73,13 +73,16 @@ namespace SumoCore
         public float LastDashTime = 0;
 
         // Events 
-        public ActionRegistry Actions = new();
+        public EventRegistry Events = new();
         public const string OnBounce = "OnBounce"; // [Side]
         public const string OnOutOfArena = "OnOutOfArena"; // [Side]
         public const string OnAction = "OnAction"; // [Side, ISumoAction, bool]
         public const string OnSkillAssigned = "OnSkillAssigned"; // [Side, ISumoAction, bool]
         private Coroutine accelerateOverTimeCoroutine;
         private Coroutine turnOverAngleCoroutine;
+
+        // Actions
+        private Queue<ISumoAction> Actions = new();
         #endregion
 
         #region Unity Methods
@@ -95,7 +98,7 @@ namespace SumoCore
         {
             LogManager.UpdateActionLog(Side);
 
-            ReadInput();
+            InputProvider?.ReadKeyboardInput();
 
             LastLinearVelocity = robotRigidBody.linearVelocity;
 
@@ -120,7 +123,7 @@ namespace SumoCore
         {
             if (collision.CompareTag("Arena/Floor") && !isOutOfArena)
             {
-                Actions[OnOutOfArena]?.Invoke(new ActionParameter(sideParam: Side));
+                Events[OnOutOfArena]?.Invoke(new EventParameter(sideParam: Side));
                 isOutOfArena = true;
             }
         }
@@ -143,7 +146,7 @@ namespace SumoCore
         public void AssignSkill(SkillType type = SkillType.Boost)
         {
             Skill = SumoSkill.CreateSkill(this, type);
-            Actions[OnSkillAssigned].Invoke(new() { SkillType = type, Side = Side, });
+            Events[OnSkillAssigned].Invoke(new() { SkillType = type, Side = Side, });
         }
 
         public void Reset()
@@ -223,40 +226,37 @@ namespace SumoCore
 
         IEnumerator TurnRoutine(ISumoAction action)
         {
-            float totalAngle;
+
+            float angularSpeed;
 
             switch (action.Type)
             {
                 case ActionType.TurnLeft:
-                    totalAngle = Mathf.Abs(RotateSpeed * action.Duration * TurnRate);
+                    angularSpeed = Mathf.Abs(RotateSpeed * TurnRate);
                     break;
                 case ActionType.TurnRight:
-                    totalAngle = -Mathf.Abs(RotateSpeed * action.Duration * TurnRate);
+                    angularSpeed = -Mathf.Abs(RotateSpeed * TurnRate);
                     break;
                 default:
                     yield break;
             }
 
-            float turnSpeed = Mathf.Abs(totalAngle) / action.Duration;
+            float elapsedTime = 0f;
 
-            float startAngle = robotRigidBody.rotation;
-            float rotatedAngle = 0f;
-
-            while (Mathf.Abs(rotatedAngle) < Mathf.Abs(totalAngle) &&
-                   BattleManager.Instance != null && BattleManager.Instance.CurrentState == BattleState.Battle_Ongoing &&
+            while (elapsedTime < action.Duration &&
+                   BattleManager.Instance != null &&
+                   BattleManager.Instance.CurrentState == BattleState.Battle_Ongoing &&
                    !IsMovementDisabled)
             {
-                float delta = turnSpeed * Time.deltaTime;
+                float deltaTime = Time.deltaTime;
+                float rotationThisFrame = angularSpeed * deltaTime;
 
-                if (Mathf.Abs(rotatedAngle + delta * Mathf.Sign(totalAngle)) > Mathf.Abs(totalAngle))
-                    delta = Mathf.Abs(totalAngle - rotatedAngle);
+                float newRotation = robotRigidBody.rotation + rotationThisFrame;
+                robotRigidBody.MoveRotation(newRotation);
 
-                float step = delta * Mathf.Sign(totalAngle);
-                rotatedAngle += step;
-
-                float currentRotation = startAngle + rotatedAngle;
-                robotRigidBody.MoveRotation(currentRotation);
+                elapsedTime += deltaTime;
                 yield return null;
+
                 Log(action);
             }
         }
@@ -352,9 +352,9 @@ namespace SumoCore
                 LogCollision(actorLog);
                 enemyRobot.LogCollision(targetLog);
 
-                ActionParameter sideParam = new(sideParam: Side);
-                Actions[OnBounce]?.Invoke(sideParam);
-                enemyRobot.Actions[OnBounce]?.Invoke(sideParam);
+                EventParameter sideParam = new(sideParam: Side);
+                Events[OnBounce]?.Invoke(sideParam);
+                enemyRobot.Events[OnBounce]?.Invoke(sideParam);
 
                 Debug.Log($"[BounceRule]\nActor=>{Side},Target=>{enemyRobot.Side}\nActorVelocity=>{actorVelocity},TargetVelocity=>{enemyVelocity}\nActorCurrentSkill=> {Skill.Type} isActive:{Skill.IsActive}, TargetCurrentSkill=>{enemyRobot.Skill.Type} isActive: {enemyRobot.Skill.IsActive} \nActorImpact=>{actorImpact}, TargetImpact=>{targetImpact}");
             }
@@ -421,19 +421,28 @@ namespace SumoCore
 
         #region Robot Movement Input
 
-        void ReadInput()
+        public void FlushInput()
+        {
+            if (InputProvider == null || isInputDisabled) return;
+
+            foreach (var action in InputProvider.FlushAction())
+                Actions.Enqueue(action);
+        }
+
+        public void OnUpdate()
         {
             if (InputProvider == null) return;
             if (isInputDisabled) return;
 
-            List<ISumoAction> actions = InputProvider.GetInput();
-            foreach (ISumoAction action in actions)
+            while (Actions.Count > 0)
             {
-                ActionParameter actionParam = new(sideParam: Side, actionParam: action, boolParam: true);
-                Actions[OnAction]?.Invoke(actionParam);
+                ISumoAction action = Actions.Dequeue();
+
+                EventParameter actionParam = new(sideParam: Side, actionParam: action, boolParam: true);
+                Events[OnAction]?.Invoke(actionParam);
                 action.Execute(this);
                 actionParam.Bool = false;
-                Actions[OnAction]?.Invoke(actionParam);
+                Events[OnAction]?.Invoke(actionParam);
             }
         }
         #endregion

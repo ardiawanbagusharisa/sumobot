@@ -23,8 +23,6 @@ public class SLMAgentController : Bot
 
     public override string ID => "SLM";
 
-    public override float Interval => DecisionInterval;
-
     public override SkillType SkillType => SkillType.Boost;
 
     #region Bot methods
@@ -36,7 +34,7 @@ public class SLMAgentController : Bot
         timer = 0f;
     }
 
-    public override void OnBotCollision(ActionParameter param)
+    public override void OnBotCollision(EventParameter param)
     {
 
     }

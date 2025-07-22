@@ -10,7 +10,6 @@ namespace SumoBot
     {
         public override string ID => Name;
 
-        public override float Interval => actionInterval;
         public override SkillType SkillType => SkillType.Boost;
 
         public string Name = "Primitive";
@@ -64,7 +63,7 @@ namespace SumoBot
             base.OnBotUpdate();
         }
 
-        public override void OnBotCollision(ActionParameter param)
+        public override void OnBotCollision(EventParameter param)
         {
             OnPlayerBounce(param.Side);
         }
