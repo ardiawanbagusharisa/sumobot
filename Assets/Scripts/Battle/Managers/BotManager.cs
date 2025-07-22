@@ -43,34 +43,24 @@ namespace SumoBot
                 Right = ScriptableObject.CreateInstance(allTypes[rightBotIndex]) as Bot;
         }
 
-        public void OnUpdate(float ElapsedTime)
+        public void OnUpdate()
         {
             if (!BotEnabled || !enabled)
                 return;
 
             if (LeftEnabled && Left != null)
             {
-                Left.ElapsedTime = ElapsedTime;
-                if (Left.ElapsedTime >= Left.Interval)
-                {
-                    Left.ElapsedTime = 0;
-                    Left.OnBotUpdate();
-                }
+                Left.OnBotUpdate();
             }
 
             if (RightEnabled && Right != null)
             {
-                Right.ElapsedTime = ElapsedTime;
-                if (Right.ElapsedTime >= Right.Interval)
-                {
-                    Right.ElapsedTime = 0;
-                    Right.OnBotUpdate();
-                }
+                Right.OnBotUpdate();
             }
         }
 
 
-        public void OnBattleStateChanged(ActionParameter param)
+        public void OnBattleStateChanged(EventParameter param)
         {
             if (!BotEnabled || !enabled)
                 return;
@@ -112,7 +102,7 @@ namespace SumoBot
             if (LeftEnabled && Left != null && controller.Side == PlayerSide.Left)
             {
                 controller.AssignSkill(Left.SkillType);
-                controller.Actions[SumoController.OnBounce].Subscribe(Left.OnBotCollision);
+                controller.Events[SumoController.OnBounce].Subscribe(Left.OnBotCollision);
                 Left.SetProvider(controller.InputProvider);
                 Left.OnBotInit(controller.Side, controller.InputProvider.API);
             }
@@ -120,7 +110,7 @@ namespace SumoBot
             if (RightEnabled && Right != null && controller.Side == PlayerSide.Right)
             {
                 controller.AssignSkill(Right.SkillType);
-                controller.Actions[SumoController.OnBounce].Subscribe(Right.OnBotCollision);
+                controller.Events[SumoController.OnBounce].Subscribe(Right.OnBotCollision);
                 Right.SetProvider(controller.InputProvider);
                 Right.OnBotInit(controller.Side, controller.InputProvider.API);
             }
@@ -133,12 +123,12 @@ namespace SumoBot
 
             if (LeftEnabled && Left != null && controller.Side == PlayerSide.Left)
             {
-                controller.Actions[SumoController.OnBounce].Unsubscribe(Left.OnBotCollision);
+                controller.Events[SumoController.OnBounce].Unsubscribe(Left.OnBotCollision);
             }
 
             if (RightEnabled && Right != null && controller.Side == PlayerSide.Right)
             {
-                controller.Actions[SumoController.OnBounce].Unsubscribe(Right.OnBotCollision);
+                controller.Events[SumoController.OnBounce].Unsubscribe(Right.OnBotCollision);
             }
         }
     }

@@ -24,7 +24,6 @@ namespace SumoBot
         public AIBot_EA_GA_Config config = new();
 
         public override string ID => config.Name;
-        public override float Interval => config.ScriptInterval;
         public override SkillType SkillType => config.DefaultSkillType;
 
         public static List<ISumoAction> PossibleActions = new() {
@@ -59,7 +58,7 @@ namespace SumoBot
             api = botAPI;
         }
 
-        public override void OnBotCollision(ActionParameter param)
+        public override void OnBotCollision(EventParameter param)
         {
             ClearCommands();
         }
@@ -76,9 +75,9 @@ namespace SumoBot
 
             foreach (var action in actions)
             {
-                SimulateResultAPI simResult = api.Simulate(action);
-                Vector3 aiDir = simResult.Rotation;
-                Vector3 aiPos = simResult.Position;
+                (Vector3, Vector3) simResult = api.Simulate(action);
+                Vector3 aiPos = simResult.Item1;
+                Vector3 aiDir = simResult.Item2;
 
                 if (api.DistanceFromArena() > api.BattleInfo.ArenaRadius)
                     return -999f;

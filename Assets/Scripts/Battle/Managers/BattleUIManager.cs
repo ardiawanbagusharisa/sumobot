@@ -193,7 +193,7 @@ Left Shift / Right Shift - Dash
         #endregion
 
         #region Battle changes
-        private void OnBattleChanged(ActionParameter param)
+        private void OnBattleChanged(EventParameter param)
         {
             var battle = param.Battle;
             RoundSystem.SetText($"Best of {(int)battle.RoundSystem}");
@@ -227,8 +227,8 @@ Left Shift / Right Shift - Dash
                     });
                     break;
                 case BattleState.Battle_Preparing:
-                    battle.LeftPlayer.Actions[SumoController.OnSkillAssigned].Subscribe(OnSkillAssigned);
-                    battle.RightPlayer.Actions[SumoController.OnSkillAssigned].Subscribe(OnSkillAssigned);
+                    battle.LeftPlayer.Events[SumoController.OnSkillAssigned].Subscribe(OnSkillAssigned);
+                    battle.RightPlayer.Events[SumoController.OnSkillAssigned].Subscribe(OnSkillAssigned);
 
                     BattlePanels.Find((o) => o.CompareTag("BattleState/Ongoing")).SetActive(true);
                     InitActionUI(LeftSkillUI, LeftDashUI);
@@ -250,8 +250,8 @@ Left Shift / Right Shift - Dash
                     BattleManager.Instance.Actions[BattleManager.OnCountdownChanged].Unsubscribe(OnCountdownChanged);
                     break;
                 case BattleState.Battle_End:
-                    leftPlayer.Actions[SumoController.OnSkillAssigned].Unsubscribe(OnSkillAssigned);
-                    rightPlayer.Actions[SumoController.OnSkillAssigned].Unsubscribe(OnSkillAssigned);
+                    leftPlayer.Events[SumoController.OnSkillAssigned].Unsubscribe(OnSkillAssigned);
+                    rightPlayer.Events[SumoController.OnSkillAssigned].Unsubscribe(OnSkillAssigned);
                     break;
                 case BattleState.PostBattle_ShowResult:
                     BattlePanels.Find((o) => o.CompareTag("BattleState/Post")).SetActive(true);
@@ -274,12 +274,12 @@ Left Shift / Right Shift - Dash
             UpdateScore(battle);
         }
 
-        private void OnCountdownChanged(ActionParameter param)
+        private void OnCountdownChanged(EventParameter param)
         {
             Countdown.SetText(param.Float.ToString());
         }
 
-        private void OnSkillAssigned(ActionParameter param)
+        private void OnSkillAssigned(EventParameter param)
         {
             if (param.Side == PlayerSide.Left)
                 LeftSkillUI.SetText(param.SkillType.ToString());

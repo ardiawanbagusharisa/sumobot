@@ -10,9 +10,6 @@ namespace SumoBot
     public abstract class Bot : ScriptableObject
     {
         #region Runtime properties
-
-        [HideInInspector]
-        public float ElapsedTime = 0;
         
         private InputProvider provider;
 
@@ -29,9 +26,6 @@ namespace SumoBot
 
         public abstract string ID { get; }
 
-        [Min(0.1f)]
-        public abstract float Interval { get; }
-
         public abstract SkillType SkillType { get; }
 
         public abstract void OnBotInit(PlayerSide side, SumoAPI botAPI);
@@ -43,7 +37,7 @@ namespace SumoBot
         }
 
         // Called when two robots get into collision (Bounce), [side] is the collider.
-        public abstract void OnBotCollision(ActionParameter param);
+        public abstract void OnBotCollision(EventParameter param);
 
         // Called whenever battle state ischanged
         public abstract void OnBattleStateChanged(BattleState state);

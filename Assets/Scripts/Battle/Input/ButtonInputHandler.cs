@@ -19,7 +19,6 @@ namespace SumoInput
         #endregion
 
         #region Runtime properties
-        private readonly float delayHoldSeconds = 0.08f;
         private readonly Dictionary<ActionType, float?> actionLastUsedMap = new();
         private readonly Dictionary<ActionType, InputType?> actionInputTypeMap = new();
         private Dictionary<ActionType, GameObject> actionButtonMap = new();
@@ -84,7 +83,7 @@ namespace SumoInput
             {
                 if (item.Value != null)
                 {
-                    bool isHolding = Time.time - item.Value < delayHoldSeconds;
+                    bool isHolding = Time.time - item.Value < BattleManager.Instance.ActionInterval;
                     UpdateButtonState(item.Key, isHolding);
                 }
             }
@@ -102,22 +101,22 @@ namespace SumoInput
 
         #region Button handling methods
 
-        void OnBattleChanged(ActionParameter param)
+        void OnBattleChanged(EventParameter param)
         {
             var battle = param.Battle;
             SumoController currentPlayer = inputProvider.PlayerSide == PlayerSide.Left ? BattleManager.Instance.Battle.LeftPlayer : BattleManager.Instance.Battle.RightPlayer;
 
             if (BattleManager.Instance.CurrentState == BattleState.Battle_Countdown)
-                currentPlayer.Actions[SumoController.OnAction].Subscribe(OnPlayerAction);
+                currentPlayer.Events[SumoController.OnAction].Subscribe(OnPlayerAction);
             else if (BattleManager.Instance.CurrentState == BattleState.Battle_End)
             {
-                currentPlayer.Actions[SumoController.OnAction].Unsubscribe(OnPlayerAction);
+                currentPlayer.Events[SumoController.OnAction].Unsubscribe(OnPlayerAction);
                 Dash.GetComponentInChildren<Button>().interactable = true;
                 Skill.GetComponentInChildren<Button>().interactable = true;
             }
         }
 
-        void OnPlayerAction(ActionParameter param)
+        void OnPlayerAction(EventParameter param)
         {
             ISumoAction action = param.Action;
             bool isPostExecute = param.Bool == false;

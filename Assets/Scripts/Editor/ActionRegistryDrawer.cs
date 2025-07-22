@@ -6,7 +6,7 @@ namespace SumoEditor
     using UnityEngine;
 
 
-    [CustomPropertyDrawer(typeof(ActionRegistry))]
+    [CustomPropertyDrawer(typeof(EventRegistry))]
     public class ActionRegistryDrawer : PropertyDrawer
     {
         private bool _foldout = true;
@@ -28,7 +28,7 @@ namespace SumoEditor
 
             // Use reflection to get access to entries
             var target = property.serializedObject.targetObject;
-            var field = fieldInfo.GetValue(target) as ActionRegistry;
+            var field = fieldInfo.GetValue(target) as EventRegistry;
 
             if (field == null)
             {
@@ -38,7 +38,7 @@ namespace SumoEditor
 
             float y = position.y + EditorGUIUtility.singleLineHeight + 4;
 
-            foreach (var entry in field.Actions)
+            foreach (var entry in field.Events)
             {
                 var key = entry.Key;
                 var action = entry.Value;
@@ -63,13 +63,13 @@ namespace SumoEditor
         public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
         {
             var target = property.serializedObject.targetObject;
-            var field = fieldInfo.GetValue(target) as ActionRegistry;
+            var field = fieldInfo.GetValue(target) as EventRegistry;
 
             if (!_foldout || field == null)
                 return EditorGUIUtility.singleLineHeight;
 
             int lines = 1;
-            foreach (var entry in field.Actions)
+            foreach (var entry in field.Events)
             {
                 lines += 1; // header
                 lines += Mathf.Max(1, entry.Value.SubscribersCount); // subscriber lines

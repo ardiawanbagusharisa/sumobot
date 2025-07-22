@@ -80,7 +80,7 @@ namespace SumoBot
                 return signedAngle;
         }
 
-        public SimulateResultAPI Simulate(ISumoAction action, bool isEnemy = false)
+        public (Vector3, Vector3) Simulate(ISumoAction action, bool isEnemy = false)
         {
             RobotStateAPI robot = isEnemy ? EnemyRobot : MyRobot;
             Vector3 position = robot.Position;

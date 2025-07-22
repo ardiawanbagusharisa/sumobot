@@ -25,7 +25,6 @@ namespace SumoBot
     {
         public AI_MCTS_Config config = new();
         public override string ID => config.Name;
-        public override float Interval => config.ScriptInterval;
         public override SkillType SkillType => config.DefaultSkillType;
 
 
@@ -81,7 +80,7 @@ namespace SumoBot
             OnBattleChanged(state);
         }
 
-        public override void OnBotCollision(ActionParameter param)
+        public override void OnBotCollision(EventParameter param)
         {
             if (side == param.Side)
                 lastActionsFromEnemy = null;

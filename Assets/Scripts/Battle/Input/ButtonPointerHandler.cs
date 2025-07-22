@@ -7,7 +7,7 @@ namespace SumoInput
     public class ButtonPointerHandler : MonoBehaviour, IPointerDownHandler, IPointerUpHandler
     {
         #region Action properties
-        public ActionRegistry Actions = new();
+        public EventRegistry Actions = new();
         static public string ActionOnHold = "ActionOnHold";
         static public string ActionOnPress = "ActionOnPress";
         private bool isHolding = false;

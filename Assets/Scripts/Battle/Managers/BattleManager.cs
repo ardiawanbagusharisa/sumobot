@@ -47,6 +47,7 @@ namespace SumoManager
         public RoundSystem RoundSystem = RoundSystem.BestOf3;
         public float BattleTime = 60f;
         public float CountdownTime = 3f;
+        public float ActionInterval = 0.1f;
         public List<Transform> StartPositions = new();
         // public GameObject SumoPrefab;
         public GameObject LeftPlayerObject;
@@ -65,12 +66,13 @@ namespace SumoManager
         #endregion
 
         #region Events properties 
-        public ActionRegistry Actions = new();
+        public EventRegistry Actions = new();
         public static string OnCountdownChanged = "OnCountdownChanged";  // [float]
         public static string OnBattleChanged = "OnBattleChanged"; // [Battle]
 
         private Coroutine battleTimerCoroutine;
         private Coroutine countdownCoroutine;
+        private float elapsedActionTime = 0f;
         #endregion
 
         #region Unity methods 
@@ -109,8 +111,8 @@ namespace SumoManager
 
         void OnDisable()
         {
-            Battle.LeftPlayer.Actions[SumoController.OnOutOfArena].Unsubscribe(OnPlayerOutOfArena);
-            Battle.RightPlayer.Actions[SumoController.OnOutOfArena].Unsubscribe(OnPlayerOutOfArena);
+            Battle.LeftPlayer.Events[SumoController.OnOutOfArena].Unsubscribe(OnPlayerOutOfArena);
+            Battle.RightPlayer.Events[SumoController.OnOutOfArena].Unsubscribe(OnPlayerOutOfArena);
         }
 
         void Update()
@@ -118,7 +120,23 @@ namespace SumoManager
             if (Battle.CurrentRound != null && CurrentState == BattleState.Battle_Ongoing)
             {
                 ElapsedTime += Time.deltaTime;
-                botManager.OnUpdate(ElapsedTime);
+                elapsedActionTime += Time.deltaTime;
+
+                if (elapsedActionTime >= ActionInterval)
+                {
+                    elapsedActionTime = 0;
+                    
+                    SumoController left = Battle.LeftPlayer;
+                    SumoController right = Battle.RightPlayer;
+
+                    botManager.OnUpdate();
+
+                    left.FlushInput();
+                    right.FlushInput();
+
+                    left.OnUpdate();
+                    right.OnUpdate();
+                }
             }
         }
 
@@ -155,7 +173,7 @@ namespace SumoManager
         {
             PlayerSide side = controller.transform.position.x < 0 ? PlayerSide.Left : PlayerSide.Right;
             controller.Initialize(side, controller.transform);
-            controller.Actions[SumoController.OnOutOfArena].Subscribe(OnPlayerOutOfArena);
+            controller.Events[SumoController.OnOutOfArena].Subscribe(OnPlayerOutOfArena);
 
             if (controller.Side == PlayerSide.Left)
                 Battle.LeftPlayer = controller;
@@ -185,7 +203,7 @@ namespace SumoManager
             float timer = CountdownTime;
             while (timer > 0 && CurrentState == BattleState.Battle_Countdown)
             {
-                Actions[OnCountdownChanged].Invoke(new ActionParameter(floatParam: timer));
+                Actions[OnCountdownChanged].Invoke(new EventParameter(floatParam: timer));
                 yield return new WaitForSeconds(1f);
                 timer -= 1f;
             }
@@ -220,7 +238,7 @@ namespace SumoManager
             yield return new WaitForSeconds(1f);
         }
 
-        private void OnPlayerOutOfArena(ActionParameter param)
+        private void OnPlayerOutOfArena(EventParameter param)
         {
             if (CurrentState != BattleState.Battle_Ongoing)
                 return;
@@ -362,7 +380,7 @@ namespace SumoManager
         // Call this when we need to trigger OnBattleChanged immediately
         private void BroadcastBattleData()
         {
-            Actions[OnBattleChanged].Invoke(new ActionParameter(
+            Actions[OnBattleChanged].Invoke(new EventParameter(
                 battleParam: Battle,
                 battleStateParam: CurrentState));
         }

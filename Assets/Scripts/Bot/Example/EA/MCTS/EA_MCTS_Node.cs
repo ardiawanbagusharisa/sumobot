@@ -148,9 +148,9 @@ namespace SumoBot
                     action.Type = config.DefaultSkillType == SkillType.Stone ? ActionType.SkillStone : ActionType.SkillBoost;
                 }
 
-                SimulateResultAPI result = api.Simulate(action);
-                aiPos += result.Position;
-                aiRot += result.Rotation;
+                (Vector3, Vector3) result = api.Simulate(action);
+                aiPos += result.Item1;
+                aiRot += result.Item2;
 
                 bool approachWithPosition = action is AccelerateAction || action is DashAction;
                 float preAngleScore = api.Angle(oriPos: aiPos, oriRot: aiRot, normalized: true);
