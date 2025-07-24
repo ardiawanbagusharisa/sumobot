@@ -31,16 +31,16 @@ namespace SumoHelper
         {
             if (!IsActive)
             {
-                debounceTime = action.Duration;
+                debounceTime = action.Duration / 2;
 
                 IsActive = true;
                 startTime = BattleManager.Instance.ElapsedTime;
 
                 this.action.Action = action;
-                this.action.Position = controller.transform.position;
-                this.action.Rotation = controller.transform.rotation.eulerAngles.z;
+                this.action.Position = controller.RigidBody.position;
+                this.action.Rotation = controller.RigidBody.rotation;
                 this.action.LinearVelocity = controller.LastLinearVelocity;
-                this.action.AngularVelocity = controller.LastAngularVelocity;
+                this.action.AngularVelocity = controller.RigidBody.angularVelocity;
 
                 SaveAction(true);
             }
@@ -61,10 +61,10 @@ namespace SumoHelper
                 IsActive = true;
                 startTime = BattleManager.Instance.ElapsedTime;
 
-                collision.Position = controller.transform.position;
-                collision.Rotation = controller.transform.rotation.eulerAngles.z;
+                collision.Position = controller.RigidBody.position;
+                collision.Rotation = controller.RigidBody.rotation;
                 collision.LinearVelocity = controller.LastLinearVelocity;
-                collision.AngularVelocity = controller.LastAngularVelocity;
+                collision.AngularVelocity = controller.RigidBody.angularVelocity;
 
                 SaveCollision(true);
             }
@@ -102,10 +102,10 @@ namespace SumoHelper
         {
             if (!isStart)
             {
-                action.Rotation = controller.transform.rotation.eulerAngles.z;
-                action.Position = controller.transform.position;
+                action.Rotation = controller.RigidBody.rotation;
+                action.Position = controller.RigidBody.position;
                 action.LinearVelocity = controller.LastLinearVelocity;
-                action.AngularVelocity = controller.LastAngularVelocity;
+                action.AngularVelocity = controller.RigidBody.angularVelocity;
             }
 
             LogManager.LogPlayerEvents(
@@ -125,10 +125,10 @@ namespace SumoHelper
 
             if (!isStart)
             {
-                collision.Rotation = controller.transform.rotation.eulerAngles.z;
-                collision.Position = controller.transform.position;
+                collision.Rotation = controller.RigidBody.rotation;
+                collision.Position = controller.RigidBody.position;
                 collision.LinearVelocity = controller.LastLinearVelocity;
-                collision.AngularVelocity = controller.LastAngularVelocity;
+                collision.AngularVelocity = controller.RigidBody.angularVelocity;
 
                 float duration = BattleManager.Instance.ElapsedTime - startTime;
                 collision.Duration = duration;
@@ -160,10 +160,10 @@ namespace SumoHelper
         {
             BaseLog log = new()
             {
-                Rotation = controller.transform.rotation.eulerAngles.z,
-                Position = controller.transform.position,
+                Rotation = controller.RigidBody.rotation,
+                Position = controller.RigidBody.position,
                 LinearVelocity = controller.LastLinearVelocity,
-                AngularVelocity = controller.LastAngularVelocity
+                AngularVelocity = controller.RigidBody.angularVelocity
             };
 
             LogManager.LogPlayerEvents(

@@ -53,6 +53,7 @@ namespace SumoManager
         public GameObject LeftPlayerObject;
         public GameObject RightPlayerObject;
         public GameObject Arena;
+        public float ArenaRadius;
         #endregion
 
         #region Runtime (readonly) properties 
@@ -106,6 +107,8 @@ namespace SumoManager
 
         void Start()
         {
+            var scale = Arena.transform.lossyScale;
+            ArenaRadius = Arena.GetComponent<CircleCollider2D>().radius * ((scale.x + scale.y) / 2f);
             TransitionToState(BattleState.PreBatle_Preparing);
         }
 
@@ -343,6 +346,8 @@ namespace SumoManager
 
                     Battle.LeftPlayer.SetSkillEnabled(false);
                     Battle.RightPlayer.SetSkillEnabled(false);
+                    Battle.LeftPlayer.ClearInput();
+                    Battle.RightPlayer.ClearInput();
                     StartCoroutine(ResetBattle());
                     break;
                 case BattleState.Battle_Reset:

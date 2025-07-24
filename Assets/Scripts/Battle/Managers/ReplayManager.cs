@@ -86,6 +86,8 @@ public class ReplayManager : MonoBehaviour
     private Dictionary<string, EventLog> rightEventsMap = new();
     private List<EventLog> leftEvents = new();
     private List<EventLog> rightEvents = new();
+    private Rigidbody2D leftRigidBody;
+    private Rigidbody2D rightRigidBody;
     #endregion
 
     #region Unity methods
@@ -143,26 +145,25 @@ public class ReplayManager : MonoBehaviour
         if (TimeLabel != null)
             TimeLabel.text = $"{FormatTime(currentTime)} / {FormatTime(currentRoundDuration)}";
 
-        InterpolateBot(leftPlayer, leftEvents, ref leftEventIndex);
-        InterpolateBot(rightPlayer, rightEvents, ref rightEventIndex);
+        InterpolateBot(leftRigidBody, leftEvents, ref leftEventIndex);
+        InterpolateBot(rightRigidBody, rightEvents, ref rightEventIndex);
 
         DisplayCurrentEventInfo();
 
         if (currentTime > currentRoundDuration)
         {
-
-            if (gameLogs[currentGameIndex].Rounds.Count - 1 == currentRoundIndex)
-            {
-                DisplayCurrentEventInfo();
-                isPlaying = false;
-                Debug.Log("Replay finished.");
-                return;
-            }
-            else
-                currentRoundIndex++;
+            currentRoundIndex++;
 
             if (currentRoundIndex >= gameLogs[currentGameIndex].Rounds.Count)
             {
+                if (currentGameIndex == gameLogs.Count - 1)
+                {
+                    DisplayCurrentEventInfo();
+                    isPlaying = false;
+                    Debug.Log("Replay finished.");
+                    return;
+                }
+
                 currentGameIndex++;
 
                 var games = gameLogs.Take(currentGameIndex).ToList();
@@ -170,15 +171,8 @@ public class ReplayManager : MonoBehaviour
                 metadata.LeftPlayerStats.WinPerGame = games.Select((i) => i.Winner == "Right").Count();
 
                 currentRoundIndex = 0;
-
-                if (currentGameIndex >= gameLogs.Count)
-                {
-                    DisplayCurrentEventInfo();
-                    isPlaying = false;
-                    Debug.Log("Replay finished.");
-                    return;
-                }
             }
+
             LoadRound(currentGameIndex, currentRoundIndex);
         }
     }
@@ -194,6 +188,11 @@ public class ReplayManager : MonoBehaviour
 
     void Init()
     {
+        leftRigidBody = leftPlayer.gameObject.GetComponent<Rigidbody2D>();
+        rightRigidBody = rightPlayer.gameObject.GetComponent<Rigidbody2D>();
+        leftRigidBody.bodyType = RigidbodyType2D.Static;
+        rightRigidBody.bodyType = RigidbodyType2D.Static;
+
         LoadRound(currentGameIndex, currentRoundIndex);
         if (autoStart)
             isPlaying = true;
@@ -248,7 +247,7 @@ public class ReplayManager : MonoBehaviour
         rightEventIndex = 0;
     }
 
-    void InterpolateBot(Transform player, List<EventLog> events, ref int index)
+    void InterpolateBot(Rigidbody2D rigidBody, List<EventLog> events, ref int index)
     {
         if (!isPlaying) return;
 
@@ -302,8 +301,8 @@ public class ReplayManager : MonoBehaviour
         var start = BaseLog.FromMap(currentEvent.Data);
         var end = BaseLog.FromMap(nextEvent.Data);
 
-        player.transform.position = Vector3.Lerp(start.Position, end.Position, t);
-        player.transform.rotation = Quaternion.Slerp(
+        rigidBody.position = Vector3.Lerp(start.Position, end.Position, t);
+        rigidBody.transform.rotation = Quaternion.Slerp(
             Quaternion.Euler(0, 0, start.Rotation),
             Quaternion.Euler(0, 0, end.Rotation),
             t
@@ -485,8 +484,8 @@ public class ReplayManager : MonoBehaviour
             rightEventsMap = lastRight.Where((x) => x.Category == "Action" && !x.IsStart).ToDictionary((x) => x.GetKey());
         }
 
-        InterpolateBot(leftPlayer, leftEvents, ref leftEventIndex);
-        InterpolateBot(rightPlayer, rightEvents, ref rightEventIndex);
+        InterpolateBot(leftRigidBody, leftEvents, ref leftEventIndex);
+        InterpolateBot(rightRigidBody, rightEvents, ref rightEventIndex);
 
         StartCoroutine(ResumeAfterLoadRound());
     }
@@ -563,7 +562,7 @@ public class ReplayManager : MonoBehaviour
     {
         ChartManager chartManager = side == PlayerSide.Left ? MostActionChartLeft : MostActionChartRight;
         if (chartManager == null) return;
-        
+
         Dictionary<string, float> mostActions = new();
 
         foreach (var action in side == PlayerSide.Left ? leftEventsMap : rightEventsMap)

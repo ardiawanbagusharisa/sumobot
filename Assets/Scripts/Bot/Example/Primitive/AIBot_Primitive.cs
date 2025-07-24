@@ -37,7 +37,7 @@ namespace SumoBot
             // When angle is quite enough facing the enemy, run dash, skill, accelerate action
             if (Mathf.Abs(angleToEnemy) < 20)
             {
-                float distance = Vector3.Distance(api.EnemyRobot.Position, api.MyRobot.Position);
+                float distance = Vector2.Distance(api.EnemyRobot.Position, api.MyRobot.Position);
                 
                 if (!api.MyRobot.IsDashOnCooldown && distance < 2.5f)
                     Enqueue(new DashAction(InputType.Script));

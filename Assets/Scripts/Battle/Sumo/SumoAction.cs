@@ -11,6 +11,7 @@ namespace SumoCore
         public InputType InputUsed;
         public string Reason;
 
+        // Duration will be replaced for Dash and Skill
         [Min(MinDuration)]
         public float Duration = MinDuration;
         public ActionType Type;
@@ -94,7 +95,7 @@ namespace SumoCore
         }
         public override void Execute(SumoController controller)
         {
-            controller.Dash(this);
+            controller.Accelerate(this);
         }
     }
 

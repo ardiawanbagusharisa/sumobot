@@ -35,6 +35,7 @@ namespace SumoBot
 
         // Called every two robots get a collision (Bounce).
         // [param.Side] -> hitter.
+        // [param.Float] -> lock duration.
         public abstract void OnBotCollision(EventParameter param);
 
         // Called every battle state is changing

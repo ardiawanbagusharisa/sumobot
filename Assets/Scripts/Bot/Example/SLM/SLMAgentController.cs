@@ -205,13 +205,13 @@ public class SLMAgentController : Bot
     float GetEdgeDistance()
     {
         float arenaRadius = api.BattleInfo.ArenaRadius;
-        float distanceFromCenter = new Vector2(api.MyRobot.Position.x, api.MyRobot.Position.z).magnitude;
+        float distanceFromCenter = new Vector2(api.MyRobot.Position.x, api.MyRobot.Position.y).magnitude;
         return Mathf.Max(0f, arenaRadius - distanceFromCenter);
     }
 
     float GetCenterDistance()
     {
-        return new Vector2(api.MyRobot.Position.x, api.MyRobot.Position.z).magnitude;
+        return new Vector2(api.MyRobot.Position.x, api.MyRobot.Position.y).magnitude;
     }
 
     bool GetEnemyStuck()
