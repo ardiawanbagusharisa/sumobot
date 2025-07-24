@@ -118,24 +118,22 @@ namespace SumoBot
             });
         }
 
-        public EA_MCTS_Node Select()
+        public EA_MCTS_Node Select(AI_MCTS_Config config)
         {
             if (children.Count == 0) return this;
-            double C = 1.41;
+            float C = config.UCBConstant;
+
             return children.OrderByDescending(child =>
             {
                 if (child.visits == 0) return double.MaxValue;
-                double exploitation = child.totalReward / child.visits;
+                float exploitation = child.totalReward / child.visits;
                 double exploration = C * Math.Sqrt(Math.Log(visits + 1) / child.visits);
                 return exploitation + exploration;
             }).FirstOrDefault();
         }
 
-        public Tuple<float, float, float> Simulate(SumoAPI api, AI_MCTS_Config config)
+        public (float, float, float) Simulate(SumoAPI api, AI_MCTS_Config config)
         {
-
-            Vector3 aiRot = Vector3.zero;
-            Vector3 aiPos = Vector3.zero;
 
             float bonusOrPenalty = 0;
             float angleScore = 0;
@@ -143,14 +141,10 @@ namespace SumoBot
 
             foreach (var action in actions)
             {
-                if (action is SkillAction)
-                {
-                    action.Type = config.DefaultSkillType == SkillType.Stone ? ActionType.SkillStone : ActionType.SkillBoost;
-                }
+                Vector2 aiPos;
+                float aiRot;
 
-                (Vector3, Vector3) result = api.Simulate(action);
-                aiPos += result.Item1;
-                aiRot += result.Item2;
+                (aiPos, aiRot) = api.Simulate(action);
 
                 bool approachWithPosition = action is AccelerateAction || action is DashAction;
                 float preAngleScore = api.Angle(oriPos: aiPos, oriRot: aiRot, normalized: true);
@@ -162,87 +156,57 @@ namespace SumoBot
                 if (action.Type == ActionType.SkillStone)
                 {
                     if (api.CanExecute(action))
-                    {
-                        bonusOrPenalty += 2f;
-
-                        if (api.DistanceNormalized(oriPos: aiPos) >= (api.BattleInfo.ArenaRadius * 0.75))
-                        {
-                            bonusOrPenalty += 2f;
-
-                            if (api.EnemyRobot.Skill.Type == SkillType.Boost && api.EnemyRobot.Skill.IsActive)
-                                bonusOrPenalty += 2f;
-
-                        }
-                        continue;
-                    }
+                        bonusOrPenalty += 10f;
                     else
-                    {
                         bonusOrPenalty -= 0.1f;
-                    }
+                    // continue;
                 }
                 else if (action.Type == ActionType.SkillBoost)
                 {
                     if (api.CanExecute(action))
-                    {
-                        bonusOrPenalty += 2f;
-                    }
+                        bonusOrPenalty += 10f;
                     else
-                    {
                         bonusOrPenalty -= 0.1f;
-                    }
+                    // continue;
+                }
+                else if (action.Type == ActionType.Dash)
+                {
+                    if (!api.CanExecute(action))
+                        bonusOrPenalty -= 0.1f;
+                    // continue;
                 }
 
-                // Define reward for action type that is approaching enemy
-                if (approachWithPosition)
+                if (action is TurnAction)
                 {
-                    float avg = (preAngleScore + preAngleScore) / 2;
-                    float distFromArena = api.DistanceFromArena();
-                    float nearArenaRadius = api.BattleInfo.ArenaRadius * 0.8f;
-
-                    if (distFromArena > nearArenaRadius)
-                    {
-                        float angleToArena = api.Angle(targetPos: api.BattleInfo.ArenaPosition, normalized: true);
-                        Debug.Log($"robot near arena {distFromArena} > {nearArenaRadius}: angle {angleToArena}");
-                        // If robot near arena radius by 70%, reward approachWithPosition action to make closer to the center of arena
-                        if (angleToArena >= 0.7f)
-                        {
-                            bonusOrPenalty += 2f;
-                        }
-                        else
-                        {
-                            bonusOrPenalty -= 1f;
-                        }
-                    }
-
-                    if (avg > 0.90f)
-                    {
-                        // Reward robot if Enemy is in front of face (by rotation and by distance)
-                        bonusOrPenalty += 3f;
-
-                        if (action.Type == ActionType.Dash)
-                            bonusOrPenalty += 0.5f;
-                        continue;
-                    }
-                    else if (preAngleScore > 0.90f && api.MyRobot.Skill.Type == SkillType.Boost && api.MyRobot.Skill.IsActive)
-                    {
-                        // Reward robot if Enemy is in front of face (by rotation and by boost-skill)
-                        bonusOrPenalty += 2f;
-
-                        if (action.Type == ActionType.Dash)
-                            bonusOrPenalty += 0.5f;
-                        continue;
-                    }
-                }
-                else
-                {
-                    // Penalize robot from trying to rotate farther than before
-                    float originalAngle = api.Angle(normalized: true);
-                    if (originalAngle > preAngleScore)
+                    if (api.Angle(normalized: true) > preAngleScore)
                     {
                         bonusOrPenalty -= 1f;
-                        continue;
+                    }
+                    else if (preAngleScore > 0.9f)
+                    {
+                        bonusOrPenalty += 2f;
                     }
                 }
+                else if (action is AccelerateAction)
+                {
+
+                    if (preAngleScore > 0.85f)
+                    {
+                        bonusOrPenalty += 3f;
+                    }
+                }
+                else if (action is DashAction && !api.MyRobot.IsDashOnCooldown)
+                {
+                    if (preAngleScore > 0.95f)
+                    {
+                        bonusOrPenalty += 5f;
+                    }
+                }
+
+                float angleToArena = api.Angle(targetPos: api.BattleInfo.ArenaPosition, oriPos: aiPos, oriRot: aiRot);
+                Vector2 distanceFromArena = api.Distance(targetPos: api.BattleInfo.ArenaPosition, oriPos: aiPos);
+
+                bonusOrPenalty += (((api.BattleInfo.ArenaRadius * 0.9f) - distanceFromArena.magnitude) * 2) + ((0.5f - preAngleScore) * 2);
             }
 
             float normAngleScore = angleScore / actions.Count();
@@ -252,10 +216,10 @@ namespace SumoBot
             this.angleScore += normAngleScore;
             this.distScore += normBonusOrPenalty;
             this.bonusOrPenalty += normBonusOrPenalty;
-            return Tuple.Create(normAngleScore, normDistScore, normBonusOrPenalty);
+            return (normAngleScore, normDistScore, normBonusOrPenalty);
         }
 
-        public void Backpropagate(Tuple<float, float, float> reward)
+        public void Backpropagate((float, float, float) reward)
         {
             visits++;
             totalReward += reward.Item1 + reward.Item2 + reward.Item3;
@@ -274,6 +238,8 @@ namespace SumoBot
                 double exploitation = child.totalReward / (child.visits + double.Epsilon);
                 return exploitation;
             }).FirstOrDefault();
+
+            // return highest;
 
             if (nodes == null)
             {

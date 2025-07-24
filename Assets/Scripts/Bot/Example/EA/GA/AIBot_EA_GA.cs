@@ -10,7 +10,6 @@ namespace SumoBot
     [System.Serializable]
     public class AIBot_EA_GA_Config
     {
-        public float ScriptInterval = 0.1f;
         public int PopulationSize = 40;
         public int GenerationCount = 7;
         public float MutationRate = 0.5f;
@@ -73,14 +72,13 @@ namespace SumoBot
             float fitness = 0f;
 
             List<ISumoAction> actions = genome.GetBestAction(config.ActionsPerInterval);
-
             foreach (var action in actions)
             {
-                (Vector3, Vector3) simResult = api.Simulate(action);
-                Vector3 aiPos = simResult.Item1;
-                Vector3 aiDir = simResult.Item2;
+                (Vector2, float) simResult = api.Simulate(action);
+                Vector2 aiPos = simResult.Item1;
+                float aiDir = simResult.Item2;
 
-                if (api.DistanceFromArena() > api.BattleInfo.ArenaRadius)
+                if (api.Distance(api.BattleInfo.ArenaPosition, aiPos).magnitude > api.BattleInfo.ArenaRadius)
                     return -999f;
 
                 if (action is DashAction)

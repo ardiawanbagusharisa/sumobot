@@ -12,10 +12,9 @@ namespace SumoBot
     [Serializable]
     public class AI_MCTS_Config
     {
-        public float ScriptInterval = 0.1f;
-        public float SimulationTime = 0.3f;
-        public int ResetIterationAt = 10;
+        public int ResetIterationAt = 2;
         public float Iterations = 100;
+        public float UCBConstant = 1.41f;
         public float ScoreLimit = -300;
         public string Name = "MCTS Example";
         public SkillType DefaultSkillType = SkillType.Stone;
@@ -32,8 +31,6 @@ namespace SumoBot
         private EA_MCTS_Node root;
         private List<ISumoAction> lastActionsFromEnemy;
         private List<ISumoAction> lastActionsToEnemy;
-        private Queue<ISumoAction> actionsQueue = new();
-
         public Dictionary<string, EA_MCTS_Node> AllNodes = new();
         public static List<ISumoAction> PossibleActions = new() {
             new TurnAction(InputType.Script, ActionType.TurnLeft, 0.1f),
@@ -43,7 +40,7 @@ namespace SumoBot
             new TurnAction(InputType.Script, ActionType.TurnRight, 0.3f),
 
             new AccelerateAction(InputType.Script, 0.1f),
-
+            new AccelerateAction(InputType.Script, 0.3f),
             new DashAction(InputType.Script),
             new SkillAction(InputType.Script),
         };
@@ -54,22 +51,17 @@ namespace SumoBot
 
         private SumoAPI api;
 
-        void OnBattleChanged(BattleState state)
-        {
-            if (state == BattleState.Battle_End)
-                InitNode();
-        }
-
         public override void OnBotUpdate()
         {
-            if (elapsedInterval % config.ResetIterationAt == 0)
+
+            elapsedInterval += 1;
+
+            if (elapsedInterval >= config.ResetIterationAt)
             {
+                elapsedInterval = 0;
                 InitNode();
             }
             Decide();
-            elapsedInterval += 1;
-
-            DeQueueWhenAvailable();
 
             Submit();
         }
@@ -77,7 +69,13 @@ namespace SumoBot
         public override void OnBattleStateChanged(BattleState state)
         {
             currState = state;
-            OnBattleChanged(state);
+
+            if (currState == BattleState.Battle_Countdown)
+            {
+                lastActionsFromEnemy = null;
+                lastActionsToEnemy = null;
+                InitNode();
+            }
         }
 
         public override void OnBotCollision(EventParameter param)
@@ -86,33 +84,17 @@ namespace SumoBot
                 lastActionsFromEnemy = null;
             else
                 lastActionsToEnemy = null;
+            ClearCommands();
             InitNode();
         }
 
         public override void OnBotInit(SumoAPI botAPI)
         {
             api = botAPI;
-
-            // Set all duration for action is similar
-            // for (int i = 0; i < PossibleActions.Count; i++)
-            // {
-            //     PossibleActions[i].Duration = config.SimulationTime;
-            // }
-
             InitNode();
         }
 
-
         #region Custom Functions
-
-        void DeQueueWhenAvailable()
-        {
-            while (actionsQueue.Count > 0)
-            {
-                Enqueue(actionsQueue.Dequeue());
-            }
-        }
-
         private void InitNode()
         {
             AllNodes.Clear();
@@ -132,11 +114,10 @@ namespace SumoBot
         {
             for (int i = 0; i < config.Iterations; i++)
             {
-                EA_MCTS_Node selected = root.Select();
+                EA_MCTS_Node selected = root.Select(config);
                 var expanded = selected.Expand(AllNodes);
                 if (expanded != null)
                 {
-                    expanded.SortAction();
                     var result = expanded.Simulate(api, config);
                     expanded.Backpropagate(result);
                 }
@@ -153,18 +134,14 @@ namespace SumoBot
                 return null;
             }
 
-            Debug.Log($"[AIBot_EA_MCTS] selected-score: {bestChild.totalReward}, selected-action(s): {bestChild.ID} selected-visits: {bestChild.visits}, {string.Join("->", bestChild.actions.Select((x) => x.FullName))}");
+            // Debug.Log($"[AIBot_EA_MCTS] selected-score: {bestChild.totalReward}, selected-action(s): {bestChild.ID} selected-visits: {bestChild.visits}, {string.Join("->", bestChild.actions.Select((x) => x.FullName))}");
 
             lastActionsToEnemy = bestChild.actions;
 
             foreach (var act in bestChild.actions)
             {
-                // if (api.ActionLockTime(act.Type) > 0)
-                // {
-                //     continue;
-                // }
                 act.Reason = bestChild.GetHighestScoreType().ToString();
-                actionsQueue.Enqueue(act);
+                Enqueue(act);
             }
             return bestChild;
         }
