@@ -1,3 +1,4 @@
+using SumoBot;
 using SumoCore;
 using SumoInput;
 using UnityEngine;
@@ -5,15 +6,15 @@ using UnityEngine;
 public static class StrategyToActionMapper
 {
 
-    public static ISumoAction Map(string strategy)
+    public static ISumoAction Map(string strategy, SumoAPI api)
     {
         if (string.IsNullOrEmpty(strategy))
             return null;
 
         if (strategy.StartsWith("turn_left_"))
-            return new TurnAction(InputType.Script, ActionType.TurnLeftWithAngle, ParseAngle(strategy));
+            return new TurnAction(InputType.Script, ActionType.TurnLeft, ParseAngle(strategy) / api.MyRobot.RotateSpeed);
         if (strategy.StartsWith("turn_right_"))
-            return new TurnAction(InputType.Script, ActionType.TurnRightWithAngle, ParseAngle(strategy));
+            return new TurnAction(InputType.Script, ActionType.TurnRight, ParseAngle(strategy) / api.MyRobot.RotateSpeed);
 
         switch (strategy)
         {

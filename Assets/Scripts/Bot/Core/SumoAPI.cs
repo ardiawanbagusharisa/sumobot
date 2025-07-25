@@ -43,6 +43,79 @@ namespace SumoBot
             return myController.InputProvider.CanExecute(action);
         }
 
+        public Vector3 Distance(
+            Vector2? oriPos = null,
+            Vector2? targetPos = null)
+        {
+            return (targetPos ?? EnemyRobot.Position) - (oriPos ?? MyRobot.Position);
+        }
+
+        public float DistanceNormalized(
+            Vector2? oriPos = null,
+            Vector2? targetPos = null)
+        {
+            Vector2 dist = Distance(oriPos, targetPos);
+            return 1f - Mathf.Clamp01(dist.magnitude / BattleInfo.ArenaRadius);
+        }
+
+        public float Angle(
+            Vector2? oriPos = null,
+            float? oriRot = null,
+            Vector2? targetPos = null,
+            bool normalized = false)
+        {
+            Vector2 facingDir = Quaternion.Euler(0, 0, oriRot ?? MyRobot.Rotation) * Vector2.up;
+            Vector2 toTarget = Distance(oriPos, targetPos).normalized;
+
+            float signedAngle = Vector2.SignedAngle(facingDir, toTarget);
+
+            if (normalized)
+                return Mathf.Cos(signedAngle * Mathf.Deg2Rad);
+            else
+                return signedAngle;
+        }
+
+        public (Vector2, float) Simulate(ISumoAction action, bool isEnemy = false, bool isDelta = false)
+        {
+            RobotStateAPI robot = isEnemy ? EnemyRobot : MyRobot;
+            Vector2 position = robot.Position;
+            float rotation = robot.Rotation;
+
+            if (action is TurnAction)
+            {
+                float delta = robot.RotateSpeed * robot.TurnRate * action.Duration;
+
+                if (action.Type == ActionType.TurnRight)
+                    delta = -delta;
+
+                rotation += delta;
+            }
+
+            Vector2 direction = Quaternion.Euler(0, 0, rotation) * Vector2.up;
+
+            if (action is AccelerateAction)
+            {
+                float effectiveSpeed = robot.MoveSpeed;
+
+                float distance = effectiveSpeed * action.Duration;
+                position += direction.normalized * distance;
+            }
+            else if (action is DashAction)
+            {
+                float effectiveSpeed = robot.DashSpeed;
+
+                float dashDistance = effectiveSpeed * robot.DashDuration;
+                position += direction.normalized * dashDistance;
+                position += direction.normalized * (robot.StopDelay * effectiveSpeed);
+            }
+
+            if (isDelta)
+            {
+                return new(position - robot.Position, rotation - robot.Rotation);
+            }
+            return new(position, rotation);
+        }
+
         public override string ToString()
         {
             return $"{BattleInfo}\n\n{EnemyRobot}\n\n{MyRobot}";
@@ -56,7 +129,7 @@ public readonly struct BattleInfoAPI
     public float Duration { get; }
     public BattleState CurrentState { get; }
     public float ArenaRadius { get; }
-    public Vector3 ArenaPosition { get; }
+    public Vector2 ArenaPosition { get; }
 
     public BattleInfoAPI(BattleManager manager)
     {
@@ -64,9 +137,8 @@ public readonly struct BattleInfoAPI
         Duration = manager.BattleTime;
         CurrentState = manager.CurrentState;
 
-        GameObject arena = manager.Arena;
         ArenaPosition = manager.Arena.transform.position;
-        ArenaRadius = arena.GetComponent<CircleCollider2D>().radius * arena.transform.lossyScale.x;
+        ArenaRadius = manager.ArenaRadius;
     }
 
     public override string ToString()
@@ -91,8 +163,8 @@ public readonly struct RobotStateAPI
     public float TurnRate { get; }
     public float BounceResistance { get; }
 
-    public Vector3 Position { get; }
-    public Quaternion Rotation { get; }
+    public Vector2 Position { get; }
+    public float Rotation { get; }
     public Vector2 LinearVelocity { get; }
     public float AngularVelocity { get; }
     public SkillStateAPI Skill { get; }
@@ -102,6 +174,7 @@ public readonly struct RobotStateAPI
 
     public RobotStateAPI(SumoController controller)
     {
+
         Side = controller.Side;
         MoveSpeed = controller.MoveSpeed;
         RotateSpeed = controller.RotateSpeed;
@@ -113,10 +186,10 @@ public readonly struct RobotStateAPI
         BounceResistance = controller.BounceResistance;
         Skill = new(controller.Skill);
 
-        Position = controller.transform.position;
-        Rotation = controller.transform.rotation;
+        Position = controller.RigidBody.position;
+        Rotation = controller.RigidBody.rotation;
         LinearVelocity = controller.LastLinearVelocity;
-        AngularVelocity = controller.LastAngularVelocity;
+        AngularVelocity = controller.RigidBody.angularVelocity;
 
         IsDashOnCooldown = controller.IsDashOnCooldown;
         IsMovementDisabled = controller.IsMovementDisabled;
@@ -126,7 +199,7 @@ public readonly struct RobotStateAPI
     {
         return $"[Robot {Side}]\n" +
                $"- Pos           : {Position}\n" +
-               $"- Rot           : {Rotation.eulerAngles}\n" +
+               $"- Rot           : {Rotation}\n" +
                $"- Velocity      : {LinearVelocity}\n" +
                $"- AngularVel    : {AngularVelocity:F2}\n" +
                $"- MoveSpeed     : {MoveSpeed:F2}\n" +
@@ -175,5 +248,17 @@ public readonly struct SkillStateAPI
                $"- Cooldown   : {cooldownStatus}\n" +
                $"- Duration   : {TotalDuration:F1}s\n" +
                $"- Multiplier : {(Type == SkillType.Boost ? BoostMultiplier : StoneMultiplier):F1}";
+    }
+}
+
+public readonly struct SimulateResultAPI
+{
+    public Vector3 Position { get; }
+    public Vector3 Rotation { get; }
+
+    public SimulateResultAPI(Vector3 position, Vector3 direction)
+    {
+        Position = position;
+        Rotation = direction;
     }
 }

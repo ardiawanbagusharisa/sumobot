@@ -7,9 +7,9 @@ namespace SumoInput
     public class ButtonPointerHandler : MonoBehaviour, IPointerDownHandler, IPointerUpHandler
     {
         #region Action properties
-        public ActionRegistry Actions = new();
-        static public string ActionOnHold = "ActionOnHold";
-        static public string ActionOnPress = "ActionOnPress";
+        public EventRegistry Events = new();
+        static public string OnHold = "ActionOnHold";
+        static public string OnPress = "ActionOnPress";
         private bool isHolding = false;
         #endregion
 
@@ -23,14 +23,14 @@ namespace SumoInput
         {
             isHolding = false;
             if (GetComponent<Button>().interactable)
-                Actions[ActionOnPress]?.Invoke();
+                Events[OnPress]?.Invoke();
         }
 
         private void Update()
         {
             if (isHolding)
                 if (GetComponent<Button>().interactable)
-                    Actions[ActionOnHold]?.Invoke();
+                    Events[OnHold]?.Invoke();
         }
         #endregion
     }

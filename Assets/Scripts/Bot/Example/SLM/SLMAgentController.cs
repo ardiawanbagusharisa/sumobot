@@ -1,4 +1,3 @@
-using System.Collections;
 using UnityEngine;
 using System.Text;
 using UnityEngine.Networking;
@@ -7,6 +6,7 @@ using System.Collections.Generic;
 using SumoCore;
 using SumoManager;
 using SumoBot;
+using System.Threading.Tasks;
 
 public class SLMAgentController : Bot
 {
@@ -23,12 +23,10 @@ public class SLMAgentController : Bot
 
     public override string ID => "SLM";
 
-    public override float Interval => DecisionInterval;
-
     public override SkillType SkillType => SkillType.Boost;
 
     #region Bot methods
-    public override void OnBotInit(PlayerSide side, SumoAPI botAPI)
+    public override void OnBotInit(SumoAPI botAPI)
     {
         api = botAPI;
         contextBuffer = new Queue<string>();
@@ -36,7 +34,7 @@ public class SLMAgentController : Bot
         timer = 0f;
     }
 
-    public override void OnBotCollision(ActionParameter param)
+    public override void OnBotCollision(EventParameter param)
     {
 
     }
@@ -49,7 +47,7 @@ public class SLMAgentController : Bot
     public override void OnBotUpdate()
     {
         RunSLM();
-        base.OnBotUpdate();
+        Submit();
     }
     #endregion
 
@@ -73,7 +71,7 @@ public class SLMAgentController : Bot
                 while (pendingActions.Count > 0)
                 {
                     string nextAction = pendingActions.Dequeue();
-                    ISumoAction sumoAction = StrategyToActionMapper.Map(nextAction);
+                    ISumoAction sumoAction = StrategyToActionMapper.Map(nextAction, api);
                     if (sumoAction != null)
                         Enqueue(sumoAction);
                     else
@@ -82,16 +80,13 @@ public class SLMAgentController : Bot
             }
             else
             {
-                StartCoroutine(RequestStrategy());
+                _ = RequestStrategyAsync();
             }
         }
     }
 
-    IEnumerator RequestStrategy()
+    async Task RequestStrategyAsync()
     {
-        string response = "";
-
-        // === Build context window: concatenation of last N instructions ===
         string situationStr = BuildSituationString();
         contextBuffer.Enqueue(situationStr);
         if (contextBuffer.Count > contextWindow)
@@ -100,27 +95,28 @@ public class SLMAgentController : Bot
         string jsonPayload = "{\"context_input\": \"" + contextInput + "\"}";
 
         byte[] bodyRaw = Encoding.UTF8.GetBytes(jsonPayload);
-
         using UnityWebRequest req = new UnityWebRequest(SLMApiUrl, "POST");
         req.uploadHandler = new UploadHandlerRaw(bodyRaw);
         req.downloadHandler = new DownloadHandlerBuffer();
         req.SetRequestHeader("Content-Type", "application/json");
-        yield return req.SendWebRequest();
+
+        var operation = req.SendWebRequest();
+
+        while (!operation.isDone)
+            await Task.Yield(); // wait for completion
 
         if (req.result == UnityWebRequest.Result.Success)
         {
-            response = req.downloadHandler.text;
-
-            // === Parsing response strategy ===
+            string response = req.downloadHandler.text;
             string[] strategies = ParseStrategiesFromJson(response);
 
-            // Split combo actions, order priority (turn > dash > accelerate > boost)
             var actions = strategies
                 .SelectMany(strat => strat.Contains("+")
                     ? strat.Split('+').Select(s => s.Trim().ToLower())
                     : new string[] { strat.Trim().ToLower() })
                 .ToList();
 
+            // Sort by priority
             actions.Sort((a, b) =>
             {
                 if (a.StartsWith("turn") && !b.StartsWith("turn")) return -1;
@@ -133,16 +129,14 @@ public class SLMAgentController : Bot
             });
 
             pendingActions = new Queue<string>(actions);
-
             Debug.Log("[SLM] Queued actions: " + string.Join(", ", actions));
         }
         else
         {
-            Debug.LogWarning("SLMAgentController: Request failed: " + req.error + " " + req.downloadHandler.text);
+            Debug.LogWarning("SLM request failed: " + req.error + " " + req.downloadHandler.text);
         }
 
         Debug.Log("[SLM] Payload: " + jsonPayload);
-        Debug.Log("[SLM] Response: " + response);
     }
 
     string BuildSituationString()
@@ -211,13 +205,13 @@ public class SLMAgentController : Bot
     float GetEdgeDistance()
     {
         float arenaRadius = api.BattleInfo.ArenaRadius;
-        float distanceFromCenter = new Vector2(api.MyRobot.Position.x, api.MyRobot.Position.z).magnitude;
+        float distanceFromCenter = new Vector2(api.MyRobot.Position.x, api.MyRobot.Position.y).magnitude;
         return Mathf.Max(0f, arenaRadius - distanceFromCenter);
     }
 
     float GetCenterDistance()
     {
-        return new Vector2(api.MyRobot.Position.x, api.MyRobot.Position.z).magnitude;
+        return new Vector2(api.MyRobot.Position.x, api.MyRobot.Position.y).magnitude;
     }
 
     bool GetEnemyStuck()

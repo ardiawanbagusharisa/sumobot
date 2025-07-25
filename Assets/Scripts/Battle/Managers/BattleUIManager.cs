@@ -7,7 +7,7 @@ using UnityEngine.UI;
 using System.Collections;
 using UnityEngine.SceneManagement;
 using SumoInput;
-
+using System;
 
 namespace SumoManager
 {
@@ -37,6 +37,7 @@ namespace SumoManager
         public TMP_Text RoundSystem;
         public TMP_Text Round;
         public TMP_Text Timer;
+        public List<SumoCostume> PlayerHUD = new();
 
         [Header("Battle UI - Left Player")]
         public TMP_Text LeftScore;
@@ -152,12 +153,12 @@ Left Shift / Right Shift - Dash
 
         private void OnEnable()
         {
-            BattleManager.Instance.Actions[BattleManager.OnBattleChanged].Subscribe(OnBattleChanged);
+            BattleManager.Instance.Events[BattleManager.OnBattleChanged].Subscribe(OnBattleChanged);
         }
 
         private void OnDisable()
         {
-            BattleManager.Instance.Actions[BattleManager.OnBattleChanged].Unsubscribe(OnBattleChanged);
+            BattleManager.Instance.Events[BattleManager.OnBattleChanged].Unsubscribe(OnBattleChanged);
         }
 
         private void FixedUpdate()
@@ -192,7 +193,7 @@ Left Shift / Right Shift - Dash
         #endregion
 
         #region Battle changes
-        private void OnBattleChanged(ActionParameter param)
+        private void OnBattleChanged(EventParameter param)
         {
             var battle = param.Battle;
             RoundSystem.SetText($"Best of {(int)battle.RoundSystem}");
@@ -202,6 +203,8 @@ Left Shift / Right Shift - Dash
             BattleState state = BattleManager.Instance.CurrentState;
             BattleStateUI.SetText(state.ToString());
 
+            SumoController leftPlayer = battle.LeftPlayer;
+            SumoController rightPlayer = battle.RightPlayer;
             switch (state)
             {
                 case BattleState.PreBatle_Preparing:
@@ -210,18 +213,29 @@ Left Shift / Right Shift - Dash
                     BattlePanels.Find((o) => o.CompareTag("BattleState/Pre")).SetActive(true);
                     BattlePanels.Find((o) => o.CompareTag("BattleState/Ongoing")).SetActive(false);
                     BattlePanels.Find((o) => o.CompareTag("BattleState/Post")).SetActive(false);
-                    LeftSkill.value = (int)battle.LeftPlayer.Skill.Type;
-                    RightSkill.value = (int)battle.LeftPlayer.Skill.Type;
+                    LeftSkill.value = (int)leftPlayer.Skill.Type;
+                    RightSkill.value = (int)rightPlayer.Skill.Type;
                     LeftFinalScore.SetText("");
                     RightFinalScore.SetText("");
+                    
+                    PlayerHUD.ForEach((x) =>
+                    {
+                        if (x.Side == Placement.Left)
+                            x.AttachToHUD(leftPlayer.Costume);
+                        else if (x.Side == Placement.Right)
+                            x.AttachToHUD(rightPlayer.Costume);
+                    });
                     break;
                 case BattleState.Battle_Preparing:
+                    battle.LeftPlayer.Events[SumoController.OnSkillAssigned].Subscribe(OnSkillAssigned);
+                    battle.RightPlayer.Events[SumoController.OnSkillAssigned].Subscribe(OnSkillAssigned);
+
                     BattlePanels.Find((o) => o.CompareTag("BattleState/Ongoing")).SetActive(true);
                     InitActionUI(LeftSkillUI, LeftDashUI);
                     InitActionUI(RightSkillUI, RightDashUI);
                     ClearScore();
-                    LeftSkillUI.SetText(battle.LeftPlayer.Skill.Type.ToString());
-                    RightSkillUI.SetText(battle.RightPlayer.Skill.Type.ToString());
+                    LeftSkillUI.SetText(leftPlayer.Skill.Type.ToString());
+                    RightSkillUI.SetText(rightPlayer.Skill.Type.ToString());
                     Countdown.SetText("");
                     RoundSystem.SetText("");
                     Round.SetText("");
@@ -229,28 +243,48 @@ Left Shift / Right Shift - Dash
                     BattlePanels.Find((o) => o.CompareTag("BattleState/Post")).SetActive(false);
                     break;
                 case BattleState.Battle_Countdown:
-                    BattleManager.Instance.Actions[BattleManager.OnCountdownChanged].Subscribe(OnCountdownChanged);
+                    BattleManager.Instance.Events[BattleManager.OnCountdownChanged].Subscribe(OnCountdownChanged);
                     break;
                 case BattleState.Battle_Ongoing:
                     Countdown.SetText("");
-                    BattleManager.Instance.Actions[BattleManager.OnCountdownChanged].Unsubscribe(OnCountdownChanged);
+                    BattleManager.Instance.Events[BattleManager.OnCountdownChanged].Unsubscribe(OnCountdownChanged);
                     break;
                 case BattleState.Battle_End:
+                    leftPlayer.Events[SumoController.OnSkillAssigned].Unsubscribe(OnSkillAssigned);
+                    rightPlayer.Events[SumoController.OnSkillAssigned].Unsubscribe(OnSkillAssigned);
                     break;
                 case BattleState.PostBattle_ShowResult:
                     BattlePanels.Find((o) => o.CompareTag("BattleState/Post")).SetActive(true);
                     BattlePanels.Find((o) => o.CompareTag("BattleState/Ongoing")).SetActive(false);
                     BattlePanels.Find((o) => o.CompareTag("BattleState/Pre")).SetActive(false);
+
                     LeftFinalScore.SetText(battle.LeftWinCount.ToString());
                     RightFinalScore.SetText(battle.RightWinCount.ToString());
+
+                    SumoCostume winnerHUD = PlayerHUD.FirstOrDefault((x) => x.Side == Placement.Winner);
+                    if (winnerHUD)
+                    {
+                        SumoController winner = battle.GetBattleWinner().GetRobotWinner(battle);
+                        if (winner != null)
+                            winnerHUD?.AttachToHUD(winner.Costume);
+                    }
+
                     break;
             }
             UpdateScore(battle);
         }
 
-        private void OnCountdownChanged(ActionParameter param)
+        private void OnCountdownChanged(EventParameter param)
         {
             Countdown.SetText(param.Float.ToString());
+        }
+
+        private void OnSkillAssigned(EventParameter param)
+        {
+            if (param.Side == PlayerSide.Left)
+                LeftSkillUI.SetText(param.SkillType.ToString());
+            else
+                RightSkillUI.SetText(param.SkillType.ToString());
         }
 
         private void InitActionUI(CooldownUIGroupSet skill, CooldownUIGroupSet dash)
