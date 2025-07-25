@@ -31,7 +31,7 @@ namespace SumoHelper
         {
             if (!IsActive)
             {
-                debounceTime = action.Duration / 2;
+                debounceTime = action.Duration;
 
                 IsActive = true;
                 startTime = BattleManager.Instance.ElapsedTime;
