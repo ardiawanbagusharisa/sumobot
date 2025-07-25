@@ -19,7 +19,6 @@ namespace SumoInput
         #endregion
 
         #region Runtime properties
-        private readonly float delayHoldSeconds = 0.08f;
         private readonly Dictionary<ActionType, float?> actionLastUsedMap = new();
         private readonly Dictionary<ActionType, InputType?> actionInputTypeMap = new();
         private Dictionary<ActionType, GameObject> actionButtonMap = new();
@@ -41,12 +40,12 @@ namespace SumoInput
         {
             // Note: We use .gameObject because Accelerate, TurnLeft, etc. are ButtonPointerHandler components,
             // and we need the GameObject they are attached to.
+            // { ActionType.Accelerate, Accelerate.gameObject },
             { ActionType.Accelerate, Accelerate.gameObject },
-            { ActionType.AccelerateWithTime, Accelerate.gameObject },
             { ActionType.TurnLeft, TurnLeft.gameObject },
-            { ActionType.TurnLeftWithAngle, TurnLeft.gameObject },
+            // { ActionType.TurnLeftWithAngle, TurnLeft.gameObject },
             { ActionType.TurnRight, TurnRight.gameObject },
-            { ActionType.TurnRightWithAngle, TurnRight.gameObject },
+            // { ActionType.TurnRightWithAngle, TurnRight.gameObject },
             { ActionType.Dash, Dash.gameObject },
             { ActionType.SkillBoost, Skill.gameObject },
             { ActionType.SkillStone, Skill.gameObject },
@@ -55,27 +54,27 @@ namespace SumoInput
 
         void OnEnable()
         {
-            Accelerate.Actions[ButtonPointerHandler.ActionOnHold].Subscribe(inputProvider.OnAccelerateButtonPressed);
-            TurnLeft.Actions[ButtonPointerHandler.ActionOnHold].Subscribe(inputProvider.OnTurnLeftButtonPressed);
-            TurnRight.Actions[ButtonPointerHandler.ActionOnHold].Subscribe(inputProvider.OnTurnRightButtonPressed);
+            Accelerate.Events[ButtonPointerHandler.OnHold].Subscribe(inputProvider.OnAccelerateButtonPressed);
+            TurnLeft.Events[ButtonPointerHandler.OnHold].Subscribe(inputProvider.OnTurnLeftButtonPressed);
+            TurnRight.Events[ButtonPointerHandler.OnHold].Subscribe(inputProvider.OnTurnRightButtonPressed);
 
-            Dash.Actions[ButtonPointerHandler.ActionOnPress].Subscribe(inputProvider.OnDashButtonPressed);
-            Skill.Actions[ButtonPointerHandler.ActionOnPress].Subscribe(inputProvider.OnSkillButtonPressed);
+            Dash.Events[ButtonPointerHandler.OnPress].Subscribe(inputProvider.OnDashButtonPressed);
+            Skill.Events[ButtonPointerHandler.OnPress].Subscribe(inputProvider.OnSkillButtonPressed);
 
-            BattleManager.Instance.Actions[BattleManager.OnBattleChanged].Subscribe(OnBattleChanged);
+            BattleManager.Instance.Events[BattleManager.OnBattleChanged].Subscribe(OnBattleChanged);
             //SetUpButtonGuide();
         }
 
         void OnDisable()
         {
-            Accelerate.Actions[ButtonPointerHandler.ActionOnHold].Unsubscribe(inputProvider.OnAccelerateButtonPressed);
-            TurnLeft.Actions[ButtonPointerHandler.ActionOnHold].Unsubscribe(inputProvider.OnTurnLeftButtonPressed);
-            TurnRight.Actions[ButtonPointerHandler.ActionOnHold].Unsubscribe(inputProvider.OnTurnRightButtonPressed);
+            Accelerate.Events[ButtonPointerHandler.OnHold].Unsubscribe(inputProvider.OnAccelerateButtonPressed);
+            TurnLeft.Events[ButtonPointerHandler.OnHold].Unsubscribe(inputProvider.OnTurnLeftButtonPressed);
+            TurnRight.Events[ButtonPointerHandler.OnHold].Unsubscribe(inputProvider.OnTurnRightButtonPressed);
 
-            Dash.Actions[ButtonPointerHandler.ActionOnPress].Unsubscribe(inputProvider.OnDashButtonPressed);
-            Skill.Actions[ButtonPointerHandler.ActionOnPress].Unsubscribe(inputProvider.OnSkillButtonPressed);
+            Dash.Events[ButtonPointerHandler.OnPress].Unsubscribe(inputProvider.OnDashButtonPressed);
+            Skill.Events[ButtonPointerHandler.OnPress].Unsubscribe(inputProvider.OnSkillButtonPressed);
 
-            BattleManager.Instance.Actions[BattleManager.OnBattleChanged].Unsubscribe(OnBattleChanged);
+            BattleManager.Instance.Events[BattleManager.OnBattleChanged].Unsubscribe(OnBattleChanged);
         }
 
         void Update()
@@ -84,7 +83,7 @@ namespace SumoInput
             {
                 if (item.Value != null)
                 {
-                    bool isHolding = Time.time - item.Value < delayHoldSeconds;
+                    bool isHolding = Time.time - item.Value < BattleManager.Instance.ActionInterval;
                     UpdateButtonState(item.Key, isHolding);
                 }
             }
@@ -102,22 +101,22 @@ namespace SumoInput
 
         #region Button handling methods
 
-        void OnBattleChanged(ActionParameter param)
+        void OnBattleChanged(EventParameter param)
         {
             var battle = param.Battle;
             SumoController currentPlayer = inputProvider.PlayerSide == PlayerSide.Left ? BattleManager.Instance.Battle.LeftPlayer : BattleManager.Instance.Battle.RightPlayer;
 
             if (BattleManager.Instance.CurrentState == BattleState.Battle_Countdown)
-                currentPlayer.Actions[SumoController.OnPlayerAction].Subscribe(OnPlayerAction);
+                currentPlayer.Events[SumoController.OnAction].Subscribe(OnPlayerAction);
             else if (BattleManager.Instance.CurrentState == BattleState.Battle_End)
             {
-                currentPlayer.Actions[SumoController.OnPlayerAction].Unsubscribe(OnPlayerAction);
+                currentPlayer.Events[SumoController.OnAction].Unsubscribe(OnPlayerAction);
                 Dash.GetComponentInChildren<Button>().interactable = true;
                 Skill.GetComponentInChildren<Button>().interactable = true;
             }
         }
 
-        void OnPlayerAction(ActionParameter param)
+        void OnPlayerAction(EventParameter param)
         {
             ISumoAction action = param.Action;
             bool isPostExecute = param.Bool == false;

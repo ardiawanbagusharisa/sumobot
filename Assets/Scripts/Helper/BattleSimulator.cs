@@ -8,16 +8,11 @@ namespace SumoHelper
     {
         public int TotalSimulations = 5;
         public float TimeScale = 5f;
-
-        // Should be [false] if we ewant to run in Headless-mode
         public bool SimulationOnStart = false;
-
-
 
         void Start()
         {
-            if (SimulationOnStart)
-                StartSimulation();
+            StartSimulation();
         }
 
         public void StartSimulation()
@@ -28,6 +23,7 @@ namespace SumoHelper
 
             Time.timeScale = TimeScale;
             Application.runInBackground = true;
+            LogManager.UpdateMetadata();
             // Time.fixedDeltaTime = 0.02f / TimeScale;
             StartCoroutine(RunSimulations());
         }
@@ -40,9 +36,12 @@ namespace SumoHelper
             for (int i = 0; i < TotalSimulations; i++)
             {
                 yield return new WaitForSeconds(1);
-                BattleManager.Instance.Battle_Start();
 
-                // Wait until match is over
+                if (SimulationOnStart || i > 0)
+                {
+                    BattleManager.Instance.Battle_Start();
+                }
+
                 while (BattleManager.Instance.CurrentState != BattleState.PostBattle_ShowResult)
                 {
                     yield return null; // wait frame

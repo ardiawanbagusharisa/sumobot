@@ -6,35 +6,35 @@ using SumoManager;
 namespace SumoHelper
 {
     [Serializable]
-    public class TrackableAction
+    public class TrackableEvent
     {
         [NonSerialized]
-        private Action<ActionParameter> action;
+        private Action<EventParameter> action;
 
         [NonSerialized]
         private readonly HashSet<Delegate> subscribers = new();
 
-        public void Subscribe(Action<ActionParameter> callback)
+        public void Subscribe(Action<EventParameter> callback)
         {
             if (subscribers.Add(callback))
                 action += callback;
 
         }
 
-        public void Unsubscribe(Action<ActionParameter> callback)
+        public void Unsubscribe(Action<EventParameter> callback)
         {
             if (subscribers.Remove(callback))
                 action -= callback;
         }
 
-        public void Invoke(ActionParameter param)
+        public void Invoke(EventParameter param)
         {
             action?.Invoke(param);
         }
 
         public void Invoke()
         {
-            Invoke(new ActionParameter());
+            Invoke(new EventParameter());
         }
 
         public IReadOnlyCollection<Delegate> Subscribers => subscribers;
@@ -54,21 +54,34 @@ namespace SumoHelper
 
 
 [Serializable]
-public class ActionParameter
+public class EventParameter
 {
     public ISumoAction Action;
     public PlayerSide Side;
     public bool Bool;
     public float Float;
     public Battle Battle;
+    public BattleState BattleState;
+    public SkillType SkillType;
 
-    public ActionParameter(ISumoAction actionParam = null, PlayerSide? sideParam = null, bool? boolParam = null, float? floatParam = null, Battle battleParam = null)
+    public EventParameter(
+        ISumoAction actionParam = null,
+        PlayerSide? sideParam = null,
+        bool? boolParam = null,
+        float? floatParam = null,
+        Battle battleParam = null,
+        BattleState? battleStateParam = null,
+        SkillType? skillType = null)
     {
 
         if (sideParam != null)
-            Action = actionParam;
-        if (sideParam != null)
             Side = (PlayerSide)sideParam;
+        if (skillType != null)
+            SkillType = (SkillType)skillType;
+        if (battleStateParam != null)
+            BattleState = (BattleState)battleStateParam;
+        if (sideParam != null)
+            Action = actionParam;
         if (boolParam != null)
             Bool = (bool)boolParam;
         if (floatParam != null)

@@ -47,12 +47,13 @@ namespace SumoManager
         public RoundSystem RoundSystem = RoundSystem.BestOf3;
         public float BattleTime = 60f;
         public float CountdownTime = 3f;
+        public float ActionInterval = 0.1f;
         public List<Transform> StartPositions = new();
         // public GameObject SumoPrefab;
         public GameObject LeftPlayerObject;
         public GameObject RightPlayerObject;
-
         public GameObject Arena;
+        public float ArenaRadius;
         #endregion
 
         #region Runtime (readonly) properties 
@@ -60,18 +61,19 @@ namespace SumoManager
         public float ElapsedTime = 0;
         public float TimeLeft => BattleTime - ElapsedTime;
 
-        public BotPlayerHandler Bot = new();
         public Battle Battle;
+        private BotManager botManager;
+        private BattleSimulator simulator;
         #endregion
 
         #region Events properties 
-        public ActionRegistry Actions = new();
-        // [float]
-        public static string OnCountdownChanged = "OnCountdownChanged";
-        // [Battle]
-        public static string OnBattleChanged = "OnBattleChanged";
+        public EventRegistry Events = new();
+        public static string OnCountdownChanged = "OnCountdownChanged";  // [float]
+        public static string OnBattleChanged = "OnBattleChanged"; // [Battle]
+
         private Coroutine battleTimerCoroutine;
         private Coroutine countdownCoroutine;
+        private float elapsedActionTime = 0f;
         #endregion
 
         #region Unity methods 
@@ -87,20 +89,33 @@ namespace SumoManager
 
         void OnEnable()
         {
+            simulator = GetComponent<BattleSimulator>();
+            botManager = GetComponent<BotManager>();
+
             LogManager.InitLog();
             Battle = new Battle(Guid.NewGuid().ToString(), RoundSystem);
-            LogManager.InitBattle();
+
+            if (simulator.enabled)
+            {
+                LogManager.InitBattle(simulator.TotalSimulations, simulator.TimeScale);
+            }
+            else
+            {
+                LogManager.InitBattle();
+            }
         }
 
         void Start()
         {
+            var scale = Arena.transform.lossyScale;
+            ArenaRadius = Arena.GetComponent<CircleCollider2D>().radius * ((scale.x + scale.y) / 2f);
             TransitionToState(BattleState.PreBatle_Preparing);
         }
 
         void OnDisable()
         {
-            Battle.LeftPlayer.Actions[SumoController.OnPlayerOutOfArena].Unsubscribe(OnPlayerOutOfArena);
-            Battle.RightPlayer.Actions[SumoController.OnPlayerOutOfArena].Unsubscribe(OnPlayerOutOfArena);
+            Battle.LeftPlayer.Events[SumoController.OnOutOfArena].Unsubscribe(OnPlayerOutOfArena);
+            Battle.RightPlayer.Events[SumoController.OnOutOfArena].Unsubscribe(OnPlayerOutOfArena);
         }
 
         void Update()
@@ -108,7 +123,23 @@ namespace SumoManager
             if (Battle.CurrentRound != null && CurrentState == BattleState.Battle_Ongoing)
             {
                 ElapsedTime += Time.deltaTime;
-                Bot.OnUpdate(ElapsedTime);
+                elapsedActionTime += Time.deltaTime;
+
+                if (elapsedActionTime >= ActionInterval)
+                {
+                    elapsedActionTime = 0;
+
+                    SumoController left = Battle.LeftPlayer;
+                    SumoController right = Battle.RightPlayer;
+
+                    botManager.OnUpdate();
+
+                    left.FlushInput();
+                    right.FlushInput();
+
+                    left.OnUpdate();
+                    right.OnUpdate();
+                }
             }
         }
 
@@ -145,7 +176,7 @@ namespace SumoManager
         {
             PlayerSide side = controller.transform.position.x < 0 ? PlayerSide.Left : PlayerSide.Right;
             controller.Initialize(side, controller.transform);
-            controller.Actions[SumoController.OnPlayerOutOfArena].Subscribe(OnPlayerOutOfArena);
+            controller.Events[SumoController.OnOutOfArena].Subscribe(OnPlayerOutOfArena);
 
             if (controller.Side == PlayerSide.Left)
                 Battle.LeftPlayer = controller;
@@ -175,7 +206,7 @@ namespace SumoManager
             float timer = CountdownTime;
             while (timer > 0 && CurrentState == BattleState.Battle_Countdown)
             {
-                Actions[OnCountdownChanged].Invoke(new ActionParameter(floatParam: timer));
+                Events[OnCountdownChanged].Invoke(new EventParameter(floatParam: timer));
                 yield return new WaitForSeconds(1f);
                 timer -= 1f;
             }
@@ -201,13 +232,16 @@ namespace SumoManager
         private IEnumerator ResetBattle()
         {
             yield return new WaitForSeconds(3f);
+            LogManager.LogLastPosition();
+
             Battle.LeftPlayer.Reset();
             Battle.RightPlayer.Reset();
+
             TransitionToState(BattleState.Battle_Reset);
             yield return new WaitForSeconds(1f);
         }
 
-        private void OnPlayerOutOfArena(ActionParameter param)
+        private void OnPlayerOutOfArena(EventParameter param)
         {
             if (CurrentState != BattleState.Battle_Ongoing)
                 return;
@@ -223,6 +257,7 @@ namespace SumoManager
 
             Battle.SetRoundWinner(winner);
             LogManager.FlushActionLog();
+            LogManager.SetRoundWinner(winner.Side.ToString());
             TransitionToState(BattleState.Battle_End);
         }
 
@@ -269,11 +304,11 @@ namespace SumoManager
                     //         InitializePlayer(player.GetComponent<SumoController>());
                     //     });
                     // }
-                    Bot.Init(LeftPlayerObject, RightPlayerObject);
                     break;
 
                 // Battle
                 case BattleState.Battle_Preparing:
+                    LogManager.SetPlayerBots(botManager.Left, botManager.Right);
                     LogManager.UpdateMetadata(logTakenAction: false);
                     LogManager.StartGameLog();
 
@@ -311,6 +346,8 @@ namespace SumoManager
 
                     Battle.LeftPlayer.SetSkillEnabled(false);
                     Battle.RightPlayer.SetSkillEnabled(false);
+                    Battle.LeftPlayer.ClearInput();
+                    Battle.RightPlayer.ClearInput();
                     StartCoroutine(ResetBattle());
                     break;
                 case BattleState.Battle_Reset:
@@ -339,8 +376,6 @@ namespace SumoManager
                 // Post Battle
                 case BattleState.PostBattle_ShowResult:
                     LogManager.SortAndSave();
-                    Battle.LeftPlayer.InputProvider = null;
-                    Battle.RightPlayer.InputProvider = null;
                     break;
             }
 
@@ -350,8 +385,9 @@ namespace SumoManager
         // Call this when we need to trigger OnBattleChanged immediately
         private void BroadcastBattleData()
         {
-            Bot.OnBattleStateChanged(CurrentState);
-            Actions[OnBattleChanged].Invoke(new ActionParameter(battleParam: Battle));
+            Events[OnBattleChanged].Invoke(new EventParameter(
+                battleParam: Battle,
+                battleStateParam: CurrentState));
         }
         #endregion
     }
@@ -392,8 +428,6 @@ namespace SumoManager
                 LeftWinCount += 1;
             else
                 RightWinCount += 1;
-
-            LogManager.SetRoundWinner(winner.Side.ToString());
 
             CurrentRound.RoundWinner = winner;
             Winners[CurrentRound.RoundNumber] = winner;
@@ -460,6 +494,22 @@ namespace SumoManager
         {
             RoundNumber = roundNumber;
             FinishTime = time;
+        }
+    }
+
+    public static class BattleExt
+    {
+        public static SumoController GetRobotWinner(this BattleWinner? battleWinner, Battle battle)
+        {
+            switch (battleWinner)
+            {
+                case BattleWinner.Left:
+                    return battle.LeftPlayer;
+                case BattleWinner.Right:
+                    return battle.RightPlayer;
+                default:
+                    return null;
+            }
         }
     }
     #endregion
