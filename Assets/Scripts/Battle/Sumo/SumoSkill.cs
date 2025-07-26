@@ -11,6 +11,21 @@ namespace SumoCore
         Stone = 1,
     }
 
+    public static class SkillTypeExtension
+    {
+        public static ActionType ToActionType(this SkillType type)
+        {
+            if (type == SkillType.Boost)
+            {
+                return ActionType.SkillBoost;
+            }
+            else
+            {
+                return ActionType.SkillStone;
+            }
+        }
+    }
+
     [Serializable]
     public class SumoSkill
     {
@@ -75,11 +90,10 @@ namespace SumoCore
                 Debug.Log($"[Skill][{Type}] is on cooldown");
                 return false;
             }
-
-            action.Type = (Type == SkillType.Boost) ? ActionType.SkillBoost : ActionType.SkillStone;
-            action.Duration = TotalDuration;
-
             Debug.Log($"[Skill][{Type}] activated!");
+
+
+            controller.SetActiveAction(action);
             IsActive = true;
             controller.Log(action);
             switch (Type)

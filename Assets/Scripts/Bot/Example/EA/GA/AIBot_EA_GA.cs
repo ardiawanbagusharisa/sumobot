@@ -4,7 +4,7 @@ using SumoInput;
 using SumoManager;
 using UnityEngine;
 
-namespace SumoBot
+namespace SumoBot.EA.GA
 {
 
     [System.Serializable]

@@ -5,7 +5,7 @@ using System.Linq;
 using SumoCore;
 using UnityEngine;
 
-namespace SumoBot
+namespace SumoBot.EA.MCTS
 {
     public class EA_MCTS_Node
     {
@@ -141,14 +141,17 @@ namespace SumoBot
 
             foreach (var action in actions)
             {
-                Vector2 aiPos;
-                float aiRot;
+                Vector2 predRBPos;
+                float predRBRot;
+                Vector2 predTPos;
+                float predTRot;
 
-                (aiPos, aiRot) = api.Simulate(action);
+                (predRBPos, predRBRot) = api.Simulate(action);
+                (predTPos, predTRot) = api.Simulate(action, useRigidBody: false);
 
                 bool approachWithPosition = action is AccelerateAction || action is DashAction;
-                float preAngleScore = api.Angle(oriPos: aiPos, oriRot: aiRot, normalized: true);
-                float preDistScore = api.DistanceNormalized(oriPos: aiPos);
+                float preAngleScore = api.Angle(oriPos: predRBPos, oriRot: predRBRot, normalized: true);
+                float preDistScore = api.DistanceNormalized(oriPos: predRBPos);
 
                 angleScore += preAngleScore;
                 distScore += preDistScore;
@@ -203,8 +206,8 @@ namespace SumoBot
                     }
                 }
 
-                float angleToArena = api.Angle(targetPos: api.BattleInfo.ArenaPosition, oriPos: aiPos, oriRot: aiRot);
-                Vector2 distanceFromArena = api.Distance(targetPos: api.BattleInfo.ArenaPosition, oriPos: aiPos);
+                float angleToArena = api.Angle(targetPos: api.BattleInfo.ArenaPosition, oriPos: predTPos);
+                Vector2 distanceFromArena = api.Distance(targetPos: api.BattleInfo.ArenaPosition, oriPos: predTPos);
 
                 bonusOrPenalty += (((api.BattleInfo.ArenaRadius * 0.9f) - distanceFromArena.magnitude) * 2) + ((0.5f - preAngleScore) * 2);
             }
