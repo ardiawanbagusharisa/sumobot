@@ -6,7 +6,7 @@ using SumoCore;
 using SumoManager;
 using System;
 
-namespace SumoBot
+namespace SumoBot.EA.MCTS
 {
 
     [Serializable]

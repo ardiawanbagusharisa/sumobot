@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using SumoHelper;
 using SumoInput;
 using SumoLog;
@@ -78,7 +79,8 @@ namespace SumoCore
 
         // Actions
         #region Action runtime properties
-        private Queue<ISumoAction> Actions = new();
+        private readonly Queue<ISumoAction> Actions = new();
+        public Dictionary<ActionType, float> ActiveActions { private set; get; } = new();
 
         // Accelerate
         private Vector2 movementVelocity = Vector2.zero;
@@ -89,7 +91,6 @@ namespace SumoCore
         private float remainingAngle;
         private int rotationDirection;
         private bool isTurning = false;
-
         private ISumoAction lastTurnAction;
         #endregion
 
@@ -119,6 +120,11 @@ namespace SumoCore
 
             if (IsMovementDisabled)
                 moveLockTime -= Time.deltaTime;
+
+            foreach (var (key, _) in ActiveActions.ToList())
+            {
+                ActiveActions[key] -= Time.deltaTime;
+            }
         }
 
         void FixedUpdate()
@@ -184,6 +190,7 @@ namespace SumoCore
 
         public void StopOngoingAction()
         {
+            ActiveActions.Clear();
             accelerateTimeRemaining = 0;
             isTurning = false;
         }
@@ -212,6 +219,8 @@ namespace SumoCore
                 LastDashTime = time;
             }
 
+            SetActiveAction(action);
+
             lastAccelerateAction = action;
             Log(action);
 
@@ -227,6 +236,7 @@ namespace SumoCore
             if (IsMovementDisabled)
                 return;
 
+            SetActiveAction(action);
             lastTurnAction = action;
             Log(action);
 
@@ -235,7 +245,6 @@ namespace SumoCore
             remainingAngle = delta;
             rotationDirection = action.Type == ActionType.TurnRight ? -1 : 1; // Turn CW (right)
             isTurning = true;
-
         }
 
         void HandlingAccelerating()
@@ -275,8 +284,12 @@ namespace SumoCore
                 lastTurnAction = null;
                 isTurning = false;
             }
-
         }
+        public void SetActiveAction(ISumoAction action, float? duration = null)
+        {
+            ActiveActions[action.Type] = duration ?? action.Duration;
+        }
+
         public void SetSkillEnabled(bool value)
         {
             IsSkillDisabled = !value;
@@ -457,7 +470,21 @@ namespace SumoCore
             if (InputProvider == null || isInputDisabled) return;
 
             foreach (var action in InputProvider.FlushAction())
+            {
+                // Fill late property for Dash and Skill
+                if (action is DashAction)
+                {
+                    action.Duration = DashDuration;
+                }
+                else if (action is SkillAction)
+                {
+                    action.Type = Skill.Type.ToActionType();
+                    action.Duration = Skill.TotalDuration;
+                }
+
                 Actions.Enqueue(action);
+            }
+
         }
 
         public void ClearInput()

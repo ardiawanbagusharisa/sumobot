@@ -3,7 +3,7 @@ using SumoInput;
 using SumoManager;
 using UnityEngine;
 
-namespace SumoBot
+namespace SumoBot.RuleBased.Primitive
 {
     // [CreateAssetMenu(fileName = "BOT_Primitive", menuName = "Bot/Primitive")]
     public class AIBot_Primitive : Bot
