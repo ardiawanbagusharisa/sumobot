@@ -8,12 +8,6 @@ namespace SumoBot.RuleBased.Fuzzy
     [System.Serializable]
     public class FuzzySugeno : FuzzyBase
     {
-        public FuzzySugeno()
-        {
-            Rules = Rules.GenerateSugenoRule();
-            Membership = Membership.GenerateTriangular();
-        }
-
         public override List<(ISumoAction action, float score)> Defuzzification(Dictionary<string, Dictionary<string, float>> inputResult)
         {
             Dictionary<ISumoAction, (float sumWeightScore, float sumWeight)> actionMap = new();
@@ -71,9 +65,9 @@ namespace SumoBot.RuleBased.Fuzzy
 
     public static class FuzzySugenoExtension
     {
-        public static List<FuzzyRuleBase> GenerateSugenoRule(this IEnumerable<FuzzyRuleBase> _)
+        public static void GenerateSugenoRule(this List<FuzzyRuleBase> value)
         {
-            return new List<FuzzyRuleBase>
+            value.AddRange(new List<FuzzyRuleBase>
             {
                 new SugenoRule() {
                     Conditions = new()
@@ -216,7 +210,7 @@ namespace SumoBot.RuleBased.Fuzzy
                     CrispOutput = 1f
                 },
                 #endregion Skill
-            };
+            });
 
         }
     }

@@ -44,9 +44,9 @@ namespace SumoBot.RuleBased.Fuzzy
 
     public static class FuzzyTriangleSetExtensions
     {
-        public static List<FuzzyMembershipBase> GenerateTriangular(this IEnumerable<FuzzyMembershipBase> value)
+        public static void GenerateTriangular(this List<FuzzyMembershipBase> value)
         {
-            return new List<FuzzyMembershipBase>
+            value.AddRange(new List<FuzzyMembershipBase>
             {
                 new FuzzyTriangleSet("distance_enemy", new()
                     {
@@ -57,7 +57,7 @@ namespace SumoBot.RuleBased.Fuzzy
                 new FuzzyTriangleSet("angle_enemy", new()
                     {
                         new FuzzyTriangleValue(label: "front", center: 0.0f, spread: 0.125f),
-                        new FuzzyTriangleValue(label: "frint_left", center: 0.125f, spread: 0.125f),
+                        new FuzzyTriangleValue(label: "front_left", center: 0.125f, spread: 0.125f),
                         new FuzzyTriangleValue(label: "left", center: 0.25f, spread: 0.125f),
                         new FuzzyTriangleValue(label: "back_left", center: 0.375f, spread: 0.125f),
                         new FuzzyTriangleValue(label: "back", center: 0.5f, spread: 0.125f),
@@ -82,7 +82,7 @@ namespace SumoBot.RuleBased.Fuzzy
                         new FuzzyTriangleValue(label: "front", center: 0f, spread: 0.16f),
                         new FuzzyTriangleValue(label: "behind", center: 0.5f, spread: 0.16f),
                     }),
-            };
+            });
         }
     }
 }

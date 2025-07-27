@@ -60,6 +60,11 @@ namespace SumoBot
             return 1f - Mathf.Clamp01(dist.magnitude / BattleInfo.ArenaRadius);
         }
 
+        // Return amount of degree from [original] to target
+        // 0 or 360 -> Up
+        // 270 -> right
+        // 180 -> bottom
+        // 90 -> left
         public float AngleDeg(
             Vector2? oriPos = null,
             float? oriRot = null,
@@ -68,13 +73,9 @@ namespace SumoBot
         {
             Vector2 toEnemy = Distance(oriPos, targetPos);
 
-            // Get angle to enemy in world space (0° is world up)
             float angleToEnemy = Mathf.Atan2(toEnemy.y, toEnemy.x) * Mathf.Rad2Deg - 90f;
             if (angleToEnemy < 0) angleToEnemy += 360f;
 
-            // Get player's facing direction in world space
-
-            // Final angle relative to the player’s forward
             float relativeAngle = angleToEnemy - (oriRot ?? MyRobot.Rotation);
             if (relativeAngle < 0) relativeAngle += 360f;
 
@@ -103,10 +104,10 @@ namespace SumoBot
                 return signedAngle;
         }
 
-        public bool IsActionActive(ActionType type, bool isEnemy = false)
+        public bool IsActionActive(ISumoAction action, bool isEnemy = false)
         {
             var activeActions = isEnemy ? enemyController.ActiveActions : myController.ActiveActions;
-            if (activeActions.TryGetValue(type, out float time))
+            if (activeActions.TryGetValue(action.Type, out float time))
             {
                 return time > 0;
             }

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using SumoCore;
 using SumoManager;
+using UnityEngine;
 
 namespace SumoBot.RuleBased.Fuzzy
 {
@@ -69,7 +70,7 @@ namespace SumoBot.RuleBased.Fuzzy
                     continue;
                 }
 
-                if (act is TurnAction && (api.IsActionActive(ActionType.TurnLeft) || api.IsActionActive(ActionType.TurnRight)))
+                if (act is TurnAction && api.IsActionActive(act))
                 {
                     continue;
                 }
@@ -82,6 +83,8 @@ namespace SumoBot.RuleBased.Fuzzy
         public override void OnBotInit(SumoAPI botAPI)
         {
             api = botAPI;
+            config.Fuzzy.Rules.GenerateSugenoRule();
+            config.Fuzzy.Membership.GenerateTriangular();
         }
     }
 }
