@@ -66,7 +66,7 @@ namespace SumoBot
             {
                 Left.OnBattleStateChanged(param.BattleState);
             }
-            if (LeftEnabled && Right != null)
+            if (RightEnabled && Right != null)
             {
                 Right.OnBattleStateChanged(param.BattleState);
             }
