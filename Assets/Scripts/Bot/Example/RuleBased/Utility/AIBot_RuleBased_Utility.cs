@@ -55,14 +55,14 @@ namespace SumoBot.RuleBased.Utility
             float result = 0;
 
             float angleToEnemy = api.AngleDeg();
-            float distanceFromArena = api.Distance(oriPos: api.MyRobot.TransformPosition, targetPos: api.BattleInfo.ArenaPosition).magnitude;
+            float distanceFromArena = api.Distance(targetPos: api.BattleInfo.ArenaPosition).magnitude;
             bool isNearArena = distanceFromArena >= (api.BattleInfo.ArenaRadius * 0.9f);
             foreach (var type in types)
             {
                 switch (type)
                 {
                     case ConsiderationType.DistanceFromCenter:
-                        result += api.DistanceNormalized(oriPos: api.MyRobot.TransformPosition, targetPos: api.BattleInfo.ArenaPosition);
+                        result += api.DistanceNormalized(targetPos: api.BattleInfo.ArenaPosition);
                         break;
                     case ConsiderationType.DistanceToEnemy:
                         result += api.DistanceNormalized();

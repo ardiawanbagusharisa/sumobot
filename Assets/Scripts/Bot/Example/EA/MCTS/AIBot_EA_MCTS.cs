@@ -50,7 +50,6 @@ namespace SumoBot.EA.MCTS
         #endregion
 
         private SumoAPI api;
-
         public override void OnBotUpdate()
         {
 

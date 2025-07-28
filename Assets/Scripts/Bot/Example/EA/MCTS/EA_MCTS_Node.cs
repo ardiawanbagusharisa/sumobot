@@ -147,7 +147,7 @@ namespace SumoBot.EA.MCTS
                 float predTRot;
 
                 (predRBPos, predRBRot) = api.Simulate(action);
-                (predTPos, predTRot) = api.Simulate(action, useRigidBody: false);
+                (predTPos, predTRot) = api.Simulate(action);
 
                 bool approachWithPosition = action is AccelerateAction || action is DashAction;
                 float preAngleScore = api.Angle(oriPos: predRBPos, oriRot: predRBRot, normalized: true);

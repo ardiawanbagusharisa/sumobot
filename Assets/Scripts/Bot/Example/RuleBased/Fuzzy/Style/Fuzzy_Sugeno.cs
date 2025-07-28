@@ -106,6 +106,14 @@ namespace SumoBot.RuleBased.Fuzzy
                 new SugenoRule() {
                     Conditions = new()
                     {
+                        { "angle_enemy", "back_right" },
+                    },
+                    Action = new TurnAction(InputType.Script, ActionType.TurnRight, 0.65f),
+                    CrispOutput = 0.9f
+                },
+                new SugenoRule() {
+                    Conditions = new()
+                    {
                         { "angle_enemy", "back" },
                     },
                     Action = new TurnAction(InputType.Script, ActionType.TurnLeft, 0.9f),

@@ -111,13 +111,6 @@ namespace SumoCore
                 InputProvider?.ReadKeyboardInput();
             }
 
-            LogManager.UpdateActionLog(Side);
-
-            LastLinearVelocity = RigidBody.linearVelocity;
-
-            if (collisionLogger != null && collisionLogger.IsActive)
-                collisionLogger.Update();
-
             if (IsMovementDisabled)
                 moveLockTime -= Time.deltaTime;
 
@@ -125,10 +118,17 @@ namespace SumoCore
             {
                 ActiveActions[key] -= Time.deltaTime;
             }
+
+            LastLinearVelocity = RigidBody.linearVelocity;
         }
 
         void FixedUpdate()
         {
+            LogManager.UpdateActionLog(Side);
+
+            if (collisionLogger != null && collisionLogger.IsActive)
+                collisionLogger.Update();
+
             HandleStopping();
             HandlingAccelerating();
             HandleTurning();
@@ -237,6 +237,7 @@ namespace SumoCore
                 return;
 
             SetActiveAction(action);
+
             lastTurnAction = action;
             Log(action);
 
@@ -287,6 +288,11 @@ namespace SumoCore
         }
         public void SetActiveAction(ISumoAction action, float? duration = null)
         {
+            if (ActiveActions.TryGetValue(action.Type, out float time) && time > 0f)
+            {
+                LogManager.FlushActionLog(Side, action);
+            }
+
             ActiveActions[action.Type] = duration ?? action.Duration;
         }
 
@@ -469,7 +475,7 @@ namespace SumoCore
         {
             if (InputProvider == null || isInputDisabled) return;
 
-            foreach (var action in InputProvider.FlushAction())
+            foreach (var action in InputProvider.Flush())
             {
                 // Fill late property for Dash and Skill
                 if (action is DashAction)
