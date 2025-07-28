@@ -58,12 +58,12 @@ namespace SumoBot.EA.GA
             api = botAPI;
         }
 
-        public override void OnBotCollision(EventParameter param)
+        public override void OnBotCollision(BounceEvent bounceEvent)
         {
             ClearCommands();
         }
 
-        public override void OnBattleStateChanged(BattleState state)
+        public override void OnBattleStateChanged(BattleState state, BattleWinner? winner)
         {
         }
 

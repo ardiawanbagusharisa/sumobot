@@ -65,7 +65,7 @@ namespace SumoBot.EA.MCTS
             Submit();
         }
 
-        public override void OnBattleStateChanged(BattleState state)
+        public override void OnBattleStateChanged(BattleState state, BattleWinner? winner)
         {
             currState = state;
 
@@ -77,9 +77,9 @@ namespace SumoBot.EA.MCTS
             }
         }
 
-        public override void OnBotCollision(EventParameter param)
+        public override void OnBotCollision(BounceEvent bounceEvent)
         {
-            if (side == param.Side)
+            if (side == bounceEvent.Actor)
                 lastActionsFromEnemy = null;
             else
                 lastActionsToEnemy = null;

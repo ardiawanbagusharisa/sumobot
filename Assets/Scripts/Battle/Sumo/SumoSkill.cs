@@ -92,9 +92,6 @@ namespace SumoCore
             }
             Debug.Log($"[Skill][{Type}] activated!");
 
-
-            controller.SetActiveAction(action);
-            
             IsActive = true;
             controller.Log(action);
             switch (Type)

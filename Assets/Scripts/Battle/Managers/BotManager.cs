@@ -67,11 +67,11 @@ namespace SumoBot
 
             if (LeftEnabled && Left != null)
             {
-                Left.OnBattleStateChanged(param.BattleState);
+                Left.OnBattleStateChanged(param.BattleState, param.Winner);
             }
-            if (LeftEnabled && Right != null)
+            if (RightEnabled && Right != null)
             {
-                Right.OnBattleStateChanged(param.BattleState);
+                Right.OnBattleStateChanged(param.BattleState, param.Winner);
             }
         }
 
@@ -102,7 +102,7 @@ namespace SumoBot
             if (LeftEnabled && Left != null && controller.Side == PlayerSide.Left)
             {
                 controller.AssignSkill(Left.SkillType);
-                controller.Events[SumoController.OnBounce].Subscribe(Left.OnBotCollision);
+                controller.Events[SumoController.OnBounce].Subscribe(OnLeftBounce);
                 Left.SetProvider(controller.InputProvider);
                 Left.OnBotInit(controller.InputProvider.API);
             }
@@ -110,7 +110,7 @@ namespace SumoBot
             if (RightEnabled && Right != null && controller.Side == PlayerSide.Right)
             {
                 controller.AssignSkill(Right.SkillType);
-                controller.Events[SumoController.OnBounce].Subscribe(Right.OnBotCollision);
+                controller.Events[SumoController.OnBounce].Subscribe(OnRightBounce);
                 Right.SetProvider(controller.InputProvider);
                 Right.OnBotInit(controller.InputProvider.API);
             }
@@ -123,13 +123,23 @@ namespace SumoBot
 
             if (LeftEnabled && Left != null && controller.Side == PlayerSide.Left)
             {
-                controller.Events[SumoController.OnBounce].Unsubscribe(Left.OnBotCollision);
+                controller.Events[SumoController.OnBounce].Unsubscribe(OnLeftBounce);
             }
 
             if (RightEnabled && Right != null && controller.Side == PlayerSide.Right)
             {
-                controller.Events[SumoController.OnBounce].Unsubscribe(Right.OnBotCollision);
+                controller.Events[SumoController.OnBounce].Unsubscribe(OnRightBounce);
             }
+        }
+
+        public void OnLeftBounce(EventParameter parameter)
+        {
+            Left.OnBotCollision(parameter.BounceEvent);
+        }
+
+        public void OnRightBounce(EventParameter parameter)
+        {
+            Right.OnBotCollision(parameter.BounceEvent);
         }
     }
 }

@@ -103,12 +103,13 @@ namespace SumoInput
 
         void OnBattleChanged(EventParameter param)
         {
-            var battle = param.Battle;
-            SumoController currentPlayer = inputProvider.PlayerSide == PlayerSide.Left ? BattleManager.Instance.Battle.LeftPlayer : BattleManager.Instance.Battle.RightPlayer;
+            var battle = BattleManager.Instance;
 
-            if (BattleManager.Instance.CurrentState == BattleState.Battle_Countdown)
+            SumoController currentPlayer = inputProvider.PlayerSide == PlayerSide.Left ? battle.Battle.LeftPlayer : battle.Battle.RightPlayer;
+
+            if (battle.CurrentState == BattleState.Battle_Countdown)
                 currentPlayer.Events[SumoController.OnAction].Subscribe(OnPlayerAction);
-            else if (BattleManager.Instance.CurrentState == BattleState.Battle_End)
+            else if (battle.CurrentState == BattleState.Battle_End)
             {
                 currentPlayer.Events[SumoController.OnAction].Unsubscribe(OnPlayerAction);
                 Dash.GetComponentInChildren<Button>().interactable = true;
