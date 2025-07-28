@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using NUnit.Framework;
 using SumoCore;
 using SumoManager;
+using UnityEditor;
 using UnityEngine;
 
 namespace SumoBot
@@ -45,7 +46,7 @@ namespace SumoBot
             return myController.InputProvider.CanExecute(action);
         }
 
-        public Vector3 Distance(
+        public Vector2 Distance(
             Vector2? oriPos = null,
             Vector2? targetPos = null)
         {
@@ -60,7 +61,7 @@ namespace SumoBot
             return 1f - Mathf.Clamp01(dist.magnitude / BattleInfo.ArenaRadius);
         }
 
-        // Return amount of degree from [original] to target
+        // Return amount of degree from [original] to [target]
         // 0 or 360 -> Up
         // 270 -> right
         // 180 -> bottom
@@ -116,13 +117,12 @@ namespace SumoBot
 
         public (Vector2, float) Simulate(
             ISumoAction action,
-            bool useRigidBody = true,
             bool isEnemy = false,
             bool isDelta = false)
         {
             RobotStateAPI robot = isEnemy ? EnemyRobot : MyRobot;
-            Vector2 position = useRigidBody ? robot.Position : robot.TransformPosition;
-            float rotation = useRigidBody ? robot.Rotation : robot.Rotation;
+            Vector2 position = robot.Position;
+            float rotation = robot.Rotation;
 
             if (action is TurnAction)
             {
@@ -208,8 +208,6 @@ public readonly struct RobotStateAPI
 
     public Vector2 Position { get; }
     public float Rotation { get; }
-    public Vector2 TransformPosition { get; }
-    public float TransformRotation { get; }
     public Vector2 LinearVelocity { get; }
     public float AngularVelocity { get; }
     public SkillStateAPI Skill { get; }
@@ -233,8 +231,6 @@ public readonly struct RobotStateAPI
 
         Position = controller.RigidBody.position;
         Rotation = controller.RigidBody.rotation;
-        TransformPosition = controller.transform.position;
-        TransformRotation = controller.transform.rotation.eulerAngles.z;
         LinearVelocity = controller.LastLinearVelocity;
         AngularVelocity = controller.RigidBody.angularVelocity;
 

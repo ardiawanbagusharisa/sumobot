@@ -1,4 +1,3 @@
-using System;
 using SumoCore;
 using SumoLog;
 using SumoManager;
@@ -44,6 +43,18 @@ namespace SumoHelper
 
                 SaveAction(true);
             }
+            // else
+            // {
+            //     var halfArena = BattleManager.Instance.ArenaRadius / 2;
+            //     if (Vector2.Distance(controller.RigidBody.position, this.action.Position) > halfArena)
+            //     {
+            //         SaveAction(false);
+            //     }
+            //     if (Mathf.Abs(Mathf.DeltaAngle(controller.RigidBody.rotation, this.action.Rotation)) > 90)
+            //     {
+            //         SaveAction(false);
+            //     }
+            // }
 
             lastCallTime = BattleManager.Instance.ElapsedTime;
         }
@@ -60,14 +71,13 @@ namespace SumoHelper
             {
                 IsActive = true;
                 startTime = BattleManager.Instance.ElapsedTime;
-
-                collision.Position = controller.RigidBody.position;
-                collision.Rotation = controller.RigidBody.rotation;
-                collision.LinearVelocity = controller.LastLinearVelocity;
-                collision.AngularVelocity = controller.RigidBody.angularVelocity;
-
+                this.collision.Position = controller.RigidBody.position;
+                this.collision.Rotation = controller.RigidBody.rotation;
+                this.collision.LinearVelocity = controller.LastLinearVelocity;
+                this.collision.AngularVelocity = controller.RigidBody.angularVelocity;
                 SaveCollision(true);
             }
+
 
             lastCallTime = BattleManager.Instance.ElapsedTime;
         }

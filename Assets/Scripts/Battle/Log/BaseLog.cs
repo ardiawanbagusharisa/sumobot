@@ -12,7 +12,6 @@ namespace SumoLog
         public Vector2 LinearVelocity;
         public float Rotation;
 
-
         public Dictionary<string, dynamic> ToMap()
         {
             return new(){
@@ -29,16 +28,12 @@ namespace SumoLog
                     {"Y",Position.y},
                 }
             },
-            { "Rotation", new Dictionary<string,float>()
-                {
-                    {"Z",Rotation},
-                }
-            },
+            { "Rotation", Rotation},
         };
         }
-    
 
-    public static BaseLog FromMap(Dictionary<string, object> data)
+
+        public static BaseLog FromMap(Dictionary<string, object> data)
         {
             var robot = (JObject)data["Robot"];
             Vector2 tempLinearVelocity = new((float)(double)robot["LinearVelocity"]["X"], (float)(double)robot["LinearVelocity"]["Y"]);
@@ -49,7 +44,7 @@ namespace SumoLog
                 AngularVelocity = (float)robot?["AngularVelocity"],
                 LinearVelocity = tempLinearVelocity,
                 Position = temPosition,
-                Rotation = (float)(double)robot?["Rotation"]?["Z"]
+                Rotation = (float)(double)robot?["Rotation"],
             };
             return result;
         }

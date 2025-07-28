@@ -145,9 +145,6 @@ public class ReplayManager : MonoBehaviour
         if (TimeLabel != null)
             TimeLabel.text = $"{FormatTime(currentTime)} / {FormatTime(currentRoundDuration)}";
 
-        InterpolateBot(leftRigidBody, leftEvents, ref leftEventIndex);
-        InterpolateBot(rightRigidBody, rightEvents, ref rightEventIndex);
-
         DisplayCurrentEventInfo();
 
         if (currentTime > currentRoundDuration)
@@ -180,6 +177,10 @@ public class ReplayManager : MonoBehaviour
     void FixedUpdate()
     {
         if (!isPlaying || !IsEnable) return;
+
+        InterpolateBot(leftRigidBody, leftEvents, ref leftEventIndex);
+        InterpolateBot(rightRigidBody, rightEvents, ref rightEventIndex);
+
         ShowActionChart();
         ShowMostActionChart(PlayerSide.Left);
         ShowMostActionChart(PlayerSide.Right);
@@ -190,8 +191,10 @@ public class ReplayManager : MonoBehaviour
     {
         leftRigidBody = leftPlayer.gameObject.GetComponent<Rigidbody2D>();
         rightRigidBody = rightPlayer.gameObject.GetComponent<Rigidbody2D>();
-        leftRigidBody.bodyType = RigidbodyType2D.Static;
-        rightRigidBody.bodyType = RigidbodyType2D.Static;
+        leftRigidBody.bodyType = RigidbodyType2D.Kinematic;
+        rightRigidBody.bodyType = RigidbodyType2D.Kinematic;
+        leftRigidBody.interpolation = RigidbodyInterpolation2D.Interpolate;
+        rightRigidBody.interpolation = RigidbodyInterpolation2D.Interpolate;
 
         LoadRound(currentGameIndex, currentRoundIndex);
         if (autoStart)
@@ -301,12 +304,12 @@ public class ReplayManager : MonoBehaviour
         var start = BaseLog.FromMap(currentEvent.Data);
         var end = BaseLog.FromMap(nextEvent.Data);
 
-        rigidBody.position = Vector3.Lerp(start.Position, end.Position, t);
-        rigidBody.transform.rotation = Quaternion.Slerp(
+        rigidBody.MovePosition(Vector3.Lerp(start.Position, end.Position, t));
+        rigidBody.MoveRotation(Quaternion.Slerp(
             Quaternion.Euler(0, 0, start.Rotation),
             Quaternion.Euler(0, 0, end.Rotation),
             t
-        );
+        ));
     }
 
 
@@ -618,11 +621,11 @@ public static class ExtReplayManager
     {
         if (log.Category == "Action")
         {
-            return $"Action_{log.Data["Name"]}_{log.Data["Duration"] ?? null}_{log.StartedAt}";
+            return $"{log.Actor}_Action_{log.Data["Name"]}_{log.Data["Duration"] ?? null}_{log.StartedAt}_{log.UpdatedAt}";
         }
         else
         {
-            return $"{log.Category}_{log.StartedAt}";
+            return $"{log.Actor}_{log.Category}_{log.StartedAt}";
         }
     }
 }

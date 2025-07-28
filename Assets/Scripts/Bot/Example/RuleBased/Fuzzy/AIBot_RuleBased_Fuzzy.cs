@@ -39,10 +39,9 @@ namespace SumoBot.RuleBased.Fuzzy
             float distanceEnemy = api.DistanceNormalized();
             float enemySide = api.Angle(normalized: true);
             float distanceFromArena = api.DistanceNormalized(
-                targetPos: api.BattleInfo.ArenaPosition,
-                oriPos: api.MyRobot.TransformPosition);
+                targetPos: api.BattleInfo.ArenaPosition);
             float angleToEnemy = api.AngleDeg(normalized: true);
-            float angleToArena = api.AngleDeg(api.MyRobot.TransformPosition, api.MyRobot.TransformRotation, api.BattleInfo.ArenaPosition, normalized: true);
+            float angleToArena = api.AngleDeg(targetPos: api.BattleInfo.ArenaPosition, normalized: true);
 
             List<float> inputs = new() {
                 distanceEnemy,

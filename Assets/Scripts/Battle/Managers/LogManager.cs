@@ -6,7 +6,6 @@ using Newtonsoft.Json;
 using SumoBot;
 using SumoCore;
 using SumoHelper;
-using SumoLog;
 using UnityEngine;
 
 namespace SumoManager
@@ -17,6 +16,12 @@ namespace SumoManager
         Left,
         Right,
     }
+    public enum LogContinuity
+    {
+        Start,
+        Continues,
+        End,
+    }
 
     public class LogManager : MonoBehaviour
     {
@@ -25,6 +30,7 @@ namespace SumoManager
         public class BattleLog
         {
             public string BattleID;
+            public int CreatedAt;
             public string InputType;
             public float BattleTime;
             public float CountdownTime;
@@ -63,7 +69,6 @@ namespace SumoManager
         [Serializable]
         public class EventLog
         {
-            public string LoggedAt;
             public float StartedAt;
             public float UpdatedAt;
             public string Actor;
@@ -188,7 +193,8 @@ namespace SumoManager
                 BattleTime = battleManager.BattleTime,
                 RoundType = (int)battleManager.RoundSystem,
                 SimulationAmount = simAmount,
-                SimulationTimeScale = simTimeScale
+                SimulationTimeScale = simTimeScale,
+                CreatedAt = (int)DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
             };
 
             SaveBattle();
@@ -285,7 +291,7 @@ namespace SumoManager
             {
                 Log.Events.Add(new EventLog
                 {
-                    LoggedAt = DateTime.Now.ToString(),
+                    StartedAt = Time.time,
                     Actor = "System",
                     Data = data
                 });
@@ -297,7 +303,7 @@ namespace SumoManager
                 {
                     EventLog eventLog = new()
                     {
-                        LoggedAt = BattleManager.Instance.ElapsedTime.ToString(),
+                        StartedAt = BattleManager.Instance.ElapsedTime,
                         Actor = "System",
                         Data = data,
                     };
@@ -320,14 +326,13 @@ namespace SumoManager
             {
                 EventLog eventLog = new()
                 {
-                    LoggedAt = BattleManager.Instance.ElapsedTime.ToString(),
                     Actor = actor.ToString(),
                     Target = target.ToString() ?? null,
                     Data = data,
                     IsStart = isStart,
                     Category = category,
+                    StartedAt = startedAt != null ? (float)startedAt : BattleManager.Instance.ElapsedTime
                 };
-                eventLog.StartedAt = startedAt != null ? (float)startedAt : BattleManager.Instance.ElapsedTime;
                 eventLog.UpdatedAt = updatedAt != null ? (float)updatedAt : eventLog.UpdatedAt = BattleManager.Instance.ElapsedTime;
                 eventLog.Duration = eventLog.UpdatedAt - eventLog.StartedAt;
                 roundLog.PlayerEvents.Add(eventLog);

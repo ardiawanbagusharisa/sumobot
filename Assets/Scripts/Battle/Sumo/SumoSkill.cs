@@ -94,6 +94,7 @@ namespace SumoCore
 
 
             controller.SetActiveAction(action);
+            
             IsActive = true;
             controller.Log(action);
             switch (Type)
