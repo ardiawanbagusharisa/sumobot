@@ -1,6 +1,7 @@
 
 using System.Collections.Generic;
 using SumoCore;
+using SumoLog;
 using SumoManager;
 using UnityEngine;
 
@@ -24,13 +25,6 @@ namespace SumoBot.RuleBased.Fuzzy
 
         private SumoAPI api;
 
-        public override void OnBattleStateChanged(BattleState state)
-        {
-        }
-
-        public override void OnBotCollision(EventParameter param)
-        {
-        }
 
         public override void OnBotUpdate()
         {
@@ -40,8 +34,8 @@ namespace SumoBot.RuleBased.Fuzzy
             float enemySide = api.Angle(normalized: true);
             float distanceFromArena = api.DistanceNormalized(
                 targetPos: api.BattleInfo.ArenaPosition);
-            float angleToEnemy = api.AngleDeg(normalized: true);
-            float angleToArena = api.AngleDeg(targetPos: api.BattleInfo.ArenaPosition, normalized: true);
+            float angleToEnemy = api.AngleDeg() / 360;
+            float angleToArena = api.AngleDeg(targetPos: api.BattleInfo.ArenaPosition) / 360;
 
             List<float> inputs = new() {
                 distanceEnemy,
@@ -84,6 +78,14 @@ namespace SumoBot.RuleBased.Fuzzy
             api = botAPI;
             config.Fuzzy.Rules.GenerateSugenoRule();
             config.Fuzzy.Membership.GenerateTriangular();
+        }
+
+        public override void OnBotCollision(BounceEvent bounceEvent)
+        {
+        }
+
+        public override void OnBattleStateChanged(BattleState state, BattleWinner? winner)
+        {
         }
     }
 }

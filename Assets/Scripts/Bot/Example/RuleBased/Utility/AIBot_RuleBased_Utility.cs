@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using SumoCore;
 using SumoManager;
+using SumoLog;
 
 namespace SumoBot.RuleBased.Utility
 {
@@ -39,15 +40,6 @@ namespace SumoBot.RuleBased.Utility
             }
 
             Submit();
-        }
-
-        public override void OnBotCollision(EventParameter param)
-        {
-            ClearCommands();
-        }
-
-        public override void OnBattleStateChanged(BattleState state)
-        {
         }
 
         public float Evaluator(List<ConsiderationType> types)
@@ -120,6 +112,15 @@ namespace SumoBot.RuleBased.Utility
                 }
             }
             return result / types.Count;
+        }
+
+        public override void OnBotCollision(BounceEvent bounceEvent)
+        {
+            ClearCommands();
+        }
+
+        public override void OnBattleStateChanged(BattleState state, BattleWinner? winner)
+        {
         }
     }
 }

@@ -48,7 +48,6 @@ namespace SumoCore
 
         #region Runtime (readonly) Properties
         public bool isInputDisabled = false;
-        public Vector2 LastLinearVelocity { get; private set; } = Vector2.zero;
         public Vector3 StartPosition;
         public Quaternion StartRotation;
         public bool IsSkillDisabled = true;
@@ -81,6 +80,7 @@ namespace SumoCore
         #region Action runtime properties
         private readonly Queue<ISumoAction> Actions = new();
         public Dictionary<ActionType, float> ActiveActions { private set; get; } = new();
+        public bool IsActionActive(ActionType type) => ActiveActions.TryGetValue(type, out var time) && time > 0f;
 
         // Accelerate
         private Vector2 movementVelocity = Vector2.zero;
@@ -111,23 +111,21 @@ namespace SumoCore
                 InputProvider?.ReadKeyboardInput();
             }
 
-            if (IsMovementDisabled)
-                moveLockTime -= Time.deltaTime;
-
-            foreach (var (key, _) in ActiveActions.ToList())
-            {
-                ActiveActions[key] -= Time.deltaTime;
-            }
-
-            LastLinearVelocity = RigidBody.linearVelocity;
-        }
-
-        void FixedUpdate()
-        {
             LogManager.UpdateActionLog(Side);
 
             if (collisionLogger != null && collisionLogger.IsActive)
                 collisionLogger.Update();
+
+            if (IsMovementDisabled)
+                moveLockTime -= Time.deltaTime;
+        }
+
+        void FixedUpdate()
+        {
+            foreach (var (key, _) in ActiveActions.ToList())
+            {
+                ActiveActions[key] -= Time.fixedDeltaTime;
+            }
 
             HandleStopping();
             HandlingAccelerating();
@@ -173,19 +171,31 @@ namespace SumoCore
         {
             transform.position = StartPosition;
             transform.rotation = StartRotation;
+            isOutOfArena = false;
             RigidBody.linearVelocity = Vector2.zero;
             RigidBody.angularVelocity = 0;
-            isOutOfArena = false;
-            LastLinearVelocity = Vector2.zero;
+            RigidBody.angularDamping = 0;
             LastDashTime = 0;
             Skill.Reset();
         }
         #endregion
 
         #region Robot Action Methods
-        public void Log(ISumoAction action)
+        public void Log(ISumoAction action, bool isNewAction = true)
         {
-            LogManager.CallActionLog(Side, action);
+            bool isActive = IsActionActive(action.Type);
+            if (isActive && isNewAction)
+            {
+                LogManager.FlushActionLog(Side, action, isActive);
+                PeriodicState state = isActive ? PeriodicState.Continues : PeriodicState.Start;
+                LogManager.CallActionLog(Side, action, state);
+            }
+            else
+            {
+                LogManager.CallActionLog(Side, action);
+            }
+
+            ActiveActions[action.Type] = action.Duration;
         }
 
         public void StopOngoingAction()
@@ -219,8 +229,6 @@ namespace SumoCore
                 LastDashTime = time;
             }
 
-            SetActiveAction(action);
-
             lastAccelerateAction = action;
             Log(action);
 
@@ -235,8 +243,6 @@ namespace SumoCore
         {
             if (IsMovementDisabled)
                 return;
-
-            SetActiveAction(action);
 
             lastTurnAction = action;
             Log(action);
@@ -254,7 +260,7 @@ namespace SumoCore
             {
                 RigidBody.linearVelocity = movementVelocity;
                 accelerateTimeRemaining -= Time.fixedDeltaTime;
-                Log(lastAccelerateAction);
+                Log(lastAccelerateAction, false);
             }
             else
             {
@@ -278,22 +284,13 @@ namespace SumoCore
 
             remainingAngle -= Mathf.Abs(step);
 
-            Log(lastTurnAction);
+            Log(lastTurnAction, false);
 
             if (remainingAngle <= 0.001f)
             {
                 lastTurnAction = null;
                 isTurning = false;
             }
-        }
-        public void SetActiveAction(ISumoAction action, float? duration = null)
-        {
-            if (ActiveActions.TryGetValue(action.Type, out float time) && time > 0f)
-            {
-                LogManager.FlushActionLog(Side, action);
-            }
-
-            ActiveActions[action.Type] = duration ?? action.Duration;
         }
 
         public void SetSkillEnabled(bool value)
@@ -330,7 +327,9 @@ namespace SumoCore
             else
                 lockDuration *= 1f + (1f - LockActorMultiplier);
 
+            collisionLogger.Collision.LockDuration = lockDuration;
             moveLockTime = Mathf.Max(moveLockTime, lockDuration);
+
             return lockDuration;
         }
         #endregion
@@ -342,17 +341,25 @@ namespace SumoCore
             if (!collision.gameObject.TryGetComponent<SumoController>(out var enemyRobot))
                 return;
 
-            float actorVelocity = LastLinearVelocity.magnitude + float.Epsilon;
-            float enemyVelocity = enemyRobot.LastLinearVelocity.magnitude + float.Epsilon;
+            float actorVelocity = RigidBody.linearVelocity.magnitude;
+            float enemyVelocity = enemyRobot.RigidBody.linearVelocity.magnitude;
 
             Vector2 collisionNormal = collision.contacts[0].normal;
 
             StopOngoingAction();
+            LogManager.FlushActionLog(Side);
+
+            if (actorVelocity == enemyVelocity)
+            {
+                actorVelocity += Random.Range(0.001f, 0.01f);
+                enemyVelocity += Random.Range(0.001f, 0.01f);
+            }
 
             // Faster robot handles the logic of assignment bounce and logging
-            if (actorVelocity >= enemyVelocity)
+            if (actorVelocity > enemyVelocity)
             {
-                LogManager.FlushActionLog();
+                var actorLog = CreateCollisionLog();
+                var enemyLog = enemyRobot.CreateCollisionLog();
 
                 float actorImpact = Bounce(collisionNormal, enemyVelocity, actorVelocity, enemyRobot);
                 float targetImpact = enemyRobot.Bounce(-collisionNormal, actorVelocity, enemyVelocity, this);
@@ -360,39 +367,46 @@ namespace SumoCore
                 float actorLockDuration = LockMovement(true, actorImpact, targetImpact);
                 float targetLockDuration = enemyRobot.LockMovement(false, targetImpact, actorImpact);
 
-                CollisionLog actorLog = new()
-                {
-                    IsActor = true,
-                    Impact = actorImpact,
-                    LockDuration = actorLockDuration,
-                    IsSkillActive = Skill.IsActive,
-                    IsDashActive = IsDashActive,
-                };
+                actorLog.IsActor = true;
+                actorLog.Impact = actorImpact;
+                actorLog.LockDuration = actorLockDuration;
 
-                CollisionLog targetLog = new()
-                {
-                    IsActor = false,
-                    Impact = targetImpact,
-                    LockDuration = targetLockDuration,
-                    IsSkillActive = enemyRobot.Skill.IsActive,
-                    IsDashActive = enemyRobot.IsDashActive,
-                };
+                enemyLog.IsActor = false;
+                enemyLog.Impact = targetImpact;
+                enemyLog.LockDuration = targetLockDuration;
 
-                LogCollision(actorLog);
-                enemyRobot.LogCollision(targetLog);
+                collisionLogger.Collision = actorLog;
+                enemyRobot.collisionLogger.Collision = enemyLog;
 
-                EventParameter sideParam = new(sideParam: Side, floatParam: moveLockTime);
-                Events[OnBounce]?.Invoke(sideParam);
-                enemyRobot.Events[OnBounce]?.Invoke(sideParam);
+                BounceEvent actorBounceEvent = new(Side, actorLog, enemyLog);
+                Events[OnBounce].Invoke(new(bounceInfoParam: actorBounceEvent));
+
+                BounceEvent targetBounceEvent = new(Side, enemyLog, actorLog);
+                enemyRobot.Events[OnBounce].Invoke(new(bounceInfoParam: targetBounceEvent));
+
+                collisionLogger.Call();
+                enemyRobot.collisionLogger.Call();
 
                 Debug.Log($"[BounceRule]\nActor=>{Side},Target=>{enemyRobot.Side}\nActorVelocity=>{actorVelocity},TargetVelocity=>{enemyVelocity}\nActorCurrentSkill=> {Skill.Type} isActive:{Skill.IsActive}, TargetCurrentSkill=>{enemyRobot.Skill.Type} isActive: {enemyRobot.Skill.IsActive} \nActorImpact=>{actorImpact}, TargetImpact=>{targetImpact}\nActorLock=>{actorLockDuration}, TargetLock=>{targetLockDuration}");
             }
         }
 
-        public void LogCollision(CollisionLog log)
+        public CollisionLog CreateCollisionLog()
         {
-            collisionLogger = new EventLogger(this, forceSave: false, isAction: false);
-            collisionLogger.Call(log);
+            collisionLogger = new(this, forceSave: false, isAction: false)
+            {
+                Collision = new()
+                {
+                    Position = RigidBody.position,
+                    Rotation = RigidBody.rotation,
+                    LinearVelocity = RigidBody.linearVelocity,
+                    AngularVelocity = RigidBody.angularVelocity,
+                    IsDashActive = IsDashActive,
+                    IsSkillActive = Skill.IsActive,
+                }
+            };
+            return collisionLogger.Collision;
+
         }
 
         public float Bounce(Vector2 direction, float enemyVelocity, float myVelocity, SumoController enemy)
@@ -424,6 +438,8 @@ namespace SumoCore
             {
                 RigidBody.angularVelocity = 0;
             }
+
+            collisionLogger.Collision.Impact = impact;
             return impact;
         }
 
@@ -461,11 +477,6 @@ namespace SumoCore
                 RigidBody.angularVelocity = 0;
                 RigidBody.angularDamping = 0;
             }
-
-            // if (moveLockTime <= 0f)
-            // {
-            //     RigidBody.angularDamping = 0;
-            // }
         }
         #endregion
 

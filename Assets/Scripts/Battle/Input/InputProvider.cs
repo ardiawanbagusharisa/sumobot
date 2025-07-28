@@ -82,13 +82,13 @@ namespace SumoInput
 
             for (int i = 0; i < list.Count; i++)
             {
-                lastIndexMap[list[i].FullName] = i;
+                lastIndexMap[list[i].Name] = i;
             }
 
             List<ISumoAction> result = new();
             for (int i = 0; i < list.Count; i++)
             {
-                if (lastIndexMap[list[i].FullName] == i)
+                if (lastIndexMap[list[i].Name] == i)
                 {
                     result.Add(list[i]);
                 }

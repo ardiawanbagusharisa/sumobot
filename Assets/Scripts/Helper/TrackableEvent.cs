@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using SumoCore;
+using SumoLog;
 using SumoManager;
+using UnityEngine;
 
 namespace SumoHelper
 {
@@ -60,8 +62,9 @@ public class EventParameter
     public PlayerSide Side;
     public bool Bool;
     public float Float;
-    public Battle Battle;
+    public BounceEvent BounceEvent;
     public BattleState BattleState;
+    public BattleWinner? Winner;
     public SkillType SkillType;
 
     public EventParameter(
@@ -69,8 +72,9 @@ public class EventParameter
         PlayerSide? sideParam = null,
         bool? boolParam = null,
         float? floatParam = null,
-        Battle battleParam = null,
         BattleState? battleStateParam = null,
+        BounceEvent bounceInfoParam = null,
+        BattleWinner? winnerParam = null,
         SkillType? skillType = null)
     {
 
@@ -86,7 +90,33 @@ public class EventParameter
             Bool = (bool)boolParam;
         if (floatParam != null)
             Float = (float)floatParam;
-        if (battleParam != null)
-            Battle = battleParam;
+        if (bounceInfoParam != null)
+            BounceEvent = bounceInfoParam;
+        if (winnerParam != null)
+            Winner = (BattleWinner)winnerParam;
+    }
+}
+
+[Serializable]
+public class BounceEvent
+{
+    public PlayerSide Actor;
+    public CollisionLog MyInfo;
+    public CollisionLog EnemyInfo;
+
+    public BounceEvent(
+        PlayerSide actor,
+        CollisionLog actorInfo,
+        CollisionLog targetInfo
+    )
+    {
+        Actor = actor;
+        MyInfo = actorInfo;
+        EnemyInfo = targetInfo;
+    }
+
+    public override string ToString()
+    {
+        return $"BounceEvent -> Hitter: {Actor}, \nActor -> {MyInfo.ToMap()}\nTarget -> {EnemyInfo.ToMap()}";
     }
 }

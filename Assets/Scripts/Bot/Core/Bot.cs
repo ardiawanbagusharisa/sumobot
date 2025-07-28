@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using SumoCore;
 using SumoInput;
+using SumoLog;
 using SumoManager;
 using UnityEngine;
 
@@ -34,12 +35,13 @@ namespace SumoBot
         public abstract void OnBotUpdate();
 
         // Called every two robots get a collision (Bounce).
-        // [param.Side] -> hitter.
-        // [param.Float] -> lock duration.
-        public abstract void OnBotCollision(EventParameter param);
+        // [BounceEvent.Actor] is the one who made a contact
+        public abstract void OnBotCollision(BounceEvent bounceEvent);
 
         // Called every battle state is changing
-        public abstract void OnBattleStateChanged(BattleState state);
+        // [state] can be one of [Preparing, Countdown, Battle_Ongoing, Battle_End, Battle_Reset]
+        // [winner] will be given when the [state] is [Battle_End]
+        public abstract void OnBattleStateChanged(BattleState state, BattleWinner? winner);
 
         // Add one action to local queue
         public virtual void Enqueue(ISumoAction action)

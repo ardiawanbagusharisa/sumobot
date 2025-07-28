@@ -195,7 +195,8 @@ Left Shift / Right Shift - Dash
         #region Battle changes
         private void OnBattleChanged(EventParameter param)
         {
-            var battle = param.Battle;
+            var battle = BattleManager.Instance.Battle;
+            
             RoundSystem.SetText($"Best of {(int)battle.RoundSystem}");
             Round.SetText($"Round {battle.CurrentRound?.RoundNumber}");
 

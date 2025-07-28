@@ -11,6 +11,7 @@ using System;
 using System.Collections;
 using UnityEngine.UI;
 using SumoCore;
+using SumoManager;
 
 public class ReplayManager : MonoBehaviour
 {
@@ -82,8 +83,8 @@ public class ReplayManager : MonoBehaviour
     private int rightEventIndex = 0;
     private bool isDraggingSlider = false;
     private BattleLog metadata;
-    private Dictionary<string, EventLog> leftEventsMap = new();
-    private Dictionary<string, EventLog> rightEventsMap = new();
+    private Dictionary<string, EventLog> leftActionMap = new();
+    private Dictionary<string, EventLog> rightActionMap = new();
     private List<EventLog> leftEvents = new();
     private List<EventLog> rightEvents = new();
     private Rigidbody2D leftRigidBody;
@@ -285,13 +286,13 @@ public class ReplayManager : MonoBehaviour
 
             if (currentEvent.Actor == "Left")
             {
-                if (!leftEventsMap.ContainsKey(key))
-                    leftEventsMap.Add(key, currentEvent);
+                if (!leftActionMap.ContainsKey(key))
+                    leftActionMap.Add(key, currentEvent);
             }
             else if (currentEvent.Actor == "Right")
             {
-                if (!rightEventsMap.ContainsKey(key))
-                    rightEventsMap.Add(key, currentEvent);
+                if (!rightActionMap.ContainsKey(key))
+                    rightActionMap.Add(key, currentEvent);
             }
         }
 
@@ -367,8 +368,8 @@ public class ReplayManager : MonoBehaviour
             GameDurationUI.SetText($"Duration: {metadata.BattleTime}");
             GameBestOf.SetText($"Best Of: {metadata.RoundType}");
 
-            metadata.LeftPlayerStats.ActionTaken = leftEventsMap.Count;
-            metadata.RightPlayerStats.ActionTaken = rightEventsMap.Count;
+            metadata.LeftPlayerStats.ActionTaken = leftActionMap.Count;
+            metadata.RightPlayerStats.ActionTaken = rightActionMap.Count;
 
             LeftBotName.SetText(metadata.LeftPlayerStats.Bot);
             LeftSkillType.SetText(metadata.LeftPlayerStats.SkillType);
@@ -447,8 +448,8 @@ public class ReplayManager : MonoBehaviour
         currentTime = 0f;
         leftEventIndex = 0;
         rightEventIndex = 0;
-        leftEventsMap.Clear();
-        rightEventsMap.Clear();
+        leftActionMap.Clear();
+        rightActionMap.Clear();
         ActionPerSecondChart.ClearChartSeries();
         MostActionChartLeft.ClearChartSeries();
 
@@ -481,10 +482,10 @@ public class ReplayManager : MonoBehaviour
             leftEventIndex = leftEvents.IndexOf(lastLeft.LastOrDefault());
             rightEventIndex = rightEvents.IndexOf(lastRight.LastOrDefault());
 
-            leftEventsMap.Clear();
-            rightEventsMap.Clear();
-            leftEventsMap = lastLeft.Where((x) => x.Category == "Action" && !x.IsStart).ToDictionary((x) => x.GetKey());
-            rightEventsMap = lastRight.Where((x) => x.Category == "Action" && !x.IsStart).ToDictionary((x) => x.GetKey());
+            leftActionMap.Clear();
+            rightActionMap.Clear();
+            leftActionMap = lastLeft.Where((x) => x.Category == "Action" && (x.State != PeriodicState.End)).ToDictionary((x) => x.GetKey());
+            rightActionMap = lastRight.Where((x) => x.Category == "Action" && (x.State != PeriodicState.End)).ToDictionary((x) => x.GetKey());
         }
 
         InterpolateBot(leftRigidBody, leftEvents, ref leftEventIndex);
@@ -518,9 +519,9 @@ public class ReplayManager : MonoBehaviour
 
         for (float i = 0; i < currentTime; i += ActionTimeInterval)
         {
-            int leftActionAmount = leftEventsMap.Values.Where((x) => x.UpdatedAt >= i && x.UpdatedAt < (i + ActionTimeInterval)).Count();
+            int leftActionAmount = leftActionMap.Values.Where((x) => x.UpdatedAt >= i && x.UpdatedAt < (i + ActionTimeInterval)).Count();
 
-            int rightActionAmount = rightEventsMap.Values.Where((x) => x.UpdatedAt >= i && x.UpdatedAt < (i + ActionTimeInterval)).Count();
+            int rightActionAmount = rightActionMap.Values.Where((x) => x.UpdatedAt >= i && x.UpdatedAt < (i + ActionTimeInterval)).Count();
 
             actionTakensMap[timeFrame] = (leftActionAmount, rightActionAmount);
 
@@ -568,7 +569,7 @@ public class ReplayManager : MonoBehaviour
 
         Dictionary<string, float> mostActions = new();
 
-        foreach (var action in side == PlayerSide.Left ? leftEventsMap : rightEventsMap)
+        foreach (var action in side == PlayerSide.Left ? leftActionMap : rightActionMap)
         {
             string key = (string)action.Value.Data["Name"];
 
