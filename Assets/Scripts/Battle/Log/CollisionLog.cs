@@ -6,27 +6,27 @@ namespace SumoLog
     public class CollisionLog : BaseLog
     {
         public bool IsActor;
-        public float Impact;
+        public float Impact = 0;
         public float BounceResistance;
-        public float LockDuration = float.NaN;
+        public float LockDuration = 0;
         public bool IsSkillActive;
         public bool IsDashActive;
 
-        public float Duration;
+        public float Duration = 0;
 
         public new Dictionary<string, dynamic> ToMap()
         {
             return new()
-        {
-            { "IsActor", IsActor},
-            { "Impact", Impact},
-            { "LockDuration", LockDuration},
-            { "IsSkillActive", IsSkillActive},
-            { "IsDashActive", IsDashActive},
+            {
+                { "IsActor", IsActor},
+                { "Impact", Impact},
+                { "LockDuration", LockDuration},
+                { "IsSkillActive", IsSkillActive},
+                { "IsDashActive", IsDashActive},
 
-            { "Duration", Duration},
-            { "Robot", base.ToMap()},
-        };
+                { "Duration", Duration},
+                { "Robot", base.ToMap()},
+            };
         }
     }
 }

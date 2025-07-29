@@ -1,5 +1,8 @@
+using System.Collections.Generic;
+using NUnit.Framework;
 using SumoCore;
 using SumoManager;
+using UnityEditor;
 using UnityEngine;
 
 namespace SumoBot
@@ -22,19 +25,19 @@ namespace SumoBot
             get { return new BattleInfoAPI(BattleManager.Instance); }
         }
 
-        public RobotStateAPI MyRobot
+        public SumoBotAPI MyRobot
         {
             get
             {
-                return new RobotStateAPI(myController);
+                return new SumoBotAPI(myController);
             }
         }
 
-        public RobotStateAPI EnemyRobot
+        public SumoBotAPI EnemyRobot
         {
             get
             {
-                return new RobotStateAPI(enemyController);
+                return new SumoBotAPI(enemyController);
             }
         }
 
@@ -43,7 +46,7 @@ namespace SumoBot
             return myController.InputProvider.CanExecute(action);
         }
 
-        public Vector3 Distance(
+        public Vector2 Distance(
             Vector2? oriPos = null,
             Vector2? targetPos = null)
         {
@@ -56,6 +59,29 @@ namespace SumoBot
         {
             Vector2 dist = Distance(oriPos, targetPos);
             return 1f - Mathf.Clamp01(dist.magnitude / BattleInfo.ArenaRadius);
+        }
+
+        // Return amount of degree from [original] to [target]
+        // 0 or 360 -> Up
+        // 270  -> right
+        // 180 -> bottom
+        // 90 -> left
+        public float AngleDeg(
+            Vector2? oriPos = null,
+            float? oriRot = null,
+            Vector2? targetPos = null)
+        {
+            Vector2 toEnemy = Distance(oriPos, targetPos);
+
+            float angleToEnemy = Mathf.Atan2(toEnemy.y, toEnemy.x) * Mathf.Rad2Deg - 90f;
+            if (angleToEnemy < 0) angleToEnemy += 360f;
+
+            float relativeAngle = angleToEnemy - (oriRot ?? MyRobot.Rotation);
+            if (relativeAngle < 0) relativeAngle += 360f;
+
+            relativeAngle = (relativeAngle + 360f) % 360f;
+
+            return relativeAngle;
         }
 
         public float Angle(
@@ -75,9 +101,20 @@ namespace SumoBot
                 return signedAngle;
         }
 
-        public (Vector2, float) Simulate(ISumoAction action, bool isEnemy = false, bool isDelta = false)
+        public bool IsActionActive(ISumoAction action, bool isEnemy = false)
         {
-            RobotStateAPI robot = isEnemy ? EnemyRobot : MyRobot;
+            if (isEnemy)
+                return enemyController.IsActionActive(action.Type);
+            else
+                return myController.IsActionActive(action.Type);
+        }
+
+        public (Vector2, float) Simulate(
+            ISumoAction action,
+            bool isEnemy = false,
+            bool isDelta = false)
+        {
+            SumoBotAPI robot = isEnemy ? EnemyRobot : MyRobot;
             Vector2 position = robot.Position;
             float rotation = robot.Rotation;
 
@@ -127,6 +164,10 @@ public readonly struct BattleInfoAPI
 {
     public float TimeLeft { get; }
     public float Duration { get; }
+    public int BestOf { get; }
+    public int CurrentRound { get; }
+    public int LeftWinCount { get; }
+    public int RightWinCount { get; }
     public BattleState CurrentState { get; }
     public float ArenaRadius { get; }
     public Vector2 ArenaPosition { get; }
@@ -136,6 +177,10 @@ public readonly struct BattleInfoAPI
         TimeLeft = manager.TimeLeft;
         Duration = manager.BattleTime;
         CurrentState = manager.CurrentState;
+        BestOf = (int)manager.RoundSystem;
+        CurrentRound = manager.Battle.CurrentRound.RoundNumber;
+        LeftWinCount = manager.Battle.LeftWinCount;
+        RightWinCount = manager.Battle.RightWinCount;
 
         ArenaPosition = manager.Arena.transform.position;
         ArenaRadius = manager.ArenaRadius;
@@ -144,13 +189,18 @@ public readonly struct BattleInfoAPI
     public override string ToString()
     {
         return $"[Battle]\n" +
-               $"- Time Left     : {TimeLeft:F2}s\n" +
-               $"- Duration      : {Duration:F2}s\n" +
-               $"- State         : {CurrentState}";
+               $"- Time Left        : {TimeLeft:F2}s\n" +
+               $"- Duration         : {Duration:F2}s\n" +
+               $"- CurrentState     : {CurrentState}\n" +
+               $"- BestOf           : {BestOf}\n" +
+               $"- CurrendRound     : {CurrentRound}\n" +
+               $"- LeftWinCount     : {LeftWinCount}\n" +
+               $"- RightWinCount    : {RightWinCount}\n" +
+               $"- RightWinCount    : {RightWinCount}";
     }
 }
 
-public readonly struct RobotStateAPI
+public readonly struct SumoBotAPI
 {
     public PlayerSide Side { get; }
     public float MoveSpeed { get; }
@@ -167,12 +217,12 @@ public readonly struct RobotStateAPI
     public float Rotation { get; }
     public Vector2 LinearVelocity { get; }
     public float AngularVelocity { get; }
-    public SkillStateAPI Skill { get; }
+    public SumoSkillAPI Skill { get; }
 
     public bool IsDashOnCooldown { get; }
     public bool IsMovementDisabled { get; }
 
-    public RobotStateAPI(SumoController controller)
+    public SumoBotAPI(SumoController controller)
     {
 
         Side = controller.Side;
@@ -188,7 +238,7 @@ public readonly struct RobotStateAPI
 
         Position = controller.RigidBody.position;
         Rotation = controller.RigidBody.rotation;
-        LinearVelocity = controller.LastLinearVelocity;
+        LinearVelocity = controller.RigidBody.linearVelocity;
         AngularVelocity = controller.RigidBody.angularVelocity;
 
         IsDashOnCooldown = controller.IsDashOnCooldown;
@@ -212,7 +262,7 @@ public readonly struct RobotStateAPI
     }
 }
 
-public readonly struct SkillStateAPI
+public readonly struct SumoSkillAPI
 {
     public SkillType Type { get; }
     public float StoneMultiplier { get; }
@@ -224,7 +274,7 @@ public readonly struct SkillStateAPI
     public float Cooldown { get; }
     public float CooldownNormalized { get; }
 
-    public SkillStateAPI(SumoSkill skill)
+    public SumoSkillAPI(SumoSkill skill)
     {
         Type = skill.Type;
         BoostMultiplier = skill.BoostMultiplier;
@@ -248,17 +298,5 @@ public readonly struct SkillStateAPI
                $"- Cooldown   : {cooldownStatus}\n" +
                $"- Duration   : {TotalDuration:F1}s\n" +
                $"- Multiplier : {(Type == SkillType.Boost ? BoostMultiplier : StoneMultiplier):F1}";
-    }
-}
-
-public readonly struct SimulateResultAPI
-{
-    public Vector3 Position { get; }
-    public Vector3 Rotation { get; }
-
-    public SimulateResultAPI(Vector3 position, Vector3 direction)
-    {
-        Position = position;
-        Rotation = direction;
     }
 }

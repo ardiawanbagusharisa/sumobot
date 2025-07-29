@@ -62,7 +62,6 @@ namespace SumoInput
             Skill.Events[ButtonPointerHandler.OnPress].Subscribe(inputProvider.OnSkillButtonPressed);
 
             BattleManager.Instance.Events[BattleManager.OnBattleChanged].Subscribe(OnBattleChanged);
-            //SetUpButtonGuide();
         }
 
         void OnDisable()
@@ -103,12 +102,13 @@ namespace SumoInput
 
         void OnBattleChanged(EventParameter param)
         {
-            var battle = param.Battle;
-            SumoController currentPlayer = inputProvider.PlayerSide == PlayerSide.Left ? BattleManager.Instance.Battle.LeftPlayer : BattleManager.Instance.Battle.RightPlayer;
+            var battle = BattleManager.Instance;
 
-            if (BattleManager.Instance.CurrentState == BattleState.Battle_Countdown)
+            SumoController currentPlayer = inputProvider.PlayerSide == PlayerSide.Left ? battle.Battle.LeftPlayer : battle.Battle.RightPlayer;
+
+            if (battle.CurrentState == BattleState.Battle_Countdown)
                 currentPlayer.Events[SumoController.OnAction].Subscribe(OnPlayerAction);
-            else if (BattleManager.Instance.CurrentState == BattleState.Battle_End)
+            else if (battle.CurrentState == BattleState.Battle_End)
             {
                 currentPlayer.Events[SumoController.OnAction].Unsubscribe(OnPlayerAction);
                 Dash.GetComponentInChildren<Button>().interactable = true;
@@ -127,19 +127,6 @@ namespace SumoInput
                 actionInputTypeMap[action.Type] = action.InputUsed;
             }
         }
-
-        // private void SetUpButtonGuide()
-        // {
-        //     foreach (var item in InputProvider.KeyboardBindings[inputProvider.PlayerSide])
-        //     {
-        //         GameObject go = actionButtonMap[item.Value.Type];
-        //         if (go != null)
-        //         {
-        //             TMP_Text text = go.GetComponentInChildren<TMP_Text>();
-        //             text.SetText($"{go.name}\n({item.Key})");
-        //         }
-        //     }
-        // }
 
         void UpdateButtonState(ActionType actionType, bool active)
         {

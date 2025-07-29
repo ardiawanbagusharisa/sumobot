@@ -3,9 +3,8 @@ using SumoInput;
 using SumoManager;
 using UnityEngine;
 
-namespace SumoBot
+namespace SumoBot.RuleBased.Primitive
 {
-    // [CreateAssetMenu(fileName = "BOT_Primitive", menuName = "Bot/Primitive")]
     public class AIBot_Primitive : Bot
     {
         public override string ID => Name;
@@ -31,14 +30,14 @@ namespace SumoBot
         public override void OnBotUpdate()
         {
             float angleToEnemy = api.Angle();
-            RobotStateAPI myState = api.MyRobot;
+            SumoBotAPI myState = api.MyRobot;
             float angleInDur = Mathf.Abs(angleToEnemy) / myState.RotateSpeed * myState.TurnRate;
 
             // When angle is quite enough facing the enemy, run dash, skill, accelerate action
             if (Mathf.Abs(angleToEnemy) < 20)
             {
                 float distance = Vector2.Distance(api.EnemyRobot.Position, api.MyRobot.Position);
-                
+
                 if (!api.MyRobot.IsDashOnCooldown && distance < 2.5f)
                     Enqueue(new DashAction(InputType.Script));
 
@@ -63,14 +62,15 @@ namespace SumoBot
             Submit();
         }
 
-        public override void OnBotCollision(EventParameter param)
+        public override void OnBotCollision(BounceEvent bounceEvent)
         {
-            OnPlayerBounce(param.Side);
+            OnPlayerBounce(bounceEvent.Actor);
         }
 
-        public override void OnBattleStateChanged(BattleState state)
+        public override void OnBattleStateChanged(BattleState state, BattleWinner? winner)
         {
             currState = state;
+            Debug.Log($"winner {winner}");
         }
     }
 }
