@@ -342,8 +342,8 @@ namespace SumoCore
             if (!collision.gameObject.TryGetComponent<SumoController>(out var enemyRobot))
                 return;
 
-            float actorVelocity = RigidBody.linearVelocity.magnitude;
-            float enemyVelocity = enemyRobot.RigidBody.linearVelocity.magnitude;
+            float actorVelocity = RigidBody.linearVelocity.magnitude + float.Epsilon;
+            float enemyVelocity = enemyRobot.RigidBody.linearVelocity.magnitude + float.Epsilon;
 
             Vector2 collisionNormal = collision.contacts[0].normal;
 
