@@ -4,7 +4,9 @@ using SumoManager;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using UnityEngine;
+using static UnityEngine.InputSystem.LowLevel.InputStateHistory;
 
 namespace SumoBot {
     public class AIBot_NN : Bot
@@ -21,7 +23,7 @@ namespace SumoBot {
         public float epsilon = 1.0f;            // Exploration rate (starts high, decays)
         public float epsilonDecay = 0.999f;     // Epsilon decay factor per update step
         public float minEpsilon = 0.01f;        // Minimum exploration rate
-        public float trainingInterval = 0.1f;  // How frequently to attempt a training step 
+        public float trainingInterval = 0.5f;  // How frequently to attempt a training step 
 
         [Header("Replay Buffer")]
         public int replayBufferSize = 10000;
@@ -31,7 +33,8 @@ namespace SumoBot {
 
         #region Model Properties
         [Header("Model Saving/Loading")]
-        public bool loadPretrainedModel = false;
+        public bool loadModel = true; 
+        public bool trainModel = true; 
         public string modelFileName = "NN_Model.json";
         private string modelFilePath;           // Full path to the model file
         #endregion
@@ -48,9 +51,11 @@ namespace SumoBot {
         private PlayerSide mySide;
 
         private float[] lastState;              // State from previous update for experience tuple
-        private int lastAction;                 // Action from previous update
+        private bool[] lastActions;             // Action from previous update
         private float trainingStepTimer;
         private float tempReward = 0f;
+        private int[] actionCounts = new int[OUTPUT_SIZE];
+        private const float ACTION_THRESHOLD = 0.5f;
         #endregion
 
         #region Bot Methods
@@ -62,7 +67,7 @@ namespace SumoBot {
             modelFilePath = Path.Combine(Application.persistentDataPath, modelFileName);
 
             // Load model if exist
-            if (loadPretrainedModel && File.Exists(modelFilePath))
+            if (loadModel && File.Exists(modelFilePath))
             {
                 LoadModel();
                 Debug.Log("Loaded pre-trained model from: " + modelFilePath);
@@ -83,34 +88,37 @@ namespace SumoBot {
 
         public override void OnBattleStateChanged(BattleState state, BattleWinner? winner)
         {
-            BattleState currState = state;
-            Debug.Log($"Battle State Changed: {state}");
-            if (currState == BattleState.Battle_End)
+            if (state == BattleState.Battle_End)
             {
-                SaveModel(); 
+                if (replayBuffer.Count > minExpLearn)
+                {
+                    List<Experience> batch = replayBuffer.Sample(batchSize);
+                    if (batch.Count > 0)
+                        TrainNetwork(batch);
+                }
+                if (trainModel)
+                    SaveModel();
+
                 lastState = null;
+
+                epsilon = Mathf.Max(minEpsilon, epsilon * epsilonDecay); 
                 Debug.Log("Battle ended. Model saved and episode context reset.");
             }
-
-            // Optionally save model when paused
-
-            // For other state changes, you might also reset `lastState` if you want each round
-            // to be a distinct episode, or only reset at Battle_End for continuous training across rounds.
         }
 
         public override void OnBotCollision(BounceEvent param)
         {
             // Reward for collision 
-            float speedColThreshold = 0.1f; 
+            float speedColThreshold = 0.05f; 
             SumoBotAPI myRobot = api.MyRobot;
             SumoBotAPI enemyRobot = api.EnemyRobot;
 
             if (myRobot.LinearVelocity.magnitude - speedColThreshold > enemyRobot.LinearVelocity.magnitude)
-                tempReward -= 0.5f;
+                tempReward += 5f;
             else if (myRobot.LinearVelocity.magnitude < enemyRobot.LinearVelocity.magnitude - speedColThreshold)
-                tempReward += 0.5f;
+                tempReward -= 1f;
             else
-                tempReward = 0f; //-= 0.1f;
+                tempReward = 0f;
 
             Debug.Log($"Collision detected! Temp Reward: {tempReward} (My Speed: {myRobot.LinearVelocity.magnitude}, Enemy Speed: {enemyRobot.LinearVelocity.magnitude})");
         }
@@ -125,14 +133,25 @@ namespace SumoBot {
 
             if (lastState != null) 
             {
-                float currentReward = CalculateReward(myRobot, enemyRobot, lastAction);
+                
                 bool done = IsEpisodeDone();
 
-                // Add experience (S_t-1, A_t-1, R_t, S_t, Done) to replay buffer
+                if (done)
+                {
+                    float distEnemy = Vector3.Distance(enemyRobot.Position, api.BattleInfo.ArenaPosition);
+                    float distMyRobot = Vector3.Distance(myRobot.Position, api.BattleInfo.ArenaPosition);
+
+                    //if ( distEnemy > api.BattleInfo.ArenaRadius && distEnemy > distMyRobot)
+                    //    tempReward += 10f; // win bonus
+                    //else if (distMyRobot > api.BattleInfo.ArenaRadius && distMyRobot > distEnemy)
+                    //    tempReward -= 5f; // loss penalty
+                }
+
+                float currentReward = CalculateReward(myRobot, enemyRobot, -1);
                 replayBuffer.AddExperience(new Experience
                 {
                     state = lastState,
-                    action = lastAction,
+                    actionsTaken = lastActions,
                     reward = currentReward,
                     nextState = currentState,
                     done = done
@@ -143,25 +162,25 @@ namespace SumoBot {
             }
 
             // Choose Action (A_t) using Epsilon-Greedy
-            int chosenAction = ChooseAction(currentState);
-            ExecuteAction(chosenAction, myRobot);
+            bool[] currentActions = ChooseActions(currentState);
+            ExecuteActions(currentActions, myRobot);
 
             lastState = currentState;
-            lastAction = chosenAction;
+            lastActions = currentActions;
 
-            // Learn from Replay Buffer (Train Network)
-            trainingStepTimer += Time.deltaTime;
-            if (trainingStepTimer >= trainingInterval && replayBuffer.Count > minExpLearn)
-            {
-                List<Experience> batch = replayBuffer.Sample(batchSize);
-                if (batch.Count > 0)
-                    TrainNetwork(batch);
+            //// Learn from Replay Buffer (Train Network)
+            //trainingStepTimer += Time.deltaTime;
+            //if (trainingStepTimer >= trainingInterval && replayBuffer.Count > minExpLearn)
+            //{
+            //    List<Experience> batch = replayBuffer.Sample(batchSize);
+            //    if (batch.Count > 0)
+            //        TrainNetwork(batch);
 
-                trainingStepTimer = 0f; 
-            }
+            //    trainingStepTimer = 0f; 
+            //}
 
             // Decay epsilon for exploration
-            epsilon = Mathf.Max(minEpsilon, epsilon * epsilonDecay);
+            //epsilon = Mathf.Max(minEpsilon, epsilon * epsilonDecay);
 
             Submit(); 
         }
@@ -198,103 +217,96 @@ namespace SumoBot {
             return inputs;
         }
 
-        private int ChooseAction(float[] state)
+        private bool[] ChooseActions(float[] state)
         {
-            // Epsilon-greedy strategy
+            bool[] actions = new bool[OUTPUT_SIZE];
+            float minProb = 0.1f;
+
             if (UnityEngine.Random.value < epsilon)
             {
-                // Explore
-                return UnityEngine.Random.Range(0, OUTPUT_SIZE);
+                for (int i = 0; i < OUTPUT_SIZE; i++)
+                    actions[i] = UnityEngine.Random.value > 0.5f;
             }
             else
             {
-                // Exploit
                 float[] qValues = qNetwork.FeedForward(state);
-                int bestAction = 0;
-                for (int i = 1; i < OUTPUT_SIZE; i++)
+                for (int i = 0; i < OUTPUT_SIZE; i++)
                 {
-                    if (qValues[i] > qValues[bestAction])
-                        bestAction = i;
-
+                    float probability = Mathf.Max(qValues[i], minProb);
+                    actions[i] = UnityEngine.Random.value < probability;
                 }
-                return bestAction;
             }
+            return actions;
         }
 
-        private void ExecuteAction(int action, SumoBotAPI myRobot)
+        private void ExecuteActions(bool[] actions, SumoBotAPI myRobot)
         {
-            switch (action)
-            {
-                case 0: 
-                    Enqueue(new AccelerateAction(InputType.Script));
-                    break;
-                case 1: // Turn Left (fixed duration for simplicity)
-                    Enqueue(new TurnAction(InputType.Script, ActionType.TurnLeft, 0.15f));
-                    break;
-                case 2: // Turn Right (fixed duration for simplicity)
-                    Enqueue(new TurnAction(InputType.Script, ActionType.TurnRight, 0.15f));
-                    break;
-                case 3: 
-                    if (!myRobot.IsDashOnCooldown)
-                        Enqueue(new DashAction(InputType.Script));
-                    break;
-                case 4: 
-                    if (!myRobot.Skill.IsSkillOnCooldown)
-                        Enqueue(new SkillAction(InputType.Script));
-                    break;
-            }
+            if (actions[0])
+                Enqueue(new AccelerateAction(InputType.Script));
+
+            if (actions[1])
+                Enqueue(new TurnAction(InputType.Script, ActionType.TurnLeft, 0.15f));
+
+            if (actions[2])
+                Enqueue(new TurnAction(InputType.Script, ActionType.TurnRight, 0.15f));
+
+            if (actions[3] && !myRobot.IsDashOnCooldown)
+                Enqueue(new DashAction(InputType.Script));
+
+            if (actions[4] && !myRobot.Skill.IsSkillOnCooldown)
+                Enqueue(new SkillAction(InputType.Script));
         }
 
         private float CalculateReward(SumoBotAPI myRobot, SumoBotAPI enemyRobot, int actionTaken)
         {
-            // Reward & penalty settings 
             float reward = 0f;
 
-            // 1. Stay moving 
-            if (myRobot.LinearVelocity.magnitude > 0.1f)
-                reward += 0.01f;
+            float myDist = Vector3.Distance(myRobot.Position, api.BattleInfo.ArenaPosition);
+            float enemyDist = Vector3.Distance(enemyRobot.Position, api.BattleInfo.ArenaPosition);
+            float arenaRadius = api.BattleInfo.ArenaRadius;
 
-            // 2. Pushing towards the edge
-            float enemyDistFromCenter = Vector3.Distance(enemyRobot.Position, api.BattleInfo.ArenaPosition);
-            float myDistFromCenter = Vector3.Distance(myRobot.Position, api.BattleInfo.ArenaPosition);
-            float arenaEdgeThreshold = api.BattleInfo.ArenaRadius * 0.9f;
-            
-            if (enemyDistFromCenter > arenaEdgeThreshold) 
-            {
-                reward += 1f; 
+            // Positive reward: close to center
+            reward += Mathf.Clamp01((arenaRadius - myDist) / arenaRadius) * 0.1f;
 
-                if (Vector3.Distance(myRobot.Position, enemyRobot.Position) < 1.0f && Vector3.Dot(myRobot.LinearVelocity.normalized, (enemyRobot.Position - myRobot.Position).normalized) > 0.8f)
-                    reward += 5f; 
-            }
+            // Bonus: push enemy near edge
+            if (enemyDist > 0.9f * arenaRadius)
+                reward += 0.5f;
 
-            // 3. Edge penalty 
-            if (myDistFromCenter > arenaEdgeThreshold)
-            {
-                reward -= 2f;
-                if (myDistFromCenter > api.BattleInfo.ArenaRadius * 0.95f)
-                    reward -= 10f;
-            }
+            // Penalty: close to own edge
+            if (myDist > 0.9f * arenaRadius)
+                reward -= 1.0f;
 
-            // 4. Close to enemy
-            if (Vector3.Distance(myRobot.Position, enemyRobot.Position) < 2.5f)
-                reward += 0.05f;
+            // Large punishment: go out
+            if (myDist > arenaRadius)
+                reward -= 5f;
+            if (enemyDist > arenaRadius)
+                reward += 10f;
 
-            // 5. Far from enemy penalty
-            if (Vector3.Distance(myRobot.Position, enemyRobot.Position) > 5.0f)
-                reward -= 0.05f;
+            // Bonus for getting closer to enemy
+            float distToEnemy = Vector3.Distance(myRobot.Position, enemyRobot.Position);
+            reward += (1f - Mathf.Clamp01(distToEnemy / arenaRadius)) * 0.2f;
 
-            // 6. Unecessary actions penalty
+            // Bonus for being aligned and pushing
+            Vector3 toEnemy = (enemyRobot.Position - myRobot.Position).normalized;
+            float alignment = Vector3.Dot(myRobot.LinearVelocity.normalized, toEnemy);
+            if (distToEnemy < 1.5f && alignment > 0.8f)
+                reward += 1f;
+
+            // Penalty for wasting dash or skill
             if ((actionTaken == 3 && myRobot.IsDashOnCooldown) || (actionTaken == 4 && myRobot.Skill.IsSkillOnCooldown))
-                reward -= 0.1f;
+                reward -= 0.2f;
 
-            // 7. Collision initiator 
-            if (tempReward != 0f) {
+            // Use collision reward (if set)
+            if (tempReward != 0f)
+            {
                 reward += tempReward;
                 tempReward = 0f;
             }
 
+            Debug.Log($"Reward Calculation: {reward}");
             return reward;
         }
+
 
         private bool IsEpisodeDone()
         {
@@ -308,28 +320,24 @@ namespace SumoBot {
         {
             foreach (Experience exp in batch)
             {
-                float[] currentQValues = qNetwork.FeedForward(exp.state); // Q-values for current state (S)
-                float targetQValue = exp.reward; // Immediate reward (R)
+                float[] currentQ = qNetwork.FeedForward(exp.state);
+                float[] targetQ = (float[])currentQ.Clone();
 
-                if (!exp.done)
+                for (int i = 0; i < OUTPUT_SIZE; i++)
                 {
-                    // Calculate target Q-value using Bellman equation: Q(s,a) = r + gamma * max(Q(s',a'))
-                    float[] nextQValues = qNetwork.FeedForward(exp.nextState); // Q-values for next state (S')
-                    float maxNextQ = nextQValues[0];
-                    for (int i = 1; i < nextQValues.Length; i++)
+                    if (exp.actionsTaken[i])
                     {
-                        if (nextQValues[i] > maxNextQ)
-                            maxNextQ = nextQValues[i];
+                        float target = exp.reward;
+                        if (!exp.done)
+                        {
+                            float[] nextQ = qNetwork.FeedForward(exp.nextState);
+                            target += discountFactor * nextQ.Max();
+                        }
+                        targetQ[i] = target;
                     }
-                    targetQValue += discountFactor * maxNextQ;
                 }
 
-                // Create target output array for training
-                // Only update the Q-value for the action that was actually taken (A)
-                float[] targetOutputs = (float[])currentQValues.Clone(); // Start with current Q-values
-                targetOutputs[exp.action] = targetQValue; // Update target for the taken action
-
-                qNetwork.Train(exp.state, targetOutputs, learningRate);
+                qNetwork.Train(exp.state, targetQ, learningRate);
             }
         }
 
@@ -337,8 +345,8 @@ namespace SumoBot {
         {
             try
             {
-                qNetwork.PrepareForSerialization();
-                string json = JsonUtility.ToJson(qNetwork);
+                SerializableNeuralNetworkData dataToSave = qNetwork.ToSerializableData();
+                string json = JsonUtility.ToJson(dataToSave);
                 File.WriteAllText(modelFilePath, json);
                 Debug.Log("Model saved successfully to: " + modelFilePath);
             }
@@ -346,6 +354,7 @@ namespace SumoBot {
             {
                 Debug.LogError("Failed to save model: " + e.Message);
             }
+
         }
 
         private void LoadModel()
@@ -353,15 +362,18 @@ namespace SumoBot {
             try
             {
                 string json = File.ReadAllText(modelFilePath);
-                NeuralNetwork loadedNetwork = JsonUtility.FromJson<NeuralNetwork>(json);
-                if (loadedNetwork != null)
+                SerializableNeuralNetworkData loadedData = JsonUtility.FromJson<SerializableNeuralNetworkData>(json);
+
+                if (loadedData != null)
                 {
-                    qNetwork = loadedNetwork;
-                    qNetwork.RestoreFromSerialization();
+                    qNetwork = new NeuralNetwork(loadedData.inputSize, loadedData.hiddenSize, loadedData.outputSize);
+                    qNetwork.LoadFromSerializableData(loadedData); 
                     Debug.Log("Model loaded successfully from: " + modelFilePath);
                 }
                 else
+                {
                     throw new Exception("JsonUtility returned null during deserialization.");
+                }
             }
             catch (Exception e)
             {
@@ -381,8 +393,19 @@ namespace SumoBot {
         public static float SigmoidDerivative(float x) => Sigmoid(x) * (1 - Sigmoid(x)); 
     }
 
+    public class SerializableNeuralNetworkData
+    {
+        public int inputSize;
+        public int hiddenSize;
+        public int outputSize;
+        public float[] weightsInputHiddenFlat;
+        public float[] biasesHidden;
+        public float[] weightsHiddenOutputFlat;
+        public float[] biasesOutput;
+    }
+
     // Feed-forward Neural Network
-    [System.Serializable]
+    [Serializable]
     public class NeuralNetwork
     {
         #region Neural Network Properties
@@ -393,13 +416,6 @@ namespace SumoBot {
         private float[,] weightsOutput;     // [hiddenSize, outputSize]
         private float[] biasesHidden;       // [hiddenSize]
         private float[] biasesOutput;       // [outputSize]
-        #endregion
-
-        #region JsonUtility
-        private float[] weightsInputFlat;      
-        private float[] weightsOutputFlat;     
-        private float[] biasesHiddenSerializable;       
-        private float[] biasesOutputSerializable;
         #endregion
 
         #region Neural Network Components
@@ -542,12 +558,40 @@ namespace SumoBot {
         #endregion
 
         #region JsonUtility Helper (convert 2D arrays to 1D and vice cersa)
-        public void PrepareForSerialization()
+        public SerializableNeuralNetworkData ToSerializableData()
         {
-            weightsInputFlat = Flatten(weightsInput);
-            weightsOutputFlat = Flatten(weightsOutput);
-            biasesHiddenSerializable = biasesHidden;
-            biasesOutputSerializable = biasesOutput;
+            SerializableNeuralNetworkData data = new SerializableNeuralNetworkData
+            {
+                inputSize = this.inputSize,
+                hiddenSize = this.hiddenSize,
+                outputSize = this.outputSize,
+                weightsInputHiddenFlat = Flatten(weightsInput),
+                biasesHidden = this.biasesHidden,
+                weightsHiddenOutputFlat = Flatten(weightsOutput),
+                biasesOutput = this.biasesOutput
+            };
+            return data;
+        }
+
+        public void LoadFromSerializableData(SerializableNeuralNetworkData data)
+        {
+            if (data.inputSize != this.inputSize || data.hiddenSize != this.hiddenSize || data.outputSize != this.outputSize)
+            {
+                Debug.LogError("Model architecture mismatch during loading! Attempting to load with new architecture.");
+                // Re-initialize arrays with new sizes if dimensions don't match
+                this.inputSize = data.inputSize;
+                this.hiddenSize = data.hiddenSize;
+                this.outputSize = data.outputSize;
+                weightsInput = new float[inputSize, hiddenSize];
+                biasesHidden = new float[hiddenSize];
+                weightsOutput = new float[hiddenSize, outputSize];
+                biasesOutput = new float[outputSize];
+            }
+
+            weightsInput = Reshape(data.weightsInputHiddenFlat, inputSize, hiddenSize);
+            biasesHidden = data.biasesHidden;
+            weightsOutput = Reshape(data.weightsHiddenOutputFlat, hiddenSize, outputSize);
+            biasesOutput = data.biasesOutput;
         }
 
         private float[] Flatten(float[,] array2D)
@@ -563,22 +607,6 @@ namespace SumoBot {
                 }
             }
             return flat;
-        }
-
-        public void RestoreFromSerialization()
-        {
-            if (weightsInputFlat == null || weightsOutputFlat == null ||
-                biasesHiddenSerializable == null || biasesOutputSerializable == null)
-            {
-                Debug.LogError("NeuralNetwork data incomplete for deserialization.");
-                InitializeWeights();
-                return;
-            }
-
-            weightsInput = Reshape(weightsInputFlat, inputSize, hiddenSize);
-            weightsOutput = Reshape(weightsOutputFlat, hiddenSize, outputSize);
-            biasesHidden = biasesHiddenSerializable;
-            biasesOutput = biasesOutputSerializable;
         }
 
         private float[,] Reshape(float[] arrayFlat, int rows, int cols)
@@ -608,7 +636,7 @@ namespace SumoBot {
     public struct Experience
     {
         public float[] state;
-        public int action;
+        public bool[] actionsTaken;
         public float reward;
         public float[] nextState;
         public bool done;
