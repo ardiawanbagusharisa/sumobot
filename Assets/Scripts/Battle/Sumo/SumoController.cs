@@ -170,9 +170,10 @@ namespace SumoCore
 
         public void Reset()
         {
+            StopOngoingAction();
+            isOutOfArena = false;
             transform.position = StartPosition;
             transform.rotation = StartRotation;
-            isOutOfArena = false;
             RigidBody.linearVelocity = Vector2.zero;
             RigidBody.angularVelocity = 0;
             RigidBody.angularDamping = 0;
@@ -201,6 +202,8 @@ namespace SumoCore
 
         public void StopOngoingAction()
         {
+            lastAccelerateAction = null;
+            lastTurnAction = null;
             ActiveActions.Clear();
             accelerateTimeRemaining = 0;
             isTurning = false;
@@ -257,6 +260,8 @@ namespace SumoCore
 
         void HandlingAccelerating()
         {
+            if (IsMovementDisabled) return;
+
             if (accelerateTimeRemaining > 0f && lastAccelerateAction != null)
             {
                 RigidBody.linearVelocity = movementVelocity;
@@ -348,54 +353,49 @@ namespace SumoCore
             Vector2 collisionNormal = collision.contacts[0].normal;
 
             const float compareThreshold = 0.001f;
-            bool isTieBreaker = false;
+            bool isTieBreaker = Mathf.Abs(actorVelocity - enemyVelocity) < compareThreshold;
 
-            if (Mathf.Abs(actorVelocity - enemyVelocity) < compareThreshold)
-            {
-                isTieBreaker = true;
-                actorVelocity += compareThreshold;
-            }
+            // Decide who is faster, if the velocity reaching equal, use the instance id
+            bool isThisActor = actorVelocity > enemyVelocity || (isTieBreaker && GetInstanceID() > enemyRobot.GetInstanceID());
 
             StopOngoingAction();
             LogManager.FlushActionLog(Side);
 
+            if (!isThisActor) return;
 
-            // Faster robot handles the logic of assignment bounce and logging
-            if (actorVelocity > enemyVelocity)
-            {
-                var actorLog = CreateCollisionLog();
-                var enemyLog = enemyRobot.CreateCollisionLog();
+            var actorLog = CreateCollisionLog();
+            var enemyLog = enemyRobot.CreateCollisionLog();
 
-                float actorImpact = Bounce(collisionNormal, enemyVelocity, actorVelocity, enemyRobot);
-                float targetImpact = enemyRobot.Bounce(-collisionNormal, actorVelocity, enemyVelocity, this);
+            float actorImpact = Bounce(collisionNormal, enemyVelocity, actorVelocity, enemyRobot);
+            float targetImpact = enemyRobot.Bounce(-collisionNormal, actorVelocity, enemyVelocity, this);
 
-                float actorLockDuration = LockMovement(true, actorImpact, targetImpact);
-                float targetLockDuration = enemyRobot.LockMovement(false, targetImpact, actorImpact);
+            float actorLockDuration = LockMovement(true, actorImpact, targetImpact);
+            float targetLockDuration = enemyRobot.LockMovement(false, targetImpact, actorImpact);
 
-                actorLog.IsActor = true;
-                actorLog.IsTieBreaker = isTieBreaker;
-                actorLog.Impact = actorImpact;
-                actorLog.LockDuration = actorLockDuration;
+            actorLog.IsActor = true;
+            actorLog.IsTieBreaker = isTieBreaker;
+            actorLog.Impact = actorImpact;
+            actorLog.LockDuration = actorLockDuration;
 
-                enemyLog.IsActor = false;
-                enemyLog.IsTieBreaker = isTieBreaker;
-                enemyLog.Impact = targetImpact;
-                enemyLog.LockDuration = targetLockDuration;
+            enemyLog.IsActor = false;
+            enemyLog.IsTieBreaker = isTieBreaker;
+            enemyLog.Impact = targetImpact;
+            enemyLog.LockDuration = targetLockDuration;
 
-                collisionLogger.Collision = actorLog;
-                enemyRobot.collisionLogger.Collision = enemyLog;
+            collisionLogger.Collision = actorLog;
+            enemyRobot.collisionLogger.Collision = enemyLog;
 
-                BounceEvent actorBounceEvent = new(Side, actorLog, enemyLog);
-                Events[OnBounce].Invoke(new(bounceInfoParam: actorBounceEvent));
+            BounceEvent actorBounceEvent = new(Side, actorLog, enemyLog);
+            Events[OnBounce].Invoke(new(bounceInfoParam: actorBounceEvent));
 
-                BounceEvent targetBounceEvent = new(Side, enemyLog, actorLog);
-                enemyRobot.Events[OnBounce].Invoke(new(bounceInfoParam: targetBounceEvent));
+            BounceEvent targetBounceEvent = new(Side, enemyLog, actorLog);
+            enemyRobot.Events[OnBounce].Invoke(new(bounceInfoParam: targetBounceEvent));
 
-                collisionLogger.Call();
-                enemyRobot.collisionLogger.Call();
+            collisionLogger.Call();
+            enemyRobot.collisionLogger.Call();
 
-                Debug.Log($"[BounceRule]\nActor=>{Side},Target=>{enemyRobot.Side}\nActorVelocity=>{actorVelocity},TargetVelocity=>{enemyVelocity}\nActorCurrentSkill=> {Skill.Type} isActive:{Skill.IsActive}, TargetCurrentSkill=>{enemyRobot.Skill.Type} isActive: {enemyRobot.Skill.IsActive} \nActorImpact=>{actorImpact}, TargetImpact=>{targetImpact}\nActorLock=>{actorLockDuration}, TargetLock=>{targetLockDuration}");
-            }
+            Debug.Log($"[BounceRule]\nActor=>{Side},Target=>{enemyRobot.Side}\nActorVelocity=>{actorVelocity},TargetVelocity=>{enemyVelocity}\nActorCurrentSkill=> {Skill.Type} isActive:{Skill.IsActive}, TargetCurrentSkill=>{enemyRobot.Skill.Type} isActive: {enemyRobot.Skill.IsActive} \nActorImpact=>{actorImpact}, TargetImpact=>{targetImpact}\nActorLock=>{actorLockDuration}, TargetLock=>{targetLockDuration}");
+
         }
 
         public CollisionLog CreateCollisionLog()
