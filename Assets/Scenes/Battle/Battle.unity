@@ -5012,11 +5012,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5583292103176566768, guid: e48db3198e16346af866a9419a1964cc, type: 3}
       propertyPath: DashSpeed
-      value: 1.5
+      value: 7
       objectReference: {fileID: 0}
     - target: {fileID: 5583292103176566768, guid: e48db3198e16346af866a9419a1964cc, type: 3}
       propertyPath: MoveSpeed
-      value: 1
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 5583292103176566768, guid: e48db3198e16346af866a9419a1964cc, type: 3}
       propertyPath: CollisionBaseForce
@@ -15657,7 +15657,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   BattleInputType: 1
   RoundSystem: 3
-  BattleTime: 60
+  BattleTime: 5
   CountdownTime: 0.1
   ActionInterval: 0.1
   StartPositions:
@@ -15764,8 +15764,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b33ce51748b63457ebe9b59f80ac599c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  TotalSimulations: 10
-  TimeScale: 1
+  TotalSimulations: 500
+  TimeScale: 2
   SimulationOnStart: 1
 --- !u!114 &2130233545
 MonoBehaviour:
@@ -15783,8 +15783,8 @@ MonoBehaviour:
   Left: {fileID: 715032728}
   RightEnabled: 1
   Right: {fileID: 1709403126}
-  leftBotIndex: 2
-  rightBotIndex: 3
+  leftBotIndex: 4
+  rightBotIndex: 4
 --- !u!1 &2132169806
 GameObject:
   m_ObjectHideFlags: 0
