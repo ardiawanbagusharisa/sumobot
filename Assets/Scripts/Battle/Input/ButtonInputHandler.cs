@@ -62,7 +62,6 @@ namespace SumoInput
             Skill.Events[ButtonPointerHandler.OnPress].Subscribe(inputProvider.OnSkillButtonPressed);
 
             BattleManager.Instance.Events[BattleManager.OnBattleChanged].Subscribe(OnBattleChanged);
-            //SetUpButtonGuide();
         }
 
         void OnDisable()
@@ -128,19 +127,6 @@ namespace SumoInput
                 actionInputTypeMap[action.Type] = action.InputUsed;
             }
         }
-
-        // private void SetUpButtonGuide()
-        // {
-        //     foreach (var item in InputProvider.KeyboardBindings[inputProvider.PlayerSide])
-        //     {
-        //         GameObject go = actionButtonMap[item.Value.Type];
-        //         if (go != null)
-        //         {
-        //             TMP_Text text = go.GetComponentInChildren<TMP_Text>();
-        //             text.SetText($"{go.name}\n({item.Key})");
-        //         }
-        //     }
-        // }
 
         void UpdateButtonState(ActionType actionType, bool active)
         {
