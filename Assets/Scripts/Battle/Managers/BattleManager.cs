@@ -417,7 +417,6 @@ namespace SumoManager
         public int LeftWinCount;
         public int RightWinCount;
 
-        // [Todo]: Utilize of handling log for state & loop changes
         public Dictionary<float, string> BattleLog;
 
         public Battle(string battleID, RoundSystem roundSystem)

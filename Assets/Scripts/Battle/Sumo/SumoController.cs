@@ -59,6 +59,7 @@ namespace SumoCore
         private bool isOutOfArena = false;
         private EventLogger collisionLogger;
         private float time => BattleManager.Instance.ElapsedTime;
+
         // Derived 
         public bool IsDashActive => LastDashTime != 0f && (LastDashTime + DashDuration) >= time;
         public float DashCooldownTimer => LastDashTime + DashCooldown - time;
@@ -488,7 +489,7 @@ namespace SumoCore
 
             foreach (var action in InputProvider.Flush())
             {
-                // Fill late property for Dash and Skill
+                // Fill late property of duration for Dash and Skill
                 if (action is DashAction)
                 {
                     action.Duration = DashDuration;
