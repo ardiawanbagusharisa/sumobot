@@ -7,7 +7,6 @@ using UnityEngine.UI;
 using System.Collections;
 using UnityEngine.SceneManagement;
 using SumoInput;
-using System;
 
 namespace SumoManager
 {
