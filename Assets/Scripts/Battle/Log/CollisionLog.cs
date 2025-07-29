@@ -6,6 +6,7 @@ namespace SumoLog
     public class CollisionLog : BaseLog
     {
         public bool IsActor;
+        public bool IsTieBreaker = false;
         public float Impact = 0;
         public float BounceResistance;
         public float LockDuration = 0;
@@ -20,6 +21,7 @@ namespace SumoLog
             {
                 { "IsActor", IsActor},
                 { "Impact", Impact},
+                { "IsTieBreaker", IsTieBreaker},
                 { "LockDuration", LockDuration},
                 { "IsSkillActive", IsSkillActive},
                 { "IsDashActive", IsDashActive},

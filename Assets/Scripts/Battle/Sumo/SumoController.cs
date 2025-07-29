@@ -347,14 +347,18 @@ namespace SumoCore
 
             Vector2 collisionNormal = collision.contacts[0].normal;
 
+            const float compareThreshold = 0.001f;
+            bool isTieBreaker = false;
+
+            if (Mathf.Abs(actorVelocity - enemyVelocity) < compareThreshold)
+            {
+                isTieBreaker = true;
+                actorVelocity += compareThreshold;
+            }
+
             StopOngoingAction();
             LogManager.FlushActionLog(Side);
 
-            if (actorVelocity == enemyVelocity)
-            {
-                actorVelocity += Random.Range(0.001f, 0.01f);
-                enemyVelocity += Random.Range(0.001f, 0.01f);
-            }
 
             // Faster robot handles the logic of assignment bounce and logging
             if (actorVelocity > enemyVelocity)
@@ -369,10 +373,12 @@ namespace SumoCore
                 float targetLockDuration = enemyRobot.LockMovement(false, targetImpact, actorImpact);
 
                 actorLog.IsActor = true;
+                actorLog.IsTieBreaker = isTieBreaker;
                 actorLog.Impact = actorImpact;
                 actorLog.LockDuration = actorLockDuration;
 
                 enemyLog.IsActor = false;
+                enemyLog.IsTieBreaker = isTieBreaker;
                 enemyLog.Impact = targetImpact;
                 enemyLog.LockDuration = targetLockDuration;
 
