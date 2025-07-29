@@ -64,8 +64,8 @@ namespace SumoBot
         public override void OnBotUpdate()
         {
             ClearCommands();
-            RobotStateAPI myRobot = api.MyRobot;
-            RobotStateAPI enemyRobot = api.EnemyRobot;
+            SumoBotAPI myRobot = api.MyRobot;
+            SumoBotAPI enemyRobot = api.EnemyRobot;
             stateTimer += Time.deltaTime; 
 
             switch (currentState)
@@ -93,9 +93,9 @@ namespace SumoBot
             Debug.Log($"Current State: {currentState}");
         }
 
-        public override void OnBotCollision(EventParameter param)
+        public override void OnBotCollision(BounceEvent param)
         {
-            if (param.Side != mySide)
+            if (param.Actor != mySide)
             {
                 ClearCommands();
                 BotState newState = currentState == BotState.Attacking ? BotState.Attacking : BotState.Dodging;
@@ -103,7 +103,7 @@ namespace SumoBot
             }
         }
 
-        public override void OnBattleStateChanged(BattleState state)
+        public override void OnBattleStateChanged(BattleState state, BattleWinner? winner)
         {
             if (state == BattleState.Battle_Ongoing)
                 TransitionToState(BotState.Searching);
@@ -125,7 +125,7 @@ namespace SumoBot
             ClearCommands();
         }
 
-        private void HandleSearching(RobotStateAPI myRobot, RobotStateAPI enemyRobot)
+        private void HandleSearching(SumoBotAPI myRobot, SumoBotAPI enemyRobot)
         {
             float angleToEnemy = api.Angle();
             float distanceToEnemy = Vector3.Distance(enemyRobot.Position, myRobot.Position);
@@ -154,7 +154,7 @@ namespace SumoBot
             }
         }
 
-        private void HandleApproaching(RobotStateAPI myRobot, RobotStateAPI enemyRobot)
+        private void HandleApproaching(SumoBotAPI myRobot, SumoBotAPI enemyRobot)
         {
             float angleToEnemy = api.Angle();
             float distanceToEnemy = Vector3.Distance(enemyRobot.Position, myRobot.Position);
@@ -190,7 +190,7 @@ namespace SumoBot
                 Enqueue(new AccelerateAction(InputType.Script));
         }
 
-        private void HandleAttacking(RobotStateAPI myRobot, RobotStateAPI enemyRobot)
+        private void HandleAttacking(SumoBotAPI myRobot, SumoBotAPI enemyRobot)
         {
             float angleToEnemy = api.Angle();
             float distanceToEnemy = Vector3.Distance(enemyRobot.Position, myRobot.Position);
@@ -233,7 +233,7 @@ namespace SumoBot
             }
         }
 
-        private void HandleDodging(RobotStateAPI myRobot, RobotStateAPI enemyRobot)
+        private void HandleDodging(SumoBotAPI myRobot, SumoBotAPI enemyRobot)
         {
             Vector2 directionToEnemy = (enemyRobot.Position - myRobot.Position).normalized;
             Vector2 dodgeDirection = new Vector2(-directionToEnemy.y, directionToEnemy.x); 
@@ -258,7 +258,7 @@ namespace SumoBot
                 TransitionToState(BotState.Recovering);
         }
 
-        private void HandleRecovering(RobotStateAPI myRobot, RobotStateAPI enemyRobot)
+        private void HandleRecovering(SumoBotAPI myRobot, SumoBotAPI enemyRobot)
         {
             if (stateTimer >= recoveryDuration || (myRobot.LinearVelocity.magnitude < stableLinearVelocity && Mathf.Abs(myRobot.AngularVelocity) < stableAngularVelocity))
                 TransitionToState(BotState.Searching);
@@ -280,7 +280,7 @@ namespace SumoBot
             }
         }
 
-        private void HandleIdle(RobotStateAPI myRobot, RobotStateAPI enemyRobot)
+        private void HandleIdle(SumoBotAPI myRobot, SumoBotAPI enemyRobot)
         {
             if (api.BattleInfo.CurrentState == BattleState.Battle_Ongoing)
                 TransitionToState(BotState.Searching);

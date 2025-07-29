@@ -5,7 +5,6 @@ using UnityEngine;
 
 namespace SumoBot.RuleBased.Primitive
 {
-    // [CreateAssetMenu(fileName = "BOT_Primitive", menuName = "Bot/Primitive")]
     public class AIBot_Primitive : Bot
     {
         public override string ID => Name;
