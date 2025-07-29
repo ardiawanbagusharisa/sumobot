@@ -14,14 +14,14 @@ namespace SumoBot
         private SumoAPI api;
 
         // Where the battle state changes
-        public override void OnBattleStateChanged(BattleState state)
+        public override void OnBattleStateChanged(BattleState state, BattleWinner? winner)
         {
         }
 
         // When your AI is got a collision (bounce)
-        public override void OnBotCollision(EventParameter param)
+        public override void OnBotCollision(BounceEvent bounceEvent)
         {
-            PlayerSide hitter = param.Side;
+            PlayerSide hitter = bounceEvent.Actor;
 
             if (hitter == api.MyRobot.Side)
                 Debug.Log($"My AI sent hit to enemy!");

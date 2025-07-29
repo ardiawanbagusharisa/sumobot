@@ -68,8 +68,8 @@ namespace SumoManager
 
         #region Events properties 
         public EventRegistry Events = new();
-        public static string OnCountdownChanged = "OnCountdownChanged";  // [float]
-        public static string OnBattleChanged = "OnBattleChanged"; // [Battle]
+        public const string OnCountdownChanged = "OnCountdownChanged";  // [float]
+        public const string OnBattleChanged = "OnBattleChanged"; // [Battle]
 
         private Coroutine battleTimerCoroutine;
         private Coroutine countdownCoroutine;
@@ -385,9 +385,13 @@ namespace SumoManager
         // Call this when we need to trigger OnBattleChanged immediately
         private void BroadcastBattleData()
         {
-            Events[OnBattleChanged].Invoke(new EventParameter(
-                battleParam: Battle,
-                battleStateParam: CurrentState));
+            EventParameter stateParam = new(
+                battleStateParam: CurrentState);
+
+            if (CurrentState == BattleState.Battle_End)
+                stateParam.Winner = Battle.GetRoundWinner();
+
+            Events[OnBattleChanged].Invoke(stateParam);
         }
         #endregion
     }
@@ -413,7 +417,6 @@ namespace SumoManager
         public int LeftWinCount;
         public int RightWinCount;
 
-        // [Todo]: Utilize of handling log for state & loop changes
         public Dictionary<float, string> BattleLog;
 
         public Battle(string battleID, RoundSystem roundSystem)
@@ -431,6 +434,18 @@ namespace SumoManager
 
             CurrentRound.RoundWinner = winner;
             Winners[CurrentRound.RoundNumber] = winner;
+        }
+
+        public BattleWinner GetRoundWinner(int? roundNumber = null)
+        {
+            if (Winners.TryGetValue(roundNumber ?? CurrentRound.RoundNumber, out SumoController winner) && winner != null)
+            {
+                if (winner.Side == PlayerSide.Left)
+                    return BattleWinner.Left;
+                else
+                    return BattleWinner.Right;
+            }
+            return BattleWinner.Draw;
         }
 
         public BattleWinner? GetBattleWinner()

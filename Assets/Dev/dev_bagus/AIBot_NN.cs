@@ -86,7 +86,7 @@ namespace SumoBot {
             Debug.Log($"NN Bot Initialized. Side: {mySide}");
         }
 
-        public override void OnBattleStateChanged(BattleState state)
+        public override void OnBattleStateChanged(BattleState state, BattleWinner? winner)
         {
             if (state == BattleState.Battle_End)
             {
@@ -106,12 +106,12 @@ namespace SumoBot {
             }
         }
 
-        public override void OnBotCollision(EventParameter param)
+        public override void OnBotCollision(BounceEvent param)
         {
             // Reward for collision 
             float speedColThreshold = 0.05f; 
-            RobotStateAPI myRobot = api.MyRobot;
-            RobotStateAPI enemyRobot = api.EnemyRobot;
+            SumoBotAPI myRobot = api.MyRobot;
+            SumoBotAPI enemyRobot = api.EnemyRobot;
 
             if (myRobot.LinearVelocity.magnitude - speedColThreshold > enemyRobot.LinearVelocity.magnitude)
                 tempReward += 5f;
@@ -126,8 +126,8 @@ namespace SumoBot {
         public override void OnBotUpdate()
         {
             ClearCommands();
-            RobotStateAPI myRobot = api.MyRobot;
-            RobotStateAPI enemyRobot = api.EnemyRobot;
+            SumoBotAPI myRobot = api.MyRobot;
+            SumoBotAPI enemyRobot = api.EnemyRobot;
 
             float[] currentState = GatherInputs(myRobot, enemyRobot);
 
@@ -187,7 +187,7 @@ namespace SumoBot {
         #endregion
 
         #region NN and RL methods
-        private float[] GatherInputs(RobotStateAPI myRobot, RobotStateAPI enemyRobot)
+        private float[] GatherInputs(SumoBotAPI myRobot, SumoBotAPI enemyRobot)
         {
             float[] inputs = new float[INPUT_SIZE];
 
@@ -239,7 +239,7 @@ namespace SumoBot {
             return actions;
         }
 
-        private void ExecuteActions(bool[] actions, RobotStateAPI myRobot)
+        private void ExecuteActions(bool[] actions, SumoBotAPI myRobot)
         {
             if (actions[0])
                 Enqueue(new AccelerateAction(InputType.Script));
@@ -257,7 +257,7 @@ namespace SumoBot {
                 Enqueue(new SkillAction(InputType.Script));
         }
 
-        private float CalculateReward(RobotStateAPI myRobot, RobotStateAPI enemyRobot, int actionTaken)
+        private float CalculateReward(SumoBotAPI myRobot, SumoBotAPI enemyRobot, int actionTaken)
         {
             float reward = 0f;
 

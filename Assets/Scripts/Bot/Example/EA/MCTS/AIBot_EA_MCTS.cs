@@ -5,7 +5,7 @@ using SumoCore;
 using SumoManager;
 using System;
 
-namespace SumoBot
+namespace SumoBot.EA.MCTS
 {
 
     [Serializable]
@@ -49,7 +49,6 @@ namespace SumoBot
         #endregion
 
         private SumoAPI api;
-
         public override void OnBotUpdate()
         {
 
@@ -65,7 +64,7 @@ namespace SumoBot
             Submit();
         }
 
-        public override void OnBattleStateChanged(BattleState state)
+        public override void OnBattleStateChanged(BattleState state, BattleWinner? winner)
         {
             currState = state;
 
@@ -77,9 +76,9 @@ namespace SumoBot
             }
         }
 
-        public override void OnBotCollision(EventParameter param)
+        public override void OnBotCollision(BounceEvent bounceEvent)
         {
-            if (side == param.Side)
+            if (side == bounceEvent.Actor)
                 lastActionsFromEnemy = null;
             else
                 lastActionsToEnemy = null;

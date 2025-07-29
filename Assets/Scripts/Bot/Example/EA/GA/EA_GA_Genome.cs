@@ -3,7 +3,7 @@ using System.Linq;
 using SumoCore;
 using UnityEngine;
 
-namespace SumoBot
+namespace SumoBot.EA.GA
 {
     [System.Serializable]
     public class AIBot_GA_Genome

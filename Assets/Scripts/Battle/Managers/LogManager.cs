@@ -6,7 +6,6 @@ using Newtonsoft.Json;
 using SumoBot;
 using SumoCore;
 using SumoHelper;
-using SumoLog;
 using UnityEngine;
 
 namespace SumoManager
@@ -17,6 +16,12 @@ namespace SumoManager
         Left,
         Right,
     }
+    public enum PeriodicState
+    {
+        Start,
+        Continues,
+        End,
+    }
 
     public class LogManager : MonoBehaviour
     {
@@ -25,6 +30,7 @@ namespace SumoManager
         public class BattleLog
         {
             public string BattleID;
+            public int CreatedAt;
             public string InputType;
             public float BattleTime;
             public float CountdownTime;
@@ -63,14 +69,13 @@ namespace SumoManager
         [Serializable]
         public class EventLog
         {
-            public string LoggedAt;
             public float StartedAt;
             public float UpdatedAt;
             public string Actor;
             public string Target;
             public float Duration;
             public string Category;
-            public bool IsStart;
+            public PeriodicState State;
 
             public Dictionary<string, object> Data = new();
 
@@ -125,23 +130,41 @@ namespace SumoManager
 
         // Some actions maybe still hanging when the state is already ended, (e.g. dash and skill).
         // Therefore, we need manually add to stack
-        public static void FlushActionLog()
+        public static void FlushActionLog(
+            PlayerSide? side = null,
+            ISumoAction action = null,
+            bool isContinues = false)
         {
-            foreach (EventLogger actionLogger in ActionLoggers[PlayerSide.Left].Values)
+            if (side != null && action != null)
             {
-                actionLogger.ForceStopAndSave();
+                // Stop specific [action] from specific [side]
+                if (ActionLoggers[(PlayerSide)side].TryGetValue(action.Type, out EventLogger actionLogger))
+                {
+                    if (isContinues)
+                        actionLogger.Kill();
+                    else
+                        actionLogger.ForceStopAndSave();
+                }
             }
-            foreach (EventLogger actionLogger in ActionLoggers[PlayerSide.Right].Values)
+            else if (side != null)
             {
-                actionLogger.ForceStopAndSave();
+                // Stop all actions from specific [side]
+                foreach (EventLogger actionLogger in ActionLoggers[(PlayerSide)side].Values)
+                {
+                    actionLogger.ForceStopAndSave();
+                }
             }
-        }
-
-        public static void FlushActionLog(PlayerSide side, ISumoAction action)
-        {
-            if (ActionLoggers[side].TryGetValue(action.Type, out EventLogger actionLogger))
+            else
             {
-                actionLogger.ForceStopAndSave();
+                // Stop all actions from all sides
+                foreach (EventLogger actionLogger in ActionLoggers[PlayerSide.Left].Values)
+                {
+                    actionLogger.ForceStopAndSave();
+                }
+                foreach (EventLogger actionLogger in ActionLoggers[PlayerSide.Right].Values)
+                {
+                    actionLogger.ForceStopAndSave();
+                }
             }
         }
 
@@ -155,12 +178,15 @@ namespace SumoManager
                 }
         }
 
-        public static void CallActionLog(PlayerSide side, ISumoAction action)
+        public static void CallActionLog(
+            PlayerSide side,
+            ISumoAction action,
+            PeriodicState state = PeriodicState.Start)
         {
             if (BattleManager.Instance.CurrentState == BattleState.Battle_Ongoing)
             {
                 EventLogger actionLog = ActionLoggers[side][action.Type];
-                actionLog.Call(action);
+                actionLog.Call(action, state);
             }
         }
         #endregion
@@ -188,7 +214,8 @@ namespace SumoManager
                 BattleTime = battleManager.BattleTime,
                 RoundType = (int)battleManager.RoundSystem,
                 SimulationAmount = simAmount,
-                SimulationTimeScale = simTimeScale
+                SimulationTimeScale = simTimeScale,
+                CreatedAt = (int)DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
             };
 
             SaveBattle();
@@ -210,13 +237,13 @@ namespace SumoManager
                 RoundLog currRound = GetCurrentRound();
                 if (currRound != null)
                 {
-                    Log.LeftPlayerStats.ActionTaken += GetCurrentRound().PlayerEvents.FindAll((x) => x.Actor == "Left" && x.Category == "Action" && !x.IsStart).Count();
+                    Log.LeftPlayerStats.ActionTaken += GetCurrentRound().PlayerEvents.FindAll((x) => x.Actor == "Left" && x.Category == "Action" && (x.State != PeriodicState.End)).Count();
 
-                    Log.RightPlayerStats.ActionTaken += GetCurrentRound().PlayerEvents.FindAll((x) => x.Actor == "Right" && x.Category == "Action" && !x.IsStart).Count();
+                    Log.RightPlayerStats.ActionTaken += GetCurrentRound().PlayerEvents.FindAll((x) => x.Actor == "Right" && x.Category == "Action" && (x.State != PeriodicState.End)).Count();
 
-                    Log.LeftPlayerStats.ContactMade += GetCurrentRound().PlayerEvents.FindAll((x) => x.Actor == "Left" && x.Category == "Collision" && !x.IsStart).Count();
+                    Log.LeftPlayerStats.ContactMade += GetCurrentRound().PlayerEvents.FindAll((x) => x.Actor == "Left" && x.Category == "Collision" && (x.State != PeriodicState.End)).Count();
 
-                    Log.RightPlayerStats.ContactMade += GetCurrentRound().PlayerEvents.FindAll((x) => x.Actor == "Right" && x.Category == "Collision" && !x.IsStart).Count();
+                    Log.RightPlayerStats.ContactMade += GetCurrentRound().PlayerEvents.FindAll((x) => x.Actor == "Right" && x.Category == "Collision" && (x.State != PeriodicState.End)).Count();
                 }
             }
 
@@ -285,7 +312,7 @@ namespace SumoManager
             {
                 Log.Events.Add(new EventLog
                 {
-                    LoggedAt = DateTime.Now.ToString(),
+                    StartedAt = Time.time,
                     Actor = "System",
                     Data = data
                 });
@@ -297,7 +324,7 @@ namespace SumoManager
                 {
                     EventLog eventLog = new()
                     {
-                        LoggedAt = BattleManager.Instance.ElapsedTime.ToString(),
+                        StartedAt = BattleManager.Instance.ElapsedTime,
                         Actor = "System",
                         Data = data,
                     };
@@ -310,7 +337,7 @@ namespace SumoManager
             PlayerSide actor,
             PlayerSide? target = null,
             string category = "Action",
-            bool isStart = false,
+            PeriodicState state = PeriodicState.Start,
             float? startedAt = null,
             float? updatedAt = null,
             Dictionary<string, object> data = null)
@@ -320,14 +347,13 @@ namespace SumoManager
             {
                 EventLog eventLog = new()
                 {
-                    LoggedAt = BattleManager.Instance.ElapsedTime.ToString(),
                     Actor = actor.ToString(),
                     Target = target.ToString() ?? null,
                     Data = data,
-                    IsStart = isStart,
+                    State = state,
                     Category = category,
+                    StartedAt = startedAt != null ? (float)startedAt : BattleManager.Instance.ElapsedTime
                 };
-                eventLog.StartedAt = startedAt != null ? (float)startedAt : BattleManager.Instance.ElapsedTime;
                 eventLog.UpdatedAt = updatedAt != null ? (float)updatedAt : eventLog.UpdatedAt = BattleManager.Instance.ElapsedTime;
                 eventLog.Duration = eventLog.UpdatedAt - eventLog.StartedAt;
                 roundLog.PlayerEvents.Add(eventLog);

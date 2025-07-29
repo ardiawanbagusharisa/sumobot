@@ -73,14 +73,31 @@ namespace SumoInput
         #endregion
 
         #region Input methods
-
-        public List<ISumoAction> FlushAction()
+        public List<ISumoAction> Flush()
         {
-            var result = actionQueue.ToList();
+            var list = actionQueue.ToList();
             actionQueue.Clear();
+
+            Dictionary<string, int> lastIndexMap = new();
+
+            for (int i = 0; i < list.Count; i++)
+            {
+                lastIndexMap[list[i].Name] = i;
+            }
+
+            List<ISumoAction> result = new();
+            for (int i = 0; i < list.Count; i++)
+            {
+                if (lastIndexMap[list[i].Name] == i)
+                {
+                    result.Add(list[i]);
+                }
+            }
+
             return result;
         }
-    
+
+
         // Applied for Live Command And AI Script
         public void EnqueueCommand(ISumoAction action)
         {

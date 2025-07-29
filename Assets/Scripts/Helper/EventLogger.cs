@@ -1,4 +1,3 @@
-using System;
 using SumoCore;
 using SumoLog;
 using SumoManager;
@@ -13,7 +12,7 @@ namespace SumoHelper
         private float debounceTime;
         private float lastCallTime;
         private float startTime;
-        private CollisionLog collision;
+        public CollisionLog Collision;
         private readonly ActionLog action;
         private readonly SumoController controller;
 
@@ -27,7 +26,7 @@ namespace SumoHelper
             }
         }
 
-        public void Call(ISumoAction action)
+        public void Call(ISumoAction action, PeriodicState state = PeriodicState.Start)
         {
             if (!IsActive)
             {
@@ -39,34 +38,27 @@ namespace SumoHelper
                 this.action.Action = action;
                 this.action.Position = controller.RigidBody.position;
                 this.action.Rotation = controller.RigidBody.rotation;
-                this.action.LinearVelocity = controller.LastLinearVelocity;
+                this.action.LinearVelocity = controller.RigidBody.linearVelocity;
                 this.action.AngularVelocity = controller.RigidBody.angularVelocity;
 
-                SaveAction(true);
+                SaveAction(state);
             }
 
             lastCallTime = BattleManager.Instance.ElapsedTime;
         }
 
-        public void Call(CollisionLog collision = null)
+        public void Call()
         {
-            if (this.collision == null && collision != null)
+            if (Collision != null)
             {
-                this.collision = collision;
-                debounceTime = collision.LockDuration;
+                debounceTime = Collision.LockDuration;
             }
 
             if (!IsActive)
             {
                 IsActive = true;
                 startTime = BattleManager.Instance.ElapsedTime;
-
-                collision.Position = controller.RigidBody.position;
-                collision.Rotation = controller.RigidBody.rotation;
-                collision.LinearVelocity = controller.LastLinearVelocity;
-                collision.AngularVelocity = controller.RigidBody.angularVelocity;
-
-                SaveCollision(true);
+                SaveCollision(PeriodicState.Start);
             }
 
             lastCallTime = BattleManager.Instance.ElapsedTime;
@@ -74,14 +66,14 @@ namespace SumoHelper
 
         public void Update()
         {
-            if (IsActive && debounceTime != 0f && BattleManager.Instance.ElapsedTime - lastCallTime >= debounceTime)
+            if (IsActive && debounceTime != 0f && lastCallTime != 0f && BattleManager.Instance.ElapsedTime - lastCallTime >= debounceTime)
             {
                 IsActive = false;
 
                 if (action != null)
-                    SaveAction(false);
-                else if (collision != null)
-                    SaveCollision(false);
+                    SaveAction(PeriodicState.End);
+                else if (Collision != null)
+                    SaveCollision(PeriodicState.End);
             }
         }
 
@@ -93,49 +85,55 @@ namespace SumoHelper
             IsActive = false;
 
             if (action != null)
-                SaveAction(false);
-            if (collision != null)
-                SaveCollision(false);
+                SaveAction(PeriodicState.End);
+            if (Collision != null)
+                SaveCollision(PeriodicState.End);
         }
 
-        public void SaveAction(bool isStart = false)
+        public void Kill()
         {
-            if (!isStart)
+            IsActive = false;
+            debounceTime = 0;
+            startTime = 0;
+            lastCallTime = 0;
+        }
+
+        public void SaveAction(PeriodicState state = PeriodicState.Start)
+        {
+            if (state == PeriodicState.End)
             {
                 action.Rotation = controller.RigidBody.rotation;
                 action.Position = controller.RigidBody.position;
-                action.LinearVelocity = controller.LastLinearVelocity;
+                action.LinearVelocity = controller.RigidBody.linearVelocity;
                 action.AngularVelocity = controller.RigidBody.angularVelocity;
             }
 
             LogManager.LogPlayerEvents(
                 actor: controller.Side,
                 startedAt: startTime,
-                isStart: isStart,
+                state: state,
                 category: "Action",
                 data: action.ToMap()
             );
         }
 
-        public void SaveCollision(bool isStart = false)
+        public void SaveCollision(PeriodicState state = PeriodicState.Start)
         {
-            Debug.Log("SaveCollision");
-
             PlayerSide? target = null;
 
-            if (!isStart)
+            if (state == PeriodicState.End)
             {
-                collision.Rotation = controller.RigidBody.rotation;
-                collision.Position = controller.RigidBody.position;
-                collision.LinearVelocity = controller.LastLinearVelocity;
-                collision.AngularVelocity = controller.RigidBody.angularVelocity;
+                Collision.Rotation = controller.RigidBody.rotation;
+                Collision.Position = controller.RigidBody.position;
+                Collision.LinearVelocity = controller.RigidBody.linearVelocity;
+                Collision.AngularVelocity = controller.RigidBody.angularVelocity;
 
                 float duration = BattleManager.Instance.ElapsedTime - startTime;
-                collision.Duration = duration;
+                Collision.Duration = duration;
             }
             else
             {
-                if (collision.IsActor)
+                if (Collision.IsActor)
                 {
                     if (controller.Side == PlayerSide.Left)
                         target = PlayerSide.Right;
@@ -150,9 +148,9 @@ namespace SumoHelper
                 actor: controller.Side,
                 target: target,
                 startedAt: startTime,
-                isStart: isStart,
+                state: state,
                 category: "Collision",
-                data: collision.ToMap()
+                data: Collision.ToMap()
             );
         }
 
@@ -162,7 +160,7 @@ namespace SumoHelper
             {
                 Rotation = controller.RigidBody.rotation,
                 Position = controller.RigidBody.position,
-                LinearVelocity = controller.LastLinearVelocity,
+                LinearVelocity = controller.RigidBody.linearVelocity,
                 AngularVelocity = controller.RigidBody.angularVelocity
             };
 
@@ -170,7 +168,7 @@ namespace SumoHelper
                 actor: controller.Side,
                 startedAt: time,
                 updatedAt: time,
-                isStart: false,
+                state: PeriodicState.Start,
                 category: customCategory,
                 data: new()
                 {

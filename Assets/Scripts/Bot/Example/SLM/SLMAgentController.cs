@@ -7,6 +7,7 @@ using SumoCore;
 using SumoManager;
 using SumoBot;
 using System.Threading.Tasks;
+using SumoLog;
 
 public class SLMAgentController : Bot
 {
@@ -19,7 +20,6 @@ public class SLMAgentController : Bot
     private float timer;
     private Queue<string> pendingActions;
     private SumoAPI api;
-    private BattleState currentState;
 
     public override string ID => "SLM";
 
@@ -34,16 +34,6 @@ public class SLMAgentController : Bot
         timer = 0f;
     }
 
-    public override void OnBotCollision(EventParameter param)
-    {
-
-    }
-
-    public override void OnBattleStateChanged(BattleState state)
-    {
-        currentState = state;
-    }
-
     public override void OnBotUpdate()
     {
         RunSLM();
@@ -55,10 +45,6 @@ public class SLMAgentController : Bot
     void RunSLM()
     {
         if (!EnableSLM) return;
-
-
-        if (currentState != BattleState.Battle_Ongoing)
-            return;
 
         timer += Time.deltaTime;
         if (timer >= DecisionInterval)
@@ -235,6 +221,14 @@ public class SLMAgentController : Bot
     bool GetDashReady()
     {
         return !api.MyRobot.IsDashOnCooldown;
+    }
+
+    public override void OnBotCollision(BounceEvent bounceEvent)
+    {
+    }
+
+    public override void OnBattleStateChanged(BattleState state, BattleWinner? winner)
+    {
     }
     #endregion
 }
