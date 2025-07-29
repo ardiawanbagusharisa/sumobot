@@ -15649,7 +15649,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   BattleInputType: 1
   RoundSystem: 1
-  BattleTime: 60
+  BattleTime: 10
   CountdownTime: 3
   ActionInterval: 0.1
   StartPositions:
@@ -15775,8 +15775,8 @@ MonoBehaviour:
   Left: {fileID: 715032728}
   RightEnabled: 1
   Right: {fileID: 1709403126}
-  leftBotIndex: 1
-  rightBotIndex: 4
+  leftBotIndex: 0
+  rightBotIndex: 6
 --- !u!1 &2132169806
 GameObject:
   m_ObjectHideFlags: 0

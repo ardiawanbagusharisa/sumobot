@@ -438,7 +438,7 @@ namespace SumoManager
 
         public BattleWinner GetRoundWinner(int? roundNumber = null)
         {
-            if (Winners.TryGetValue(roundNumber ?? CurrentRound.RoundNumber, out SumoController winner))
+            if (Winners.TryGetValue(roundNumber ?? CurrentRound.RoundNumber, out SumoController winner) && winner != null)
             {
                 if (winner.Side == PlayerSide.Left)
                     return BattleWinner.Left;

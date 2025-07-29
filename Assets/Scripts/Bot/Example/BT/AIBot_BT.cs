@@ -54,12 +54,12 @@ namespace SumoBot
             Submit();
         }
 
-        public override void OnBotCollision(EventParameter param)
+        public override void OnBotCollision(BounceEvent param)
         {
             // Could integrate a temporary BT override for collision reaction
         }
 
-        public override void OnBattleStateChanged(BattleState state)
+        public override void OnBattleStateChanged(BattleState state, BattleWinner? winner)
         {
             // Optional resets or emergency logic
         }

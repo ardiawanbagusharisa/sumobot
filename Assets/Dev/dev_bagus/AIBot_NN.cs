@@ -81,7 +81,7 @@ namespace SumoBot {
             Debug.Log($"NN Bot Initialized. Side: {mySide}");
         }
 
-        public override void OnBattleStateChanged(BattleState state)
+        public override void OnBattleStateChanged(BattleState state, BattleWinner? winner)
         {
             BattleState currState = state;
             Debug.Log($"Battle State Changed: {state}");
@@ -98,12 +98,12 @@ namespace SumoBot {
             // to be a distinct episode, or only reset at Battle_End for continuous training across rounds.
         }
 
-        public override void OnBotCollision(EventParameter param)
+        public override void OnBotCollision(BounceEvent param)
         {
             // Reward for collision 
             float speedColThreshold = 0.1f; 
-            RobotStateAPI myRobot = api.MyRobot;
-            RobotStateAPI enemyRobot = api.EnemyRobot;
+            SumoBotAPI myRobot = api.MyRobot;
+            SumoBotAPI enemyRobot = api.EnemyRobot;
 
             if (myRobot.LinearVelocity.magnitude - speedColThreshold > enemyRobot.LinearVelocity.magnitude)
                 tempReward -= 0.5f;
@@ -118,8 +118,8 @@ namespace SumoBot {
         public override void OnBotUpdate()
         {
             ClearCommands();
-            RobotStateAPI myRobot = api.MyRobot;
-            RobotStateAPI enemyRobot = api.EnemyRobot;
+            SumoBotAPI myRobot = api.MyRobot;
+            SumoBotAPI enemyRobot = api.EnemyRobot;
 
             float[] currentState = GatherInputs(myRobot, enemyRobot);
 
@@ -168,7 +168,7 @@ namespace SumoBot {
         #endregion
 
         #region NN and RL methods
-        private float[] GatherInputs(RobotStateAPI myRobot, RobotStateAPI enemyRobot)
+        private float[] GatherInputs(SumoBotAPI myRobot, SumoBotAPI enemyRobot)
         {
             float[] inputs = new float[INPUT_SIZE];
 
@@ -221,7 +221,7 @@ namespace SumoBot {
             }
         }
 
-        private void ExecuteAction(int action, RobotStateAPI myRobot)
+        private void ExecuteAction(int action, SumoBotAPI myRobot)
         {
             switch (action)
             {
@@ -245,7 +245,7 @@ namespace SumoBot {
             }
         }
 
-        private float CalculateReward(RobotStateAPI myRobot, RobotStateAPI enemyRobot, int actionTaken)
+        private float CalculateReward(SumoBotAPI myRobot, SumoBotAPI enemyRobot, int actionTaken)
         {
             // Reward & penalty settings 
             float reward = 0f;
