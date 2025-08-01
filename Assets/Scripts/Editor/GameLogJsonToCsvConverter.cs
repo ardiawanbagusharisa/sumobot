@@ -104,24 +104,45 @@ namespace SumoEditor
                                 ["RoundWinner"] = gameWinner == "Draw" ? "2" : gameWinner == "Left" ? "0" : "1",
                                 ["RoundTimestamp"] = roundTimestamp,
 
-                                ["LoggedAt"] = eventLog?["LoggedAt"]?.ToString(),
                                 ["StartedAt"] = eventLog?["StartedAt"]?.ToString(),
                                 ["UpdatedAt"] = eventLog?["UpdatedAt"]?.ToString(),
                                 ["Actor"] = eventLog?["Actor"]?.ToString() == "Left" ? "0" : "1",
                                 ["Target"] = eventLog?["Target"]?.ToString() == "Left" ? "0" : "1",
                                 ["Category"] = eventLog?["Category"]?.ToString(),
-                                ["IsStart"] = ((bool?)eventLog?["IsStart"] == true ? 1 : 0).ToString(),
+                                ["State"] = eventLog?["State"].ToString(),
                             };
 
-                            var data = eventLog?["Data"]?["Robot"];
-                            if (data != null)
+                            var act = eventLog?["Data"];
+                            if (act != null)
                             {
-                                row["PosX"] = data["Position"]?["X"]?.ToString();
-                                row["PosY"] = data["Position"]?["Y"]?.ToString();
-                                row["LinvX"] = data["LinearVelocity"]?["X"]?.ToString();
-                                row["LinvY"] = data["LinearVelocity"]?["Y"]?.ToString();
-                                row["Angv"] = data["AngularVelocity"]?.ToString();
-                                row["Rot"] = data["Rotation"]?["Z"]?.ToString();
+                                row["Name"] = act["Name"]?.ToString();
+                                row["Duration"] = act["Duration"]?.ToString();
+
+                                var robot = act?["Robot"];
+                                if (robot != null)
+                                {
+                                    row["BotPosX"] = robot["Position"]?["X"]?.ToString();
+                                    row["BotPosY"] = robot["Position"]?["Y"]?.ToString();
+                                    row["BotLinv"] = robot["LinearVelocity"]?.ToString();
+                                    row["BotAngv"] = robot["AngularVelocity"]?.ToString();
+                                    row["BotRot"] = robot["Rotation"]?.ToString();
+                                    row["BotIsDashActive"] = (bool)robot["IsDashActive"] == true ? "1" : "0";
+                                    row["BotIsSkillActive"] = (bool)robot["IsSkillActive"] == true ? "1" : "0";
+                                    row["BotIsOutFromArena"] = (bool)robot["IsOutFromArena"] == true ? "1" : "0";
+                                }
+
+                                var enemyRobot = act?["EnemyRobot"];
+                                if (enemyRobot != null)
+                                {
+                                    row["EnemyBotPosX"] = enemyRobot["Position"]?["X"]?.ToString();
+                                    row["EnemyBotPosY"] = enemyRobot["Position"]?["Y"]?.ToString();
+                                    row["EnemyBotLinv"] = enemyRobot["LinearVelocity"]?.ToString();
+                                    row["EnemyBotAngv"] = enemyRobot["AngularVelocity"]?.ToString();
+                                    row["EnemyBotRot"] = enemyRobot["Rotation"]?.ToString();
+                                    row["EnemyBotIsDashActive"] = (bool)enemyRobot["IsDashActive"] == true ? "1" : "0";
+                                    row["EnemyBotIsSkillActive"] = (bool)enemyRobot["IsSkillActive"] == true ? "1" : "0";
+                                    row["EnemyBotIsOutFromArena"] = (bool)enemyRobot["IsOutFromArena"] == true ? "1" : "0";
+                                }
                             }
 
                             if (eventLog?["Category"]?.ToString() == "Collision")
@@ -129,20 +150,37 @@ namespace SumoEditor
                                 var collisionData = eventLog["Data"];
 
                                 // Actor
-                                row["ColIsActor"] = collisionData?["IsActor"]?.ToString();
+                                row["ColActor"] = collisionData?["IsActor"]?.ToString();
                                 row["ColImpact"] = collisionData?["Impact"]?.ToString();
+                                row["ColTieBreaker"] = collisionData?["IsTieBreaker"]?.ToString();
                                 row["ColLockDuration"] = collisionData?["LockDuration"]?.ToString();
-                                row["ColDuration"] = collisionData?["Duration"]?.ToString();
-                            }
-                            else if (eventLog?["Category"]?.ToString() == "Action")
-                            {
-                                var actionData = eventLog["Data"];
 
-                                // Actor
-                                row["ActName"] = actionData?["Name"]?.ToString();
-                                row["ActParam"] = actionData?["Parameter"]?.ToString();
-                                row["ActReason"] = actionData?["Reason"]?.ToString();
-                                row["ActDuration"] = actionData?["Duration"]?.ToString();
+                                var colRobot = collisionData?["Robot"];
+                                if (colRobot != null)
+                                {
+                                    row["ColBotPosX"] = colRobot["Position"]?["X"]?.ToString();
+                                    row["ColBotPosY"] = colRobot["Position"]?["Y"]?.ToString();
+                                    row["ColBotLinv"] = colRobot["LinearVelocity"]?.ToString();
+                                    row["ColBotAngv"] = colRobot["AngularVelocity"]?.ToString();
+                                    row["ColBotRot"] = colRobot["Rotation"]?.ToString();
+                                    row["ColBotIsDashActive"] = (bool)colRobot["IsDashActive"] == true ? "1" : "0";
+                                    row["ColBotIsSkillActive"] = (bool)colRobot["IsSkillActive"] == true ? "1" : "0";
+                                    row["ColBotIsOutFromArena"] = (bool)colRobot["IsOutFromArena"] == true ? "1" : "0";
+                                }
+
+                                var colEnemyRobot = collisionData?["EnemyRobot"];
+                                if (colEnemyRobot != null)
+                                {
+                                    row["ColEnemyBotPosX"] = colEnemyRobot["Position"]?["X"]?.ToString();
+                                    row["ColEnemyBotPosY"] = colEnemyRobot["Position"]?["Y"]?.ToString();
+                                    row["ColEnemyBotLinv"] = colEnemyRobot["LinearVelocity"]?.ToString();
+                                    row["ColEnemyBotAngv"] = colEnemyRobot["AngularVelocity"]?.ToString();
+                                    row["ColEnemyBotRot"] = colEnemyRobot["Rotation"]?.ToString();
+                                    row["ColEnemyBotIsDashActive"] = (bool)colEnemyRobot["IsDashActive"] == true ? "1" : "0";
+                                    row["ColEnemyBotIsSkillActive"] = (bool)colEnemyRobot["IsSkillActive"] == true ? "1" : "0";
+                                    row["ColEnemyBotIsOutFromArena"] = (bool)colEnemyRobot["IsOutFromArena"] == true ? "1" : "0";
+                                }
+
                             }
 
                             csvRows.Add(row);

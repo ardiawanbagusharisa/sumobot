@@ -28,15 +28,19 @@ namespace SumoCore
 
         #region Physics Stats Properties
         [Header("Physics Stats")]
+
         public float StopDelay = 0.5f;
         public float AngularStopDelay = 0.5f;
         public float StopTreshold = 0.1f;
         public float SlowDownRate = 2.0f;
+
+        // Bounce
         public float Torque = 0.2f;
         public float TurnRate = 0.3f;
         public float BounceResistance = 1f;
         public float LockActorMultiplier = 0.95f;
         public float CollisionBaseForce = 4f;
+        public float TieBreakerLockDuration = 0.8f;
         #endregion
 
         #region General Properties
@@ -56,7 +60,7 @@ namespace SumoCore
         private float reserverdBounceResistance;
         public Rigidbody2D RigidBody;
         private float moveLockTime = 0f;
-        private bool isOutOfArena = false;
+        public bool IsOutOfArena = false;
         private EventLogger collisionLogger;
         private float time => BattleManager.Instance.ElapsedTime;
 
@@ -140,10 +144,10 @@ namespace SumoCore
 
         void OnTriggerExit2D(Collider2D collision)
         {
-            if (collision.CompareTag("Arena/Floor") && !isOutOfArena)
+            if (collision.CompareTag("Arena/Floor") && !IsOutOfArena)
             {
+                IsOutOfArena = true;
                 Events[OnOutOfArena]?.Invoke(new EventParameter(sideParam: Side));
-                isOutOfArena = true;
             }
         }
         #endregion
@@ -171,7 +175,7 @@ namespace SumoCore
         public void Reset()
         {
             StopOngoingAction();
-            isOutOfArena = false;
+            IsOutOfArena = false;
             transform.position = StartPosition;
             transform.rotation = StartRotation;
             RigidBody.linearVelocity = Vector2.zero;
@@ -319,21 +323,29 @@ namespace SumoCore
             DashSpeed = reservedDashSpeed;
         }
 
-        public float LockMovement(bool isActor, float myImpact, float enemyImpact)
+        public float LockMovement(bool isActor, float myImpact, float enemyImpact, bool isTieBreaker)
         {
-            if (Skill.Type == SkillType.Stone && Skill.IsActive)
+            float lockDuration;
+            if (isTieBreaker)
             {
-                return 0;
+                lockDuration = TieBreakerLockDuration;
+            }
+            else
+            {
+                if (Skill.Type == SkillType.Stone && Skill.IsActive)
+                {
+                    return 0;
+                }
+
+                lockDuration = Mathf.Clamp01((myImpact + enemyImpact) / 2);
+
+                if (isActor)
+                    lockDuration *= LockActorMultiplier;
+                else
+                    lockDuration *= 1f + (1f - LockActorMultiplier);
+
             }
 
-            float avgImpact = Mathf.Clamp01((myImpact + enemyImpact) / 2);
-            float lockDuration = avgImpact;
-            if (isActor)
-                lockDuration *= LockActorMultiplier;
-            else
-                lockDuration *= 1f + (1f - LockActorMultiplier);
-
-            collisionLogger.Collision.LockDuration = lockDuration;
             moveLockTime = Mathf.Max(moveLockTime, lockDuration);
 
             return lockDuration;
@@ -355,85 +367,84 @@ namespace SumoCore
             const float compareThreshold = 0.001f;
             bool isTieBreaker = Mathf.Abs(actorVelocity - enemyVelocity) < compareThreshold;
 
-            // Decide who is faster, if the velocity reaching equal, use the instance id
-            bool isThisActor = actorVelocity > enemyVelocity || (isTieBreaker && GetInstanceID() > enemyRobot.GetInstanceID());
+            // Decide who is handling the bounce logic, if the velocity reaching equal, use the instance id
+            bool isActor = actorVelocity > enemyVelocity || (isTieBreaker && GetInstanceID() > enemyRobot.GetInstanceID());
 
             StopOngoingAction();
             LogManager.FlushActionLog(Side);
 
-            if (!isThisActor) return;
+            if (!isActor) return;
 
-            var actorLog = CreateCollisionLog();
-            var enemyLog = enemyRobot.CreateCollisionLog();
+            EventLogger actorEventLog = EventLogger.CreateCollisionLog(this, enemyRobot);
+            EventLogger targetEventLog = EventLogger.CreateCollisionLog(enemyRobot, this);
 
-            float actorImpact = Bounce(collisionNormal, enemyVelocity, actorVelocity, enemyRobot);
-            float targetImpact = enemyRobot.Bounce(-collisionNormal, actorVelocity, enemyVelocity, this);
+            // Initially set stat of [actor] and [target]
+            actorEventLog.SetState();
+            targetEventLog.SetState();
 
-            float actorLockDuration = LockMovement(true, actorImpact, targetImpact);
-            float targetLockDuration = enemyRobot.LockMovement(false, targetImpact, actorImpact);
+            float actorImpact = Bounce(collisionNormal, enemyVelocity, actorVelocity, enemyRobot, isTieBreaker);
+            float targetImpact = enemyRobot.Bounce(-collisionNormal, actorVelocity, enemyVelocity, this, isTieBreaker);
 
-            actorLog.IsActor = true;
-            actorLog.IsTieBreaker = isTieBreaker;
-            actorLog.Impact = actorImpact;
-            actorLog.LockDuration = actorLockDuration;
+            float actorLockDuration = LockMovement(true, actorImpact, targetImpact, isTieBreaker);
+            float targetLockDuration = enemyRobot.LockMovement(false, targetImpact, actorImpact, isTieBreaker);
 
-            enemyLog.IsActor = false;
-            enemyLog.IsTieBreaker = isTieBreaker;
-            enemyLog.Impact = targetImpact;
-            enemyLog.LockDuration = targetLockDuration;
+            CollisionLog actorColLog = actorEventLog.Collision;
+            CollisionLog targetColLog = targetEventLog.Collision;
 
-            collisionLogger.Collision = actorLog;
-            enemyRobot.collisionLogger.Collision = enemyLog;
+            actorColLog.IsActor = true;
+            actorColLog.IsTieBreaker = isTieBreaker;
+            actorColLog.Impact = actorImpact;
+            actorColLog.LockDuration = actorLockDuration;
 
-            BounceEvent actorBounceEvent = new(Side, actorLog, enemyLog);
+            targetColLog.IsActor = false;
+            targetColLog.IsTieBreaker = isTieBreaker;
+            targetColLog.Impact = targetImpact;
+            targetColLog.LockDuration = targetLockDuration;
+
+            collisionLogger = actorEventLog;
+            enemyRobot.collisionLogger = targetEventLog;
+
+            BounceEvent actorBounceEvent = new(Side, actorColLog, targetColLog);
             Events[OnBounce].Invoke(new(bounceInfoParam: actorBounceEvent));
 
-            BounceEvent targetBounceEvent = new(Side, enemyLog, actorLog);
+            BounceEvent targetBounceEvent = new(Side, targetColLog, actorColLog);
             enemyRobot.Events[OnBounce].Invoke(new(bounceInfoParam: targetBounceEvent));
 
             collisionLogger.Call();
             enemyRobot.collisionLogger.Call();
 
-            Debug.Log($"[BounceRule]\nActor=>{Side},Target=>{enemyRobot.Side}\nActorVelocity=>{actorVelocity},TargetVelocity=>{enemyVelocity}\nActorCurrentSkill=> {Skill.Type} isActive:{Skill.IsActive}, TargetCurrentSkill=>{enemyRobot.Skill.Type} isActive: {enemyRobot.Skill.IsActive} \nActorImpact=>{actorImpact}, TargetImpact=>{targetImpact}\nActorLock=>{actorLockDuration}, TargetLock=>{targetLockDuration}");
+            Debug.Log($"[BounceRule] - IsTieBreaker ({isTieBreaker})\nActor=>{Side},Target=>{enemyRobot.Side}\nActorVelocity=>{actorVelocity},TargetVelocity=>{enemyVelocity}\nActorCurrentSkill=> {Skill.Type} isActive:{Skill.IsActive}, TargetCurrentSkill=>{enemyRobot.Skill.Type} isActive: {enemyRobot.Skill.IsActive} \nActorImpact=>{actorImpact}, TargetImpact=>{targetImpact}\nActorLock=>{actorLockDuration}, TargetLock=>{targetLockDuration}");
 
         }
 
-        public CollisionLog CreateCollisionLog()
-        {
-            collisionLogger = new(this, forceSave: false, isAction: false)
-            {
-                Collision = new()
-                {
-                    Position = RigidBody.position,
-                    Rotation = RigidBody.rotation,
-                    LinearVelocity = RigidBody.linearVelocity,
-                    AngularVelocity = RigidBody.angularVelocity,
-                    IsDashActive = IsDashActive,
-                    IsSkillActive = Skill.IsActive,
-                }
-            };
-            return collisionLogger.Collision;
-
-        }
-
-        public float Bounce(Vector2 direction, float enemyVelocity, float myVelocity, SumoController enemy)
+        public float Bounce(Vector2 direction, float enemyVelocity, float myVelocity, SumoController enemy, bool isTieBreaker)
         {
             float total = enemyVelocity + myVelocity;
-            float impact = CollisionBaseForce * enemyVelocity / total;
+
+            float impact;
             float torque;
 
-            if (enemy.Skill.Type == SkillType.Stone && enemy.Skill.IsActive)
-                impact = myVelocity / total;
-
-            impact *= enemy.BounceResistance;
-
-            if (Skill.Type == SkillType.Stone && Skill.IsActive)
+            if (isTieBreaker)
             {
-                torque = 0;
-                impact = 0;
+                impact = CollisionBaseForce;
+                torque = impact;
             }
             else
-                torque = impact;
+            {
+                impact = CollisionBaseForce * enemyVelocity / total;
+
+                if (enemy.Skill.Type == SkillType.Stone && enemy.Skill.IsActive)
+                    impact = myVelocity / total;
+
+                impact *= enemy.BounceResistance;
+
+                if (Skill.Type == SkillType.Stone && Skill.IsActive)
+                {
+                    torque = 0;
+                }
+                else
+                    torque = impact;
+            }
 
             if (torque > 0 && impact > 0)
             {
@@ -446,7 +457,6 @@ namespace SumoCore
                 RigidBody.angularVelocity = 0;
             }
 
-            collisionLogger.Collision.Impact = impact;
             return impact;
         }
 
