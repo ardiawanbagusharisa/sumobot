@@ -7,7 +7,7 @@ namespace SumoHelper
     public class BattleSimulator : MonoBehaviour
     {
         public int TotalSimulations = 5;
-        public float TimeScale = 5f;
+        public float TimeScale = 1f;
         public bool SimulationOnStart = false;
 
         void Start()

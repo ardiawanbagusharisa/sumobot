@@ -90,7 +90,10 @@ namespace SumoBot
             Vector2? targetPos = null,
             bool normalized = false)
         {
-            Vector2 facingDir = Quaternion.Euler(0, 0, oriRot ?? MyRobot.Rotation) * Vector2.up;
+            var zRot = oriRot ?? MyRobot.Rotation % 360f;
+            if (zRot < 0) zRot += 360f;
+
+            Vector2 facingDir = Quaternion.Euler(0, 0, zRot) * Vector2.up;
             Vector2 toTarget = Distance(oriPos, targetPos).normalized;
 
             float signedAngle = Vector2.SignedAngle(facingDir, toTarget);
@@ -116,7 +119,8 @@ namespace SumoBot
         {
             SumoBotAPI robot = isEnemy ? EnemyRobot : MyRobot;
             Vector2 position = robot.Position;
-            float rotation = robot.Rotation;
+            float rotation = robot.Rotation % 360;
+            if (rotation < 0) rotation += 360f;
 
             if (action is TurnAction)
             {
