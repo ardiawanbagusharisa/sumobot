@@ -56,7 +56,6 @@ namespace SumoBot
             }
         }
 
-
         public void OnBattleStateChanged(EventParameter param)
         {
             if (!BotEnabled || !enabled)
@@ -121,11 +120,26 @@ namespace SumoBot
             if (LeftEnabled && Left != null && controller.Side == PlayerSide.Left)
             {
                 controller.Events[SumoController.OnBounce].Unsubscribe(OnLeftBounce);
+                Left.OnBotDestroy();
             }
 
             if (RightEnabled && Right != null && controller.Side == PlayerSide.Right)
             {
                 controller.Events[SumoController.OnBounce].Unsubscribe(OnRightBounce);
+                Right.OnBotDestroy();
+            }
+        }
+
+        void OnDestroy()
+        {
+            if (LeftEnabled && Left != null)
+            {
+                Left.OnBotDestroy();
+            }
+
+            if (RightEnabled && Right != null)
+            {
+                Right.OnBotDestroy();
             }
         }
 

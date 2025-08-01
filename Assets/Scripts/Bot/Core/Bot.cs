@@ -61,6 +61,8 @@ namespace SumoBot
         {
             actions.Clear();
         }
+
+        public virtual void OnBotDestroy() { }
         #endregion
     }
 }

@@ -4958,6 +4958,14 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 621552808}
     m_Modifications:
+    - target: {fileID: 934423392390313545, guid: e48db3198e16346af866a9419a1964cc, type: 3}
+      propertyPath: m_SortingLayer
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 934423392390313545, guid: e48db3198e16346af866a9419a1964cc, type: 3}
+      propertyPath: m_SortingLayerID
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 1488574921577525681, guid: e48db3198e16346af866a9419a1964cc, type: 3}
       propertyPath: m_Name
       value: Left
@@ -5028,6 +5036,14 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8581006012013900821, guid: e48db3198e16346af866a9419a1964cc, type: 3}
       propertyPath: m_Simulated
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8581006012013900821, guid: e48db3198e16346af866a9419a1964cc, type: 3}
+      propertyPath: m_SleepingMode
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8581006012013900821, guid: e48db3198e16346af866a9419a1964cc, type: 3}
+      propertyPath: m_CollisionDetection
       value: 1
       objectReference: {fileID: 0}
     m_RemovedComponents: []
@@ -12747,11 +12763,11 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 934423392390313545, guid: e48db3198e16346af866a9419a1964cc, type: 3}
       propertyPath: m_SortingLayer
-      value: 2
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 934423392390313545, guid: e48db3198e16346af866a9419a1964cc, type: 3}
       propertyPath: m_SortingLayerID
-      value: -353056759
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1335788416037175078, guid: e48db3198e16346af866a9419a1964cc, type: 3}
       propertyPath: m_Enabled
@@ -12900,6 +12916,14 @@ PrefabInstance:
     - target: {fileID: 5583292103176566768, guid: e48db3198e16346af866a9419a1964cc, type: 3}
       propertyPath: Skill.StoneMultiplier
       value: 7
+      objectReference: {fileID: 0}
+    - target: {fileID: 8581006012013900821, guid: e48db3198e16346af866a9419a1964cc, type: 3}
+      propertyPath: m_SleepingMode
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8581006012013900821, guid: e48db3198e16346af866a9419a1964cc, type: 3}
+      propertyPath: m_CollisionDetection
+      value: 1
       objectReference: {fileID: 0}
     m_RemovedComponents:
     - {fileID: 7192337878665551969, guid: e48db3198e16346af866a9419a1964cc, type: 3}
@@ -15657,7 +15681,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   BattleInputType: 1
   RoundSystem: 3
-  BattleTime: 5
+  BattleTime: 60
   CountdownTime: 0.1
   ActionInterval: 0.1
   StartPositions:
@@ -15765,7 +15789,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   TotalSimulations: 500
-  TimeScale: 2
+  TimeScale: 10
   SimulationOnStart: 1
 --- !u!114 &2130233545
 MonoBehaviour:
@@ -15783,8 +15807,8 @@ MonoBehaviour:
   Left: {fileID: 715032728}
   RightEnabled: 1
   Right: {fileID: 1709403126}
-  leftBotIndex: 4
-  rightBotIndex: 4
+  leftBotIndex: 8
+  rightBotIndex: 1
 --- !u!1 &2132169806
 GameObject:
   m_ObjectHideFlags: 0
