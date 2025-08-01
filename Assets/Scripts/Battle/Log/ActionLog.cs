@@ -8,7 +8,7 @@ using UnityEngine;
 
 namespace SumoLog
 {
-    public class ActionLog : BaseLog
+    public class ActionLog : RobotLog
     {
         [DoNotSerialize]
         public ISumoAction Action;
@@ -20,34 +20,32 @@ namespace SumoLog
                 { "Name", Action.Name},
                 { "Duration", Action.Duration},
                 { "Reason", Action.Reason},
-                { "Robot", base.ToMap()},
+
+                { "Robot", Robot.ToMap()},
+                { "EnemyRobot", EnemyRobot.ToMap()},
             };
         }
         public static new ActionLog FromMap(Dictionary<string, object> map)
         {
             var robot = (JObject)map["Robot"];
-            Vector2 tempLinearVelocity = new((float)(double)robot["LinearVelocity"]["X"], (float)(double)robot["LinearVelocity"]["Y"]);
-            Vector2 temPosition = new((float)(double)robot["Position"]["X"], (float)(double)robot["LinearVelocity"]["Y"]);
+            var enemyRobot = (JObject)map["EnemyRobot"];
 
             var name = (string)map?["Name"];
-            var angle = (float?)(double?)map?["Angle"] ?? null;
             var duration = (float?)(double?)map?["Duration"] ?? 0f;
 
-            Debug.Log($"{name} | {duration} | {angle}");
+            Debug.Log($"{name} | {duration}");
             ActionLog result = new()
             {
-                Action = ActionFactory.Parse(name, duration, angle),
-                AngularVelocity = (float)robot?["AngularVelocity"],
-                LinearVelocity = tempLinearVelocity,
-                Position = temPosition,
-                Rotation = (float)(double)robot?["Rotation"]?["Z"]
+                Action = ActionFactory.Parse(name, duration),
+                Robot = BaseLog.FromObject(robot),
+                EnemyRobot = BaseLog.FromObject(enemyRobot)
             };
             return result;
         }
 
         public static class ActionFactory
         {
-            public static ISumoAction Parse(string name, float duration, float? angle)
+            public static ISumoAction Parse(string name, float duration)
             {
                 if (string.IsNullOrEmpty(name))
                     return null;
