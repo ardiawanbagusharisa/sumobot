@@ -72,7 +72,7 @@ class AIBot_ML_LSTM : Bot
     public void RunLSTM(float[] inputs)
     {
 
-        Tensor<float> inputTensor = new(new TensorShape(5, 6), inputs);
+        Tensor<float> inputTensor = new(new TensorShape(1, 5, 6), inputs);
 
         engine.Schedule(inputTensor);
 
