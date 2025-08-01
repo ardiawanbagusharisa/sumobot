@@ -1,7 +1,7 @@
+using NUnit.Framework;
 using SumoCore;
 using SumoLog;
 using SumoManager;
-using UnityEngine;
 
 namespace SumoHelper
 {
@@ -15,33 +15,39 @@ namespace SumoHelper
         public CollisionLog Collision;
         private readonly ActionLog action;
         private readonly SumoController controller;
+        private readonly SumoController enemyController = null;
 
-        public EventLogger(SumoController controller, bool forceSave = true, bool isAction = true)
+        public EventLogger(SumoController controller, SumoController enemyController = null, bool forceSave = true, bool isAction = true)
         {
             this.controller = controller;
+            this.enemyController = enemyController;
             ForceSave = forceSave;
             if (isAction)
             {
                 action = new();
             }
+            else
+            {
+                Collision = new();
+                SetState();
+            }
+        }
+
+        public static EventLogger CreateCollisionLog(SumoController controller, SumoController enemyController)
+        {
+            return new(controller, enemyController, forceSave: false, isAction: false);
         }
 
         public void Call(ISumoAction action, PeriodicState state = PeriodicState.Start)
         {
             if (!IsActive)
             {
+                this.action.Action = action;
                 debounceTime = action.Duration;
+                startTime = BattleManager.Instance.ElapsedTime;
+                SaveAction(state);
 
                 IsActive = true;
-                startTime = BattleManager.Instance.ElapsedTime;
-
-                this.action.Action = action;
-                this.action.Position = controller.RigidBody.position;
-                this.action.Rotation = controller.RigidBody.rotation;
-                this.action.LinearVelocity = controller.RigidBody.linearVelocity;
-                this.action.AngularVelocity = controller.RigidBody.angularVelocity;
-
-                SaveAction(state);
             }
 
             lastCallTime = BattleManager.Instance.ElapsedTime;
@@ -56,9 +62,10 @@ namespace SumoHelper
 
             if (!IsActive)
             {
+                SaveCollision(PeriodicState.Start);
+
                 IsActive = true;
                 startTime = BattleManager.Instance.ElapsedTime;
-                SaveCollision(PeriodicState.Start);
             }
 
             lastCallTime = BattleManager.Instance.ElapsedTime;
@@ -66,6 +73,8 @@ namespace SumoHelper
 
         public void Update()
         {
+            if (Collision == null) return;
+
             if (IsActive && debounceTime != 0f && lastCallTime != 0f && BattleManager.Instance.ElapsedTime - lastCallTime >= debounceTime)
             {
                 IsActive = false;
@@ -100,13 +109,7 @@ namespace SumoHelper
 
         public void SaveAction(PeriodicState state = PeriodicState.Start)
         {
-            if (state == PeriodicState.End)
-            {
-                action.Rotation = controller.RigidBody.rotation;
-                action.Position = controller.RigidBody.position;
-                action.LinearVelocity = controller.RigidBody.linearVelocity;
-                action.AngularVelocity = controller.RigidBody.angularVelocity;
-            }
+            SetState();
 
             LogManager.LogPlayerEvents(
                 actor: controller.Side,
@@ -123,17 +126,14 @@ namespace SumoHelper
 
             if (state == PeriodicState.End)
             {
-                Collision.Rotation = controller.RigidBody.rotation;
-                Collision.Position = controller.RigidBody.position;
-                Collision.LinearVelocity = controller.RigidBody.linearVelocity;
-                Collision.AngularVelocity = controller.RigidBody.angularVelocity;
+                SetState();
 
                 float duration = BattleManager.Instance.ElapsedTime - startTime;
                 Collision.Duration = duration;
             }
             else
             {
-                if (Collision.IsActor)
+                if (Collision.IsActor && !Collision.IsTieBreaker)
                 {
                     if (controller.Side == PlayerSide.Left)
                         target = PlayerSide.Right;
@@ -158,9 +158,9 @@ namespace SumoHelper
         {
             BaseLog log = new()
             {
-                Rotation = controller.RigidBody.rotation,
+                Rotation = Normalize360(controller.RigidBody.rotation),
                 Position = controller.RigidBody.position,
-                LinearVelocity = controller.RigidBody.linearVelocity,
+                LinearVelocity = controller.RigidBody.linearVelocity.magnitude,
                 AngularVelocity = controller.RigidBody.angularVelocity
             };
 
@@ -175,6 +175,34 @@ namespace SumoHelper
                     {"Robot", log.ToMap()}
                 }
             );
+        }
+
+        public void SetState()
+        {
+            RobotLog log = Collision != null ? Collision : action;
+
+            log.Robot.Position = controller.RigidBody.position;
+            log.Robot.Rotation = Normalize360(controller.RigidBody.rotation);
+            log.Robot.LinearVelocity = controller.RigidBody.linearVelocity.magnitude;
+            log.Robot.AngularVelocity = controller.RigidBody.angularVelocity;
+            log.Robot.IsDashActive = controller.IsDashActive;
+            log.Robot.IsSkillActive = controller.Skill.IsActive;
+            log.Robot.IsOutFromArena = controller.IsOutOfArena;
+
+            log.EnemyRobot.Position = enemyController.RigidBody.position;
+            log.EnemyRobot.Rotation = Normalize360(enemyController.RigidBody.rotation);
+            log.EnemyRobot.LinearVelocity = enemyController.RigidBody.linearVelocity.magnitude;
+            log.EnemyRobot.AngularVelocity = enemyController.RigidBody.angularVelocity;
+            log.EnemyRobot.IsDashActive = enemyController.IsDashActive;
+            log.EnemyRobot.IsSkillActive = enemyController.Skill.IsActive;
+            log.EnemyRobot.IsOutFromArena = enemyController.IsOutOfArena;
+        }
+
+        float Normalize360(float angle)
+        {
+            angle %= 360f;
+            if (angle < 0) angle += 360f;
+            return angle;
         }
     }
 }

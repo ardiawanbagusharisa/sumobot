@@ -112,17 +112,19 @@ namespace SumoManager
             SumoController rightPlayer = BattleManager.Instance.Battle.RightPlayer;
 
             if (!ActionLoggers.ContainsKey(leftPlayer.Side))
-                ActionLoggers.Add(leftPlayer.Side, InitByController(leftPlayer));
+                ActionLoggers.Add(leftPlayer.Side, InitByController(leftPlayer, rightPlayer));
             if (!ActionLoggers.ContainsKey(rightPlayer.Side))
-                ActionLoggers.Add(rightPlayer.Side, InitByController(rightPlayer));
+                ActionLoggers.Add(rightPlayer.Side, InitByController(rightPlayer, leftPlayer));
 
-            static Dictionary<ActionType, EventLogger> InitByController(SumoController controller)
+            static Dictionary<ActionType, EventLogger> InitByController(
+                SumoController controller,
+                SumoController enemyController)
             {
                 Dictionary<ActionType, EventLogger> logs = new();
                 IEnumerable<ActionType> actionTypes = Enum.GetValues(typeof(ActionType)).Cast<ActionType>();
                 foreach (ActionType action in actionTypes)
                 {
-                    logs.Add(action, new EventLogger(controller));
+                    logs.Add(action, new EventLogger(controller, enemyController));
                 }
                 return logs;
             }
@@ -241,9 +243,9 @@ namespace SumoManager
 
                     Log.RightPlayerStats.ActionTaken += GetCurrentRound().PlayerEvents.FindAll((x) => x.Actor == "Right" && x.Category == "Action" && (x.State != PeriodicState.End)).Count();
 
-                    Log.LeftPlayerStats.ContactMade += GetCurrentRound().PlayerEvents.FindAll((x) => x.Actor == "Left" && x.Category == "Collision" && (x.State != PeriodicState.End)).Count();
+                    Log.LeftPlayerStats.ContactMade += GetCurrentRound().PlayerEvents.FindAll((x) => x.Actor == "Left" && x.Category == "Collision" && (x.State != PeriodicState.End) && (bool)x.Data["IsActor"]).Count();
 
-                    Log.RightPlayerStats.ContactMade += GetCurrentRound().PlayerEvents.FindAll((x) => x.Actor == "Right" && x.Category == "Collision" && (x.State != PeriodicState.End)).Count();
+                    Log.RightPlayerStats.ContactMade += GetCurrentRound().PlayerEvents.FindAll((x) => x.Actor == "Right" && x.Category == "Collision" && (x.State != PeriodicState.End) && (bool)x.Data["IsActor"]).Count();
                 }
             }
 
@@ -374,7 +376,6 @@ namespace SumoManager
         #region Saving methods
         public static void SaveCurrentGame()
         {
-
             string json = JsonConvert.SerializeObject(Log.Games[CurrentGameIndex], Formatting.Indented);
             string paddedIndex = CurrentGameIndex.ToString("D3"); // D3 = 3-digit padding
             string savePath = Path.Combine(logFolderPath, $"game_{paddedIndex}.json");
@@ -404,8 +405,8 @@ namespace SumoManager
             {
                 Battle battle = BattleManager.Instance.Battle;
 
-                EventLogger leftLog = new(battle.LeftPlayer, isAction: false);
-                EventLogger rightLog = new(battle.RightPlayer, isAction: false);
+                EventLogger leftLog = new(battle.LeftPlayer, battle.RightPlayer, isAction: false);
+                EventLogger rightLog = new(battle.RightPlayer, battle.LeftPlayer, isAction: false);
 
                 leftLog.Save("LastPosition", roundLog.Duration);
                 rightLog.Save("LastPosition", roundLog.Duration);
