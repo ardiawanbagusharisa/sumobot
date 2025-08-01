@@ -107,7 +107,9 @@ namespace SumoEditor
                                 ["StartedAt"] = eventLog?["StartedAt"]?.ToString(),
                                 ["UpdatedAt"] = eventLog?["UpdatedAt"]?.ToString(),
                                 ["Actor"] = eventLog?["Actor"]?.ToString() == "Left" ? "0" : "1",
-                                ["Target"] = eventLog?["Target"]?.ToString() == "Left" ? "0" : "1",
+
+                                ["Target"] = eventLog?["Target"]?.ToString() == "" ? "" : eventLog?["Target"]?.ToString() == "Left" ? "0" : "1",
+                                
                                 ["Category"] = eventLog?["Category"]?.ToString(),
                                 ["State"] = eventLog?["State"].ToString(),
                             };
