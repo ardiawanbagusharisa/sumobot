@@ -36,6 +36,7 @@ namespace SumoManager
             public float CountdownTime;
             public int RoundType;
             public int SimulationAmount;
+            public int SimulationAISwapInterval;
             public float SimulationTimeScale;
             public PlayerStats LeftPlayerStats = new();
             public PlayerStats RightPlayerStats = new();
@@ -204,7 +205,7 @@ namespace SumoManager
             Directory.CreateDirectory(logFolderPath);
         }
 
-        public static void InitBattle(int simAmount = 0, float simTimeScale = 0)
+        public static void InitBattle(BattleSimulator simulator = null)
         {
             BattleManager battleManager = BattleManager.Instance;
 
@@ -215,8 +216,9 @@ namespace SumoManager
                 CountdownTime = battleManager.CountdownTime,
                 BattleTime = battleManager.BattleTime,
                 RoundType = (int)battleManager.RoundSystem,
-                SimulationAmount = simAmount,
-                SimulationTimeScale = simTimeScale,
+                SimulationAmount = simulator?.TotalSimulations ?? 0,
+                SimulationTimeScale = simulator?.TimeScale ?? 0,
+                SimulationAISwapInterval = simulator?.SwapAIInterval ?? 0,
                 CreatedAt = (int)DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
             };
 
@@ -275,6 +277,23 @@ namespace SumoManager
                 Timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss")
             };
             Log.Games[CurrentGameIndex].Rounds.Add(newRound);
+        }
+
+        public static PlayerSide? GetWinnerByContactMade()
+        {
+            RoundLog round = GetCurrentRound();
+            if (round == null)
+                return null;
+
+            int leftContact = round.PlayerEvents.FindAll((x) => x.Actor == "Left" && x.Category == "Collision" && (x.State != PeriodicState.End) && (bool)x.Data["IsActor"]).Count();
+            int rightContact = round.PlayerEvents.FindAll((x) => x.Actor == "Right" && x.Category == "Collision" && (x.State != PeriodicState.End) && (bool)x.Data["IsActor"]).Count();
+
+            if (leftContact > rightContact)
+                return PlayerSide.Left;
+            else if (rightContact > leftContact)
+                return PlayerSide.Right;
+            else
+                return null;
         }
 
         public static void SetRoundWinner(string winner)

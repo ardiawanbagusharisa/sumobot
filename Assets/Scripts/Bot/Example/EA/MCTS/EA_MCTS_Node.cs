@@ -83,7 +83,9 @@ namespace SumoBot.EA.MCTS
             {
                 var newActNames = $"{ID}:{x.FullName}";
                 if (!AllNodes.ContainsKey(newActNames))
+                {
                     return true;
+                }
                 return false;
             }).ToList();
 
@@ -141,17 +143,15 @@ namespace SumoBot.EA.MCTS
 
             foreach (var action in actions)
             {
-                Vector2 predRBPos;
-                float predRBRot;
-                Vector2 predTPos;
-                float predTRot;
+                List<string> reason = new();
+                Vector2 predPos;
+                float predRot;
 
-                (predRBPos, predRBRot) = api.Simulate(action);
-                (predTPos, predTRot) = api.Simulate(action);
+                (predPos, predRot) = api.Simulate(action);
 
                 bool approachWithPosition = action is AccelerateAction || action is DashAction;
-                float preAngleScore = api.Angle(oriPos: predRBPos, oriRot: predRBRot, normalized: true);
-                float preDistScore = api.DistanceNormalized(oriPos: predRBPos);
+                float preAngleScore = api.Angle(oriPos: predPos, oriRot: predRot, normalized: true);
+                float preDistScore = api.DistanceNormalized(oriPos: predPos);
 
                 angleScore += preAngleScore;
                 distScore += preDistScore;
@@ -159,7 +159,10 @@ namespace SumoBot.EA.MCTS
                 if (action.Type == ActionType.SkillStone)
                 {
                     if (api.CanExecute(action))
+                    {
                         bonusOrPenalty += 10f;
+                        reason.Add("Use skill stone immediately");
+                    }
                     else
                         bonusOrPenalty -= 0.1f;
                     // continue;
@@ -183,14 +186,10 @@ namespace SumoBot.EA.MCTS
                 {
                     if (api.Angle(normalized: true) > preAngleScore)
                     {
-                        bonusOrPenalty -= 1f;
-                    }
-                    else if (preAngleScore > 0.9f)
-                    {
-                        bonusOrPenalty += 2f;
+                        bonusOrPenalty -= 5f;
                     }
                 }
-                else if (action is AccelerateAction)
+                if (action is AccelerateAction)
                 {
 
                     if (preAngleScore > 0.85f)
@@ -206,10 +205,12 @@ namespace SumoBot.EA.MCTS
                     }
                 }
 
-                float angleToArena = api.Angle(targetPos: api.BattleInfo.ArenaPosition, oriPos: predTPos);
-                Vector2 distanceFromArena = api.Distance(targetPos: api.BattleInfo.ArenaPosition, oriPos: predTPos);
+                Vector2 distanceFromArena = api.Distance(targetPos: api.BattleInfo.ArenaPosition, oriPos: predPos);
 
-                bonusOrPenalty += (((api.BattleInfo.ArenaRadius * 0.9f) - distanceFromArena.magnitude) * 2) + ((0.5f - preAngleScore) * 2);
+                if (distanceFromArena.magnitude >= api.BattleInfo.ArenaRadius)
+                {
+                    bonusOrPenalty -= 100f;
+                }
             }
 
             float normAngleScore = angleScore / actions.Count();

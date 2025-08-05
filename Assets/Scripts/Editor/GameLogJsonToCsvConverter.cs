@@ -119,6 +119,7 @@ namespace SumoEditor
                             {
                                 row["Name"] = act["Name"]?.ToString();
                                 row["Duration"] = act["Duration"]?.ToString();
+                                row["Reason"] = act["Reason"]?.ToString();
 
                                 var robot = act?["Robot"];
                                 if (robot != null)

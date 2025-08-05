@@ -9,6 +9,7 @@ namespace SumoHelper
         public int TotalSimulations = 5;
         public float TimeScale = 1f;
         public bool SimulationOnStart = false;
+        public int SwapAIInterval = 0;
 
         void Start()
         {
@@ -35,6 +36,10 @@ namespace SumoHelper
 
             for (int i = 0; i < TotalSimulations; i++)
             {
+                if (SwapAIInterval > 0 && i > 0 && (i % SwapAIInterval == 0))
+                {
+                    BattleManager.Instance.BotManager.Swap();
+                }
                 yield return new WaitForSeconds(1);
 
                 if (SimulationOnStart || i > 0)

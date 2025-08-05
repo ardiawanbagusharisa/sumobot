@@ -62,7 +62,7 @@ namespace SumoManager
         public float TimeLeft => BattleTime - ElapsedTime;
 
         public Battle Battle;
-        private BotManager botManager;
+        public BotManager BotManager;
         private BattleSimulator simulator;
         #endregion
 
@@ -90,14 +90,14 @@ namespace SumoManager
         void OnEnable()
         {
             simulator = GetComponent<BattleSimulator>();
-            botManager = GetComponent<BotManager>();
+            BotManager = GetComponent<BotManager>();
 
             LogManager.InitLog();
             Battle = new Battle(Guid.NewGuid().ToString(), RoundSystem);
 
             if (simulator.enabled)
             {
-                LogManager.InitBattle(simulator.TotalSimulations, simulator.TimeScale);
+                LogManager.InitBattle(simulator);
             }
             else
             {
@@ -132,7 +132,7 @@ namespace SumoManager
                     SumoController left = Battle.LeftPlayer;
                     SumoController right = Battle.RightPlayer;
 
-                    botManager.OnUpdate();
+                    BotManager.OnUpdate();
 
                     left.FlushInput();
                     right.FlushInput();
@@ -222,10 +222,20 @@ namespace SumoManager
                 timer -= 1f;
             }
 
-            LogManager.SetRoundWinner("Draw");
-            Battle.CurrentRound.RoundWinner = null;
-            Battle.Winners[Battle.CurrentRound.RoundNumber] = null;
             LogManager.FlushActionLog();
+            PlayerSide? side = LogManager.GetWinnerByContactMade();
+            if (side != null)
+            {
+                LogManager.SetRoundWinner(side.ToString());
+                Battle.SetRoundWinner(side == PlayerSide.Left ? Battle.LeftPlayer : Battle.RightPlayer);
+            }
+            else
+            {
+                LogManager.SetRoundWinner("Draw");
+                Battle.CurrentRound.RoundWinner = null;
+                Battle.Winners[Battle.CurrentRound.RoundNumber] = null;
+            }
+
             TransitionToState(BattleState.Battle_End);
         }
 
@@ -308,7 +318,7 @@ namespace SumoManager
 
                 // Battle
                 case BattleState.Battle_Preparing:
-                    LogManager.SetPlayerBots(botManager.Left, botManager.Right);
+                    LogManager.SetPlayerBots(BotManager.Left, BotManager.Right);
                     LogManager.UpdateMetadata(logTakenAction: false);
                     LogManager.StartGameLog();
 
