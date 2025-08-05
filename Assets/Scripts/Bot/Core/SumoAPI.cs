@@ -58,7 +58,7 @@ namespace SumoBot
             Vector2? targetPos = null)
         {
             Vector2 dist = Distance(oriPos, targetPos);
-            return 1f - Mathf.Clamp01(dist.magnitude / BattleInfo.ArenaRadius);
+            return (dist.magnitude / (2 * BattleInfo.ArenaRadius));
         }
 
         // Return amount of degree from [original] to [target]
