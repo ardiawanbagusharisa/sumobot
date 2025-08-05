@@ -224,7 +224,9 @@ public readonly struct SumoBotAPI
     public SumoSkillAPI Skill { get; }
 
     public bool IsDashOnCooldown { get; }
+    public bool IsDashActive { get; }
     public bool IsMovementDisabled { get; }
+    public bool IsOutFromArena { get; }
 
     public SumoBotAPI(SumoController controller)
     {
@@ -246,7 +248,9 @@ public readonly struct SumoBotAPI
         AngularVelocity = controller.RigidBody.angularVelocity;
 
         IsDashOnCooldown = controller.IsDashOnCooldown;
+        IsDashActive = controller.IsDashActive;
         IsMovementDisabled = controller.IsMovementDisabled;
+        IsOutFromArena = controller.IsOutOfArena;
     }
 
     public override string ToString()

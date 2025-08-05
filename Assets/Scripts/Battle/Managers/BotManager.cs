@@ -130,6 +130,19 @@ namespace SumoBot
             }
         }
 
+        public void Swap()
+        {
+            if (!BotEnabled || !enabled)
+                return;
+
+            if (Left == null || Right == null)
+            {
+                return;
+            }
+
+            Assign(Right, Left);
+        }
+
         void OnDestroy()
         {
             if (LeftEnabled && Left != null)

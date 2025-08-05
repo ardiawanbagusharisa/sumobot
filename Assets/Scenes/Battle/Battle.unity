@@ -15704,6 +15704,7 @@ MonoBehaviour:
       RoundWinner: {fileID: 0}
     LeftWinCount: 0
     RightWinCount: 0
+  BotManager: {fileID: 0}
 --- !u!114 &2130233542
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -15783,14 +15784,15 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2130233538}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: b33ce51748b63457ebe9b59f80ac599c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  TotalSimulations: 500
+  TotalSimulations: 100
   TimeScale: 10
   SimulationOnStart: 1
+  SwapAIInterval: 5
 --- !u!114 &2130233545
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -15807,8 +15809,8 @@ MonoBehaviour:
   Left: {fileID: 715032728}
   RightEnabled: 1
   Right: {fileID: 1709403126}
-  leftBotIndex: 4
-  rightBotIndex: 3
+  leftBotIndex: 0
+  rightBotIndex: 2
 --- !u!1 &2132169806
 GameObject:
   m_ObjectHideFlags: 0

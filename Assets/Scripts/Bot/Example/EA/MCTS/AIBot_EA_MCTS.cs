@@ -16,7 +16,7 @@ namespace SumoBot.EA.MCTS
         public float UCBConstant = 1.41f;
         public float ScoreLimit = -300;
         public string Name = "MCTS Example";
-        public SkillType DefaultSkillType = SkillType.Stone;
+        public SkillType DefaultSkillType = SkillType.Boost;
     }
 
     public class AIBot_EA_MCTS : Bot
@@ -33,9 +33,9 @@ namespace SumoBot.EA.MCTS
         public Dictionary<string, EA_MCTS_Node> AllNodes = new();
         public static List<ISumoAction> PossibleActions = new() {
             new TurnAction(InputType.Script, ActionType.TurnLeft, 0.1f),
-            new TurnAction(InputType.Script, ActionType.TurnLeft, 0.3f),
-
             new TurnAction(InputType.Script, ActionType.TurnRight, 0.1f),
+
+            new TurnAction(InputType.Script, ActionType.TurnLeft, 0.3f),
             new TurnAction(InputType.Script, ActionType.TurnRight, 0.3f),
 
             new AccelerateAction(InputType.Script, 0.1f),
@@ -139,6 +139,8 @@ namespace SumoBot.EA.MCTS
             foreach (var act in bestChild.actions)
             {
                 act.Reason = bestChild.GetHighestScoreType().ToString();
+                // if (act is TurnAction && api.IsActionActive(act))
+                //     continue;
                 Enqueue(act);
             }
             return bestChild;

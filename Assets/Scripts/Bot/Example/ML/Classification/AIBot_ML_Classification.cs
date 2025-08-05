@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using SumoBot;
@@ -8,7 +7,7 @@ using SumoManager;
 using Unity.InferenceEngine;
 using UnityEngine;
 
-class AIBot_ML_MLP : Bot
+class AIBot_ML_Classification : Bot
 {
     public override string ID => "MLP";
 
@@ -18,7 +17,6 @@ class AIBot_ML_MLP : Bot
     public Worker engine;
     private SumoAPI api;
     private bool isInitializing = false;
-
     private readonly List<string> labels = new()
     {
         "Accelerate", "Dash", "SkillBoost", "TurnLeft", "TurnRight"
@@ -46,22 +44,30 @@ class AIBot_ML_MLP : Bot
         api = botAPI;
         CreateEngine();
     }
-
     public override void OnBotUpdate()
     {
-        float[] array = new float[] {
-            api.MyRobot.Position.x,
-            api.MyRobot.Position.y,
-            Normalize360(api.MyRobot.Rotation),
-            api.EnemyRobot.Position.x,
-            api.EnemyRobot.Position.y,
-            Normalize360(api.EnemyRobot.Rotation)
-            };
-
-        Tensor<float> inputTensor = new(new TensorShape(1, 6), array);
+        var inputs = new float[] {
+                api.MyRobot.Position.x,
+                api.MyRobot.Position.y,
+                Normalize360(api.MyRobot.Rotation),
+                // api.MyRobot.LinearVelocity.magnitude,
+                // api.MyRobot.AngularVelocity,
+                // api.MyRobot.IsDashActive ? 1 : 0,
+                // api.MyRobot.Skill.IsActive ? 1 : 0,
+                // api.MyRobot.IsOutFromArena ? 1 : 0,
+                // Enemy
+                api.EnemyRobot.Position.x,
+                api.EnemyRobot.Position.y,
+                Normalize360(api.EnemyRobot.Rotation),
+                // api.EnemyRobot.LinearVelocity.magnitude,
+                // api.EnemyRobot.AngularVelocity,
+                // api.EnemyRobot.IsDashActive ? 1 : 0,
+                // api.EnemyRobot.Skill.IsActive ? 1 : 0,
+                // api.EnemyRobot.IsOutFromArena ? 1 : 0,
+             };
+        Tensor<float> inputTensor = new(new TensorShape(1, 6), inputs);
 
         engine.Schedule(inputTensor);
-
 
         // output actions at 0
         Tensor<float> outputTensorAct = (engine.PeekOutput(0) as Tensor<float>).ReadbackAndClone();
@@ -126,7 +132,7 @@ class AIBot_ML_MLP : Bot
 
         if (runtimeModel == null)
         {
-            ModelAsset modelAsset = Resources.Load("Models/ML/mlp") as ModelAsset;
+            ModelAsset modelAsset = Resources.Load("Models/ML/ml_6_4_layers") as ModelAsset;
             runtimeModel = ModelLoader.Load(modelAsset);
         }
 
