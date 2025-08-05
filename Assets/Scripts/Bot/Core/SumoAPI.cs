@@ -1,5 +1,8 @@
+using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using NUnit.Framework;
+using SumoBot.RuleBased.Fuzzy;
 using SumoCore;
 using SumoManager;
 using UnityEditor;
@@ -44,6 +47,15 @@ namespace SumoBot
         public bool CanExecute(ISumoAction action)
         {
             return myController.InputProvider.CanExecute(action);
+        }
+
+        public Coroutine StartCoroutine(IEnumerator func)
+        {
+            return myController.StartCoroutine(func);
+        }
+        public void StopCoroutine(Coroutine func)
+        {
+            myController.StopCoroutine(func);
         }
 
         public Vector2 Distance(
@@ -155,6 +167,46 @@ namespace SumoBot
                 return new(position - robot.Position, rotation - robot.Rotation);
             }
             return new(position, rotation);
+        }
+
+        public string GenerateReason(ISumoAction action = null)
+        {
+            List<string> reasons = new();
+
+            (Vector2 oriPos, float oriRot) = action != null ? Simulate(action) : (MyRobot.Position, MyRobot.Rotation);
+
+            float distanceEnemyNorm = DistanceNormalized(oriPos: oriPos);
+            float distanceEnemy = Distance(oriPos: oriPos).magnitude;
+            float enemySide = Angle(oriPos: oriPos, oriRot: oriRot, normalized: true);
+            float distanceFromArenaNorm = DistanceNormalized(oriPos: oriPos,
+                targetPos: BattleInfo.ArenaPosition);
+            float distanceFromArena = Distance(oriPos: oriPos,
+                targetPos: BattleInfo.ArenaPosition).magnitude;
+            float angleToEnemy = AngleDeg(oriPos: oriPos, oriRot: oriRot) / 360;
+            float angleToArena = AngleDeg(oriPos: oriPos, targetPos: BattleInfo.ArenaPosition) / 360;
+
+            List<float> inputs = new() {
+                distanceEnemyNorm,
+                angleToArena,
+                distanceFromArenaNorm,
+                enemySide,
+                };
+
+            FuzzyBase fuzzy = new FuzzySugeno();
+            fuzzy.Membership.GenerateTriangular();
+            var fuzzificationResult = fuzzy.Fuzzification(inputs);
+
+            fuzzificationResult.TryGetValue("distance_from_enemy", out var distanceFromEnemyMembership);
+            fuzzificationResult.TryGetValue("facing_to_arena", out var facingToArenaMembership);
+            fuzzificationResult.TryGetValue("distance_from_arena", out var distanceFromArenaMembership);
+            fuzzificationResult.TryGetValue("angle_to_enemy", out var angleToEnemyMembership);
+
+            reasons.Add($"How much distance from my robot to enemy?: The distance is {distanceEnemy}, considered as {string.Join(" and ", distanceFromEnemyMembership.OrderByDescending(x => x.Value).TakeWhile((x) => x.Value > 0).Select(x => $"{x.Key} with accuracy {x.Value}"))}");
+            reasons.Add($"\nHow much angle my robot need to face enemy? The score is {angleToArena}, enemy is in {string.Join(" and ", angleToEnemyMembership.OrderByDescending(x => x.Value).TakeWhile((x) => x.Value > 0).Select(x => $"{x.Key} with accuracy {x.Value}"))}");
+            reasons.Add($"\nHow much the distance from my robot to arena center?: The distance is {distanceFromArena}, considered as {string.Join(" and ", distanceFromArenaMembership.OrderByDescending(x => x.Value).TakeWhile((x) => x.Value > 0).Select(x => $"{x.Key} with accuracy {x.Value}"))}");
+            reasons.Add($"\nFace to arena {string.Join(" and ", facingToArenaMembership.OrderByDescending(x => x.Value).TakeWhile((x) => x.Value > 0).Select(x => $"{x.Key} with accuracy {x.Value}"))}");
+
+            return string.Join(", ", reasons);
         }
 
         public override string ToString()

@@ -67,6 +67,9 @@ namespace SumoBot.RuleBased.Fuzzy
                 {
                     continue;
                 }
+
+                act.Reason = api.GenerateReason(act);
+
                 Enqueue(act);
             }
 

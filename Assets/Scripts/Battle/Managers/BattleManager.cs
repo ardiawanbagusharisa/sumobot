@@ -218,8 +218,8 @@ namespace SumoManager
             float timer = BattleTime;
             while (timer > 0 && CurrentState == BattleState.Battle_Ongoing)
             {
-                yield return new WaitForSeconds(1f);
                 timer -= 1f;
+                yield return new WaitForSeconds(1f);
             }
 
             LogManager.FlushActionLog();

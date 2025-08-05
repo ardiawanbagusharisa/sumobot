@@ -138,7 +138,7 @@ namespace SumoBot.EA.MCTS
 
             foreach (var act in bestChild.actions)
             {
-                act.Reason = bestChild.GetHighestScoreType().ToString();
+                act.Reason = api.GenerateReason(act);
                 // if (act is TurnAction && api.IsActionActive(act))
                 //     continue;
                 Enqueue(act);
