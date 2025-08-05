@@ -72,8 +72,8 @@ namespace SumoBot.RuleBased.Fuzzy
                 new SugenoRule() {
                     Conditions = new()
                     {
-                        { "distance_arena", "near_border" },
-                        { "angle_arena", "front" },
+                        { "distance_from_arena", "near_border" },
+                        { "facing_to_arena", "front" },
                     },
                     Action = new TurnAction(InputType.Script, ActionType.Accelerate, 0.2f),
                     CrispOutput = 0.9f
@@ -81,8 +81,8 @@ namespace SumoBot.RuleBased.Fuzzy
                 new SugenoRule() {
                     Conditions = new()
                     {
-                        { "distance_arena", "near_border" },
-                        { "distance_enemy", "far" },
+                        { "distance_from_arena", "near_border" },
+                        { "distance_from_enemy", "far" },
                     },
                     Action = new TurnAction(InputType.Script, ActionType.TurnLeft, 0.5f),
                     CrispOutput = 0.9f
@@ -90,7 +90,7 @@ namespace SumoBot.RuleBased.Fuzzy
                 new SugenoRule() {
                     Conditions = new()
                     {
-                        { "angle_enemy", "back_left" },
+                        { "enemy_position", "back_left" },
                     },
                     Action = new TurnAction(InputType.Script, ActionType.TurnLeft, 065f),
                     CrispOutput = 0.9f
@@ -98,7 +98,7 @@ namespace SumoBot.RuleBased.Fuzzy
                 new SugenoRule() {
                     Conditions = new()
                     {
-                        { "angle_enemy", "back_right" },
+                        { "enemy_position", "back_right" },
                     },
                     Action = new TurnAction(InputType.Script, ActionType.TurnRight, 0.65f),
                     CrispOutput = 0.9f
@@ -106,7 +106,7 @@ namespace SumoBot.RuleBased.Fuzzy
                 new SugenoRule() {
                     Conditions = new()
                     {
-                        { "angle_enemy", "back_right" },
+                        { "enemy_position", "back_right" },
                     },
                     Action = new TurnAction(InputType.Script, ActionType.TurnRight, 0.65f),
                     CrispOutput = 0.9f
@@ -114,7 +114,7 @@ namespace SumoBot.RuleBased.Fuzzy
                 new SugenoRule() {
                     Conditions = new()
                     {
-                        { "angle_enemy", "back" },
+                        { "enemy_position", "back" },
                     },
                     Action = new TurnAction(InputType.Script, ActionType.TurnLeft, 0.9f),
                     CrispOutput = 1.5f
@@ -122,7 +122,7 @@ namespace SumoBot.RuleBased.Fuzzy
                 new SugenoRule() {
                     Conditions = new()
                     {
-                        { "angle_enemy", "front_left" },
+                        { "enemy_position", "front_left" },
                     },
                     Action = new TurnAction(InputType.Script, ActionType.TurnLeft, 0.3f),
                     CrispOutput = 0.9f
@@ -130,7 +130,7 @@ namespace SumoBot.RuleBased.Fuzzy
                 new SugenoRule() {
                     Conditions = new()
                     {
-                        { "angle_enemy", "left" },
+                        { "enemy_position", "left" },
                     },
                     Action = new TurnAction(InputType.Script, ActionType.TurnLeft, 0.5f),
                     CrispOutput = 0.9f
@@ -138,7 +138,7 @@ namespace SumoBot.RuleBased.Fuzzy
                 new SugenoRule() {
                     Conditions = new()
                     {
-                        { "angle_enemy", "right" },
+                        { "enemy_position", "right" },
                     },
                     Action = new TurnAction(InputType.Script, ActionType.TurnRight, 0.5f),
                     CrispOutput = 0.9f
@@ -146,7 +146,7 @@ namespace SumoBot.RuleBased.Fuzzy
                 new SugenoRule() {
                     Conditions = new()
                     {
-                        { "angle_enemy", "front_left" },
+                        { "enemy_position", "front_left" },
                     },
                     Action = new TurnAction(InputType.Script, ActionType.TurnLeft, 0.25f),
                     CrispOutput = 0.9f
@@ -155,7 +155,7 @@ namespace SumoBot.RuleBased.Fuzzy
                 new SugenoRule() {
                     Conditions = new()
                     {
-                        { "angle_enemy", "front_right" },
+                        { "enemy_position", "front_right" },
                     },
                     Action = new TurnAction(InputType.Script, ActionType.TurnRight, 0.2f),
                     CrispOutput = 0.9f
@@ -164,8 +164,8 @@ namespace SumoBot.RuleBased.Fuzzy
                 new SugenoRule() {
                     Conditions = new()
                     {
-                        { "distance_enemy", "far" },
-                        { "side_enemy", "front" },
+                        { "distance_from_enemy", "far" },
+                        { "angle_to_enemy", "front" },
                     },
                     Action = new AccelerateAction(InputType.Script, 0.2f),
                     CrispOutput = 3f
@@ -173,8 +173,8 @@ namespace SumoBot.RuleBased.Fuzzy
                 new SugenoRule() {
                     Conditions = new()
                     {
-                        { "distance_enemy", "close" },
-                        { "side_enemy", "front" },
+                        { "distance_from_enemy", "close" },
+                        { "angle_to_enemy", "front" },
                     },
                     Action = new DashAction(InputType.Script),
                     CrispOutput = 5f
@@ -182,8 +182,8 @@ namespace SumoBot.RuleBased.Fuzzy
                 new SugenoRule() {
                     Conditions = new()
                     {
-                        { "distance_enemy", "medium" },
-                        { "side_enemy", "front" },
+                        { "distance_from_enemy", "medium" },
+                        { "angle_to_enemy", "front" },
                     },
                     Action = new AccelerateAction(InputType.Script, 0.3f),
                     CrispOutput = 2.5f
@@ -191,8 +191,8 @@ namespace SumoBot.RuleBased.Fuzzy
                 new SugenoRule() {
                     Conditions = new()
                     {
-                        { "distance_enemy", "medium" },
-                        { "side_enemy", "front" },
+                        { "distance_from_enemy", "medium" },
+                        { "angle_to_enemy", "front" },
                     },
                     Action = new AccelerateAction(InputType.Script, 0.3f),
                     CrispOutput = 2.5f
@@ -202,8 +202,8 @@ namespace SumoBot.RuleBased.Fuzzy
                 new SugenoRule() {
                     Conditions = new()
                     {
-                        { "distance_arena", "near_border" },
-                        { "distance_enemy", "medium" },
+                        { "distance_from_arena", "near_border" },
+                        { "distance_from_enemy", "medium" },
                     },
                     Action = new SkillAction(InputType.Script, ActionType.SkillStone),
                     CrispOutput = 1f
@@ -211,8 +211,8 @@ namespace SumoBot.RuleBased.Fuzzy
                 new SugenoRule() {
                     Conditions = new()
                     {
-                        { "side_enemy", "front" },
-                        { "distance_enemy", "medium" },
+                        { "angle_to_enemy", "front" },
+                        { "distance_from_enemy", "medium" },
                     },
                     Action = new SkillAction(InputType.Script, ActionType.SkillBoost),
                     CrispOutput = 1f
