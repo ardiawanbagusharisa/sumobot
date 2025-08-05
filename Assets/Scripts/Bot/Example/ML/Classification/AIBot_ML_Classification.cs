@@ -9,7 +9,7 @@ using UnityEngine;
 
 class AIBot_ML_Classification : Bot
 {
-    public override string ID => "MLP";
+    public override string ID => "ML_Classification";
 
     public override SkillType SkillType => SkillType.Boost;
 
