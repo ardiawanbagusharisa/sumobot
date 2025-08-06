@@ -16,13 +16,13 @@ public class AIBot_NN : Bot
 
     #region NN Configs
     public bool loadModel = true;
-    public bool saveModel = true;
+    public bool saveModel = false;
     public string modelFileName = "NN_Model.json";
-    private string csvLogFileName = "NN_LearningLog.csv";
-    public float LearningRate = 0.01f;
-    public float MaxEpisodeTime = 10f;
-    public float AngleThreshold = 10f;
-    public int TotalEpisodes = 0;
+    public string csvLogFileName = "NN_LearningLog.csv";
+    public float learningRate = 0.01f;
+    public float maxEpisodeTime = 10f;
+    public float angleThreshold = 10f;
+    public int totalEpisodes = 0;
     
     private NeuralNetwork NN;
     [SerializeField]
@@ -36,7 +36,7 @@ public class AIBot_NN : Bot
         api = botAPI;
 
         //string path = Path.Combine(Application.persistentDataPath, modelFileName);
-        string path = "Assets/Resources/Models/ML/NeuralNetwork/" + modelFileName;
+        string path = "Assets/Resources/Models/ML/NN/" + modelFileName;
         if (loadModel && File.Exists(path))
         {
             NN = NeuralNetwork.Load(path);
@@ -48,7 +48,7 @@ public class AIBot_NN : Bot
             Debug.Log("Created new NN");
         }
 
-        TotalEpisodes = 0;
+        totalEpisodes = 0;
     }
 
     public override void OnBotUpdate()
@@ -58,7 +58,7 @@ public class AIBot_NN : Bot
         Submit();
 
         timer += 0.1f;
-        if (timer >= MaxEpisodeTime) 
+        if (timer >= maxEpisodeTime) 
         {
             ResetEpisode();
             Debug.Log($"Angle: {api.Angle()}. AngleDeg: {api.AngleDeg()}, Dist: {api.Distance().magnitude} {api.Distance()}, DistN: {api.DistanceNormalized()}");
@@ -76,7 +76,7 @@ public class AIBot_NN : Bot
             if (saveModel)
             {
                 //string path = Path.Combine(Application.persistentDataPath, modelFileName);
-                string path = "Assets/Resources/Models/ML/NeuralNetwork/" + modelFileName;
+                string path = "Assets/Resources/Models/ML/NN/" + modelFileName;
                 NN.Save(path);
                 Debug.Log($"Saved NN to {path}");
             }
@@ -90,7 +90,7 @@ public class AIBot_NN : Bot
     #endregion
 
     #region NN Calls
-    void ThinkAndAct()
+    private void ThinkAndAct()
     {
         float posX = api.MyRobot.Position.x / api.BattleInfo.ArenaRadius;
         float posY = api.MyRobot.Position.y / api.BattleInfo.ArenaRadius;
@@ -116,7 +116,7 @@ public class AIBot_NN : Bot
             Enqueue(new TurnAction(InputType.Script, ActionType.TurnRight, Mathf.Max(0.1f, Mathf.Clamp01(angleInDur))));
         }
 
-        if (Mathf.Abs(angle) < AngleThreshold && accelerate > 0.05f)
+        if (Mathf.Abs(angle) < angleThreshold && accelerate > 0.05f)
         {
             Enqueue(new AccelerateAction(InputType.Script, Mathf.Max(0.1f, Mathf.Clamp01(accelerate))));
         }
@@ -128,14 +128,14 @@ public class AIBot_NN : Bot
         targetOutputs[1] = angle > 0 ? Mathf.Abs(angle) / 180f : 0f;
         targetOutputs[2] = angle < 0 ? Mathf.Abs(angle) / 180f : 0f;
         
-        NN.Train(inputs, targetOutputs, LearningRate);
+        NN.Train(inputs, targetOutputs, learningRate);
 
         LogNNLearning(inputs, outputs, targetOutputs, CalculateLoss(outputs, targetOutputs));
     }
 
     void ResetEpisode() { 
         timer = 0f;
-        TotalEpisodes++;
+        totalEpisodes++;
     }
 
     void OnApplicationQuit()
@@ -143,7 +143,7 @@ public class AIBot_NN : Bot
         if (saveModel)
         {
             //string path = Path.Combine(Application.persistentDataPath, modelFileName);
-            string path = "Assets/Resources/Models/ML/NeuralNetwork/" + modelFileName;
+            string path = "Assets/Resources/Models/ML/NN/" + modelFileName;
             NN.Save(path);
             Debug.Log($"Saved NN to {path}");
         }
@@ -152,7 +152,7 @@ public class AIBot_NN : Bot
     private void LogNNLearning(float[] inputs, float[] outputs, float[] targets, float loss)
     {
         //string path = Path.Combine(Application.persistentDataPath, csvLogFileName);
-        string path = "Assets/Resources/Models/ML/NeuralNetwork/" + csvLogFileName;
+        string path = "Assets/Resources/Models/ML/NN/" + csvLogFileName;
         bool writeHeader = !File.Exists(path);
         using (StreamWriter sw = new StreamWriter(path, true))
         {
@@ -160,7 +160,7 @@ public class AIBot_NN : Bot
             {
                 sw.WriteLine("Episode,Timer,Input_PosX,Input_PosY,Input_Angle,Input_DistNorm,Output_Accelerate,Output_TurnLeft,Output_TurnRight,Target_Accelerate,Target_TurnLeft,Target_TurnRight,Loss");
             }
-            sw.WriteLine($"{TotalEpisodes},{timer:F2},{inputs[0]:F4},{inputs[1]:F4},{inputs[2]:F4},{inputs[3]:F4},{outputs[0]:F4},{outputs[1]:F4},{outputs[2]:F4},{targets[0]:F4},{targets[1]:F4},{targets[2]:F4},{loss:F6}");
+            sw.WriteLine($"{totalEpisodes},{timer:F2},{inputs[0]:F4},{inputs[1]:F4},{inputs[2]:F4},{inputs[3]:F4},{outputs[0]:F4},{outputs[1]:F4},{outputs[2]:F4},{targets[0]:F4},{targets[1]:F4},{targets[2]:F4},{loss:F6}");
         }
     }
     
