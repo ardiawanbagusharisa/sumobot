@@ -13,6 +13,8 @@ namespace SumoBot
         public override string ID => "BT_Bot";
         public override SkillType SkillType => SkillType.Boost;
         #endregion
+
+        #region Behavior Tree Parameters
         [Header("BT Parameters")]
         public float approachAngle = 20f;
         public float attackAngle = 15f;
@@ -21,17 +23,17 @@ namespace SumoBot
         public float attackDistance = 2.5f;
         public float minTurnDuration = 0.1f;
         public float minAccelerationRatio = 0.9f;
+        #endregion
 
         #region Runtime Properties
         private SumoAPI api;
-        private PlayerSide mySide;
         public BTNode root;
         #endregion
 
+        #region Bot Template Methods
         public override void OnBotInit(SumoAPI botAPI)
         {
             api = botAPI;
-            mySide = api.MyRobot.Side;
 
             root = new Selector(
                 new Sequence(
@@ -63,6 +65,7 @@ namespace SumoBot
         {
             // Optional resets or emergency logic
         }
+        #endregion
 
         #region Conditions
 
