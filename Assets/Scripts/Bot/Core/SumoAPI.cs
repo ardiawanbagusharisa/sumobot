@@ -1,8 +1,5 @@
-using System.Collections.Generic;
-using NUnit.Framework;
 using SumoCore;
 using SumoManager;
-using UnityEditor;
 using UnityEngine;
 
 namespace SumoBot

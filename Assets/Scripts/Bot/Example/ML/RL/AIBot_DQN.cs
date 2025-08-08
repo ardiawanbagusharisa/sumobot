@@ -26,7 +26,7 @@ public class AIBot_DQN : Bot
     #region NN Properties 
     public float epsilon = 0.1f;
     public float discountFactor = 0.99f;
-    public float learningRate = 0.005f;
+    public float learningRate = 0.001f;
     public int replayBufferSize = 10000;
     public int batchSize = 64;
     public float maxEpisodeTime = 10f;
@@ -36,8 +36,12 @@ public class AIBot_DQN : Bot
 
     private DeepQNetwork DQN;
     private List<DeepQNetwork.Experience> replayBuffer = new();
-    private float[] lastStates;     // Inputs: Position X, Position Y, Angle, Distance Normalized
+    private float[] lastState;     // Same as inputs: Position X, Position Y, Angle, Distance Normalized
     private int lastAction;
+
+    public int input = 4;   // Position X, Position Y, Angle, Distance Normalized
+    public int hidden = 16; // Hidden layer size
+    public int output = 5;  // Accelerate, TurnLeft, TurnRight, Dash, Skill
 
     [SerializeField]
     private float timer = 0f; 
@@ -55,7 +59,9 @@ public class AIBot_DQN : Bot
         }
         else
         {
-            DQN = new DeepQNetwork(4, 16, 3); // 4 Inputs: Position X, Position Y, Angle, Distance Normalized
+            // 4 Inputs: Position X, Position Y, Angle, Distance Normalized
+            // 5 Outputs: Accelerate, TurnLeft, TurnRight, Dash, Skill 
+            DQN = new DeepQNetwork(input, hidden, output);
             Debug.Log("Created new DQN");
         }
 
@@ -110,7 +116,7 @@ public class AIBot_DQN : Bot
         float distanceNormalized = api.DistanceNormalized();
         float angleInDur = Mathf.Abs(angle) / api.MyRobot.RotateSpeed * api.MyRobot.TurnRate;
 
-        float[] state = new float[] { posX, posY, angle, distanceNormalized };
+        float[] state = new float[] { posX, posY, angle, distanceNormalized}; // Input for Network 
         
         // Choose action using epsilon-greedy policy
         int action = DQN.ChooseAction(state, epsilon);
@@ -120,36 +126,43 @@ public class AIBot_DQN : Bot
         // Consider to move posX, posY, angle, distanceNormalized into CalculateReward, that means 
         // also consider to use myRobot and enemyRobot states as state[]
 
-        // Store experience
-        if (lastStates != null)
+        // Store the experience
+        if (lastState != null)
         {
-            bool done = api.Distance(api.MyRobot.Position, api.BattleInfo.ArenaPosition).magnitude > api.BattleInfo.ArenaRadius + 0.5f 
-                || api.Distance(api.EnemyRobot.Position, api.BattleInfo.ArenaPosition).magnitude > api.BattleInfo.ArenaRadius + 0.5f
-                || api.BattleInfo.TimeLeft <= 0f || api.BattleInfo.CurrentState == BattleState.Battle_End; // Is the game ended, target reached? 
+            float myDistToCenter = api.Distance(api.MyRobot.Position, api.BattleInfo.ArenaPosition).magnitude;
+            float enemyDistToCenter = api.Distance(api.EnemyRobot.Position, api.BattleInfo.ArenaPosition).magnitude;
+            float outArenaDist = api.BattleInfo.ArenaRadius + 0.4f;
+            bool isGameEnded = api.BattleInfo.TimeLeft <= 0f || api.BattleInfo.CurrentState == BattleState.Battle_End;
 
-            replayBuffer.Add(new DeepQNetwork.Experience(lastStates, lastAction, reward, state, done));
+            bool done = isGameEnded || myDistToCenter > outArenaDist || enemyDistToCenter > outArenaDist;
+            
+            replayBuffer.Add(new DeepQNetwork.Experience(lastState, lastAction, reward, state, done));
             if (replayBuffer.Count > replayBufferSize)
                 replayBuffer.RemoveAt(0);
         }
 
-        // Perform action
+        // Perform action (single)
         if (action == 0)    // && Mathf.Abs(angle) < angleThreshold OR //dot > Mathf.Cos(angleThreshold * Mathf.Deg2Rad))
             Enqueue(new AccelerateAction(InputType.Script));
         else if (action == 1) // && angle > 0)
             Enqueue(new TurnAction(InputType.Script, ActionType.TurnLeft, Mathf.Max(0.1f, Mathf.Clamp01(angleInDur))));
         else if (action == 2) // && angle < 0)
             Enqueue(new TurnAction(InputType.Script, ActionType.TurnRight, Mathf.Max(0.1f, Mathf.Clamp01(angleInDur))));
+        else if (action == 3 && Mathf.Abs(angle) < angleThreshold && !api.MyRobot.IsDashOnCooldown)
+            Enqueue(new DashAction(InputType.Script));
+        else if (action == 4 && Mathf.Abs(angle) < angleThreshold && !api.MyRobot.Skill.IsSkillOnCooldown)
+            Enqueue(new SkillAction(InputType.Script));
 
         // Train with a mini batch
-        if (replayBuffer.Count >= batchSize) {
-
-            var exp = replayBuffer[replayBuffer.Count - 1]; // Use the latest experience
+        if (replayBuffer.Count >= batchSize)
+        {
+            DeepQNetwork.Experience exp = replayBuffer[replayBuffer.Count - 1]; // Use the latest experience
 
             float[] outputs = DQN.Forward(exp.state);
             float[] targets = (float[])outputs.Clone(); // Copy current Q-values as base
-
             float[] nextQ = DQN.Forward(exp.nextState);
             float target = exp.reward;
+
             if (!exp.done)
                 target += discountFactor * Mathf.Max(nextQ);
 
@@ -157,15 +170,15 @@ public class AIBot_DQN : Bot
 
             float loss = CalculateLoss(outputs, targets);
 
-            LogDQNLearning(exp.state, outputs, targets, exp.reward, loss, totalEpisodes+1);
+            LogDQNLearning(exp.state, outputs, targets, exp.reward, loss, totalEpisodes + 1);
 
             DQN.Train(replayBuffer, batchSize, learningRate, discountFactor);
         }
             
-        lastStates = state;
+        lastState = state;
         lastAction = action;
     }
-    // Create a function to log DQN learning
+
     private void LogDQNLearning(float[] inputs, float[] outputs, float[] targets, float reward, float loss, int episode)
     {
         //string path = Path.Combine(Application.persistentDataPath, csvLogFileName);
@@ -175,9 +188,9 @@ public class AIBot_DQN : Bot
         {
             if (writeHeader)
             {
-                sw.WriteLine("Episode,Reward,Timer,Input_PosX,Input_PosY,Input_Angle,Input_DistNorm,Output_Accelerate,Output_TurnLeft,Output_TurnRight,Target_Accelerate,Target_TurnLeft,Target_TurnRight,Loss");
+                sw.WriteLine("Episode,Reward,Timer,Input_PosX,Input_PosY,Input_Angle,Input_DistNorm,Output_Accelerate,Output_TurnLeft,Output_TurnRight,Output_Dash,Output_Skill,Target_Accelerate,Target_TurnLeft,Target_TurnRight,Target_Dash,Target_Skill,Loss");
             }
-            sw.WriteLine($"{episode},{reward:F2},{timer:F2},{inputs[0]:F4},{inputs[1]:F4},{inputs[2]:F4},{inputs[3]:F4},{outputs[0]:F4},{outputs[1]:F4},{outputs[2]:F4},{targets[0]:F4},{targets[1]:F4},{targets[2]:F4},{loss:F6}");
+            sw.WriteLine($"{episode},{reward:F2},{timer:F2},{inputs[0]:F4},{inputs[1]:F4},{inputs[2]:F4},{inputs[3]:F4},{outputs[0]:F4},{outputs[1]:F4},{outputs[2]:F4},{outputs[3]:F4},{outputs[4]:F4},{targets[0]:F4},{targets[1]:F4},{targets[2]:F4},{targets[3]:F4},{targets[4]:F4},{loss:F6}");
         }
     }
 
@@ -195,21 +208,39 @@ public class AIBot_DQN : Bot
     float CalculateReward(float angle, float distanceNormalized)
     {
         float reward = 0f;
+        BattleInfoAPI battleInfo = api.BattleInfo;
+        SumoBotAPI myRobot = api.MyRobot;
+        SumoBotAPI enemyRobot = api.EnemyRobot;
+        float enemyDistance = api.Distance(enemyRobot.Position, battleInfo.ArenaPosition).magnitude;
+        float myDistance = api.Distance(myRobot.Position, battleInfo.ArenaPosition).magnitude;
+        float outThreshold = battleInfo.ArenaRadius + 0.4f;
 
-        // Distance to enemy
+        reward += api.MyRobot.LinearVelocity.magnitude * 0.01f; // Reward for moving
+
         reward += (1 - distanceNormalized) * 2f; // OR (lastdistance - distance) * 1f        
-        
-        // Angle to enemy 
         reward += (1 - Mathf.Abs(angle) / 180) * 0.5f;
+        reward -= Mathf.Abs(angle) / 180 * 0.1f;
 
-        // MyRobot stays in arena
-        if (api.Distance(api.MyRobot.Position, api.BattleInfo.ArenaPosition).magnitude < api.BattleInfo.ArenaRadius + 0.5f)
-            reward += 0.1f;
-        else if (api.Distance(api.MyRobot.Position, api.BattleInfo.ArenaPosition).magnitude > api.BattleInfo.ArenaRadius + 0.5f)
-            reward -= 0.5f;
-        // Enemy out of arena
-        if (api.Distance(api.EnemyRobot.Position, api.BattleInfo.ArenaPosition).magnitude > api.BattleInfo.ArenaRadius + 0.5f)
-            reward += 0.1f;
+        float endReward = 0f;
+        if (enemyDistance > outThreshold && enemyDistance > myDistance)
+            endReward += 2f;
+
+        reward += endReward;
+
+        // Reward for using dash and skill
+        if (myRobot.Skill.IsActive && Mathf.Abs(angle) < angleThreshold)
+            reward += 0.5f; // Reward for using skill when facing enemy
+        if (myRobot.IsDashOnCooldown && Mathf.Abs(angle) < angleThreshold)
+            reward += 0.5f;
+
+        //// Approaching enemy when dash or skill
+        //if (isDashCD == 0 && Mathf.Abs(angle) < angleThreshold && distanceNormalized < 0.2f)
+        //    reward += 0.1f;
+
+        //// [Edit later] need to check the activation, not the colldown 
+        //if ((isSkillCD == 0 && api.MyRobot.Skill.Type == SkillType.Boost && Mathf.Abs(angle) < angleThreshold && distanceNormalized < 0.2f) ||
+        //    (isSkillCD == 0 && api.MyRobot.Skill.Type == SkillType.Stone && distanceNormalized < 0.2f)) // [Edit later] change with: if enemy dash or skill
+        //    reward += 0.1f;
 
         return reward;
     }
@@ -218,7 +249,7 @@ public class AIBot_DQN : Bot
     {
         timer = 0f;
         totalEpisodes++;
-        lastStates = null;
+        lastState = null;
     }
 
     void OnApplicationQuit() 

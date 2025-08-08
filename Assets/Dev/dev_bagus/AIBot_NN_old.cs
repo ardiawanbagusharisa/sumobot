@@ -54,7 +54,7 @@
 //        private ReplayBuffer replayBuffer;
 //        private SumoAPI api;
 //        private PlayerSide mySide;
-//        private float[] lastStates;
+//        private float[] lastState;
 //        private bool[] lastActions;
 //        private float tempReward = 0f;
 //        private float episodeReward = 0f;
@@ -88,7 +88,7 @@
 //                epsilon = 0.05f; // Lower initial epsilon
 //            }
 
-//            lastStates = null;
+//            lastState = null;
 //            currentLearningRate = learningRate;
 //            Debug.Log($"NN Bot Initialized. Side: {mySide}, Epsilon: {epsilon:F4}");
 //        }
@@ -125,7 +125,7 @@
 //                if (trainModel)
 //                    SaveModel();
 
-//                lastStates = null;
+//                lastState = null;
 //                epsilon = Mathf.Max(minEpsilon, epsilon * epsilonDecay);
 //                currentLearningRate *= learningRateDecay; // Decay learning rate
 //                Debug.Log($"Episode {episodeCounter}, New Epsilon: {epsilon:F4}, New Learning Rate: {currentLearningRate:F6}");
@@ -170,7 +170,7 @@
 //                decisionTimer = 0f;
 //                float[] currentStates = GatherInputs(myRobot, enemyRobot);
 
-//                if (lastStates != null)
+//                if (lastState != null)
 //                {
 //                    bool done = IsEpisodeDone();
 //                    if (done)
@@ -181,7 +181,7 @@
 
 //                    replayBuffer.AddExperience(new Experience
 //                    {
-//                        state = lastStates,
+//                        state = lastState,
 //                        actionsTaken = lastActions,
 //                        reward = tempReward,
 //                        nextState = currentStates,
@@ -194,7 +194,7 @@
 
 //                bool[] currentActions = ChooseActions(currentStates);
 //                lastActions = currentActions;
-//                lastStates = currentStates;
+//                lastState = currentStates;
 //            }
 
 //            if (lastActions != null)
@@ -215,7 +215,7 @@
 
 //            // Debug logging
 //            string actionsStr = lastActions != null ? string.Join(", ", lastActions.Select((a, i) => $"{i}: {(a ? "1" : "0")}")) : "None";
-//            float[] qValues = lastStates != null ? qNetwork.FeedForward(lastStates) : new float[OUTPUT_SIZE];
+//            float[] qValues = lastState != null ? qNetwork.FeedForward(lastState) : new float[OUTPUT_SIZE];
 //            float qVariance = CalculateQValueVariance(qValues);
 //            string qValuesStr = string.Join(", ", qValues.Select(q => q.ToString("F3")));
 //            Debug.Log($"Episode: {episodeCounter}, Reward: {episodeReward:F2}, Epsilon: {epsilon:F4}, Buffer Size: {replayBuffer.Count}, Actions: {actionsStr}, Q-Values: {qValuesStr}, Q-Variance: {qVariance:F3}");
@@ -231,7 +231,7 @@
 //            float arenaRadius = api.BattleInfo.ArenaRadius;
 //            float distToCenter = (myRobot.Position - center).magnitude / arenaRadius;
 //            float distToEnemy = (enemyRobot.Position - myRobot.Position).magnitude / arenaRadius;
-//            float lastDistToEnemy = lastStates != null ? lastStates[2] * 2 * arenaRadius : distToEnemy;
+//            float lastDistToEnemy = lastState != null ? lastState[2] * 2 * arenaRadius : distToEnemy;
 //            float enemyDistToCenter = (enemyRobot.Position - center).magnitude / arenaRadius;
 //            float angleToEnemy = api.Angle(myRobot.Position, myRobot.Rotation, enemyRobot.Position, false);
 
