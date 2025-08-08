@@ -16,12 +16,14 @@ public class AIBot_DQN : Bot
     private SumoAPI api;
     #endregion
 
-    #region NN Configs
+    #region Configs Properties 
     public bool loadModel = true;
     public bool saveModel = true;
     public string modelFileName = "DQN_Model.json";
     public string csvLogFileName = "DQN_LearningLog.csv";
+    #endregion
 
+    #region NN Properties 
     public float epsilon = 0.1f;
     public float discountFactor = 0.99f;
     public float learningRate = 0.005f;
@@ -30,7 +32,6 @@ public class AIBot_DQN : Bot
     public float maxEpisodeTime = 10f;
     public int maxTotalEpisodes = 100; 
     public int totalEpisodes = 0;
-
     public float angleThreshold = 10f;
 
     private DeepQNetwork DQN;
