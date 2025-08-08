@@ -23,11 +23,15 @@ public class AIBot_NN : Bot
     public float maxEpisodeTime = 10f;
     public float angleThreshold = 10f;
     public int totalEpisodes = 0;
-    
+
+    public int input = 4; // Position X, Position Y, Angle, Distance Normalized
+    public int hidden = 16; // Hidden layer size
+    public int output = 5; // Accelerate, TurnLeft, TurnRight, Dash, Skill
+
     private NeuralNetwork NN;
     [SerializeField]
     private float timer = 0f;
-    // var to hold collision, face towards edge while in the edge 
+    
     #endregion
 
     #region Bot Methods
@@ -44,7 +48,9 @@ public class AIBot_NN : Bot
         }
         else
         {
-            NN = new NeuralNetwork(4, 16, 3); // 4 Inputs: Position X, Position Y, Angle, Distance Normalized
+            // 4 Inputs: Position X, Position Y, Angle, Distance Normalized
+            // 5 Outputs: Accelerate, TurnLeft, TurnRight, Dash, Skill 
+            NN = new NeuralNetwork(input, hidden, output); 
             Debug.Log("Created new NN");
         }
 
@@ -96,14 +102,20 @@ public class AIBot_NN : Bot
         float posY = api.MyRobot.Position.y / api.BattleInfo.ArenaRadius;
         float angle = api.Angle();
         float distanceNormalized = api.DistanceNormalized();
+        float isDashCD = api.MyRobot.IsDashOnCooldown ? 1f : 0f; 
+        float isSkillCD = api.MyRobot.Skill.IsSkillOnCooldown ? 1f : 0f;
 
         // Get inputs and outputs for NN
-        float[] inputs = new float[] { posX, posY, angle, distanceNormalized };
+        // [Edit later] Consider to use IsDashCD and IsSkillCD as inputs too
+        float[] inputs = new float[] { posX, posY, angle, distanceNormalized, isDashCD, isSkillCD };
+        
         float[] outputs = NN.Forward(inputs);
 
         float accelerate = outputs[0];      // 0 to 1
         float turnLeft = outputs[1];        // -1 to 1
         float turnRight = outputs[2];       // -1 to 1
+        float dash = outputs[3];          // 0 or 1
+        float skill = outputs[4];         // 0 or 1
 
         float angleInDur = Mathf.Abs(angle) / api.MyRobot.RotateSpeed * api.MyRobot.TurnRate;
 
@@ -120,17 +132,31 @@ public class AIBot_NN : Bot
         {
             Enqueue(new AccelerateAction(InputType.Script, Mathf.Max(0.1f, Mathf.Clamp01(accelerate))));
         }
-        // [Edit later] Dash and skill here
+       
+        if (!api.MyRobot.IsDashOnCooldown && dash > 0.05f)  // && angle < dashSkillAngle
+        {
+            Enqueue(new DashAction(InputType.Script));
+        }
+        if (!api.MyRobot.Skill.IsSkillOnCooldown && skill > 0.05f) // && angle < dashSkillAngle
+        {
+            if (SkillType == SkillType.Boost || (SkillType == SkillType.Stone && api.DistanceNormalized(api.MyRobot.Position, api.BattleInfo.ArenaPosition) > 0.8f))
+            {
+                Enqueue(new SkillAction(InputType.Script));
+            }       
+        }
 
         // Train 
-        float[] targetOutputs = new float[3]; //{ accelerate, turnLeft, turnRight };
+        float[] targetOutputs = new float[5]; //{ accelerate, turnLeft, turnRight, dash, skill };
         targetOutputs[0] = Mathf.Clamp01(accelerate);           
         targetOutputs[1] = angle > 0 ? Mathf.Abs(angle) / 180f : 0f;
         targetOutputs[2] = angle < 0 ? Mathf.Abs(angle) / 180f : 0f;
-        
+        targetOutputs[3] = !api.MyRobot.IsDashOnCooldown && Mathf.Abs(angle) < angleThreshold ? 1f : 0f;
+        targetOutputs[4] = !api.MyRobot.Skill.IsSkillOnCooldown && Mathf.Abs(angle) < angleThreshold ? 1f : 0f;
+
         NN.Train(inputs, targetOutputs, learningRate);
 
-        LogNNLearning(inputs, outputs, targetOutputs, CalculateLoss(outputs, targetOutputs));
+        if (saveModel)
+            LogNNLearning(inputs, outputs, targetOutputs, CalculateLoss(outputs, targetOutputs));
     }
 
     void ResetEpisode() { 
@@ -158,9 +184,9 @@ public class AIBot_NN : Bot
         {
             if (writeHeader)
             {
-                sw.WriteLine("Episode,Timer,Input_PosX,Input_PosY,Input_Angle,Input_DistNorm,Output_Accelerate,Output_TurnLeft,Output_TurnRight,Target_Accelerate,Target_TurnLeft,Target_TurnRight,Loss");
+                sw.WriteLine("Episode,Timer,Input_PosX,Input_PosY,Input_Angle,Input_DistNorm,Output_Accelerate,Output_TurnLeft,Output_TurnRight,Output_IsDashCD,Output_IsSkillCD,Target_Accelerate,Target_TurnLeft,Target_TurnRight,Target_IsDashCD,Target_IsSkillCD,Loss");
             }
-            sw.WriteLine($"{totalEpisodes},{timer:F2},{inputs[0]:F4},{inputs[1]:F4},{inputs[2]:F4},{inputs[3]:F4},{outputs[0]:F4},{outputs[1]:F4},{outputs[2]:F4},{targets[0]:F4},{targets[1]:F4},{targets[2]:F4},{loss:F6}");
+            sw.WriteLine($"{totalEpisodes},{timer:F2},{inputs[0]:F4},{inputs[1]:F4},{inputs[2]:F4},{inputs[3]:F4},{outputs[0]:F4},{outputs[1]:F4},{outputs[2]:F4},{outputs[3]:F4},{outputs[4]:F4},{targets[0]:F4},{targets[1]:F4},{targets[2]:F4},{targets[3]:F4},{targets[4]:F4},{loss:F6}");
         }
     }
     

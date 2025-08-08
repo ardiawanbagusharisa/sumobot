@@ -16,7 +16,7 @@ public class AIBot_PPO : Bot
     #endregion
 
     #region Configs Properties
-    public bool loadModel = false;
+    public bool loadModel = true;
     public bool saveModel = true;
     public string modelFileName = "PPO_Model.json";
     public string csvLogFileName = "PPO_LearningLog.csv";
@@ -40,6 +40,10 @@ public class AIBot_PPO : Bot
     private int lastAction;
     private int stepInEpisode = 0;
     private float timer = 0f;
+
+    public int input = 4;   // 4 Inputs: Position X, Position Y, Angle, Distance Normalized 
+    public int hidden = 16; // Hidden layer size
+    public int output = 5;  // 5 Outputs: // Accelerate, TurnLeft, TurnRight, Dash, SkillBoost
     #endregion
 
     #region Bot Template Methods
@@ -54,7 +58,7 @@ public class AIBot_PPO : Bot
         }
         else
         {
-            PPO = new ProximalPolicyOptimization(4, 16, 3); // 4 Inputs: Position X, Position Y, Angle, Distance Normalized
+            PPO = new ProximalPolicyOptimization(input, hidden, output); // 4 Inputs: Position X, Position Y, Angle, Distance Normalized
             Debug.Log("Created new PPO");
         }
 
@@ -137,8 +141,12 @@ public class AIBot_PPO : Bot
             Enqueue(new TurnAction(InputType.Script, ActionType.TurnLeft, Mathf.Max(0.1f, Mathf.Clamp01(angleInDur))));
         else if (action == 2 && angle < -angleThreshold)
             Enqueue(new TurnAction(InputType.Script, ActionType.TurnRight, Mathf.Max(0.1f, Mathf.Clamp01(angleInDur))));
+        else if (action == 3 && Mathf.Abs(angle) <= angleThreshold && !api.MyRobot.IsDashOnCooldown)
+            Enqueue(new DashAction(InputType.Script));
+        else if (action == 4 && Mathf.Abs(angle) <= angleThreshold && !api.MyRobot.Skill.IsSkillOnCooldown)
+            Enqueue(new SkillAction(InputType.Script));
 
-        // Calculate loss for logging
+        // Calculate loss for logging 
         float policyLoss = 0f, valueLoss = 0f, totalLoss = 0f;
         if (episodeBuffer.Count > 0)
         {
@@ -182,6 +190,12 @@ public class AIBot_PPO : Bot
             endReward += 5f * 0.2f;
 
         reward += endReward;
+
+        // Reward for using dash and skill
+        if(myRobot.Skill.IsActive && Mathf.Abs(angle) < angleThreshold)
+            reward += 0.5f; // Reward for using skill when facing enemy
+        if (myRobot.IsDashOnCooldown && Mathf.Abs(angle) < angleThreshold)
+            reward += 0.5f;
 
         Debug.Log($"Reward: {reward:F2} | EndReward: {endReward:F2} | Angle: {(1 - Mathf.Abs(angle) / 180f):F2} | Dist: {(1 - distNormalized):F2}");
 
@@ -242,11 +256,11 @@ public class AIBot_PPO : Bot
         {
             if (writeHeader)
             {
-                sw.WriteLine("Episode,Step,PosX,PosY,Angle,DistN,Action0P,Action1P,Action2P,Action,Reward,Entropy,OriginalEntropy,PolicyLoss,ValueLoss,TotalLoss,Advantage,ClippedRatio,Return");
+                sw.WriteLine("Episode,Step,PosX,PosY,Angle,DistN,AccProb,TurnLeftProb,TurnRightProb,DashProb,SkillProb,Action,Reward,Entropy,OriginalEntropy,PolicyLoss,ValueLoss,TotalLoss,Advantage,ClippedRatio,Return");
             }
             float originalEntropy = CalculateEntropy(actionProbs); // Use actionProbs before noise for original
             sw.WriteLine($"{episode},{step},{posX:F2},{posY:F2},{angle:F2},{distN:F2}," +
-                         $"{actionProbs[0]:F4},{actionProbs[1]:F4},{actionProbs[2]:F4}," +
+                         $"{actionProbs[0]:F4},{actionProbs[1]:F4},{actionProbs[2]:F4},{actionProbs[3]:F4},{actionProbs[4]:F4}," +
                          $"{action},{reward:F4},{entropy:F4},{originalEntropy:F4},{policyLoss:F4},{valueLoss:F4},{totalLoss:F4},{advantage:F4},{clippedRatio:F4},{returnVal:F4}");
         }
     }
