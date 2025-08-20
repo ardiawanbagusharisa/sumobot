@@ -39,6 +39,7 @@ public class ChartManager : MonoBehaviour
     [Header("Chart Colors Source")]
     [SerializeField] private Texture2D _paletteSourceTexture;
     [SerializeField] private int _numFixColors = 0;
+    [SerializeField] private int _numSeries = 3;
 
     ColorPalette _colorPalette;
     RenderTexture _canvasRenderTexture;
@@ -48,7 +49,7 @@ public class ChartManager : MonoBehaviour
     {
         _chartSeriesList.Clear();
 
-        for (int i = 0; i < 3; i++)
+        for (int i = 0; i < _numSeries; i++)
         {
             float[] data = new float[52];
 

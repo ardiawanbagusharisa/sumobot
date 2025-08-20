@@ -660,6 +660,10 @@ PrefabInstance:
       propertyPath: m_AnchorMax.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 3913191151682720506, guid: 6bb05384eaab28e49b0dbe041f18a9f4, type: 3}
+      propertyPath: m_AnchorMin.y
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 4783769575960624349, guid: 6bb05384eaab28e49b0dbe041f18a9f4, type: 3}
       propertyPath: m_SizeDelta.y
       value: 0
@@ -759,6 +763,10 @@ PrefabInstance:
     - target: {fileID: 6930594686332527008, guid: 6bb05384eaab28e49b0dbe041f18a9f4, type: 3}
       propertyPath: _brushSize
       value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 6930594686332527008, guid: 6bb05384eaab28e49b0dbe041f18a9f4, type: 3}
+      propertyPath: _numSeries
+      value: 9
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
