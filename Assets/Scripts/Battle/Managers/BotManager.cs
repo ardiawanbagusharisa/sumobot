@@ -1,10 +1,9 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using SumoCore;
 using SumoInput;
 using SumoManager;
-using Unity.VisualScripting;
-using UnityEditor.SceneManagement;
 using UnityEngine;
 
 namespace SumoBot
@@ -55,23 +54,34 @@ namespace SumoBot
 
             if (LeftEnabled && Left != null)
             {
-                Left.OnBotUpdate();
+                leftConfig.IsOnUpdate = true;
 
-                if (leftConfig?.RunningCoroutine != null)
+                try
                 {
-                    StopCoroutine(leftConfig.RoutineFunc);
+                    Left.OnBotUpdate();
+                }
+                finally
+                {
+                    leftConfig.IsOnUpdate = false;
                 }
 
-                if (leftConfig.RoutineFunc != null)
-                {
-                    leftConfig.RunningCoroutine = StartCoroutine(leftConfig.RoutineFunc);
-                }
+                leftConfig.RunCoroutine(this);
             }
 
             if (RightEnabled && Right != null)
             {
-                Right.OnBotUpdate();
+                rightConfig.IsOnUpdate = true;
 
+                try
+                {
+                    Right.OnBotUpdate();
+                }
+                finally
+                {
+                    rightConfig.IsOnUpdate = false;
+                }
+
+                rightConfig.RunCoroutine(this);
             }
         }
 
@@ -83,10 +93,21 @@ namespace SumoBot
             if (LeftEnabled && Left != null)
             {
                 Left.OnBattleStateChanged(param.BattleState, param.Winner);
+
+                if (param.BattleState == BattleState.Battle_End)
+                {
+                    leftConfig.CleanCoroutine(this);
+                }
             }
+
             if (RightEnabled && Right != null)
             {
                 Right.OnBattleStateChanged(param.BattleState, param.Winner);
+
+                if (param.BattleState == BattleState.Battle_End)
+                {
+                    rightConfig.CleanCoroutine(this);
+                }
             }
         }
 
@@ -150,12 +171,14 @@ namespace SumoBot
             {
                 controller.Events[SumoController.OnBounce].Unsubscribe(OnLeftBounce);
                 Left.OnBotDestroy();
+                leftConfig?.CleanCoroutine(this);
             }
 
             if (RightEnabled && Right != null && controller.Side == PlayerSide.Right)
             {
                 controller.Events[SumoController.OnBounce].Unsubscribe(OnRightBounce);
                 Right.OnBotDestroy();
+                rightConfig?.CleanCoroutine(this);
             }
         }
 
@@ -202,10 +225,63 @@ namespace SumoBot
         public Queue<ISumoAction> Actions;
         public IEnumerator RoutineFunc;
         public Coroutine RunningCoroutine;
+        public bool CoroutineCrash;
+        public bool IsOnUpdate = false;
 
         public void Submit()
         {
             InputProvider.EnqueueCommand(Actions);
+        }
+        public void Enqueue(ISumoAction action)
+        {
+            Actions.Enqueue(action);
+        }
+
+        public void RunCoroutine(MonoBehaviour runner)
+        {
+            if (RunningCoroutine != null)
+            {
+                runner.StopCoroutine(RunningCoroutine);
+            }
+
+            if (RoutineFunc != null)
+            {
+                RunningCoroutine = runner.StartCoroutine(SafeCoroutine(RoutineFunc));
+            }
+        }
+
+        public void CleanCoroutine(MonoBehaviour runner)
+        {
+            CoroutineCrash = false;
+            if (RunningCoroutine != null)
+            {
+                runner.StopCoroutine(RunningCoroutine);
+            }
+            RunningCoroutine = null;
+            RoutineFunc = null;
+        }
+
+        private IEnumerator SafeCoroutine(IEnumerator coroutineFactory)
+        {
+            while (true)
+            {
+                object current;
+                try
+                {
+                    if (!coroutineFactory.MoveNext())
+                        break;
+
+                    current = coroutineFactory.Current;
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogError($"Exception during coroutine execution: {ex}");
+                    CoroutineCrash = true;
+                    yield break;
+                }
+
+                yield return current;
+            }
         }
     }
 }

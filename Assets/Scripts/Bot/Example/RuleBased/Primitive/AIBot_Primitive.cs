@@ -25,13 +25,15 @@ namespace SumoBot.RuleBased.Primitive
         public override void OnBotInit(SumoAPI botAPI)
         {
             api = botAPI;
+            Debug.Log($"api {api.BattleInfo.ArenaPosition}");
         }
 
         public override void OnBotUpdate()
         {
             float angleToEnemy = api.Angle();
+            Debug.Log($"Angle To Enemy {angleToEnemy}");
             SumoBotAPI myState = api.MyRobot;
-            float angleInDur = Mathf.Abs(angleToEnemy) / myState.RotateSpeed * myState.TurnRate;
+            float angleInDur = Mathf.Abs(angleToEnemy) / myState.RotateSpeed;
 
             // When angle is quite enough facing the enemy, run dash, skill, accelerate action
             if (Mathf.Abs(angleToEnemy) < 20)
