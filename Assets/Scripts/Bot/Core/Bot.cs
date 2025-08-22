@@ -13,9 +13,9 @@ namespace SumoBot
     {
         #region Runtime properties
 
-        private BotConfig config;
+        private BotHandler config;
 
-        internal void Init(BotConfig config)
+        internal void Init(BotHandler config)
         {
             this.config = config;
         }
