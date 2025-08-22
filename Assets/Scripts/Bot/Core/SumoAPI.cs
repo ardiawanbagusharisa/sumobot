@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -44,6 +45,14 @@ namespace SumoBot
             }
         }
 
+        public bool IsActionActive(ISumoAction action, bool isEnemy = false)
+        {
+            if (isEnemy)
+                return enemyController.IsActionActive(action.Type);
+            else
+                return myController.IsActionActive(action.Type);
+        }
+
         public bool CanExecute(ISumoAction action)
         {
             return myController.InputProvider.CanExecute(action);
@@ -70,30 +79,7 @@ namespace SumoBot
             Vector2? targetPos = null)
         {
             Vector2 dist = Distance(oriPos, targetPos);
-            return 1f - Mathf.Clamp01(dist.magnitude / BattleInfo.ArenaRadius);
-        }
-
-        // Return amount of degree from [original] to [target]
-        // 0 or 360 -> Up
-        // 270  -> right
-        // 180 -> bottom
-        // 90 -> left
-        public float AngleDeg(
-            Vector2? oriPos = null,
-            float? oriRot = null,
-            Vector2? targetPos = null)
-        {
-            Vector2 toEnemy = Distance(oriPos, targetPos);
-
-            float angleToEnemy = Mathf.Atan2(toEnemy.y, toEnemy.x) * Mathf.Rad2Deg - 90f;
-            if (angleToEnemy < 0) angleToEnemy += 360f;
-
-            float relativeAngle = angleToEnemy - (oriRot ?? MyRobot.Rotation);
-            if (relativeAngle < 0) relativeAngle += 360f;
-
-            relativeAngle = (relativeAngle + 360f) % 360f;
-
-            return relativeAngle;
+            return 1f - Mathf.Clamp01(dist.magnitude / (BattleInfo.ArenaRadius * 2));
         }
 
         public float Angle(
@@ -116,97 +102,65 @@ namespace SumoBot
                 return signedAngle;
         }
 
-        public bool IsActionActive(ISumoAction action, bool isEnemy = false)
-        {
-            if (isEnemy)
-                return enemyController.IsActionActive(action.Type);
-            else
-                return myController.IsActionActive(action.Type);
-        }
-
         public (Vector2, float) Simulate(
-            ISumoAction action,
-            bool isEnemy = false,
-            bool isDelta = false)
+            List<ISumoAction> actions,
+            bool isEnemy = false)
         {
             SumoBotAPI robot = isEnemy ? EnemyRobot : MyRobot;
+            float moveSpeed = robot.MoveSpeed;
+            float dashSpeed = robot.DashSpeed;
             Vector2 position = robot.Position;
             float rotation = robot.Rotation % 360;
             if (rotation < 0) rotation += 360f;
 
-            if (action is TurnAction)
+            foreach (ISumoAction action in actions)
             {
-                float delta = robot.RotateSpeed * robot.TurnRate * action.Duration;
+                if (action is SkillAction)
+                {
+                    if (action.Type == ActionType.SkillBoost)
+                    {
+                        moveSpeed *= robot.Skill.BoostMultiplier;
+                        dashSpeed *= robot.Skill.BoostMultiplier;
+                    }
+                    if (action.Type == ActionType.SkillStone)
+                    {
+                        moveSpeed = 0;
+                        dashSpeed = 0;
+                    }
+                }
 
-                if (action.Type == ActionType.TurnRight)
-                    delta = -delta;
+                if (action is TurnAction)
+                {
+                    float delta = robot.RotateSpeed * action.Duration;
 
-                rotation += delta;
-            }
+                    if (action.Type == ActionType.TurnRight)
+                        delta = -delta;
 
-            Vector2 direction = Quaternion.Euler(0, 0, rotation) * Vector2.up;
+                    rotation += delta;
+                }
 
-            if (action is AccelerateAction)
-            {
-                float effectiveSpeed = robot.MoveSpeed;
+                Vector2 direction = Quaternion.Euler(0, 0, rotation) * Vector2.up;
 
-                float distance = effectiveSpeed * action.Duration;
-                position += direction.normalized * distance;
-            }
-            else if (action is DashAction)
-            {
-                float effectiveSpeed = robot.DashSpeed;
+                if (moveSpeed == 0 && dashSpeed == 0)
+                    continue;
 
-                float dashDistance = effectiveSpeed * robot.DashDuration;
-                position += direction.normalized * dashDistance;
-                position += direction.normalized * (robot.StopDelay * effectiveSpeed);
-            }
+                if (action is AccelerateAction)
+                {
+                    float effectiveSpeed = robot.MoveSpeed;
 
-            if (isDelta)
-            {
-                return new(position - robot.Position, rotation - robot.Rotation);
+                    float distance = effectiveSpeed * action.Duration;
+                    position += direction.normalized * distance;
+                }
+                else if (action is DashAction)
+                {
+                    float effectiveSpeed = robot.DashSpeed;
+
+                    float dashDistance = effectiveSpeed * robot.DashDuration;
+                    position += direction.normalized * dashDistance;
+                    position += direction.normalized * (robot.StopDelay * effectiveSpeed);
+                }
             }
             return new(position, rotation);
-        }
-
-        public string GenerateReason(ISumoAction action = null)
-        {
-            List<string> reasons = new();
-
-            (Vector2 oriPos, float oriRot) = action != null ? Simulate(action) : (MyRobot.Position, MyRobot.Rotation);
-
-            float distanceEnemyNorm = DistanceNormalized(oriPos: oriPos);
-            float distanceEnemy = Distance(oriPos: oriPos).magnitude;
-            float enemySide = Angle(oriPos: oriPos, oriRot: oriRot, normalized: true);
-            float distanceFromArenaNorm = DistanceNormalized(oriPos: oriPos,
-                targetPos: BattleInfo.ArenaPosition);
-            float distanceFromArena = Distance(oriPos: oriPos,
-                targetPos: BattleInfo.ArenaPosition).magnitude;
-            float angleToEnemy = AngleDeg(oriPos: oriPos, oriRot: oriRot) / 360;
-            float angleToArena = AngleDeg(oriPos: oriPos, targetPos: BattleInfo.ArenaPosition) / 360;
-
-            List<float> inputs = new() {
-                distanceEnemyNorm,
-                angleToArena,
-                distanceFromArenaNorm,
-                enemySide,
-                };
-
-            FuzzyBase fuzzy = new FuzzySugeno();
-            fuzzy.Membership.GenerateTriangular();
-            var fuzzificationResult = fuzzy.Fuzzification(inputs);
-
-            fuzzificationResult.TryGetValue("distance_from_enemy", out var distanceFromEnemyMembership);
-            fuzzificationResult.TryGetValue("facing_to_arena", out var facingToArenaMembership);
-            fuzzificationResult.TryGetValue("distance_from_arena", out var distanceFromArenaMembership);
-            fuzzificationResult.TryGetValue("angle_to_enemy", out var angleToEnemyMembership);
-
-            reasons.Add($"How much distance from my robot to enemy?: The distance is {distanceEnemy}, considered as {string.Join(" and ", distanceFromEnemyMembership.OrderByDescending(x => x.Value).TakeWhile((x) => x.Value > 0).Select(x => $"{x.Key} with accuracy {x.Value}"))}");
-            reasons.Add($"\nHow much angle my robot need to face enemy? The score is {angleToArena}, enemy is in {string.Join(" and ", angleToEnemyMembership.OrderByDescending(x => x.Value).TakeWhile((x) => x.Value > 0).Select(x => $"{x.Key} with accuracy {x.Value}"))}");
-            reasons.Add($"\nHow much the distance from my robot to arena center?: The distance is {distanceFromArena}, considered as {string.Join(" and ", distanceFromArenaMembership.OrderByDescending(x => x.Value).TakeWhile((x) => x.Value > 0).Select(x => $"{x.Key} with accuracy {x.Value}"))}");
-            reasons.Add($"\nFace to arena {string.Join(" and ", facingToArenaMembership.OrderByDescending(x => x.Value).TakeWhile((x) => x.Value > 0).Select(x => $"{x.Key} with accuracy {x.Value}"))}");
-
-            return string.Join(", ", reasons);
         }
 
         public override string ToString()
@@ -266,7 +220,6 @@ public readonly struct SumoBotAPI
     public float DashCooldown { get; }
 
     public float StopDelay { get; }
-    public float TurnRate { get; }
     public float BounceResistance { get; }
 
     public Vector2 Position { get; }
@@ -279,17 +232,16 @@ public readonly struct SumoBotAPI
     public bool IsDashActive { get; }
     public bool IsMovementDisabled { get; }
     public bool IsOutFromArena { get; }
+    public Dictionary<ActionType, float> ActiveActions { get; }
 
     public SumoBotAPI(SumoController controller)
     {
-
         Side = controller.Side;
         MoveSpeed = controller.MoveSpeed;
         RotateSpeed = controller.RotateSpeed;
         DashSpeed = controller.DashSpeed;
         DashDuration = controller.DashDuration;
         DashCooldown = controller.DashCooldown;
-        TurnRate = controller.TurnRate;
         StopDelay = controller.StopDelay;
         BounceResistance = controller.BounceResistance;
         Skill = new(controller.Skill);
@@ -303,6 +255,8 @@ public readonly struct SumoBotAPI
         IsDashActive = controller.IsDashActive;
         IsMovementDisabled = controller.IsMovementDisabled;
         IsOutFromArena = controller.IsOutOfArena;
+
+        ActiveActions = controller.ActiveActions;
     }
 
     public override string ToString()
@@ -314,7 +268,6 @@ public readonly struct SumoBotAPI
                $"- AngularVel    : {AngularVelocity:F2}\n" +
                $"- MoveSpeed     : {MoveSpeed:F2}\n" +
                $"- DashSpeed     : {DashSpeed:F2} (Cooldown: {DashCooldown:F2}s)\n" +
-               $"- RotateSpeed   : {RotateSpeed:F2}, TurnRate: {TurnRate:F2}\n" +
                $"- StopDelay     : {StopDelay:F2}, BounceResist: {BounceResistance:F2}\n" +
                $"- IsDashOnCooldown   : {IsDashOnCooldown}\n" +
                $"- IsMovementLock: {IsMovementDisabled}\n" +

@@ -36,7 +36,6 @@ namespace SumoCore
 
         // Bounce
         public float Torque = 0.2f;
-        public float TurnRate = 0.3f;
         public float BounceResistance = 1f;
         public float LockActorMultiplier = 0.95f;
         public float CollisionBaseForce = 4f;
@@ -255,7 +254,7 @@ namespace SumoCore
             lastTurnAction = action;
             Log(action);
 
-            float delta = RotateSpeed * TurnRate * action.Duration;
+            float delta = RotateSpeed * action.Duration;
 
             remainingAngle = delta;
             rotationDirection = action.Type == ActionType.TurnRight ? -1 : 1; // Turn CW (right)
@@ -283,7 +282,7 @@ namespace SumoCore
             if (!isTurning || IsMovementDisabled || lastTurnAction == null)
                 return;
 
-            float angularStep = RotateSpeed * TurnRate * Time.fixedDeltaTime;
+            float angularStep = RotateSpeed * Time.fixedDeltaTime;
 
             // Clamp step to remaining angle
             float step = Mathf.Min(angularStep, remainingAngle);

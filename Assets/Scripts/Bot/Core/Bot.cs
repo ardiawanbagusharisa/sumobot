@@ -45,7 +45,7 @@ namespace SumoBot
         // Add one action to local queue
         public virtual void Enqueue(ISumoAction action)
         {
-            config.Actions.Enqueue(action);
+            config.Enqueue(action);
         }
         public virtual void SetRoutine(IEnumerator func)
         {
@@ -56,6 +56,9 @@ namespace SumoBot
         // actions that already sent will be executed in order every battle tick
         public void Submit()
         {
+            if (!config.IsOnUpdate)
+                throw new InvalidOperationException("Submit() can only be called during OnBotUpdate().");
+
             config.Submit();
         }
 

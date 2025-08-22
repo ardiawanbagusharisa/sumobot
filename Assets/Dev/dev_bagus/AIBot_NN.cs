@@ -196,7 +196,7 @@ namespace SumoBot {
             inputs[0] = myRobot.Position.x / api.BattleInfo.ArenaRadius; 
             inputs[1] = myRobot.Position.y / api.BattleInfo.ArenaRadius; 
             inputs[2] = myRobot.LinearVelocity.magnitude / myRobot.MoveSpeed; 
-            inputs[3] = myRobot.AngularVelocity / (myRobot.RotateSpeed * myRobot.TurnRate * 100f); // [edit later]
+            inputs[3] = myRobot.AngularVelocity / (myRobot.RotateSpeed * 100f); // [edit later]
             inputs[4] = api.Angle() / 180f; 
             inputs[5] = Vector3.Distance(myRobot.Position, enemyRobot.Position) / (2 * api.BattleInfo.ArenaRadius); 
             inputs[6] = (Vector3.SignedAngle(myRobot.Rotation * Vector3.up, (api.BattleInfo.ArenaPosition - myRobot.Position).normalized, Vector3.forward)) / 180f; 
@@ -206,7 +206,7 @@ namespace SumoBot {
             inputs[9] = enemyRobot.Position.x / api.BattleInfo.ArenaRadius;
             inputs[10] = enemyRobot.Position.y / api.BattleInfo.ArenaRadius;
             inputs[11] = enemyRobot.LinearVelocity.magnitude / enemyRobot.MoveSpeed;
-            inputs[12] = enemyRobot.AngularVelocity / (enemyRobot.RotateSpeed * enemyRobot.TurnRate * 100f);
+            inputs[12] = enemyRobot.AngularVelocity / (enemyRobot.RotateSpeed * 100f);
             inputs[13] = enemyRobot.Rotation / 360f;
             inputs[14] = Vector3.Dot((myRobot.Rotation * Vector3.up).normalized, (enemyRobot.Rotation * Vector3.up).normalized);
             inputs[15] = Vector3.Dot(myRobot.LinearVelocity.normalized, (enemyRobot.Position - myRobot.Position).normalized);
