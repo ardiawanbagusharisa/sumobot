@@ -1,12 +1,6 @@
-using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
-using NUnit.Framework;
-using SumoBot.RuleBased.Fuzzy;
 using SumoCore;
 using SumoManager;
-using UnityEditor;
 using UnityEngine;
 
 namespace SumoBot
@@ -57,11 +51,7 @@ namespace SumoBot
         {
             return myController.InputProvider.CanExecute(action);
         }
-
-        public Coroutine StartCoroutine(IEnumerator func)
-        {
-            return myController.StartCoroutine(func);
-        }
+        
         public void StopCoroutine(Coroutine func)
         {
             myController.StopCoroutine(func);
@@ -79,7 +69,30 @@ namespace SumoBot
             Vector2? targetPos = null)
         {
             Vector2 dist = Distance(oriPos, targetPos);
-            return 1f - Mathf.Clamp01(dist.magnitude / (BattleInfo.ArenaRadius * 2));
+            return dist.magnitude / (2 * BattleInfo.ArenaRadius);
+        }
+
+        // Return amount of degree from [original] to [target]
+        // 0 or 360 -> Up
+        // 270  -> right
+        // 180 -> bottom
+        // 90 -> left
+        public float AngleDeg(
+            Vector2? oriPos = null,
+            float? oriRot = null,
+            Vector2? targetPos = null)
+        {
+            Vector2 toEnemy = Distance(oriPos, targetPos);
+
+            float angleToEnemy = Mathf.Atan2(toEnemy.y, toEnemy.x) * Mathf.Rad2Deg - 90f;
+            if (angleToEnemy < 0) angleToEnemy += 360f;
+
+            float relativeAngle = angleToEnemy - (oriRot ?? MyRobot.Rotation);
+            if (relativeAngle < 0) relativeAngle += 360f;
+
+            relativeAngle = (relativeAngle + 360f) % 360f;
+
+            return relativeAngle;
         }
 
         public float Angle(
