@@ -25,8 +25,8 @@ namespace SumoBot
 
         public bool BotEnabled => LeftEnabled || RightEnabled;
 
-        private BotConfig leftConfig;
-        private BotConfig rightConfig;
+        private BotHandler leftConfig;
+        private BotHandler rightConfig;
 
 
         private void OnEnable()
@@ -219,7 +219,7 @@ namespace SumoBot
         }
     }
 
-    public class BotConfig
+    public class BotHandler
     {
         public InputProvider InputProvider;
         public Queue<ISumoAction> Actions;
