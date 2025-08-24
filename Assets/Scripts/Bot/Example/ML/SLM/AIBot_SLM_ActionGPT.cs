@@ -7,19 +7,24 @@ using SumoManager;
 using Unity.InferenceEngine;
 using UnityEngine;
 using System.Threading.Tasks;
+using System;
+using System.IO;
 
 namespace ML.LanguageModels
 {
+
     class AIBot_SLM_ActionGPT : Bot
     {
         public override string ID => "Sumo_ActionGPT";
 
-        public override SkillType SkillType => SkillType.Boost;
+        public override SkillType SkillType => DefaultSkillType;
+
+        public SkillType DefaultSkillType = SkillType.Stone;
 
         public Model runtimeModel;
         public Worker engine;
         private SumoAPI api;
-        private bool isInitializing = false;
+        private bool isInitialized = false;
 
         private BPETokenizer tokenizer;
         private BattleState state;
@@ -30,14 +35,12 @@ namespace ML.LanguageModels
         public override void OnBattleStateChanged(BattleState state, BattleWinner? winner)
         {
             this.state = state;
-            if (state == BattleState.Battle_End)
+
+            if (state == BattleState.Battle_Countdown)
             {
-                engine.Dispose();
                 prompt = null;
                 ClearCommands();
-            }
-            else if (state == BattleState.Battle_Countdown)
-            {
+                isGenerating = false;
                 CreateEngine();
             }
         }
@@ -49,13 +52,21 @@ namespace ML.LanguageModels
         public override void OnBotInit(SumoAPI botAPI)
         {
             api = botAPI;
-            tokenizer = new("Assets/Resources/Models/ML/LanguageModels/action_tokenizer.json");
+            string tokenizerPath = $"ML/Tokenizer/action_tokenizer";
+            TextAsset tokenizerAsset = Resources.Load<TextAsset>(tokenizerPath);
+            if (tokenizerAsset == null)
+            {
+                Debug.LogError("Tokenizer JSON not found in Resources!");
+                return;
+            }
+            tokenizer = new(tokenizerAsset);
         }
 
         public override void OnBotUpdate()
         {
             if (isGenerating) return;
             prompt = GeneratePrompt();
+
             _ = RunInference();
             Submit();
         }
@@ -64,7 +75,7 @@ namespace ML.LanguageModels
         {
             var signedAngle = api.Angle();
             var signedAngleScore = api.Angle(normalized: true);
-            var distanceToEnemy = api.DistanceNormalized();
+            var distanceToEnemy = 1 - api.DistanceNormalized();
             var nearArena = api.Distance(targetPos: api.BattleInfo.ArenaPosition).magnitude / api.BattleInfo.ArenaRadius;
 
             var centerToMe = api.Distance(targetPos: api.MyRobot.Position, oriPos: api.BattleInfo.ArenaPosition).normalized;
@@ -76,7 +87,7 @@ namespace ML.LanguageModels
             var facingToOutside = Vector2.Dot(facingDir, centerToMe);
 
             // return $"GameState: BotPos=[{api.MyRobot.Position.x:F2},{api.MyRobot.Position.y:F2}], BotRot={Normalize360(api.MyRobot.Rotation):F0}, EnemyPos=[{api.EnemyRobot.Position.x:F2},{api.EnemyRobot.Position.y:F2}], EnemyRot={Normalize360(api.EnemyRobot.Rotation):F0}, EnemyAngle={signedAngle:F2}, EnemyAngleScore={signedAngleScore:F2}, EnemyDistance={distanceToEnemy:F2}, BotArena={nearArena:F2} Result:";
-            return $"GameState: BotPos=[{api.MyRobot.Position.x:F2},{api.MyRobot.Position.y:F2}] BotRot={Normalize360(api.MyRobot.Rotation):F0} EnemyPos=[{api.EnemyRobot.Position.x:F2},{api.EnemyRobot.Position.y:F2}] EnemyRot={Normalize360(api.EnemyRobot.Rotation):F0} EnemyAngle={signedAngle:F2} EnemyAngleScore={signedAngleScore:F2} EnemyDistance={distanceToEnemy:F2} BotArena={nearArena:F2} FaceArena={facingToOutside:F2} Result:";
+            return $"BotPos=[{api.MyRobot.Position.x:F2},{api.MyRobot.Position.y:F2}] BotRot={Normalize360(api.MyRobot.Rotation):F0} EnemyPos=[{api.EnemyRobot.Position.x:F2},{api.EnemyRobot.Position.y:F2}] EnemyRot={Normalize360(api.EnemyRobot.Rotation):F0} EnemyAngle={signedAngle:F2} EnemyAngleScore={signedAngleScore:F2} EnemyDistance={distanceToEnemy:F2} BotArena={nearArena:F2} FaceArena={facingToOutside:F2} Result:";
         }
 
         async Task RunInference()
@@ -92,11 +103,9 @@ namespace ML.LanguageModels
 
                 List<int> completeOutput = new(input);
                 List<int> outputTokens = new();
-                Debug.Log($"Start inference at {Time.frameCount}");
-
 
                 var currIters = 0;
-                while (currIters < 10 && state == BattleState.Battle_Ongoing)
+                while (currIters < 15 && state == BattleState.Battle_Ongoing)
                 {
                     isGenerating = true;
                     int[] inputSlice = completeOutput
@@ -109,6 +118,7 @@ namespace ML.LanguageModels
                     engine?.Schedule();
 
                     using var output = (Tensor<float>)engine.PeekOutput(0).ReadbackAndClone();
+                    await Task.Yield();
                     float[] logits = output.DownloadToArray();
                     tensor.Dispose();
                     output.Dispose();
@@ -116,13 +126,12 @@ namespace ML.LanguageModels
                     int nextToken = ArgMax(logits, inputSlice.Length - 1, vocabSize);
 
                     // Break on newline or empty token
-                    if (nextToken == 47 || nextToken == 0)
+                    if (tokenizer.idToToken[nextToken] == "\n" || tokenizer.idToToken[nextToken] == "<PAD>")
                         break;
 
                     completeOutput.Add(nextToken);
                     outputTokens.Add(nextToken);
                     currIters += 1;
-                    await Task.Yield();
                 }
 
                 isGenerating = false;
@@ -159,26 +168,29 @@ namespace ML.LanguageModels
                                 continue;
 
                             act = "Skill";
-                            dur = 0;
                         }
                         else if (action.StartsWith("DS"))
                         {
                             if (api.MyRobot.IsDashOnCooldown)
                                 continue;
-                                
+
                             act = "Dash";
-                            dur = 0;
                         }
 
                         if (act == null)
                         {
                             continue;
                         }
+
+                        if (dur < 0.1)
+                        {
+                            dur = 0.1f;
+                        }
+
                         Debug.Log($"action: {act} {dur}");
                         var parsedAct = GetAction(act, dur);
                         Enqueue(parsedAct);
                     }
-
                 }
             }
         }
@@ -210,22 +222,19 @@ namespace ML.LanguageModels
 
         private void CreateEngine()
         {
-            if (isInitializing)
+            if (isInitialized)
                 return;
-
-            isInitializing = true;
 
             engine?.Dispose();
 
             if (runtimeModel == null)
             {
-                ModelAsset modelAsset = Resources.Load("Models/ML/LanguageModels/action_gpt") as ModelAsset;
+                ModelAsset modelAsset = Resources.Load($"ML/Models/SLM/action_gpt") as ModelAsset;
                 runtimeModel = ModelLoader.Load(modelAsset);
             }
 
             engine = new Worker(runtimeModel, BackendType.CPU);
-            isInitializing = false;
-            isGenerating = false;
+            isInitialized = true;
         }
 
         public override void OnBotDestroy()

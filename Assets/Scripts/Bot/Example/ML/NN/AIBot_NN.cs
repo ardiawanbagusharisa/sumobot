@@ -17,7 +17,7 @@ public class AIBot_NN : Bot
     #region NN Configs
     public bool loadModel = true;
     public bool saveModel = false;
-    public string modelFileName = "NN_Model.json";
+    public string modelFileName = "NN_Model";
     public string csvLogFileName = "NN_LearningLog.csv";
     public float learningRate = 0.01f;
     public float maxEpisodeTime = 10f;
@@ -31,7 +31,7 @@ public class AIBot_NN : Bot
     private NeuralNetwork NN;
     [SerializeField]
     private float timer = 0f;
-    
+
     #endregion
 
     #region Bot Methods
@@ -40,17 +40,18 @@ public class AIBot_NN : Bot
         api = botAPI;
 
         //string path = Path.Combine(Application.persistentDataPath, modelFileName);
-        string path = "Assets/Resources/Models/ML/NN/" + modelFileName;
-        if (loadModel && File.Exists(path))
+        string path = "ML/Models/NN/" + modelFileName;
+        if (loadModel)
         {
             NN = NeuralNetwork.Load(path);
             Debug.Log($"Loaded NN from {path}");
+            return;
         }
         else
         {
             // 4 Inputs: Position X, Position Y, Angle, Distance Normalized
             // 5 Outputs: Accelerate, TurnLeft, TurnRight, Dash, Skill 
-            NN = new NeuralNetwork(input, hidden, output); 
+            NN = new NeuralNetwork(input, hidden, output);
             Debug.Log("Created new NN");
         }
 
@@ -64,10 +65,10 @@ public class AIBot_NN : Bot
         Submit();
 
         timer += 0.1f;
-        if (timer >= maxEpisodeTime) 
+        if (timer >= maxEpisodeTime)
         {
             ResetEpisode();
-            Debug.Log($"Angle: {api.Angle()}. AngleDeg: {api.AngleDeg()}, Dist: {api.Distance().magnitude} {api.Distance()}, DistN: {api.DistanceNormalized()}");
+            Debug.Log($"Angle: {api.Angle()}, Dist: {api.Distance().magnitude} {api.Distance()}, DistN: {api.DistanceNormalized()}");
             Debug.Log($"MyPos: {api.MyRobot.Position}, MyRot: {api.MyRobot.Rotation}, EnemyPos: {api.EnemyRobot.Position}, EnemyRotation: {api.EnemyRobot.Rotation}");
         }
     }
@@ -82,7 +83,7 @@ public class AIBot_NN : Bot
             if (saveModel)
             {
                 //string path = Path.Combine(Application.persistentDataPath, modelFileName);
-                string path = "Assets/Resources/Models/ML/NN/" + modelFileName;
+                string path = "Assets/Resources/ML/Models/NN/" + modelFileName + ".json";
                 NN.Save(path);
                 Debug.Log($"Saved NN to {path}");
             }
@@ -102,13 +103,13 @@ public class AIBot_NN : Bot
         float posY = api.MyRobot.Position.y / api.BattleInfo.ArenaRadius;
         float angle = api.Angle();
         float distanceNormalized = api.DistanceNormalized();
-        float isDashCD = api.MyRobot.IsDashOnCooldown ? 1f : 0f; 
+        float isDashCD = api.MyRobot.IsDashOnCooldown ? 1f : 0f;
         float isSkillCD = api.MyRobot.Skill.IsSkillOnCooldown ? 1f : 0f;
 
         // Get inputs and outputs for NN
         // [Edit later] Consider to use IsDashCD and IsSkillCD as inputs too
         float[] inputs = new float[] { posX, posY, angle, distanceNormalized, isDashCD, isSkillCD };
-        
+
         float[] outputs = NN.Forward(inputs);
 
         float accelerate = outputs[0];      // 0 to 1
@@ -117,7 +118,7 @@ public class AIBot_NN : Bot
         float dash = outputs[3];          // 0 or 1
         float skill = outputs[4];         // 0 or 1
 
-        float angleInDur = Mathf.Abs(angle) / api.MyRobot.RotateSpeed * api.MyRobot.TurnRate;
+        float angleInDur = Mathf.Abs(angle) / api.MyRobot.RotateSpeed;
 
         if (angle > 0 && turnLeft > 0.05f)
         {
@@ -132,7 +133,7 @@ public class AIBot_NN : Bot
         {
             Enqueue(new AccelerateAction(InputType.Script, Mathf.Max(0.1f, Mathf.Clamp01(accelerate))));
         }
-       
+
         if (!api.MyRobot.IsDashOnCooldown && dash > 0.05f)  // && angle < dashSkillAngle
         {
             Enqueue(new DashAction(InputType.Script));
@@ -142,12 +143,12 @@ public class AIBot_NN : Bot
             if (SkillType == SkillType.Boost || (SkillType == SkillType.Stone && api.DistanceNormalized(api.MyRobot.Position, api.BattleInfo.ArenaPosition) > 0.8f))
             {
                 Enqueue(new SkillAction(InputType.Script));
-            }       
+            }
         }
 
         // Train 
         float[] targetOutputs = new float[5]; //{ accelerate, turnLeft, turnRight, dash, skill };
-        targetOutputs[0] = Mathf.Clamp01(accelerate);           
+        targetOutputs[0] = Mathf.Clamp01(accelerate);
         targetOutputs[1] = angle > 0 ? Mathf.Abs(angle) / 180f : 0f;
         targetOutputs[2] = angle < 0 ? Mathf.Abs(angle) / 180f : 0f;
         targetOutputs[3] = !api.MyRobot.IsDashOnCooldown && Mathf.Abs(angle) < angleThreshold ? 1f : 0f;
@@ -159,7 +160,8 @@ public class AIBot_NN : Bot
             LogNNLearning(inputs, outputs, targetOutputs, CalculateLoss(outputs, targetOutputs));
     }
 
-    void ResetEpisode() { 
+    void ResetEpisode()
+    {
         timer = 0f;
         totalEpisodes++;
     }
@@ -168,8 +170,8 @@ public class AIBot_NN : Bot
     {
         if (saveModel)
         {
-            //string path = Path.Combine(Application.persistentDataPath, modelFileName);
-            string path = "Assets/Resources/Models/ML/NN/" + modelFileName;
+            string modelPath = "ML/Models/NN/" + modelFileName + ".json";
+            string path = Path.Combine(Application.streamingAssetsPath, modelPath);
             NN.Save(path);
             Debug.Log($"Saved NN to {path}");
         }
@@ -177,8 +179,8 @@ public class AIBot_NN : Bot
 
     private void LogNNLearning(float[] inputs, float[] outputs, float[] targets, float loss)
     {
-        //string path = Path.Combine(Application.persistentDataPath, csvLogFileName);
-        string path = "Assets/Resources/Models/ML/NN/" + csvLogFileName;
+        string csvPath = "ML/Models/NN/" + csvLogFileName;
+        string path = Path.Combine(Application.streamingAssetsPath, csvPath);
         bool writeHeader = !File.Exists(path);
         using (StreamWriter sw = new StreamWriter(path, true))
         {
@@ -189,7 +191,7 @@ public class AIBot_NN : Bot
             sw.WriteLine($"{totalEpisodes},{timer:F2},{inputs[0]:F4},{inputs[1]:F4},{inputs[2]:F4},{inputs[3]:F4},{outputs[0]:F4},{outputs[1]:F4},{outputs[2]:F4},{outputs[3]:F4},{outputs[4]:F4},{targets[0]:F4},{targets[1]:F4},{targets[2]:F4},{targets[3]:F4},{targets[4]:F4},{loss:F6}");
         }
     }
-    
+
     private float CalculateLoss(float[] outputs, float[] targets)
     {
         // MSE loss (for logging purposes)
@@ -216,7 +218,7 @@ public class NeuralNetwork
     private int inputSize;
     private int hiddenSize;
     private int outputSize;
-    
+
     [Serializable]
     private class NetworkData
     {
@@ -348,10 +350,11 @@ public class NeuralNetwork
 
     public static NeuralNetwork Load(string path)
     {
-        if (!File.Exists(path))
+        TextAsset model = Resources.Load<TextAsset>(path);
+        if (model == null)
             throw new FileNotFoundException(path);
 
-        NetworkData d = JsonUtility.FromJson<NetworkData>(File.ReadAllText(path));
+        NetworkData d = JsonUtility.FromJson<NetworkData>(model.text);
         NeuralNetwork nn = new NeuralNetwork(d.inputSize, d.hiddenSize, d.outputSize);
 
         nn.Unflatten(d.w1, nn.weights1);

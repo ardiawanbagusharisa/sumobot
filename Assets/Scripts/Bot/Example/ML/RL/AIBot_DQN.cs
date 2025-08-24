@@ -18,8 +18,8 @@ public class AIBot_DQN : Bot
 
     #region Configs Properties 
     public bool loadModel = true;
-    public bool saveModel = true;
-    public string modelFileName = "DQN_Model.json";
+    public bool saveModel = false;
+    public string modelFileName = "DQN_Model";
     public string csvLogFileName = "DQN_LearningLog.csv";
     #endregion
 
@@ -30,7 +30,7 @@ public class AIBot_DQN : Bot
     public int replayBufferSize = 10000;
     public int batchSize = 64;
     public float maxEpisodeTime = 10f;
-    public int maxTotalEpisodes = 100; 
+    public int maxTotalEpisodes = 100;
     public int totalEpisodes = 0;
     public float angleThreshold = 10f;
 
@@ -44,15 +44,15 @@ public class AIBot_DQN : Bot
     public int output = 5;  // Accelerate, TurnLeft, TurnRight, Dash, Skill
 
     [SerializeField]
-    private float timer = 0f; 
+    private float timer = 0f;
     #endregion
 
     public override void OnBotInit(SumoAPI botAPI)
     {
         api = botAPI;
         //string path = Path.Combine(Application.persistentDataPath, modelFileName);
-        string path = "Assets/Resources/Models/ML/RL/" + modelFileName;
-        if (loadModel && File.Exists(path))
+        string path = "ML/Models/RL/" + modelFileName;
+        if (loadModel)
         {
             DQN = DeepQNetwork.Load(path);
             Debug.Log($"Loaded DQN from {path}");
@@ -78,10 +78,11 @@ public class AIBot_DQN : Bot
         if (timer >= maxEpisodeTime)
         {
             ResetEpisode();
-            Debug.Log($"Angle: {api.Angle()}. AngleDeg: {api.AngleDeg()}, Dist: {api.Distance().magnitude} {api.Distance()}, DistN: {api.DistanceNormalized()}");
+            Debug.Log($"Angle: {api.Angle()}, Dist: {api.Distance().magnitude} {api.Distance()}, DistN: {api.DistanceNormalized()}");
             Debug.Log($"MyPos: {api.MyRobot.Position}, MyRot: {api.MyRobot.Rotation}, EnemyPos: {api.EnemyRobot.Position}, EnemyRotation: {api.EnemyRobot.Rotation}");
         }
-        if (totalEpisodes >= maxTotalEpisodes) {
+        if (totalEpisodes >= maxTotalEpisodes)
+        {
 #if UNITY_EDITOR
             // If running in the Unity Editor, stop play mode
             EditorApplication.isPlaying = false;
@@ -96,7 +97,7 @@ public class AIBot_DQN : Bot
             if (saveModel)
             {
                 //string path = Path.Combine(Application.persistentDataPath, modelFileName);
-                string path = "Assets/Resources/Models/ML/RL/" + modelFileName;
+                string path = "Assets/Resources/ML/Models/RL/" + modelFileName + ".json";
                 DQN.Save(path);
                 Debug.Log($"Saved RL to {path}");
             }
@@ -108,16 +109,16 @@ public class AIBot_DQN : Bot
         ClearCommands();
     }
 
-    private void ThinkAndAct() 
+    private void ThinkAndAct()
     {
         float posX = api.MyRobot.Position.x / api.BattleInfo.ArenaRadius;
         float posY = api.MyRobot.Position.y / api.BattleInfo.ArenaRadius;
         float angle = api.Angle();
         float distanceNormalized = api.DistanceNormalized();
-        float angleInDur = Mathf.Abs(angle) / api.MyRobot.RotateSpeed * api.MyRobot.TurnRate;
+        float angleInDur = Mathf.Abs(angle) / api.MyRobot.RotateSpeed;
 
-        float[] state = new float[] { posX, posY, angle, distanceNormalized}; // Input for Network 
-        
+        float[] state = new float[] { posX, posY, angle, distanceNormalized }; // Input for Network 
+
         // Choose action using epsilon-greedy policy
         int action = DQN.ChooseAction(state, epsilon);
         float reward = CalculateReward(angle, distanceNormalized);
@@ -135,7 +136,7 @@ public class AIBot_DQN : Bot
             bool isGameEnded = api.BattleInfo.TimeLeft <= 0f || api.BattleInfo.CurrentState == BattleState.Battle_End;
 
             bool done = isGameEnded || myDistToCenter > outArenaDist || enemyDistToCenter > outArenaDist;
-            
+
             replayBuffer.Add(new DeepQNetwork.Experience(lastState, lastAction, reward, state, done));
             if (replayBuffer.Count > replayBufferSize)
                 replayBuffer.RemoveAt(0);
@@ -170,11 +171,12 @@ public class AIBot_DQN : Bot
 
             float loss = CalculateLoss(outputs, targets);
 
-            LogDQNLearning(exp.state, outputs, targets, exp.reward, loss, totalEpisodes + 1);
+            if (saveModel)
+                LogDQNLearning(exp.state, outputs, targets, exp.reward, loss, totalEpisodes + 1);
 
             DQN.Train(replayBuffer, batchSize, learningRate, discountFactor);
         }
-            
+
         lastState = state;
         lastAction = action;
     }
@@ -182,7 +184,7 @@ public class AIBot_DQN : Bot
     private void LogDQNLearning(float[] inputs, float[] outputs, float[] targets, float reward, float loss, int episode)
     {
         //string path = Path.Combine(Application.persistentDataPath, csvLogFileName);
-        string path = "Assets/Resources/Models/ML/RL/" + csvLogFileName;
+        string path = "Assets/Resources/ML/Models/RL/" + csvLogFileName;
         bool writeHeader = !File.Exists(path);
         using (StreamWriter sw = new StreamWriter(path, true))
         {
@@ -252,12 +254,12 @@ public class AIBot_DQN : Bot
         lastState = null;
     }
 
-    void OnApplicationQuit() 
+    void OnApplicationQuit()
     {
         if (saveModel)
         {
             //string path = Path.Combine(Application.persistentDataPath, modelFileName);
-            string path = "Assets/Resources/Models/ML/RL/" + modelFileName;
+            string path = "Assets/Resources/ML/Models/RL/" + modelFileName + ".json";
             DQN.Save(path);
             Debug.Log($"Saved DQN to {path}");
         }
@@ -323,7 +325,8 @@ public class DeepQNetwork
     private void Randomize(float[,] weights, int input, int output)
     {
         for (int i = 0; i < weights.GetLength(0); i++)
-            for (int j = 0; j < weights.GetLength(1); j++) {
+            for (int j = 0; j < weights.GetLength(1); j++)
+            {
                 //weights[i, j] = (float)(rand.NextDouble() * 0.2 - 0.1);
 
                 // Using Xavier initialization
@@ -332,7 +335,7 @@ public class DeepQNetwork
                 float limit = Mathf.Sqrt(6f / (fanIn + fanOut));
                 weights[i, j] = (float)(rand.NextDouble() * (limit - (-limit)) + (-limit));
             }
-                
+
     }
 
     public float[] Forward(float[] input)
@@ -444,10 +447,11 @@ public class DeepQNetwork
 
     public static DeepQNetwork Load(string path)
     {
-        if (!File.Exists(path))
+        TextAsset model = Resources.Load<TextAsset>(path);
+        if (model == null)
             throw new FileNotFoundException(path);
 
-        NetworkData d = JsonUtility.FromJson<NetworkData>(File.ReadAllText(path));
+        NetworkData d = JsonUtility.FromJson<NetworkData>(model.text);
         DeepQNetwork dqn = new DeepQNetwork(d.inputSize, d.hiddenSize, d.outputSize);
         dqn.Unflatten(d.w1, dqn.weights1);
         dqn.Unflatten(d.w2, dqn.weights2);

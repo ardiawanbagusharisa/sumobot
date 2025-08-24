@@ -6,12 +6,16 @@ using UnityEngine;
 
 public class BotUtility
 {
+    private static List<Type> cached;
     public static List<Type> GetAllBotTypes()
     {
-        return AppDomain.CurrentDomain.GetAssemblies()
-            .SelectMany(assembly => assembly.GetTypes())
-            .Where(type => typeof(Bot).IsAssignableFrom(type) && !type.IsAbstract && type.IsSubclassOf(typeof(ScriptableObject)))
-            .OrderBy(t => t.Name)
-            .ToList();
+        cached ??= AppDomain.CurrentDomain.GetAssemblies()
+                .SelectMany(a => a.GetTypes())
+                .Where(t => typeof(Bot).IsAssignableFrom(t)
+                            && !t.IsAbstract
+                            && t.IsSubclassOf(typeof(ScriptableObject)))
+                .OrderBy(t => t.Name)
+                .ToList();
+        return cached;
     }
 }
