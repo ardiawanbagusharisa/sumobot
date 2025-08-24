@@ -1,9 +1,11 @@
+using SumoCore;
 using UnityEngine;
 using UnityEngine.UI;
 
 public class PartSwitcher : MonoBehaviour
 {
-    public Sprite[] sprites;     
+    public SumoPart part;
+    public Sprite[] sprites;
     public Image targetImage;
     public Image targetPreviewImage;
 
@@ -20,10 +22,17 @@ public class PartSwitcher : MonoBehaviour
 
     public void UpdateSprite(int direction)
     {
-        if (sprites.Length == 0 || targetImage == null) return;
+        if (GameManager.Instance.GetProfileById() == null)
+            return;
+
+        if (sprites.Length == 0 || targetImage == null)
+            return;
 
         currentIndex = (currentIndex + direction + sprites.Length) % sprites.Length;
         targetImage.sprite = sprites[currentIndex];
         targetPreviewImage.sprite = sprites[currentIndex];
+
+        var costume = GameManager.Instance.GetProfileById();
+        costume.Parts[part] = sprites[currentIndex];
     }
 }

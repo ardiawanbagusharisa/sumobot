@@ -46,7 +46,7 @@ namespace SumoCore
         [Header("General Info")]
         public PlayerSide Side;
         public InputProvider InputProvider;
-        public SumoCostume Costume;
+        public PlayerProfile Profile;
         #endregion
 
         #region Runtime (readonly) Properties
@@ -152,28 +152,33 @@ namespace SumoCore
         #endregion
 
         #region Robot State Methods
-        public void Initialize(PlayerSide side, Transform startPosition)
+        public void Initialize(PlayerSide side, Transform startPosition, PlayerProfile profile)
         {
             Side = side;
             StartPosition = startPosition.position;
             StartRotation = startPosition.rotation;
+            Profile = profile;
+            Profile.SetCostume(GetComponent<SumoCostume>());
 
-            Costume = GetComponent<SumoCostume>();
-            Costume.UpdateSideColor();
+            if (Skill == null)
+                AssignSkill();
+            else if (!Skill.IsInitialized)
+                AssignSkill();
 
-            AssignSkill();
             SetSkillEnabled(false);
         }
 
         public void AssignSkill(SkillType type = SkillType.Boost)
         {
             Skill = SumoSkill.CreateSkill(this, type);
-            Events[OnSkillAssigned].Invoke(new() { SkillType = type, Side = Side, });
+            Events[OnSkillAssigned].Invoke(new() { SkillType = type, Side = Side });
         }
 
         public void Reset()
         {
+            Skill.Reset();
             StopOngoingAction();
+
             IsOutOfArena = false;
             transform.position = StartPosition;
             transform.rotation = StartRotation;
@@ -181,7 +186,6 @@ namespace SumoCore
             RigidBody.angularVelocity = 0;
             RigidBody.angularDamping = 0;
             LastDashTime = 0;
-            Skill.Reset();
         }
         #endregion
 

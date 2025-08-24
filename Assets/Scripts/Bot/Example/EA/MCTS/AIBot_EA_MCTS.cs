@@ -275,7 +275,7 @@ namespace SumoBot.EA.MCTS
 
                 bool approachWithPosition = action is AccelerateAction || action is DashAction;
                 float preAngleScore = api.Angle(oriPos: predPos, oriRot: predRot, normalized: true);
-                float preDistScore = api.DistanceNormalized(oriPos: predPos);
+                float preDistScore = 1 - api.DistanceNormalized(oriPos: predPos);
 
                 angleScore += preAngleScore;
                 distScore += preDistScore;

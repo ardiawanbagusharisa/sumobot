@@ -16,12 +16,32 @@ namespace SumoInput
         Script,
     }
 
+    public static class InputTypeExtension
+    {
+        public static int ToBattleInputType(this InputType type)
+        {
+            switch (type)
+            {
+                case InputType.UI:
+                case InputType.Keyboard:
+                    return 0;
+                case InputType.LiveCommand:
+                    return 1;
+                case InputType.Script:
+                    return 2;
+                default:
+                    return 0;
+            }
+        }
+    }
+
     public class InputProvider : MonoBehaviour
     {
         #region Input properties
         public bool IncludeKeyboard;
         public PlayerSide PlayerSide;
         public SumoAPI API;
+        public InputType InputType = InputType.UI;
         #endregion
 
         #region Runtime properties

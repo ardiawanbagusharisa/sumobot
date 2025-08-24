@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using Newtonsoft.Json.Linq;
+using UnityEngine;
 
 namespace ML.LanguageModels
 {
@@ -17,10 +18,9 @@ namespace ML.LanguageModels
         private Dictionary<char, byte> byteDecoder;
         private bool addPrefixSpace;
 
-        public BPETokenizer(string tokenizerJsonPath)
+        public BPETokenizer(TextAsset tokenizerAsset)
         {
-            string json = System.IO.File.ReadAllText(tokenizerJsonPath);
-            JObject root = JObject.Parse(json);
+            JObject root = JObject.Parse(tokenizerAsset.text);
 
             // --- Load vocab ---
             var vocabObj = (JObject)root["model"]["vocab"];

@@ -40,7 +40,7 @@ namespace SumoManager
         #endregion
 
         #region Input methods
-        public void InitializeInput(SumoController controller)
+        public void InitializeInput(SumoController controller, InputType type)
         {
 
             GameObject liveCommandObject = controller.Side == PlayerSide.Left ? LeftLiveCommand : RightLiveCommand;
@@ -48,7 +48,7 @@ namespace SumoManager
 
             GameObject selectedInputObject;
 
-            switch (BattleManager.Instance.BattleInputType)
+            switch (type)
             {
                 case InputType.Script:
                     liveCommandObject.SetActive(false);
@@ -72,12 +72,12 @@ namespace SumoManager
 
             SumoAPI api = CreateAPI(controller.Side);
 
-            InputProvider inputProvider = GetInputProvider(controller, selectedInputObject);
+            InputProvider inputProvider = GetInputProvider(controller, selectedInputObject, type);
             inputProvider.API = api;
             controller.InputProvider = inputProvider;
 
             // Additional initialization
-            switch (BattleManager.Instance.BattleInputType)
+            switch (type)
             {
                 case InputType.UI:
                 case InputType.Keyboard:
@@ -95,11 +95,10 @@ namespace SumoManager
             }
         }
 
-        private InputProvider GetInputProvider(SumoController controller, GameObject selectedInputObject)
+        private InputProvider GetInputProvider(SumoController controller, GameObject selectedInputObject, InputType type)
         {
-            InputType battleInputType = BattleManager.Instance.BattleInputType;
             InputProvider inputProvider;
-            if (battleInputType == InputType.Script)
+            if (type == InputType.Script)
             {
                 if (botManager.BotEnabled)
                 {
@@ -109,15 +108,16 @@ namespace SumoManager
                     inputProvider = scriptInputProvider;
                 }
                 else
-                    throw new Exception($"Battle with [{battleInputType}] should provide InputProvider");
+                    throw new Exception($"Battle with [{type}] should provide InputProvider");
             }
             else
             {
                 if (selectedInputObject == null)
-                    throw new Exception($"One of [{battleInputType}]'s object must be used");
+                    throw new Exception($"One of [{type}]'s object must be used");
 
                 inputProvider = selectedInputObject.GetComponent<InputProvider>();
             }
+            inputProvider.InputType = type;
 
             return inputProvider;
         }

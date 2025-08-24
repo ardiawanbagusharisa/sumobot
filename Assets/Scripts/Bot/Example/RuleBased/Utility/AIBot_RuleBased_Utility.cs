@@ -57,10 +57,10 @@ namespace SumoBot.RuleBased.Utility
                 switch (type)
                 {
                     case ConsiderationType.DistanceFromCenter:
-                        result += api.DistanceNormalized(targetPos: api.BattleInfo.ArenaPosition);
+                        result += 1 - api.DistanceNormalized(targetPos: api.BattleInfo.ArenaPosition);
                         break;
                     case ConsiderationType.DistanceToEnemy:
-                        result += api.DistanceNormalized();
+                        result += 1 - api.DistanceNormalized();
                         break;
                     case ConsiderationType.EnemyInSideRight:
                         {
@@ -104,7 +104,7 @@ namespace SumoBot.RuleBased.Utility
                         }
                     case ConsiderationType.EnemyInFrontAndClose:
                         {
-                            float dist = api.DistanceNormalized();
+                            float dist = 1 - api.DistanceNormalized();
                             float angle = api.Angle(normalized: true);
                             float val = (angle + dist) / 2;
                             result += val > 0.8f ? val : -1;

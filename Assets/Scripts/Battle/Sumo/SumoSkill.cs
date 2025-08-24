@@ -43,6 +43,7 @@ namespace SumoCore
         #endregion
 
         #region Runtime (readonly) properties
+        public bool IsInitialized = false;
         private float usedAt;
         private readonly SumoController controller;
         #endregion
@@ -63,6 +64,7 @@ namespace SumoCore
                 Type = type,
                 TotalCooldown = cooldown,
                 TotalDuration = duration,
+                IsInitialized = true,
             };
             return skill;
         }
@@ -71,6 +73,8 @@ namespace SumoCore
         public float Cooldown => usedAt + TotalCooldown - BattleManager.Instance.ElapsedTime;
         public float CooldownNormalized => 1 - (Cooldown / TotalCooldown);
         public bool IsSkillOnCooldown => Cooldown >= 0f;
+        private Coroutine DurationRoutine;
+        private Coroutine CooldownRoutine;
         #endregion
 
         #region Activation and cooldown methods
@@ -78,6 +82,22 @@ namespace SumoCore
         {
             usedAt = 0;
             IsActive = false;
+
+            if (DurationRoutine != null)
+            {
+                controller.StopCoroutine(DurationRoutine);
+                DurationRoutine = null;
+            }
+            if (CooldownRoutine != null)
+            {
+                controller.StopCoroutine(CooldownRoutine);
+                CooldownRoutine = null;
+            }
+
+            controller.ResetFreezeMovement();
+            controller.ResetBounceResistance();
+            controller.ResetMoveSpeed();
+            controller.ResetDashSpeed();
         }
 
         public bool Activate(ISumoAction action)
@@ -104,8 +124,8 @@ namespace SumoCore
                     break;
             }
 
-            controller.StartCoroutine(OnAfterDuration());
-            controller.StartCoroutine(OnAfterCooldown());
+            DurationRoutine = controller.StartCoroutine(OnAfterDuration());
+            CooldownRoutine = controller.StartCoroutine(OnAfterCooldown());
             return true;
         }
 
