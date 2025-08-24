@@ -17,8 +17,8 @@ public class AIBot_PPO : Bot
 
     #region Configs Properties
     public bool loadModel = true;
-    public bool saveModel = true;
-    public string modelFileName = "PPO_Model.json";
+    public bool saveModel = false;
+    public string modelFileName = "PPO_Model";
     public string csvLogFileName = "PPO_LearningLog.csv";
     #endregion
 
@@ -50,8 +50,8 @@ public class AIBot_PPO : Bot
     public override void OnBotInit(SumoAPI botAPI)
     {
         api = botAPI;
-        string path = Path.Combine("Assets/Resources/Models/ML/RL/", modelFileName);
-        if (loadModel && File.Exists(path))
+        string path = "ML/Models/RL/" + modelFileName;
+        if (loadModel)
         {
             PPO = ProximalPolicyOptimization.Load(path);
             Debug.Log($"Loaded PPO from {path}");
@@ -74,7 +74,7 @@ public class AIBot_PPO : Bot
         if (timer >= maxEpisodeTime)
         {
             ResetEpisode();
-            Debug.Log($"Angle: {api.Angle():F2}, AngleDeg: {api.AngleDeg():F2}, Dist: {api.Distance().magnitude:F2}, DistN: {api.DistanceNormalized():F2}");
+            Debug.Log($"Angle: {api.Angle():F2}, Dist: {api.Distance().magnitude:F2}, DistN: {api.DistanceNormalized():F2}");
             Debug.Log($"MyPos: {api.MyRobot.Position}, MyRot: {api.MyRobot.Rotation:F2}, EnemyPos: {api.EnemyRobot.Position}, EnemyRot: {api.EnemyRobot.Rotation:F2}");
         }
         if (totalEpisodes >= maxTotalEpisodes)
@@ -92,7 +92,7 @@ public class AIBot_PPO : Bot
             ClearCommands();
             if (saveModel)
             {
-                string path = Path.Combine("Assets/Resources/Models/ML/RL/", modelFileName);
+                string path = Path.Combine("Assets/Resources/ML/Models/RL/", modelFileName, ".json");
                 PPO.Save(path);
                 Debug.Log($"Saved PPO to {path}");
             }
@@ -112,7 +112,7 @@ public class AIBot_PPO : Bot
         float posY = Mathf.Clamp01(api.MyRobot.Position.y / api.BattleInfo.ArenaRadius);
         float angle = api.Angle();
         float distanceNormalized = Mathf.Clamp01(api.DistanceNormalized());
-        float angleInDur = Mathf.Abs(angle) / api.MyRobot.RotateSpeed * api.MyRobot.TurnRate;
+        float angleInDur = Mathf.Abs(angle) / api.MyRobot.RotateSpeed;
 
         float[] state = new float[] { posX, posY, angle, distanceNormalized };
         (float[] probs, float value) = PPO.Forward(state);
@@ -154,7 +154,8 @@ public class AIBot_PPO : Bot
             (policyLoss, valueLoss, totalLoss) = PPO.CalculateLoss(lastExp, probs, value, returnVal, clipEpsilon, valueLossCoefficient, entropyCoefficient);
         }
 
-        LogPPOLearning(totalEpisodes, stepInEpisode, posX, posY, angle, distanceNormalized, probs, action, reward, entropy, policyLoss, valueLoss, totalLoss, advantage, clippedRatio, returnVal);
+        if (saveModel)
+            LogPPOLearning(totalEpisodes, stepInEpisode, posX, posY, angle, distanceNormalized, probs, action, reward, entropy, policyLoss, valueLoss, totalLoss, advantage, clippedRatio, returnVal);
 
         lastState = state;
         lastAction = action;
@@ -192,7 +193,7 @@ public class AIBot_PPO : Bot
         reward += endReward;
 
         // Reward for using dash and skill
-        if(myRobot.Skill.IsActive && Mathf.Abs(angle) < angleThreshold)
+        if (myRobot.Skill.IsActive && Mathf.Abs(angle) < angleThreshold)
             reward += 0.5f; // Reward for using skill when facing enemy
         if (myRobot.IsDashOnCooldown && Mathf.Abs(angle) < angleThreshold)
             reward += 0.5f;
@@ -250,7 +251,7 @@ public class AIBot_PPO : Bot
 
     private void LogPPOLearning(int episode, int step, float posX, float posY, float angle, float distN, float[] actionProbs, int action, float reward, float entropy, float policyLoss, float valueLoss, float totalLoss, float advantage, float clippedRatio, float returnVal)
     {
-        string path = Path.Combine("Assets/Resources/Models/ML/RL/", csvLogFileName);
+        string path = Path.Combine("Assets/Resources/ML/Models/RL/", csvLogFileName);
         bool writeHeader = !File.Exists(path);
         using (StreamWriter sw = new StreamWriter(path, true))
         {
@@ -277,7 +278,7 @@ public class AIBot_PPO : Bot
     {
         if (saveModel)
         {
-            string path = Path.Combine("Assets/Resources/Models/ML/RL/", modelFileName);
+            string path = Path.Combine("Assets/Resources/ML/Models/RL/", modelFileName, ".json");
             PPO.Save(path);
             Debug.Log($"Saved PPO to {path}");
         }
@@ -587,10 +588,11 @@ public class ProximalPolicyOptimization
 
     public static ProximalPolicyOptimization Load(string path)
     {
-        if (!File.Exists(path))
+        TextAsset model = Resources.Load<TextAsset>(path);
+        if (model == null)
             throw new FileNotFoundException(path);
 
-        NetworkData d = JsonUtility.FromJson<NetworkData>(File.ReadAllText(path));
+        NetworkData d = JsonUtility.FromJson<NetworkData>(model.text);
         ProximalPolicyOptimization ppo = new ProximalPolicyOptimization(d.inputSize, d.hiddenSize, d.outputSize);
         ppo.Unflatten(d.w1, ppo.weights1);
         ppo.Unflatten(d.w2, ppo.weights2);

@@ -1403,6 +1403,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bf39dfe638fc65940956ae1b99c4e601, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  part: 1
   sprites:
   - {fileID: 21300000, guid: 20854f7a39a8e354e9afec79c7f8f51a, type: 3}
   - {fileID: 21300000, guid: af2004aae6c427543ba3ddfc2a77aa39, type: 3}
@@ -1944,6 +1945,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bf39dfe638fc65940956ae1b99c4e601, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  part: 2
   sprites:
   - {fileID: 21300000, guid: 8ecd691a281da6c45b94a5197b3c7fee, type: 3}
   - {fileID: 21300000, guid: 494ae397be5bc634eb90c50e21ea1750, type: 3}
@@ -2757,6 +2759,7 @@ GameObject:
   - component: {fileID: 2810435256613096967}
   - component: {fileID: 4902846689856226498}
   - component: {fileID: 1159119550733393503}
+  - component: {fileID: 4902846689856226499}
   m_Layer: 5
   m_Name: Robot Creation
   m_TagString: BattleState/Pre
@@ -2904,9 +2907,9 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 0}
-        m_TargetAssemblyTypeName: BattleLoop.BattleManager, Assembly-CSharp
-        m_MethodName: Battle_Start
+      - m_Target: {fileID: 4902846689856226499}
+        m_TargetAssemblyTypeName: CostumeManager, Assembly-CSharp
+        m_MethodName: SaveAndBack
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -3138,6 +3141,19 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 853793495865885196}
   m_CullTransparentMesh: 1
+--- !u!114 &4902846689856226499
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 853793495865885196}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 35894718d2562490f85cd026ee1755d1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  PlayerTxt: {fileID: 78391315}
 --- !u!222 &5619382003852466876
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -3286,6 +3302,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bf39dfe638fc65940956ae1b99c4e601, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  part: 0
   sprites:
   - {fileID: 21300000, guid: 3cd4515f50606f74292bb3aa1efe6ab5, type: 3}
   - {fileID: 21300000, guid: 051498862d7e59d4f8e435586631724f, type: 3}

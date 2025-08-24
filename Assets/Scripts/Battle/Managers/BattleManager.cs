@@ -43,7 +43,8 @@ namespace SumoManager
 
         #region Battle Configuration properties
         [Header("Battle Configuration")]
-        public InputType BattleInputType = InputType.UI;
+        public InputType LeftInputType = InputType.UI;
+        public InputType RightInputType = InputType.UI;
         public RoundSystem RoundSystem = RoundSystem.BestOf3;
         public float BattleTime = 60f;
         public float CountdownTime = 3f;
@@ -89,9 +90,13 @@ namespace SumoManager
 
         void OnEnable()
         {
+            // [Todo]: Move game manager to the first scene
+            _ = GameManager.Instance;
+
             simulator = GetComponent<BattleSimulator>();
             BotManager = GetComponent<BotManager>();
 
+            LogManager.UnregisterAction();
             LogManager.InitLog();
             Battle = new Battle(Guid.NewGuid().ToString(), RoundSystem);
 
@@ -146,16 +151,6 @@ namespace SumoManager
         #endregion
 
         #region API methods
-        public void SetLeftDefaultSkill(int type)
-        {
-            Battle.LeftPlayer.AssignSkill(type == 0 ? SkillType.Boost : SkillType.Stone);
-        }
-
-        public void SetRightDefaultSkill(int type)
-        {
-            Battle.RightPlayer.AssignSkill(type == 0 ? SkillType.Boost : SkillType.Stone);
-        }
-
         public void Battle_Start()
         {
             if (CurrentState == BattleState.Battle_Preparing ||
@@ -172,16 +167,30 @@ namespace SumoManager
         #endregion
 
         #region Core Logic methods 
-        private void InitializePlayer(SumoController controller)
+        private void InitializeController(SumoController controller)
         {
             PlayerSide side = controller.transform.position.x < 0 ? PlayerSide.Left : PlayerSide.Right;
-            controller.Initialize(side, controller.transform);
-            controller.Events[SumoController.OnOutOfArena].Subscribe(OnPlayerOutOfArena);
 
             if (controller.Side == PlayerSide.Left)
+            {
+                controller.Initialize(
+                    side,
+                    controller.transform,
+                    GameManager.Instance.Left);
+
                 Battle.LeftPlayer = controller;
+            }
             else
+            {
+                controller.Initialize(
+                    side,
+                    controller.transform,
+                    GameManager.Instance.Right);
+
                 Battle.RightPlayer = controller;
+            }
+
+            controller.Events[SumoController.OnOutOfArena].Subscribe(OnPlayerOutOfArena);
 
             LogManager.LogBattleState(
                     data: new Dictionary<string, object>()
@@ -303,17 +312,9 @@ namespace SumoManager
                 case BattleState.PreBatle_Preparing:
                     if (LeftPlayerObject != null && RightPlayerObject != null)
                     {
-                        InitializePlayer(LeftPlayerObject.GetComponent<SumoController>());
-                        InitializePlayer(RightPlayerObject.GetComponent<SumoController>());
+                        InitializeController(LeftPlayerObject.GetComponent<SumoController>());
+                        InitializeController(RightPlayerObject.GetComponent<SumoController>());
                     }
-                    // else if (SumoPrefab != null && StartPositions.Count > 0)
-                    // {
-                    //     StartPositions.ForEach(pos =>
-                    //     {
-                    //         GameObject player = Instantiate(SumoPrefab, pos.position, pos.rotation);
-                    //         InitializePlayer(player.GetComponent<SumoController>());
-                    //     });
-                    // }
                     break;
 
                 // Battle
@@ -328,8 +329,8 @@ namespace SumoManager
 
                     Battle.LeftPlayer.Reset();
                     Battle.RightPlayer.Reset();
-                    InputManager.Instance.InitializeInput(Battle.LeftPlayer);
-                    InputManager.Instance.InitializeInput(Battle.RightPlayer);
+                    InputManager.Instance.InitializeInput(Battle.LeftPlayer, LeftInputType);
+                    InputManager.Instance.InitializeInput(Battle.RightPlayer, RightInputType);
 
                     LogManager.RegisterAction();
                     StartCoroutine(AllPlayersReady());
@@ -426,8 +427,6 @@ namespace SumoManager
 
         public int LeftWinCount;
         public int RightWinCount;
-
-        public Dictionary<float, string> BattleLog;
 
         public Battle(string battleID, RoundSystem roundSystem)
         {

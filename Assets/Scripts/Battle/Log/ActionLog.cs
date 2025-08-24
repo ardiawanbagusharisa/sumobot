@@ -45,16 +45,10 @@ namespace SumoLog
 
         public static class ActionFactory
         {
-            public static ISumoAction Parse(string name, float duration)
+            public static ISumoAction Parse(string action, float duration)
             {
-                if (string.IsNullOrEmpty(name))
+                if (string.IsNullOrEmpty(action))
                     return null;
-
-                var parts = name.Split('_');
-                if (parts.Length != 2)
-                    return null;
-
-                string action = parts[1];
 
                 if (Enum.TryParse(action, out ActionType type))
                 {

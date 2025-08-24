@@ -65,7 +65,6 @@ namespace SumoBot
                     leftConfig.IsOnUpdate = false;
                 }
 
-                leftConfig.RunCoroutine(this);
             }
 
             if (RightEnabled && Right != null)
@@ -81,7 +80,6 @@ namespace SumoBot
                     rightConfig.IsOnUpdate = false;
                 }
 
-                rightConfig.RunCoroutine(this);
             }
         }
 
@@ -93,40 +91,38 @@ namespace SumoBot
             if (LeftEnabled && Left != null)
             {
                 Left.OnBattleStateChanged(param.BattleState, param.Winner);
-
-                if (param.BattleState == BattleState.Battle_End)
-                {
-                    leftConfig.CleanCoroutine(this);
-                }
             }
 
             if (RightEnabled && Right != null)
             {
                 Right.OnBattleStateChanged(param.BattleState, param.Winner);
-
-                if (param.BattleState == BattleState.Battle_End)
-                {
-                    rightConfig.CleanCoroutine(this);
-                }
             }
         }
 
-        public void Assign(Bot leftParam, Bot rightParam)
+        public void Assign(Bot param, PlayerSide side)
         {
             BattleManager instance = BattleManager.Instance;
             SumoController leftPlayer = instance.Battle.LeftPlayer;
             SumoController rightPlayer = instance.Battle.RightPlayer;
 
-            UnInit(leftPlayer);
-            UnInit(rightPlayer);
+            if (side == PlayerSide.Left)
+            {
+                UnInit(leftPlayer);
+                Left = param;
+            }
+            else
+            {
+                UnInit(rightPlayer);
+                Right = param;
+            }
 
-            Left = leftParam;
-            Right = rightParam;
 
             if (instance.CurrentState >= BattleState.Battle_Preparing)
             {
-                Init(leftPlayer);
-                Init(rightPlayer);
+                if (side == PlayerSide.Left)
+                    Init(leftPlayer);
+                else
+                    Init(rightPlayer);
             }
         }
 
@@ -171,15 +167,16 @@ namespace SumoBot
             {
                 controller.Events[SumoController.OnBounce].Unsubscribe(OnLeftBounce);
                 Left.OnBotDestroy();
-                leftConfig?.CleanCoroutine(this);
+                Destroy(Left);
             }
 
             if (RightEnabled && Right != null && controller.Side == PlayerSide.Right)
             {
                 controller.Events[SumoController.OnBounce].Unsubscribe(OnRightBounce);
                 Right.OnBotDestroy();
-                rightConfig?.CleanCoroutine(this);
+                Destroy(Right);
             }
+
         }
 
         public void Swap()
@@ -192,7 +189,8 @@ namespace SumoBot
                 return;
             }
 
-            Assign(Right, Left);
+            Assign(Right, PlayerSide.Right);
+            Assign(Left, PlayerSide.Left);
         }
 
         void OnDestroy()
@@ -223,65 +221,21 @@ namespace SumoBot
     {
         public InputProvider InputProvider;
         public Queue<ISumoAction> Actions;
-        public IEnumerator RoutineFunc;
-        public Coroutine RunningCoroutine;
-        public bool CoroutineCrash;
         public bool IsOnUpdate = false;
 
         public void Submit()
         {
+            if (!IsOnUpdate)
+            {
+                Debug.LogError("Submit() can only be called during OnBotUpdate().");
+                throw new Exception("Submit() can only be called during OnBotUpdate().");
+            }
+
             InputProvider.EnqueueCommand(Actions);
         }
         public void Enqueue(ISumoAction action)
         {
             Actions.Enqueue(action);
-        }
-
-        public void RunCoroutine(MonoBehaviour runner)
-        {
-            if (RunningCoroutine != null)
-            {
-                runner.StopCoroutine(RunningCoroutine);
-            }
-
-            if (RoutineFunc != null)
-            {
-                RunningCoroutine = runner.StartCoroutine(SafeCoroutine(RoutineFunc));
-            }
-        }
-
-        public void CleanCoroutine(MonoBehaviour runner)
-        {
-            CoroutineCrash = false;
-            if (RunningCoroutine != null)
-            {
-                runner.StopCoroutine(RunningCoroutine);
-            }
-            RunningCoroutine = null;
-            RoutineFunc = null;
-        }
-
-        private IEnumerator SafeCoroutine(IEnumerator coroutineFactory)
-        {
-            while (true)
-            {
-                object current;
-                try
-                {
-                    if (!coroutineFactory.MoveNext())
-                        break;
-
-                    current = coroutineFactory.Current;
-                }
-                catch (Exception ex)
-                {
-                    Debug.LogError($"Exception during coroutine execution: {ex}");
-                    CoroutineCrash = true;
-                    yield break;
-                }
-
-                yield return current;
-            }
         }
     }
 }

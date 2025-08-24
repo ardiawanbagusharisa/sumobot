@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using SumoBot;
 using SumoCore;
@@ -132,7 +133,7 @@ class AIBot_ML_Classification : Bot
 
         if (runtimeModel == null)
         {
-            ModelAsset modelAsset = Resources.Load("Models/ML/ml_6_4_layers") as ModelAsset;
+            ModelAsset modelAsset = Resources.Load($"ML/Models/Classification/model") as ModelAsset;
             runtimeModel = ModelLoader.Load(modelAsset);
         }
 

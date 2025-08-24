@@ -32,6 +32,7 @@ namespace SumoBot.RuleBased.Primitive
         {
             float angleToEnemy = api.Angle();
             Debug.Log($"Angle To Enemy {angleToEnemy}");
+            Debug.Log($"Angle To Enemy Norm {api.Angle(normalized: true)}");
             SumoBotAPI myState = api.MyRobot;
             float angleInDur = Mathf.Abs(angleToEnemy) / myState.RotateSpeed;
 

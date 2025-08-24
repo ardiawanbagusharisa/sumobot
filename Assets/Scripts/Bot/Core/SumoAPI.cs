@@ -1,14 +1,15 @@
+using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using SumoCore;
 using SumoManager;
 using UnityEngine;
+using static SumoManager.LogManager;
 
 namespace SumoBot
 {
     public class SumoAPI
     {
-        // [Todo]: Should change the SumoController to exact attribute, giving SumoController directly might be risky
-        // Need to configure asmdef (assembly scope)
         private readonly SumoController myController;
         private readonly SumoController enemyController;
 
@@ -39,6 +40,14 @@ namespace SumoBot
             }
         }
 
+        public LogAPI Log
+        {
+            get
+            {
+                return new LogAPI();
+            }
+        }
+
         public bool IsActionActive(ISumoAction action, bool isEnemy = false)
         {
             if (isEnemy)
@@ -51,7 +60,7 @@ namespace SumoBot
         {
             return myController.InputProvider.CanExecute(action);
         }
-        
+
         public void StopCoroutine(Coroutine func)
         {
             myController.StopCoroutine(func);
@@ -70,29 +79,6 @@ namespace SumoBot
         {
             Vector2 dist = Distance(oriPos, targetPos);
             return dist.magnitude / (2 * BattleInfo.ArenaRadius);
-        }
-
-        // Return amount of degree from [original] to [target]
-        // 0 or 360 -> Up
-        // 270  -> right
-        // 180 -> bottom
-        // 90 -> left
-        public float AngleDeg(
-            Vector2? oriPos = null,
-            float? oriRot = null,
-            Vector2? targetPos = null)
-        {
-            Vector2 toEnemy = Distance(oriPos, targetPos);
-
-            float angleToEnemy = Mathf.Atan2(toEnemy.y, toEnemy.x) * Mathf.Rad2Deg - 90f;
-            if (angleToEnemy < 0) angleToEnemy += 360f;
-
-            float relativeAngle = angleToEnemy - (oriRot ?? MyRobot.Rotation);
-            if (relativeAngle < 0) relativeAngle += 360f;
-
-            relativeAngle = (relativeAngle + 360f) % 360f;
-
-            return relativeAngle;
         }
 
         public float Angle(
@@ -152,10 +138,10 @@ namespace SumoBot
                     rotation += delta;
                 }
 
-                Vector2 direction = Quaternion.Euler(0, 0, rotation) * Vector2.up;
-
                 if (moveSpeed == 0 && dashSpeed == 0)
                     continue;
+
+                Vector2 direction = Quaternion.Euler(0, 0, rotation) * Vector2.up;
 
                 if (action is AccelerateAction)
                 {
@@ -185,6 +171,7 @@ namespace SumoBot
 
 public readonly struct BattleInfoAPI
 {
+    public float ActionInterval { get; }
     public float TimeLeft { get; }
     public float Duration { get; }
     public int BestOf { get; }
@@ -195,8 +182,13 @@ public readonly struct BattleInfoAPI
     public float ArenaRadius { get; }
     public Vector2 ArenaPosition { get; }
 
+    private readonly BattleManager manager;
+
     public BattleInfoAPI(BattleManager manager)
     {
+        this.manager = manager;
+
+        ActionInterval = manager.ActionInterval;
         TimeLeft = manager.TimeLeft;
         Duration = manager.BattleTime;
         CurrentState = manager.CurrentState;
@@ -208,6 +200,11 @@ public readonly struct BattleInfoAPI
         ArenaPosition = manager.Arena.transform.position;
         ArenaRadius = manager.ArenaRadius;
     }
+
+    // Return null when battle is on-going
+    public BattleWinner? GetBattleWinner() => manager.Battle.GetBattleWinner();
+
+    public BattleWinner GetRoundWinner(int? round) => manager.Battle.GetRoundWinner(round);
 
     public override string ToString()
     {
@@ -324,5 +321,187 @@ public readonly struct SumoSkillAPI
                $"- Cooldown   : {cooldownStatus}\n" +
                $"- Duration   : {TotalDuration:F1}s\n" +
                $"- Multiplier : {(Type == SkillType.Boost ? BoostMultiplier : StoneMultiplier):F1}";
+    }
+
+
+}
+
+public readonly struct LogAPI
+{
+    static readonly List<PeriodicState> defaultStates = new() {
+        PeriodicState.Start,
+        PeriodicState.Continues,
+        PeriodicState.End
+    };
+
+
+
+    public GameLog GetGame(int gameIndex)
+    {
+        if (gameIndex < 0 || gameIndex >= Log.Games.Count) return null;
+        return Log.Games[gameIndex];
+    }
+
+    public GameLog GetCurrentGame()
+    {
+        return Log.Games.Count > 0 ? Log.Games[CurrentGameIndex] : null;
+    }
+
+    public RoundLog GetRound(int gameIndex, int roundIndex)
+    {
+        GameLog game = GetGame(gameIndex);
+        if (game == null || roundIndex < 0 || roundIndex >= game.Rounds.Count) return null;
+        return game.Rounds[roundIndex];
+    }
+
+    public RoundLog GetCurrentRound()
+    {
+        return GetCurrentGame()?.Rounds.Count > 0 ? GetCurrentGame().Rounds[^1] : null;
+    }
+
+    /// <summary>
+    /// Get last N events (optionally filtered by player side).
+    /// </summary>
+    public List<EventLog> GetLastEvents(
+        int count = 10,
+        List<PeriodicState> states = null,
+        PlayerSide? side = null,
+        EventCategory category = EventCategory.All)
+    {
+        states ??= defaultStates;
+
+        RoundLog round = GetCurrentRound();
+        if (round == null) return new List<EventLog>();
+        IEnumerable<EventLog> query = FilterEvent(round, category, states);
+        if (side != null)
+            query = query.Where(e => e.Actor == side.ToString()).ToList();
+
+        return query.OrderByDescending(e => e.UpdatedAt).Take(count).ToList();
+    }
+
+    /// <summary>
+    /// Get events for a specific game (optionally limit and filter by side).
+    /// </summary>
+    public List<EventLog> GetEventsByGame(
+        int gameIndex,
+        int count = 10,
+        PlayerSide? side = null,
+        List<PeriodicState> states = null,
+        EventCategory category = EventCategory.All)
+    {
+        states ??= defaultStates;
+
+        GameLog game = GetGame(gameIndex);
+        if (game == null) return new List<EventLog>();
+
+        IEnumerable<EventLog> query = game.Rounds.SelectMany((e) => e.PlayerEvents);
+        query = FilterEvent(query, category, states);
+        if (side != null)
+            query = query.Where(e => e.Actor == side.ToString());
+
+        return query.OrderByDescending(e => e.UpdatedAt).Take(count).ToList();
+    }
+
+    /// <summary>
+    /// Get all events in a specific round (optionally filtered by side).
+    /// </summary>
+    public List<EventLog> GetEventsByRound(
+        int gameIndex,
+        int roundIndex,
+        PlayerSide? side = null,
+        List<PeriodicState> states = null,
+        EventCategory category = EventCategory.All)
+    {
+        states ??= defaultStates;
+
+        RoundLog round = GetRound(gameIndex, roundIndex);
+        if (round == null) return new List<EventLog>();
+
+        IEnumerable<EventLog> query = FilterEvent(round, category, states);
+        if (side != null)
+            query = query.Where(e => e.Actor == side.ToString());
+
+        return query.OrderBy(e => e.UpdatedAt).ToList();
+    }
+
+    /// <summary>
+    /// Get all state events from a round.
+    /// </summary>
+    public List<EventLog> GetStateEvents(int gameIndex, int roundIndex)
+    {
+        RoundLog round = GetRound(gameIndex, roundIndex);
+        return round?.StateEvents ?? new List<EventLog>();
+    }
+
+    /// <summary>
+    /// Get events in a time range (relative to round elapsed time).
+    /// </summary>
+    public List<EventLog> GetEventsInTimeRange(float start, float end, int gameIndex, int roundIndex)
+    {
+        RoundLog round = GetRound(gameIndex, roundIndex);
+        if (round == null) return new List<EventLog>();
+
+        return round.PlayerEvents
+            .Where(e => e.StartedAt >= start && e.UpdatedAt <= end)
+            .OrderBy(e => e.StartedAt)
+            .ToList();
+    }
+
+    /// <summary>
+    /// Get aggregate stats for a player.
+    /// </summary>
+    public PlayerStats GetPlayerStats(PlayerSide side)
+    {
+        return side == PlayerSide.Left ? Log.LeftPlayerStats : Log.RightPlayerStats;
+    }
+
+    /// <summary>
+    /// Get winner of a game or round.
+    /// </summary>
+    public string GetWinner(int gameIndex, int roundIndex = -1)
+    {
+        if (roundIndex >= 0)
+            return GetRound(gameIndex, roundIndex)?.Winner;
+        return GetGame(gameIndex)?.Winner;
+    }
+
+    /// <summary>
+    /// Get all rounds of a game.
+    /// </summary>
+    public List<RoundLog> GetAllRoundsOfGame(int gameIndex)
+    {
+        return GetGame(gameIndex)?.Rounds ?? new List<RoundLog>();
+    }
+
+    /// <summary>
+    /// Get all games played.
+    /// </summary>
+    public List<GameLog> GetAllGames()
+    {
+        return Log.Games;
+    }
+
+    private IEnumerable<EventLog> FilterEvent(RoundLog round, EventCategory category, List<PeriodicState> states)
+    {
+        IEnumerable<EventLog> query = round.PlayerEvents.Where(log =>
+        {
+            if (category == EventCategory.All || log.Category == category.ToString())
+            {
+                return states.Any((e) => e == log.State);
+            }
+            return false;
+        });
+        return query;
+    }
+    private IEnumerable<EventLog> FilterEvent(IEnumerable<EventLog> playerEvents, EventCategory category, List<PeriodicState> states)
+    {
+        return playerEvents.Where(log =>
+        {
+            if (category == EventCategory.All || log.Category == category.ToString())
+            {
+                return states.Any((e) => e == log.State);
+            }
+            return false;
+        });
     }
 }

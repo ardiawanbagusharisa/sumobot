@@ -13,32 +13,36 @@ namespace SumoCore
         Right,
         Winner,
     }
-    
+
+    public enum SumoPart
+    {
+        // Mandatory
+        Wheel,
+        Eye,
+        Accessory,
+        // Mandatory
+
+        FaceSide,
+    }
+
     [Serializable]
     public class SumoCostume : MonoBehaviour
     {
         #region Costume properties
-        public const string Triangle = "Triangle";
-        public const string Wheel = "Wheel";
-        public const string Body = "Body";
-        public const string Eye = "Eye";
-        public const string Accessory = "Accessory";
-        public Dictionary<string, SpriteRenderer> SpriteParts { private set; get; } = new()
+        public Dictionary<SumoPart, SpriteRenderer> SpriteRenderers { private set; get; } = new()
         {
-            {Triangle, null},
-            {Wheel, null},
-            {Body, null},
-            {Eye, null},
-            {Accessory, null},
+            {SumoPart.Wheel, null},
+            {SumoPart.Eye, null},
+            {SumoPart.Accessory, null},
+            {SumoPart.FaceSide, null},
         };
 
-        public Dictionary<string, Image> ImagePart { private set; get; } = new()
+        public Dictionary<SumoPart, Image> ImagePart { private set; get; } = new()
         {
-            {Triangle, null},
-            {Wheel, null},
-            {Body, null},
-            {Eye, null},
-            {Accessory, null},
+            {SumoPart.Wheel, null},
+            {SumoPart.Eye, null},
+            {SumoPart.Accessory, null},
+            {SumoPart.FaceSide, null},
         };
 
         public Placement Side;
@@ -66,12 +70,12 @@ namespace SumoCore
             {
                 List<SpriteRenderer> sprites = GetComponentsInChildren<SpriteRenderer>().ToList();
 
-                SpriteParts.ToList().ForEach((part) =>
+                SpriteRenderers.ToList().ForEach((part) =>
                 {
                     SpriteRenderer sprite = sprites.FirstOrDefault((x) => x.gameObject.CompareTag($"Robot/{part.Key}"));
                     if (sprite != null)
                     {
-                        SpriteParts[part.Key] = sprite;
+                        SpriteRenderers[part.Key] = sprite;
                     }
                 });
             }
@@ -83,23 +87,40 @@ namespace SumoCore
                 return;
 
             if (Side == Placement.Left)
-                SpriteParts[Triangle].color = new Color(0, 255, 0);
+                SpriteRenderers[SumoPart.FaceSide].color = new Color(0, 255, 0);
             else if (Side == Placement.Right)
-                SpriteParts[Triangle].color = new Color(255, 0, 0);
+                SpriteRenderers[SumoPart.FaceSide].color = new Color(255, 0, 0);
         }
 
-        public void AttachToHUD(SumoCostume robotCostume)
+        public void AttachToUI(SumoCostume robotCostume)
         {
             if (!UI)
                 return;
 
-            robotCostume.SpriteParts.ToList().ForEach((x) =>
+            robotCostume.SpriteRenderers.ToList().ForEach((x) =>
             {
                 if (ImagePart.ContainsKey(x.Key) && ImagePart[x.Key] != null)
                 {
                     ImagePart[x.Key].sprite = x.Value.sprite;
                     ImagePart[x.Key].color = x.Value.color;
                     ImagePart[x.Key].material = x.Value.material;
+                }
+            });
+        }
+
+        public void AttachObject(Dictionary<SumoPart, Sprite> sprites)
+        {
+            if (UI)
+                return;
+
+            Debug.Log($"SpriteRenderers {SpriteRenderers.Count}");
+            SpriteRenderers.ToList().ForEach((part) =>
+            {
+                sprites.TryGetValue(part.Key, out var sprite);
+                if (sprite != null)
+                {
+                    Debug.Log($"Replacing sprite {part.Key}");
+                    SpriteRenderers[part.Key].sprite = sprite;
                 }
             });
         }

@@ -95,7 +95,7 @@ namespace SumoBot.EA.GA
                 }
 
                 float angleScore = api.Angle(oriPos: aiPos, oriRot: aiDir, normalized: true);
-                float distScore = api.DistanceNormalized(oriPos: aiPos);
+                float distScore = 1 - api.DistanceNormalized(oriPos: aiPos);
 
                 fitness += angleScore + distScore;
             }
