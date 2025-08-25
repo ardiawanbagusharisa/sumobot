@@ -96,7 +96,7 @@ namespace SumoBot
         {
             float angle = api.Angle();
             float turnAmount = Mathf.Clamp(Mathf.Abs(angle), 5f, 30f);
-            float duration = Mathf.Max(turnAmount / api.MyRobot.RotateSpeed * api.MyRobot.TurnRate, minTurnDuration);
+            float duration = Mathf.Max(turnAmount / api.MyRobot.RotateSpeed, minTurnDuration);
 
             ActionType turn = angle >= 0 ? ActionType.TurnLeft : ActionType.TurnRight;
             Enqueue(new TurnAction(InputType.Script, turn, duration));
@@ -114,7 +114,7 @@ namespace SumoBot
 
             if (Mathf.Abs(angle) > 3f)
             {
-                float dur = Mathf.Max(Mathf.Abs(angle) / api.MyRobot.RotateSpeed * api.MyRobot.TurnRate, minTurnDuration);
+                float dur = Mathf.Max(Mathf.Abs(angle) / api.MyRobot.RotateSpeed, minTurnDuration);
                 ActionType turn = angle > 0 ? ActionType.TurnLeft : ActionType.TurnRight;
                 Enqueue(new TurnAction(InputType.Script, turn, dur));
             }

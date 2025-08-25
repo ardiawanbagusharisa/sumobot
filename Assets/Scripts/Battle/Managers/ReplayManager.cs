@@ -12,6 +12,7 @@ using System.Collections;
 using UnityEngine.UI;
 using SumoCore;
 using SumoManager;
+using UnityEngine.EventSystems;
 
 public class ReplayManager : MonoBehaviour
 {
@@ -30,6 +31,7 @@ public class ReplayManager : MonoBehaviour
 
     [Header("Replay Configuration")]
     public bool LoadFromPath = true;
+    public EventSystem eventSystem;
 
     #region Replay control properties
     [Header("Replay Controls")]
@@ -68,6 +70,7 @@ public class ReplayManager : MonoBehaviour
     public float ActionTimeInterval = 2f;
     public ChartManager MostActionChartLeft;
     public ChartManager MostActionChartRight;
+    public ChartManager Charts;
     #endregion
 
     #region Runtime (readonly) properties 
@@ -107,8 +110,14 @@ public class ReplayManager : MonoBehaviour
         if (!IsEnable)
             return;
 
-        if (LoadFromPath)
-            LoadGameFromPath();
+        if (GameManager.Instance.ShowReplay)
+        {
+            LoadGameFromBattle(Log);
+            return;
+        }
+
+        // if (LoadFromPath)
+            // LoadGameFromPath();
     }
 
     void OnEnable()
@@ -185,6 +194,9 @@ public class ReplayManager : MonoBehaviour
         ShowActionChart();
         ShowMostActionChart(PlayerSide.Left);
         ShowMostActionChart(PlayerSide.Right);
+
+        // Experimental
+        // ShowAllChart();
     }
     #endregion
 
@@ -302,8 +314,19 @@ public class ReplayManager : MonoBehaviour
             currentTime
         );
 
-        var start = BaseLog.FromMap(currentEvent.Data);
-        var end = BaseLog.FromMap(nextEvent.Data);
+        BaseLog start;
+        BaseLog end;
+
+        if (GameManager.Instance.ShowReplay)
+        {
+            start = BaseLog.FromMap(currentEvent.Data);
+            end = BaseLog.FromMap(nextEvent.Data);
+        }
+        else
+        {
+            start = BaseLog.FromMap(currentEvent.Data);
+            end = BaseLog.FromMap(nextEvent.Data);
+        }
 
         rigidBody.MovePosition(Vector3.Lerp(start.Position, end.Position, t));
         rigidBody.MoveRotation(Quaternion.Slerp(
@@ -314,35 +337,47 @@ public class ReplayManager : MonoBehaviour
     }
 
 
-    public void LoadGameFromPath()
-    {
-        string basePath = Path.Combine(Application.persistentDataPath, "Logs");
-        string folder = EditorUtility.OpenFolderPanel("Select Replay Folder", basePath, "");
+    // public void LoadGameFromPath()
+    // {
+    //     string basePath = Path.Combine(Application.persistentDataPath, "Logs");
+    //     string folder = EditorUtility.OpenFolderPanel("Select Replay Folder", basePath, "");
 
-        if (string.IsNullOrEmpty(folder)) return;
+    //     if (string.IsNullOrEmpty(folder)) return;
 
-        string[] files = Directory.GetFiles(folder, "game_*.json");
-        foreach (var file in files)
-        {
-            string json = File.ReadAllText(file);
-            var log = JsonConvert.DeserializeObject<GameLog>(json);
-            gameLogs.Add(log);
-        }
+    //     string[] files = Directory.GetFiles(folder, "game_*.json");
+    //     if (files.Count() == 0)
+    //     {
+    //         Debug.LogError("Folder doesn't contain games");
+    //         return;
+    //     }
 
-        string[] metadataFile = Directory.GetFiles(folder, "metadata.json");
-        string jsonMetaData = File.ReadAllText(metadataFile[0]);
-        metadata = JsonConvert.DeserializeObject<BattleLog>(jsonMetaData);
+    //     foreach (var file in files)
+    //     {
+    //         string json = File.ReadAllText(file);
+    //         var log = JsonConvert.DeserializeObject<GameLog>(json);
+    //         gameLogs.Add(log);
+    //     }
 
-        metadata.LeftPlayerStats.WinPerGame = 0;
-        metadata.RightPlayerStats.WinPerGame = 0;
-        metadata.LeftPlayerStats.ActionTaken = 0;
-        metadata.RightPlayerStats.ActionTaken = 0;
+    //     string[] metadataFile = Directory.GetFiles(folder, "metadata.json");
+    //     string jsonMetaData = File.ReadAllText(metadataFile[0]);
+    //     metadata = JsonConvert.DeserializeObject<BattleLog>(jsonMetaData);
 
-        Init();
-    }
+    //     metadata.LeftPlayerStats.WinPerGame = 0;
+    //     metadata.RightPlayerStats.WinPerGame = 0;
+    //     metadata.LeftPlayerStats.ActionTaken = 0;
+    //     metadata.RightPlayerStats.ActionTaken = 0;
+
+    //     Init();
+    // }
 
     public void LoadGameFromBattle(BattleLog battleLog)
     {
+        if (battleLog.Games.Count() == 0)
+        {
+            Debug.LogError("BattleLog doesn't contain games");
+            return;
+        }
+
         foreach (var game in battleLog.Games)
         {
             gameLogs.Add(game);
@@ -613,6 +648,11 @@ public class ReplayManager : MonoBehaviour
 
         chartManager.AddChartSeries(chart);
         chartManager.DrawChart();
+    }
+
+    public void BackToBattle()
+    {
+        GameManager.Instance.Replay_BackToBattle();
     }
 }
 

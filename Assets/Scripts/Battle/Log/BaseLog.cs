@@ -59,8 +59,30 @@ namespace SumoLog
 
         public static BaseLog FromMap(Dictionary<string, object> data)
         {
-            var robot = (JObject)data["Robot"];
-            return FromObject(robot);
+            try
+            {
+                var robot = (JObject)data["Robot"];
+                return FromObject(robot);
+            }
+            catch
+            {
+                var robot = (Dictionary<string, object>)data["Robot"];
+                var position = (Dictionary<string, float>)robot["Position"];
+
+                Vector2 temPosition = new(position["X"], position["Y"]);
+
+                BaseLog result = new()
+                {
+                    AngularVelocity = (float)robot?["AngularVelocity"],
+                    LinearVelocity = (float)robot?["LinearVelocity"],
+                    Position = temPosition,
+                    Rotation = (float)robot?["Rotation"],
+                    IsDashActive = (bool)robot?["IsDashActive"],
+                    IsSkillActive = (bool)robot?["IsSkillActive"],
+                    IsOutFromArena = (bool)robot?["IsOutFromArena"],
+                };
+                return result;
+            }
         }
 
         public static BaseLog FromObject(JObject robot)
@@ -73,6 +95,9 @@ namespace SumoLog
                 LinearVelocity = (float)(double)robot?["LinearVelocity"],
                 Position = temPosition,
                 Rotation = (float)(double)robot?["Rotation"],
+                IsDashActive = (bool)robot?["IsDashActive"],
+                IsSkillActive = (bool)robot?["IsSkillActive"],
+                IsOutFromArena = (bool)robot?["IsOutFromArena"],
             };
             return result;
         }
