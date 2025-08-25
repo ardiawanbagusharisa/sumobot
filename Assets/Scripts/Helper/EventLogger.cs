@@ -116,7 +116,8 @@ namespace SumoHelper
                 startedAt: startTime,
                 state: state,
                 category: "Action",
-                data: action.ToMap()
+                dataMap: action.ToMap(),
+                robotLog: action
             );
         }
 
@@ -150,7 +151,8 @@ namespace SumoHelper
                 startedAt: startTime,
                 state: state,
                 category: "Collision",
-                data: Collision.ToMap()
+                dataMap: Collision.ToMap(),
+                robotLog: Collision
             );
         }
 
@@ -170,7 +172,7 @@ namespace SumoHelper
                 updatedAt: time,
                 state: PeriodicState.Start,
                 category: customCategory,
-                data: new()
+                dataMap: new()
                 {
                     {"Robot", log.ToMap()}
                 }

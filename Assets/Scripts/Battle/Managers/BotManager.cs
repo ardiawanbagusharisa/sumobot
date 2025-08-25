@@ -1,4 +1,8 @@
+using System;
+using System.Collections;
+using System.Collections.Generic;
 using SumoCore;
+using SumoInput;
 using SumoManager;
 using UnityEngine;
 
@@ -21,11 +25,14 @@ namespace SumoBot
 
         public bool BotEnabled => LeftEnabled || RightEnabled;
 
+        private BotHandler leftConfig;
+        private BotHandler rightConfig;
+
+
         private void OnEnable()
         {
             BattleManager.Instance.Events[BattleManager.OnBattleChanged].Subscribe(OnBattleStateChanged);
         }
-
         void Start()
         {
             if (!enabled)
@@ -47,12 +54,32 @@ namespace SumoBot
 
             if (LeftEnabled && Left != null)
             {
-                Left.OnBotUpdate();
+                leftConfig.IsOnUpdate = true;
+
+                try
+                {
+                    Left.OnBotUpdate();
+                }
+                finally
+                {
+                    leftConfig.IsOnUpdate = false;
+                }
+
             }
 
             if (RightEnabled && Right != null)
             {
-                Right.OnBotUpdate();
+                rightConfig.IsOnUpdate = true;
+
+                try
+                {
+                    Right.OnBotUpdate();
+                }
+                finally
+                {
+                    rightConfig.IsOnUpdate = false;
+                }
+
             }
         }
 
@@ -65,28 +92,37 @@ namespace SumoBot
             {
                 Left.OnBattleStateChanged(param.BattleState, param.Winner);
             }
+
             if (RightEnabled && Right != null)
             {
                 Right.OnBattleStateChanged(param.BattleState, param.Winner);
             }
         }
 
-        public void Assign(Bot leftParam, Bot rightParam)
+        public void Assign(Bot param, PlayerSide side)
         {
             BattleManager instance = BattleManager.Instance;
             SumoController leftPlayer = instance.Battle.LeftPlayer;
             SumoController rightPlayer = instance.Battle.RightPlayer;
 
-            UnInit(leftPlayer);
-            UnInit(rightPlayer);
+            if (side == PlayerSide.Left)
+            {
+                UnInit(leftPlayer);
+                Left = param;
+            }
+            else
+            {
+                UnInit(rightPlayer);
+                Right = param;
+            }
 
-            Left = leftParam;
-            Right = rightParam;
 
             if (instance.CurrentState >= BattleState.Battle_Preparing)
             {
-                Init(leftPlayer);
-                Init(rightPlayer);
+                if (side == PlayerSide.Left)
+                    Init(leftPlayer);
+                else
+                    Init(rightPlayer);
             }
         }
 
@@ -97,18 +133,28 @@ namespace SumoBot
 
             if (LeftEnabled && Left != null && controller.Side == PlayerSide.Left)
             {
+                leftConfig = new()
+                {
+                    InputProvider = controller.InputProvider,
+                    Actions = new(),
+                };
                 controller.AssignSkill(Left.SkillType);
                 controller.Events[SumoController.OnBounce].Subscribe(OnLeftBounce);
-                Left.SetProvider(controller.InputProvider);
-                Left.OnBotInit(controller.InputProvider.API);
+                Left.Init(leftConfig);
+                Left.OnBotInit(leftConfig.InputProvider.API);
             }
 
             if (RightEnabled && Right != null && controller.Side == PlayerSide.Right)
             {
+                rightConfig = new()
+                {
+                    InputProvider = controller.InputProvider,
+                    Actions = new(),
+                };
                 controller.AssignSkill(Right.SkillType);
                 controller.Events[SumoController.OnBounce].Subscribe(OnRightBounce);
-                Right.SetProvider(controller.InputProvider);
-                Right.OnBotInit(controller.InputProvider.API);
+                Right.Init(rightConfig);
+                Right.OnBotInit(rightConfig.InputProvider.API);
             }
         }
 
@@ -121,13 +167,30 @@ namespace SumoBot
             {
                 controller.Events[SumoController.OnBounce].Unsubscribe(OnLeftBounce);
                 Left.OnBotDestroy();
+                Destroy(Left);
             }
 
             if (RightEnabled && Right != null && controller.Side == PlayerSide.Right)
             {
                 controller.Events[SumoController.OnBounce].Unsubscribe(OnRightBounce);
                 Right.OnBotDestroy();
+                Destroy(Right);
             }
+
+        }
+
+        public void Swap()
+        {
+            if (!BotEnabled || !enabled)
+                return;
+
+            if (Left == null || Right == null)
+            {
+                return;
+            }
+
+            Assign(Right, PlayerSide.Right);
+            Assign(Left, PlayerSide.Left);
         }
 
         void OnDestroy()
@@ -151,6 +214,28 @@ namespace SumoBot
         public void OnRightBounce(EventParameter parameter)
         {
             Right.OnBotCollision(parameter.BounceEvent);
+        }
+    }
+
+    public class BotHandler
+    {
+        public InputProvider InputProvider;
+        public Queue<ISumoAction> Actions;
+        public bool IsOnUpdate = false;
+
+        public void Submit()
+        {
+            if (!IsOnUpdate)
+            {
+                Debug.LogError("Submit() can only be called during OnBotUpdate().");
+                throw new Exception("Submit() can only be called during OnBotUpdate().");
+            }
+
+            InputProvider.EnqueueCommand(Actions);
+        }
+        public void Enqueue(ISumoAction action)
+        {
+            Actions.Enqueue(action);
         }
     }
 }

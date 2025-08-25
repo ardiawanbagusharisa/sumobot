@@ -6,6 +6,7 @@ using Newtonsoft.Json;
 using SumoBot;
 using SumoCore;
 using SumoHelper;
+using SumoLog;
 using UnityEngine;
 
 namespace SumoManager
@@ -22,6 +23,12 @@ namespace SumoManager
         Continues,
         End,
     }
+    public enum EventCategory
+    {
+        Action,
+        Collision,
+        All,
+    }
 
     public class LogManager : MonoBehaviour
     {
@@ -31,11 +38,11 @@ namespace SumoManager
         {
             public string BattleID;
             public int CreatedAt;
-            public string InputType;
             public float BattleTime;
             public float CountdownTime;
             public int RoundType;
             public int SimulationAmount;
+            public int SimulationAISwapInterval;
             public float SimulationTimeScale;
             public PlayerStats LeftPlayerStats = new();
             public PlayerStats RightPlayerStats = new();
@@ -76,15 +83,17 @@ namespace SumoManager
             public float Duration;
             public string Category;
             public PeriodicState State;
-
             public Dictionary<string, object> Data = new();
 
-
+            [NonSerialized]
+            public RobotLog RobotLog = new();
         }
 
         [Serializable]
         public class PlayerStats
         {
+            public string Name;
+            public string InputType;
             public string SkillType;
             public string Bot;
             public int WinPerGame = 0;
@@ -128,6 +137,11 @@ namespace SumoManager
                 }
                 return logs;
             }
+        }
+
+        public static void UnregisterAction()
+        {
+            ActionLoggers.Clear();
         }
 
         // Some actions maybe still hanging when the state is already ended, (e.g. dash and skill).
@@ -204,19 +218,19 @@ namespace SumoManager
             Directory.CreateDirectory(logFolderPath);
         }
 
-        public static void InitBattle(int simAmount = 0, float simTimeScale = 0)
+        public static void InitBattle(BattleSimulator simulator = null)
         {
             BattleManager battleManager = BattleManager.Instance;
 
             Log = new()
             {
-                InputType = battleManager.BattleInputType.ToString(),
                 BattleID = battleManager.Battle.BattleID.ToString(),
                 CountdownTime = battleManager.CountdownTime,
                 BattleTime = battleManager.BattleTime,
                 RoundType = (int)battleManager.RoundSystem,
-                SimulationAmount = simAmount,
-                SimulationTimeScale = simTimeScale,
+                SimulationAmount = simulator?.TotalSimulations ?? 0,
+                SimulationTimeScale = simulator?.TimeScale ?? 0,
+                SimulationAISwapInterval = simulator?.SwapAIInterval ?? 0,
                 CreatedAt = (int)DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
             };
 
@@ -231,8 +245,17 @@ namespace SumoManager
 
         public static void UpdateMetadata(bool logTakenAction = true)
         {
-            Log.LeftPlayerStats.SkillType = BattleManager.Instance.Battle.LeftPlayer.Skill.Type.ToString();
-            Log.RightPlayerStats.SkillType = BattleManager.Instance.Battle.RightPlayer.Skill.Type.ToString();
+            var leftPlayer = BattleManager.Instance.Battle.LeftPlayer;
+            var rightPlayer = BattleManager.Instance.Battle.RightPlayer;
+
+            Log.LeftPlayerStats.SkillType = leftPlayer.Skill.Type.ToString();
+            Log.RightPlayerStats.SkillType = rightPlayer.Skill.Type.ToString();
+
+            Log.LeftPlayerStats.InputType = BattleManager.Instance.LeftInputType.ToString();
+            Log.RightPlayerStats.InputType = BattleManager.Instance.RightInputType.ToString();
+
+            Log.LeftPlayerStats.Name = leftPlayer.Profile.Name;
+            Log.RightPlayerStats.Name = rightPlayer.Profile.Name;
 
             if (logTakenAction && Log.Games.Count > 0)
             {
@@ -275,6 +298,23 @@ namespace SumoManager
                 Timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss")
             };
             Log.Games[CurrentGameIndex].Rounds.Add(newRound);
+        }
+
+        public static PlayerSide? GetWinnerByContactMade()
+        {
+            RoundLog round = GetCurrentRound();
+            if (round == null)
+                return null;
+
+            int leftContact = round.PlayerEvents.FindAll((x) => x.Actor == "Left" && x.Category == "Collision" && (x.State != PeriodicState.End) && (bool)x.Data["IsActor"]).Count();
+            int rightContact = round.PlayerEvents.FindAll((x) => x.Actor == "Right" && x.Category == "Collision" && (x.State != PeriodicState.End) && (bool)x.Data["IsActor"]).Count();
+
+            if (leftContact > rightContact)
+                return PlayerSide.Left;
+            else if (rightContact > leftContact)
+                return PlayerSide.Right;
+            else
+                return null;
         }
 
         public static void SetRoundWinner(string winner)
@@ -342,7 +382,8 @@ namespace SumoManager
             PeriodicState state = PeriodicState.Start,
             float? startedAt = null,
             float? updatedAt = null,
-            Dictionary<string, object> data = null)
+            Dictionary<string, object> dataMap = null,
+            RobotLog robotLog = null)
         {
             RoundLog roundLog = GetCurrentRound();
             if (roundLog != null)
@@ -351,7 +392,8 @@ namespace SumoManager
                 {
                     Actor = actor.ToString(),
                     Target = target.ToString() ?? null,
-                    Data = data,
+                    Data = dataMap,
+                    RobotLog = robotLog,
                     State = state,
                     Category = category,
                     StartedAt = startedAt != null ? (float)startedAt : BattleManager.Instance.ElapsedTime

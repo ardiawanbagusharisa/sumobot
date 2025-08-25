@@ -7,6 +7,7 @@ using UnityEngine.UI;
 using System.Collections;
 using UnityEngine.SceneManagement;
 using SumoInput;
+using SumoBot;
 
 namespace SumoManager
 {
@@ -25,10 +26,6 @@ namespace SumoManager
         [Header("Main Panels")]
         public List<GameObject> BattlePanels = new();
 
-        [Header("Pre-battle UI")]
-        public TMP_Dropdown LeftSkill;
-        public TMP_Dropdown RightSkill;
-
         [Header("Battle UI")]
         public GameObject PausePanel;
         public TMP_Text BattleStateUI;
@@ -37,8 +34,14 @@ namespace SumoManager
         public TMP_Text Round;
         public TMP_Text Timer;
         public List<SumoCostume> PlayerHUD = new();
+        public Sprite CrownSprite;
 
         [Header("Battle UI - Left Player")]
+        public TMP_Dropdown LeftInputType;
+        public TMP_Dropdown LeftSkill;
+        public TMP_Dropdown LeftScript;
+        public Button LeftCostumeBtn;
+        public GameObject LeftCrown;
         public TMP_Text LeftScore;
         public TMP_Text LeftFinalScore;
         public CooldownUIGroupSet LeftSkillUI;
@@ -50,6 +53,11 @@ namespace SumoManager
 
 
         [Header("Battle UI - Right Player")]
+        public TMP_Dropdown RightInputType;
+        public TMP_Dropdown RightSkill;
+        public TMP_Dropdown RightScript;
+        public Button RightCostumeBtn;
+        public GameObject RightCrown;
         public TMP_Text RightScore;
         public TMP_Text RightFinalScore;
         public CooldownUIGroupSet RightSkillUI;
@@ -160,19 +168,51 @@ Left Shift / Right Shift - Dash
             BattleManager.Instance.Events[BattleManager.OnBattleChanged].Unsubscribe(OnBattleChanged);
         }
 
+        void Start()
+        {
+            LeftInputType.onValueChanged.AddListener((v) =>
+            {
+                SetInputMode(PlayerSide.Left, v);
+            });
+            RightInputType.onValueChanged.AddListener((v) =>
+            {
+                SetInputMode(PlayerSide.Right, v);
+            });
+            LeftSkill.onValueChanged.AddListener((v) =>
+            {
+                SetDefaultSkill(PlayerSide.Left, v);
+            });
+            RightSkill.onValueChanged.AddListener((v) =>
+            {
+                SetDefaultSkill(PlayerSide.Right, v);
+            });
+            LeftScript.onValueChanged.AddListener((v) =>
+            {
+                OnBotSelect(PlayerSide.Left, v);
+            });
+            RightScript.onValueChanged.AddListener((v) =>
+            {
+                OnBotSelect(PlayerSide.Right, v);
+            });
+
+        }
+
         private void FixedUpdate()
         {
             BattleManager battle = BattleManager.Instance;
+            if (battle.CurrentState <= BattleState.Battle_Preparing) return;
+
+            SumoController leftPlayer = battle.Battle.LeftPlayer;
+            SumoController rightPlayer = battle.Battle.RightPlayer;
+
             if (battle.CurrentState == BattleState.Battle_Ongoing ||
             battle.CurrentState == BattleState.Battle_End ||
             battle.CurrentState == BattleState.Battle_Reset)
             {
                 Timer.SetText(Mathf.CeilToInt(battle.TimeLeft).ToString());
-                SumoController leftPlayer = battle.Battle.LeftPlayer;
-                SumoController rightPlayer = battle.Battle.RightPlayer;
 
-                UpdateActionUI(leftPlayer, LeftSkillUI, LeftDashUI);
-                UpdateActionUI(rightPlayer, RightSkillUI, RightDashUI);
+                UpdateActionUI(LeftSkillUI, LeftDashUI, leftPlayer);
+                UpdateActionUI(RightSkillUI, RightDashUI, rightPlayer);
 
                 LeftDashBuff.SetActive(leftPlayer.IsDashActive);
                 LeftSkillBuff.SetActive(leftPlayer.Skill.IsActive);
@@ -181,12 +221,20 @@ Left Shift / Right Shift - Dash
             }
             else
             {
-                ResetActionUI(LeftSkillUI, LeftDashUI);
-                ResetActionUI(RightSkillUI, RightDashUI);
+                ResetActionUI(LeftSkillUI, LeftDashUI, leftPlayer);
+                ResetActionUI(RightSkillUI, RightDashUI, rightPlayer);
 
                 // Reset timer UI
                 if (Timer != null)
                     Timer.SetText(battle.BattleTime.ToString());
+            }
+
+            if (battle.CurrentState == BattleState.Battle_Reset || battle.CurrentState == BattleState.PostBattle_ShowResult)
+            {
+                LeftDashBuff.SetActive(false);
+                LeftSkillBuff.SetActive(false);
+                RightDashBuff.SetActive(false);
+                RightSkillBuff.SetActive(false);
             }
         }
         #endregion
@@ -195,7 +243,7 @@ Left Shift / Right Shift - Dash
         private void OnBattleChanged(EventParameter param)
         {
             var battle = BattleManager.Instance.Battle;
-            
+
             RoundSystem.SetText($"Best of {(int)battle.RoundSystem}");
             Round.SetText($"Round {battle.CurrentRound?.RoundNumber}");
 
@@ -213,26 +261,23 @@ Left Shift / Right Shift - Dash
                     BattlePanels.Find((o) => o.CompareTag("BattleState/Pre")).SetActive(true);
                     BattlePanels.Find((o) => o.CompareTag("BattleState/Ongoing")).SetActive(false);
                     BattlePanels.Find((o) => o.CompareTag("BattleState/Post")).SetActive(false);
+                    LeftInputType.value = BattleManager.Instance.LeftInputType.ToBattleInputType();
+                    RightInputType.value = BattleManager.Instance.RightInputType.ToBattleInputType();
                     LeftSkill.value = (int)leftPlayer.Skill.Type;
                     RightSkill.value = (int)rightPlayer.Skill.Type;
                     LeftFinalScore.SetText("");
                     RightFinalScore.SetText("");
-                    
-                    PlayerHUD.ForEach((x) =>
-                    {
-                        if (x.Side == Placement.Left)
-                            x.AttachToHUD(leftPlayer.Costume);
-                        else if (x.Side == Placement.Right)
-                            x.AttachToHUD(rightPlayer.Costume);
-                    });
+
+                    LeftCostumeBtn.onClick.AddListener(() => CreateCostume(leftPlayer.Profile.ID));
+                    RightCostumeBtn.onClick.AddListener(() => CreateCostume(rightPlayer.Profile.ID));
                     break;
                 case BattleState.Battle_Preparing:
                     battle.LeftPlayer.Events[SumoController.OnSkillAssigned].Subscribe(OnSkillAssigned);
                     battle.RightPlayer.Events[SumoController.OnSkillAssigned].Subscribe(OnSkillAssigned);
 
                     BattlePanels.Find((o) => o.CompareTag("BattleState/Ongoing")).SetActive(true);
-                    InitActionUI(LeftSkillUI, LeftDashUI);
-                    InitActionUI(RightSkillUI, RightDashUI);
+                    InitActionUI(LeftSkillUI, LeftDashUI, leftPlayer);
+                    InitActionUI(RightSkillUI, RightDashUI, rightPlayer);
                     ClearScore();
                     LeftSkillUI.SetText(leftPlayer.Skill.Type.ToString());
                     RightSkillUI.SetText(rightPlayer.Skill.Type.ToString());
@@ -243,6 +288,22 @@ Left Shift / Right Shift - Dash
                     BattlePanels.Find((o) => o.CompareTag("BattleState/Post")).SetActive(false);
                     break;
                 case BattleState.Battle_Countdown:
+                    var leftSkill = leftPlayer.Skill;
+                    var rightSkill = rightPlayer.Skill;
+
+                    if (leftSkill.Type == SkillType.Boost)
+                        LeftSkillBuff.GetComponentInChildren<TMP_Text>().text = $"SPD x {leftSkill.BoostMultiplier}";
+                    else
+                        LeftSkillBuff.GetComponentInChildren<TMP_Text>().text = "FREEZED";
+
+
+                    if (rightSkill.Type == SkillType.Boost)
+                        RightSkillBuff.GetComponentInChildren<TMP_Text>().text = $"SPD x {rightSkill.BoostMultiplier}";
+                    else
+                        RightSkillBuff.GetComponentInChildren<TMP_Text>().text = "FREEZED";
+
+                    LeftDashBuff.GetComponentInChildren<TMP_Text>().text = $"SPD + {leftPlayer.DashSpeed}";
+                    RightDashBuff.GetComponentInChildren<TMP_Text>().text = $"SPD + {rightPlayer.DashSpeed}";
                     BattleManager.Instance.Events[BattleManager.OnCountdownChanged].Subscribe(OnCountdownChanged);
                     break;
                 case BattleState.Battle_Ongoing:
@@ -254,23 +315,43 @@ Left Shift / Right Shift - Dash
                     rightPlayer.Events[SumoController.OnSkillAssigned].Unsubscribe(OnSkillAssigned);
                     break;
                 case BattleState.PostBattle_ShowResult:
+                    SumoController winner = battle.GetBattleWinner().GetRobotWinner(battle);
+                    if (winner != null)
+                    {
+                        if (winner.Side == PlayerSide.Left)
+                        {
+                            LeftCrown.SetActive(true);
+                            RightCrown.SetActive(false);
+                        }
+                        else
+                        {
+                            LeftCrown.SetActive(false);
+                            RightCrown.SetActive(true);
+                        }
+                    }
+                    else
+                    {
+                        LeftCrown.SetActive(false);
+                        RightCrown.SetActive(false);
+                    }
+
                     BattlePanels.Find((o) => o.CompareTag("BattleState/Post")).SetActive(true);
                     BattlePanels.Find((o) => o.CompareTag("BattleState/Ongoing")).SetActive(false);
                     BattlePanels.Find((o) => o.CompareTag("BattleState/Pre")).SetActive(false);
 
                     LeftFinalScore.SetText(battle.LeftWinCount.ToString());
                     RightFinalScore.SetText(battle.RightWinCount.ToString());
-
-                    SumoCostume winnerHUD = PlayerHUD.FirstOrDefault((x) => x.Side == Placement.Winner);
-                    if (winnerHUD)
-                    {
-                        SumoController winner = battle.GetBattleWinner().GetRobotWinner(battle);
-                        if (winner != null)
-                            winnerHUD?.AttachToHUD(winner.Costume);
-                    }
-
                     break;
             }
+
+            PlayerHUD.ForEach((costume) =>
+                   {
+                       if (costume.Side == Placement.Left)
+                           costume.AttachToUI(leftPlayer.Profile.CurrentCostume);
+                       else if (costume.Side == Placement.Right)
+                           costume.AttachToUI(rightPlayer.Profile.CurrentCostume);
+                   });
+
             UpdateScore(battle);
         }
 
@@ -287,25 +368,26 @@ Left Shift / Right Shift - Dash
                 RightSkillUI.SetText(param.SkillType.ToString());
         }
 
-        private void InitActionUI(CooldownUIGroupSet skill, CooldownUIGroupSet dash)
+        private void InitActionUI(CooldownUIGroupSet skill, CooldownUIGroupSet dash, SumoController controller)
         {
-            InputType inputType = BattleManager.Instance.BattleInputType;
+
+            InputType inputType = controller.InputProvider.InputType;
 
             skill.SetVisible(inputType);
             dash.SetVisible(inputType);
         }
 
-        private void UpdateActionUI(SumoController player, CooldownUIGroupSet skill, CooldownUIGroupSet dash)
+        private void UpdateActionUI(CooldownUIGroupSet skill, CooldownUIGroupSet dash, SumoController player)
         {
-            InputType inputType = BattleManager.Instance.BattleInputType;
+            InputType inputType = player.InputProvider.InputType;
 
             skill.SetCooldown(player.Skill.CooldownNormalized, inputType);
             dash.SetCooldown(player.DashCooldownNormalized, inputType);
         }
 
-        private void ResetActionUI(CooldownUIGroupSet skill, CooldownUIGroupSet dash)
+        private void ResetActionUI(CooldownUIGroupSet skill, CooldownUIGroupSet dash, SumoController player)
         {
-            InputType inputType = BattleManager.Instance.BattleInputType;
+            InputType inputType = player.InputProvider.InputType;
 
             skill.Reset(inputType);
             dash.Reset(inputType);
@@ -330,6 +412,103 @@ Left Shift / Right Shift - Dash
         }
         #endregion
 
+        #region Battle player config
+        public void CreateCostume(string id)
+        {
+            GameManager.Instance.Battle_LoadCostumeScene(id);
+        }
+
+        public void SetDefaultSkill(PlayerSide side, int type)
+        {
+            if (side == PlayerSide.Left)
+                BattleManager.Instance.Battle.LeftPlayer.AssignSkill(type == 0 ? SkillType.Boost : SkillType.Stone);
+            else
+                BattleManager.Instance.Battle.RightPlayer.AssignSkill(type == 0 ? SkillType.Boost : SkillType.Stone);
+        }
+
+        public void SetInputMode(PlayerSide side, int type)
+        {
+            InputType changedType;
+            switch (type)
+            {
+                case 1:
+                    changedType = InputType.LiveCommand;
+                    break;
+                case 2:
+                    changedType = InputType.Script;
+                    break;
+                default:
+                    changedType = InputType.UI;
+                    break;
+            }
+
+
+            if (side == PlayerSide.Left)
+            {
+                EnableBotSelector(side, LeftScript, changedType == InputType.Script);
+                BattleManager.Instance.LeftInputType = changedType;
+            }
+            else
+            {
+                EnableBotSelector(side, RightScript, changedType == InputType.Script);
+                BattleManager.Instance.RightInputType = changedType;
+            }
+        }
+
+        private void EnableBotSelector(PlayerSide side, TMP_Dropdown dropdown, bool isActive)
+        {
+            var botManager = BattleManager.Instance.BotManager;
+            var botTypes = BotUtility.GetAllBotTypes();
+            var botNames = botTypes.ConvertAll(t => t.Name).ToArray();
+
+            if (isActive)
+            {
+                dropdown.AddOptions(botNames.ToList());
+                dropdown.value = 0;
+            }
+
+            if (side == PlayerSide.Left)
+            {
+                LeftSkill.interactable = !isActive;
+                botManager.LeftEnabled = isActive;
+                if (isActive)
+                {
+                    botManager.leftBotIndex = 0;
+                    botManager.Left = ScriptableObject.CreateInstance(botTypes[0]) as Bot;
+                }
+            }
+            else
+            {
+                RightSkill.interactable = !isActive;
+                botManager.RightEnabled = isActive;
+                if (isActive)
+                {
+                    botManager.rightBotIndex = 0;
+                    botManager.Right = ScriptableObject.CreateInstance(botTypes[0]) as Bot;
+                }
+            }
+            dropdown.gameObject.SetActive(isActive);
+        }
+
+        private void OnBotSelect(PlayerSide side, int index)
+        {
+            var botManager = BattleManager.Instance.BotManager;
+            var botTypes = BotUtility.GetAllBotTypes();
+            var bot = ScriptableObject.CreateInstance(botTypes[index]) as Bot;
+            if (side == PlayerSide.Left)
+            {
+                botManager.leftBotIndex = index;
+                botManager.Assign(bot, PlayerSide.Left);
+            }
+            else
+            {
+                botManager.rightBotIndex = index;
+                botManager.Assign(bot, PlayerSide.Right);
+            }
+
+        }
+        #endregion
+
         #region Battle menu
         public void Pause()
         {
@@ -347,6 +526,11 @@ Left Shift / Right Shift - Dash
         {
             Time.timeScale = 1;
             SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+        }
+
+        public void ShowReplay()
+        {
+            GameManager.Instance.Battle_ShowReplay();
         }
 
         public void ShowGuide()

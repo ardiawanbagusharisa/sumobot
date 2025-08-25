@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using SumoCore;
 using SumoInput;
-using SumoLog;
 using SumoManager;
 using UnityEngine;
 
@@ -12,13 +11,11 @@ namespace SumoBot
     {
         #region Runtime properties
 
-        private InputProvider provider;
-        private Queue<ISumoAction> actions;
+        private BotHandler handler;
 
-        internal void SetProvider(InputProvider provider)
+        internal void Init(BotHandler handler)
         {
-            actions = new Queue<ISumoAction>();
-            this.provider = provider;
+            this.handler = handler;
         }
         #endregion
 
@@ -46,20 +43,20 @@ namespace SumoBot
         // Add one action to local queue
         public virtual void Enqueue(ISumoAction action)
         {
-            actions.Enqueue(action);
+            handler.Enqueue(action);
         }
 
         // Send your local queue to game's queue
         // actions that already sent will be executed in order every battle tick
         public void Submit()
         {
-            provider.EnqueueCommand(actions);
+            handler.Submit();
         }
 
         // Clear your queue locally.
         public virtual void ClearCommands()
         {
-            actions.Clear();
+            handler.Actions.Clear();
         }
 
         public virtual void OnBotDestroy() { }

@@ -145,7 +145,7 @@ namespace SumoBot
             if (Mathf.Abs(angleToEnemy) > focusAngle)
             {
                 float turnAmount = Mathf.Min(Mathf.Abs(angleToEnemy), searchTurnAngle);
-                turnAmount = Mathf.Max(turnAmount, minTurnDuration * myRobot.RotateSpeed * myRobot.TurnRate);
+                turnAmount = Mathf.Max(turnAmount, minTurnDuration * myRobot.RotateSpeed);
 
                 if (angleToEnemy > 0)
                     Enqueue(new TurnAction(InputType.Script, ActionType.TurnLeft, turnAmount));
@@ -177,7 +177,7 @@ namespace SumoBot
 
             if (Mathf.Abs(angleToEnemy) > focusAngle)
             {
-                float angleInDur = Mathf.Abs(angleToEnemy) / myRobot.RotateSpeed * myRobot.TurnRate;
+                float angleInDur = Mathf.Abs(angleToEnemy) / myRobot.RotateSpeed;
                 angleInDur = Mathf.Max(angleInDur, minTurnDuration);
 
                 if (angleToEnemy > 0)
@@ -203,7 +203,7 @@ namespace SumoBot
 
             if (Mathf.Abs(angleToEnemy) > focusAngle)
             {
-                float angleInDur = Mathf.Abs(angleToEnemy) / myRobot.RotateSpeed * myRobot.TurnRate;
+                float angleInDur = Mathf.Abs(angleToEnemy) / myRobot.RotateSpeed;
                 angleInDur = Mathf.Max(angleInDur, minTurnDuration);
 
                 if (angleToEnemy > 0)
@@ -270,9 +270,9 @@ namespace SumoBot
                 float angleToCenter = Vector2.SignedAngle(forward, directionToCenter);
                 
                 if (angleToCenter < 0)
-                    Enqueue(new TurnAction(InputType.Script, ActionType.TurnLeft, Mathf.Max(minTurnDuration, Mathf.Abs(angleToCenter) / myRobot.RotateSpeed * myRobot.TurnRate)));
+                    Enqueue(new TurnAction(InputType.Script, ActionType.TurnLeft, Mathf.Max(minTurnDuration, Mathf.Abs(angleToCenter) / myRobot.RotateSpeed)));
                 else if (angleToCenter > 0)
-                    Enqueue(new TurnAction(InputType.Script, ActionType.TurnRight, Mathf.Max(minTurnDuration, Mathf.Abs(angleToCenter) / myRobot.RotateSpeed * myRobot.TurnRate)));
+                    Enqueue(new TurnAction(InputType.Script, ActionType.TurnRight, Mathf.Max(minTurnDuration, Mathf.Abs(angleToCenter) / myRobot.RotateSpeed)));
                 
                 float distance = Vector2.Distance(myRobot.Position, api.BattleInfo.ArenaPosition);
                 if (distance < api.BattleInfo.ArenaRadius - edgeAvoidDistance)
