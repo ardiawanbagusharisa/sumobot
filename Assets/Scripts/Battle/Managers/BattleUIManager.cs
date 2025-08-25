@@ -199,8 +199,6 @@ Left Shift / Right Shift - Dash
 
         private void FixedUpdate()
         {
-            if (GameManager.Instance.ShowReplay) return;
-
             BattleManager battle = BattleManager.Instance;
             if (battle.CurrentState <= BattleState.Battle_Preparing) return;
 
