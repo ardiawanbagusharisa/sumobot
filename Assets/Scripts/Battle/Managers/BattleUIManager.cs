@@ -329,6 +329,11 @@ Left Shift / Right Shift - Dash
                             RightCrown.SetActive(true);
                         }
                     }
+                    else
+                    {
+                        LeftCrown.SetActive(false);
+                        RightCrown.SetActive(false);
+                    }
 
                     BattlePanels.Find((o) => o.CompareTag("BattleState/Post")).SetActive(true);
                     BattlePanels.Find((o) => o.CompareTag("BattleState/Ongoing")).SetActive(false);
