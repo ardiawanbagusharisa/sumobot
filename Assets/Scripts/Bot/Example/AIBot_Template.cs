@@ -4,6 +4,7 @@ using SumoCore;
 using SumoInput;
 using SumoLog;
 using SumoManager;
+using Unity.InferenceEngine;
 using UnityEngine;
 
 namespace SumoBot
