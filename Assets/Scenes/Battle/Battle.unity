@@ -6282,6 +6282,7 @@ GameObject:
   - component: {fileID: 551174139}
   - component: {fileID: 551174140}
   - component: {fileID: 551174143}
+  - component: {fileID: 551174144}
   m_Layer: 5
   m_Name: Dash
   m_TagString: Button/Dash
@@ -6414,6 +6415,18 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: c7a94608a2b084ddb96192a91226fb42, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!114 &551174144
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 551174137}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9cdce7c5286e54a36a8d965db6ff1960, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
 --- !u!1 &569859723
@@ -7280,6 +7293,7 @@ GameObject:
   - component: {fileID: 629858574}
   - component: {fileID: 629858573}
   - component: {fileID: 629858572}
+  - component: {fileID: 629858576}
   m_Layer: 5
   m_Name: Left
   m_TagString: Button/TurnLeft
@@ -7401,6 +7415,18 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 629858570}
   m_CullTransparentMesh: 1
+--- !u!114 &629858576
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 629858570}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9cdce7c5286e54a36a8d965db6ff1960, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &630405336
 GameObject:
   m_ObjectHideFlags: 0
@@ -14790,11 +14816,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ae733049efbdd485bac7269e63f05e36, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  Accelerate: {fileID: 1831535907}
-  TurnLeft: {fileID: 629858573}
-  TurnRight: {fileID: 1633985212}
-  Dash: {fileID: 551174140}
-  Skill: {fileID: 1451450147}
+  Accelerate: {fileID: 1831535910}
+  TurnLeft: {fileID: 629858576}
+  TurnRight: {fileID: 1633985215}
+  Dash: {fileID: 551174144}
+  Skill: {fileID: 1451450151}
 --- !u!114 &1218235358
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -17329,6 +17355,7 @@ GameObject:
   - component: {fileID: 1451450146}
   - component: {fileID: 1451450147}
   - component: {fileID: 1451450150}
+  - component: {fileID: 1451450151}
   m_Layer: 5
   m_Name: Skill
   m_TagString: Button/Boost
@@ -17461,6 +17488,18 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: c7a94608a2b084ddb96192a91226fb42, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!114 &1451450151
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1451450144}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9cdce7c5286e54a36a8d965db6ff1960, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
 --- !u!1 &1451694195
@@ -19814,6 +19853,7 @@ GameObject:
   - component: {fileID: 1633985213}
   - component: {fileID: 1633985212}
   - component: {fileID: 1633985211}
+  - component: {fileID: 1633985215}
   m_Layer: 5
   m_Name: Right
   m_TagString: Button/TurnRight
@@ -19935,6 +19975,18 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1633985209}
   m_CullTransparentMesh: 1
+--- !u!114 &1633985215
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1633985209}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9cdce7c5286e54a36a8d965db6ff1960, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &1641089503
 GameObject:
   m_ObjectHideFlags: 0
@@ -23209,6 +23261,7 @@ GameObject:
   - component: {fileID: 1831535908}
   - component: {fileID: 1831535907}
   - component: {fileID: 1831535906}
+  - component: {fileID: 1831535910}
   m_Layer: 5
   m_Name: Accelerate
   m_TagString: Button/Accelerate
@@ -23330,6 +23383,18 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1831535904}
   m_CullTransparentMesh: 1
+--- !u!114 &1831535910
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1831535904}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9cdce7c5286e54a36a8d965db6ff1960, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &1831705369
 GameObject:
   m_ObjectHideFlags: 0
@@ -28835,6 +28900,7 @@ GameObject:
   - component: {fileID: 6700192012129046926}
   - component: {fileID: 7152423365124990940}
   - component: {fileID: 1867807851672774921}
+  - component: {fileID: 7152423365124990941}
   m_Layer: 5
   m_Name: Right
   m_TagString: Button/TurnRight
@@ -29590,6 +29656,7 @@ GameObject:
   - component: {fileID: 726275592348275962}
   - component: {fileID: 4040565115034481576}
   - component: {fileID: 3032768894191776539}
+  - component: {fileID: 4040565115034481577}
   m_Layer: 5
   m_Name: Accelerate
   m_TagString: Button/Accelerate
@@ -29685,6 +29752,7 @@ GameObject:
   - component: {fileID: 8709263502047528278}
   - component: {fileID: 8709263502047528279}
   - component: {fileID: 8134541077510751396}
+  - component: {fileID: 8709263502047528280}
   m_Layer: 5
   m_Name: Left
   m_TagString: Button/TurnLeft
@@ -30738,6 +30806,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2e66796bcb07e42c08cf5275ddebe4f4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!114 &4040565115034481577
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2267720409472396560}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9cdce7c5286e54a36a8d965db6ff1960, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!114 &4048070967410996302
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -31176,6 +31256,7 @@ GameObject:
   - component: {fileID: 2905642964800819128}
   - component: {fileID: 799458850321888780}
   - component: {fileID: 6146690784344710109}
+  - component: {fileID: 6146690784344710110}
   m_Layer: 5
   m_Name: Skill
   m_TagString: Button/Boost
@@ -31379,11 +31460,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ae733049efbdd485bac7269e63f05e36, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  Accelerate: {fileID: 4040565115034481576}
-  TurnLeft: {fileID: 8709263502047528279}
-  TurnRight: {fileID: 7152423365124990940}
-  Dash: {fileID: 2408362545189751182}
-  Skill: {fileID: 799458850321888780}
+  Accelerate: {fileID: 4040565115034481577}
+  TurnLeft: {fileID: 8709263502047528280}
+  TurnRight: {fileID: 7152423365124990941}
+  Dash: {fileID: 9048422451235625475}
+  Skill: {fileID: 6146690784344710110}
 --- !u!114 &5511277951059839787
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -31783,6 +31864,18 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: c7a94608a2b084ddb96192a91226fb42, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!114 &6146690784344710110
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5015422443380326432}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9cdce7c5286e54a36a8d965db6ff1960, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
 --- !u!224 &6185084550980354979
@@ -32348,6 +32441,18 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 2e66796bcb07e42c08cf5275ddebe4f4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!114 &7152423365124990941
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 758405899479473023}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9cdce7c5286e54a36a8d965db6ff1960, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
 --- !u!224 &7249369561250749025
@@ -32990,6 +33095,7 @@ GameObject:
   - component: {fileID: 3808148948199868581}
   - component: {fileID: 2408362545189751182}
   - component: {fileID: 9048422451235625474}
+  - component: {fileID: 9048422451235625475}
   m_Layer: 5
   m_Name: Dash
   m_TagString: Button/Dash
@@ -33037,6 +33143,18 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 2e66796bcb07e42c08cf5275ddebe4f4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!114 &8709263502047528280
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2503993871061406410}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9cdce7c5286e54a36a8d965db6ff1960, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
 --- !u!224 &8847711573314339708
@@ -33157,6 +33275,18 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: c7a94608a2b084ddb96192a91226fb42, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!114 &9048422451235625475
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8682156856159326934}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9cdce7c5286e54a36a8d965db6ff1960, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
 --- !u!1 &9154546434793356397
