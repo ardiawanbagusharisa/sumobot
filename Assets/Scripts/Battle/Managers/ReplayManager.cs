@@ -94,6 +94,8 @@ public class ReplayManager : MonoBehaviour
     private Rigidbody2D rightRigidBody;
     private List<string> logs = new();
     private bool autoScrollLog = true;
+    private (float, float) originalBotRotation = new();
+    private (Vector2, Vector2) originalBotPosition = new();
     #endregion
 
     #region Unity methods
@@ -117,10 +119,16 @@ public class ReplayManager : MonoBehaviour
             LoadGameFromBattle(Log);
             return;
         }
+#if DEBUG
+        if (LoadFromPath)
+            LoadGameFromPath();
+#endif
+    }
+
+    void OnEnable()
+    {
         if (ScrollEvent != null)
-        {
             ScrollEvent.Events[CustomHandlerListener.OnScrolling].Subscribe(OnDrag);
-        }
 
         if (LogEvents != null)
         {
@@ -132,32 +140,22 @@ public class ReplayManager : MonoBehaviour
                 }
             });
         }
-#if DEBUG
-        if (LoadFromPath)
-            LoadGameFromPath();
-#endif
-    }
 
-    void OnEnable()
-    {
         if (TimeSliderUI != null)
-        {
             TimeSliderUI.onValueChanged.AddListener(OnTimeSliderChanged);
-        }
     }
 
 
     void OnDisable()
     {
         if (TimeSliderUI != null)
-        {
             TimeSliderUI.onValueChanged.RemoveListener(OnTimeSliderChanged);
-        }
 
         if (PlaybackSpeedSlider != null)
-        {
             PlaybackSpeedSlider.onValueChanged.RemoveListener(OnPlayBackSpeedChanged);
-        }
+
+        if (ScrollEvent != null)
+            ScrollEvent.Events[CustomHandlerListener.OnScrolling].Unsubscribe(OnDrag);
     }
 
 
@@ -173,7 +171,7 @@ public class ReplayManager : MonoBehaviour
         if (TimeLabel != null)
             TimeLabel.text = $"{FormatTime(currentTime)} / {FormatTime(currentRoundDuration)}";
 
-        // DisplayCurrentEventInfo();
+        DisplayCurrentEventInfo();
 
         if (currentTime > currentRoundDuration)
         {
@@ -202,11 +200,6 @@ public class ReplayManager : MonoBehaviour
         }
     }
 
-    void LateUpdate()
-    {
-        DisplayCurrentEventInfo();
-    }
-
     void FixedUpdate()
     {
         if (!isPlaying || !IsEnable) return;
@@ -218,12 +211,9 @@ public class ReplayManager : MonoBehaviour
             return;
         if (!ChartContainer.activeSelf)
             return;
+
         ShowActionChart();
         ShowMostActionChart();
-
-
-        // Experimental
-        // ShowAllChart();
     }
     #endregion
 
@@ -231,6 +221,8 @@ public class ReplayManager : MonoBehaviour
     {
         leftRigidBody = leftPlayer.gameObject.GetComponent<Rigidbody2D>();
         rightRigidBody = rightPlayer.gameObject.GetComponent<Rigidbody2D>();
+        originalBotRotation = (leftRigidBody.rotation, rightRigidBody.rotation);
+        originalBotPosition = (leftRigidBody.position, rightRigidBody.position);
         leftRigidBody.bodyType = RigidbodyType2D.Kinematic;
         rightRigidBody.bodyType = RigidbodyType2D.Kinematic;
         leftRigidBody.interpolation = RigidbodyInterpolation2D.Interpolate;
@@ -268,6 +260,11 @@ public class ReplayManager : MonoBehaviour
     #region Core Logics
     void LoadRound(int gameIdx, int roundIdx)
     {
+        leftRigidBody.MovePosition(originalBotPosition.Item1);
+        leftRigidBody.MoveRotation(originalBotRotation.Item1);
+        rightRigidBody.MovePosition(originalBotPosition.Item2);
+        rightRigidBody.MoveRotation(originalBotRotation.Item2);
+
         ResetReplay(includePlayer: roundIdx == 0);
 
         var round = gameLogs[gameIdx].Rounds[roundIdx];
@@ -293,7 +290,8 @@ public class ReplayManager : MonoBehaviour
     void InterpolateBot(Rigidbody2D rigidBody, List<EventLog> events, ref int index)
     {
         if (!isPlaying) return;
-
+        if (events.Count <= 1)
+            return;
         if (index >= events.Count)
             return;
 
