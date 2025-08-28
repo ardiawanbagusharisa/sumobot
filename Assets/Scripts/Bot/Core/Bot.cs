@@ -1,15 +1,17 @@
-using System;
-using System.Collections.Generic;
 using SumoCore;
-using SumoInput;
 using SumoManager;
 using UnityEngine;
 
 namespace SumoBot
 {
+    /// <summary>
+    /// Abstract base class for all bot logic in the SumoBot system.
+    /// Provides a standardized interface for bot behavior during battle, including initialization,
+    /// updates, collision handling, and state changes.
+    /// </summary>
     public abstract class Bot : ScriptableObject
     {
-        #region Runtime properties
+        #region Runtime properties (private)
 
         private BotHandler handler;
 
@@ -19,46 +21,76 @@ namespace SumoBot
         }
         #endregion
 
-        #region Abstract properties & method
+        #region Abstract properties & method (public)
 
+        /// <summary>
+        /// Unique identifier for the bot (e.g., "Bot_01", "Stone_02"). Can be name of your Bot
+        /// </summary>
         public abstract string ID { get; }
 
+        /// <summary>
+        /// Type of skill the bot uses (e.g., Boost, Stone).
+        /// </summary>
         public abstract SkillType SkillType { get; }
 
-        // Called once Bot initialized (BattleState.preparing)
+        /// <summary>
+        /// Called once when the bot is initialized, during battle preparation.
+        /// Allows bot-specific setup or initialization logic.
+        /// </summary>
         public abstract void OnBotInit(SumoAPI botAPI);
 
-        // Called every battle tick is satisfied.
+        /// <summary>
+        /// Called every battle tick (default 100ms), allowing the bot to update its state and decisions.
+        /// Should contain AI logic for movement, skill usage, and action prediction.
+        /// </summary>
         public abstract void OnBotUpdate();
 
-        // Called every two robots get a collision (Bounce).
-        // [BounceEvent.Actor] is the one who made a contact
+        /// <summary>
+        /// Called when two bots collide (bounce). The [bounceEvent] contains details about the collision.
+        /// </summary>
+        /// <param name="bounceEvent">Event data containing the colliding bots and collision details.</param>
         public abstract void OnBotCollision(BounceEvent bounceEvent);
 
-        // Called every battle state is changing
-        // [state] can be one of [Preparing, Countdown, Battle_Ongoing, Battle_End, Battle_Reset]
-        // [winner] will be given when the [state] is [Battle_End]
+        /// <summary>
+        /// Called whenever the battle state changes (e.g., from Battle_Countdown to Battle_Ongoing).
+        /// Provides the bot with knowledge of the current battle phase.
+        /// </summary>
+        /// <param name="state">Current battle state (e.g., Preparing, Battle_Ongoing).</param>
+        /// <param name="winner">Optional winner if the state is Battle_End.</param>
         public abstract void OnBattleStateChanged(BattleState state, BattleWinner? winner);
 
-        // Add one action to local queue
+        /// <summary>
+        /// Adds a single action (e.g., dash, boost) to the bot's local action queue.
+        /// </summary>
+        /// <param name="action">The action to enqueue.</param>
         public virtual void Enqueue(ISumoAction action)
         {
             handler.Enqueue(action);
         }
 
-        // Send your local queue to game's queue
-        // actions that already sent will be executed in order every battle tick
+        /// <summary>
+        /// Transfers all queued actions from the local bot queue to the game's action queue.
+        /// Actions are executed in order during each battle tick.
+        /// Can only be called inside [OnBotUpdate], otherwise will throw Exception
+        /// </summary>
         public void Submit()
         {
             handler.Submit();
         }
 
-        // Clear your queue locally.
+        /// <summary>
+        /// Clears all actions from the local bot queue.
+        /// Use when a bot wants to reset its action list (e.g., after a skill or cooldown).
+        /// </summary>
         public virtual void ClearCommands()
         {
             handler.Actions.Clear();
         }
 
+        /// <summary>
+        /// Called when the bot is destroyed (e.g., game over or bot removed).
+        /// Allows cleanup or finalization of resources.
+        /// </summary>
         public virtual void OnBotDestroy() { }
         #endregion
     }

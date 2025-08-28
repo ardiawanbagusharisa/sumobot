@@ -319,7 +319,6 @@ namespace SumoManager
 
         public static void SetRoundWinner(string winner)
         {
-            Debug.Log($"Setting eventLog winner {winner}");
             RoundLog round = GetCurrentRound();
             if (round != null)
             {
