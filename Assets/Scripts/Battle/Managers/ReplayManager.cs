@@ -12,8 +12,6 @@ using System.Collections;
 using UnityEngine.UI;
 using SumoCore;
 using SumoManager;
-using UnityEngine.EventSystems;
-using Unity.VisualScripting;
 
 public class ReplayManager : MonoBehaviour
 {
@@ -32,7 +30,8 @@ public class ReplayManager : MonoBehaviour
 
     [Header("Replay Configuration")]
     public bool LoadFromPath = true;
-    public EventSystem eventSystem;
+    public CustomHandlerListener ScrollEvent;
+
 
     #region Replay control properties
     [Header("Replay Controls")]
@@ -50,6 +49,8 @@ public class ReplayManager : MonoBehaviour
     [Header("Replay UI")]
     public TMP_Text GameUI;
     public TMP_Text RoundUI;
+    public TMP_Text LogUI;
+    public ScrollRect LogEvents;
     public TMP_Text GameDurationUI;
     public TMP_Text GameBestOf;
 
@@ -66,12 +67,10 @@ public class ReplayManager : MonoBehaviour
 
     #region Replay Charts
     [Header("Replay Charts")]
-    public GameObject SidebarPanel;
-    public ChartManager ActionPerSecondChart;
+
+    public GameObject ChartContainer;
+    public ChartManager Chart;
     public float ActionTimeInterval = 2f;
-    public ChartManager MostActionChartLeft;
-    public ChartManager MostActionChartRight;
-    public ChartManager Charts;
     #endregion
 
     #region Runtime (readonly) properties 
@@ -93,6 +92,8 @@ public class ReplayManager : MonoBehaviour
     private List<EventLog> rightEvents = new();
     private Rigidbody2D leftRigidBody;
     private Rigidbody2D rightRigidBody;
+    private List<string> logs = new();
+    private bool autoScrollLog = true;
     #endregion
 
     #region Unity methods
@@ -115,6 +116,21 @@ public class ReplayManager : MonoBehaviour
         {
             LoadGameFromBattle(Log);
             return;
+        }
+        if (ScrollEvent != null)
+        {
+            ScrollEvent.Events[CustomHandlerListener.OnScrolling].Subscribe(OnDrag);
+        }
+
+        if (LogEvents != null)
+        {
+            LogEvents.onValueChanged.AddListener((val) =>
+            {
+                if (val.magnitude < 0.01f)
+                {
+                    autoScrollLog = true;
+                }
+            });
         }
 #if DEBUG
         if (LoadFromPath)
@@ -157,7 +173,7 @@ public class ReplayManager : MonoBehaviour
         if (TimeLabel != null)
             TimeLabel.text = $"{FormatTime(currentTime)} / {FormatTime(currentRoundDuration)}";
 
-        DisplayCurrentEventInfo();
+        // DisplayCurrentEventInfo();
 
         if (currentTime > currentRoundDuration)
         {
@@ -186,6 +202,11 @@ public class ReplayManager : MonoBehaviour
         }
     }
 
+    void LateUpdate()
+    {
+        DisplayCurrentEventInfo();
+    }
+
     void FixedUpdate()
     {
         if (!isPlaying || !IsEnable) return;
@@ -193,6 +214,10 @@ public class ReplayManager : MonoBehaviour
         InterpolateBot(leftRigidBody, leftEvents, ref leftEventIndex);
         InterpolateBot(rightRigidBody, rightEvents, ref rightEventIndex);
 
+        if (ChartContainer == null || Chart == null)
+            return;
+        if (!ChartContainer.activeSelf)
+            return;
         ShowActionChart();
         ShowMostActionChart();
 
@@ -297,16 +322,25 @@ public class ReplayManager : MonoBehaviour
         if (currentEvent.Category == "Action")
         {
             var key = currentEvent.GetKey();
+            var log = currentEvent.GetLog();
 
             if (currentEvent.Actor == "Left")
             {
                 if (!leftActionMap.ContainsKey(key))
+                {
                     leftActionMap.Add(key, currentEvent);
+                    if (log != null)
+                        logs.Add(log);
+                }
             }
             else if (currentEvent.Actor == "Right")
             {
                 if (!rightActionMap.ContainsKey(key))
+                {
                     rightActionMap.Add(key, currentEvent);
+                    if (log != null)
+                        logs.Add(log);
+                }
             }
         }
 
@@ -418,6 +452,15 @@ public class ReplayManager : MonoBehaviour
             RightSkillType.SetText(metadata.RightPlayerStats.SkillType);
             RightWinCount.SetText(metadata.RightPlayerStats.WinPerGame.ToString());
             RightActionTaken.SetText(metadata.RightPlayerStats.ActionTaken.ToString());
+            // var reversed = logs.ToArray().Reverse();
+            LogUI.text = string.Join("\n", logs);
+
+            if (autoScrollLog)
+            {
+                LogEvents.verticalNormalizedPosition = 0f;
+            }
+            // Canvas.ForceUpdateCanvases();
+            // if (autoScrollLog)
         }
     }
     #endregion
@@ -488,8 +531,10 @@ public class ReplayManager : MonoBehaviour
         rightEventIndex = 0;
         leftActionMap.Clear();
         rightActionMap.Clear();
-        ActionPerSecondChart.ClearChartSeries();
-        MostActionChartLeft.ClearChartSeries();
+        logs.Clear();
+
+        if (Chart != null)
+            Chart.ClearChartSeries();
 
         if (includePlayer)
         {
@@ -522,8 +567,31 @@ public class ReplayManager : MonoBehaviour
 
             leftActionMap.Clear();
             rightActionMap.Clear();
-            leftActionMap = lastLeft.Where((x) => x.Category == "Action" && (x.State != PeriodicState.End)).ToDictionary((x) => x.GetKey());
-            rightActionMap = lastRight.Where((x) => x.Category == "Action" && (x.State != PeriodicState.End)).ToDictionary((x) => x.GetKey());
+            logs.Clear();
+
+            foreach (var eventLog in lastLeft)
+            {
+                if (eventLog.State != PeriodicState.End)
+                {
+                    if (eventLog.Category == "Action")
+                        leftActionMap.Add(eventLog.GetKey(), eventLog);
+                    var log = eventLog.GetLog();
+                    if (log != null)
+                        logs.Add(eventLog.GetLog());
+                }
+            }
+
+            foreach (var eventLog in lastRight)
+            {
+                if (eventLog.State != PeriodicState.End)
+                {
+                    if (eventLog.Category == "Action")
+                        leftActionMap.Add(eventLog.GetKey(), eventLog);
+                    var log = eventLog.GetLog();
+                    if (log != null)
+                        logs.Add(eventLog.GetLog());
+                }
+            }
         }
 
         InterpolateBot(leftRigidBody, leftEvents, ref leftEventIndex);
@@ -549,46 +617,6 @@ public class ReplayManager : MonoBehaviour
         return $"{minutes:00}:{seconds:00}";
     }
 
-    private void ShowMostActionChart()
-    {
-        ChartManager chartManager = MostActionChartLeft;
-        if (chartManager == null)
-        {
-            throw new Exception("Chart object is not assigned");
-        }
-
-        var topActions = 3;
-        var group = new string[] { "Left", "Right" };
-
-        var leftMostActs = GetChartMostAction(PlayerSide.Left, topActions);
-        var rightMostActs = GetChartMostAction(PlayerSide.Right, topActions);
-        
-        List<float> data = new();
-        List<string> categories = new();
-        List<Color> categoryColors = new() { Color.green, Color.red};
-
-        for (int i = 0; i < leftMostActs.Count(); i++)
-        {
-            data.Add(leftMostActs[i].Value);
-            categories.Add(leftMostActs[i].Key);
-        }
-        for (int i = 0; i < rightMostActs.Count(); i++)
-        {
-            data.Add(rightMostActs[i].Value);
-            categories.Add(rightMostActs[i].Key);
-        }
-
-        var chart = ChartSeries.CreateGroup(
-            $"{currentRoundIndex + 1}",
-            data.ToArray(),
-            2,
-            categories.Count(),
-            group, categories.ToArray(), categoryColors: categoryColors.ToArray());
-
-        MostActionChartLeft.AddChartSeries(chart);
-        MostActionChartLeft.DrawChart();
-    }
-
     private void ShowActionChart()
     {
         int timeFrame = 1;
@@ -610,18 +638,14 @@ public class ReplayManager : MonoBehaviour
         var rightAmount = actionTakensMap.Select((x) => x.Value.Item2).ToArray();
 
         ChartSeries chartLeft = ChartSeries.Create(
-            $"P1_Round_{currentRoundIndex + 1}",
+            $"Action per Seconds (Left)",
             leftAmount, ChartSeries.ChartType.Line, Color.green);
 
         ChartSeries chartRight = ChartSeries.Create(
-            $"P2_Round_{currentRoundIndex + 1}",
+            $"Action per Seconds (Right)",
             rightAmount, ChartSeries.ChartType.Line, Color.red);
 
-        void setup()
-        {
-            ActionPerSecondChart.Setup(
-                xGridSpacing: (int)ActionTimeInterval,
-                onXLabelCreated: (index) =>
+        chartLeft.onXLabelCreated = (index) =>
                 {
                     if (ActionTimeInterval > 1.0f)
                     {
@@ -629,15 +653,90 @@ public class ReplayManager : MonoBehaviour
                         return Mathf.Floor(xlabel).ToString("0.#");
                     }
                     return index.ToString();
-                });
+                };
+        chartRight.onXLabelCreated = (index) =>
+                {
+                    if (ActionTimeInterval > 1.0f)
+                    {
+                        float xlabel = index * ActionTimeInterval;
+                        return Mathf.Floor(xlabel).ToString("0.#");
+                    }
+                    return index.ToString();
+                };
+
+        Chart.AddChartSeries(chartLeft, true);
+        Chart.AddChartSeries(chartRight, true);
+        Chart.DrawChart();
+    }
+
+    private void ShowMostActionChart()
+    {
+        var topActions = 3;
+        var groupLabels = new string[] { "Left", "Right" };
+        List<Color> categoryColors = new() { Color.green, Color.red };
+
+        var leftMostActs = GetChartMostAction(PlayerSide.Left, topActions);
+        var rightMostActs = GetChartMostAction(PlayerSide.Right, topActions);
+
+        List<float> data = new();
+        List<string> categories = new();
+
+        for (int i = 0; i < leftMostActs.Count(); i++)
+        {
+            data.Add(leftMostActs[i].Value);
+            categories.Add(leftMostActs[i].Key);
+        }
+        for (int i = 0; i < rightMostActs.Count(); i++)
+        {
+            data.Add(rightMostActs[i].Value);
+            categories.Add(rightMostActs[i].Key);
+        }
+        var chart = ChartSeries.CreateGroup(
+            $"Most Action Takens",
+            data.ToArray(),
+            groupLabels,
+            categories.ToArray(),
+            categoryColors: categoryColors.ToArray()
+            );
+        chart.isVisible = false;
+        Chart.AddChartSeries(chart, true);
+        Chart.DrawChart();
+    }
+
+    private void ShowContactMadeChart()
+    {
+        var topActions = 3;
+        var groupLabels = new string[] { "Left", "Right" };
+        List<Color> categoryColors = new() { Color.green, Color.red };
+
+        var leftMostActs = GetChartMostAction(PlayerSide.Left, topActions);
+        var rightMostActs = GetChartMostAction(PlayerSide.Right, topActions);
+
+        List<float> data = new();
+        List<string> categories = new();
+
+        for (int i = 0; i < leftMostActs.Count(); i++)
+        {
+            data.Add(leftMostActs[i].Value);
+            categories.Add(leftMostActs[i].Key);
         }
 
-        chartLeft.OnPrepareToDraw = setup;
-        chartRight.OnPrepareToDraw = setup;
+        for (int i = 0; i < rightMostActs.Count(); i++)
+        {
+            data.Add(rightMostActs[i].Value);
+            categories.Add(rightMostActs[i].Key);
+        }
 
-        ActionPerSecondChart.AddChartSeries(chartLeft);
-        ActionPerSecondChart.AddChartSeries(chartRight);
-        ActionPerSecondChart.DrawChart();
+        var chart = ChartSeries.CreateGroup(
+            $"{currentRoundIndex + 1}",
+            data.ToArray(),
+            groupLabels,
+            categories.ToArray(),
+            categoryColors: categoryColors.ToArray()
+            );
+
+        Chart.AddChartSeries(chart);
+        Chart.DrawChart();
     }
 
     private List<KeyValuePair<string, float>> GetChartMostAction(PlayerSide side, int topActions)
@@ -662,32 +761,20 @@ public class ReplayManager : MonoBehaviour
         mostActionList.Sort((a, b) => b.Value.CompareTo(a.Value));
         mostActionList = mostActionList.Take(topActions).ToList();
         return mostActionList;
+    }
 
-        // ChartSeries chart = ChartSeries.Create(
-        //     $"{side}_Round_{currentRoundIndex + 1}",
-        //     mostActionList.Select((x) => (float)x.Value).ToArray(),
-        //     ChartSeries.ChartType.Bar,
-        //     side == PlayerSide.Left ? Color.green.WithAlpha(0.1f) : Color.red.WithAlpha(0.1f), 5f, side == PlayerSide.Left ? Color.green.WithAlpha(0.1f) : Color.red.WithAlpha(0.1f));
-
-        // chart.onXLabelCreated = (index) =>
-        //         {
-        //             if (index <= mostActionList.Count)
-        //             {
-        //                 return mostActionList[(int)index - 1].Key;
-        //             }
-        //             else
-        //             {
-        //                 return "";
-        //             }
-        //         };
-
-        // void setup()
-        // {
-        //     chartManager.Setup(
-        //         xGridSpacing: 0);
-        // }
-        // chart.OnPrepareToDraw = setup;
-        // return chart;
+    public void ShowChart()
+    {
+        if (ChartContainer == null) return;
+        ChartContainer.SetActive(true);
+    }
+    public void HideChart()
+    {
+        ChartContainer.SetActive(false);
+    }
+    public void OnDrag(EventParameter param)
+    {
+        autoScrollLog = false;
     }
 
     public void BackToBattle()
@@ -709,4 +796,18 @@ public static class ExtReplayManager
             return $"{log.Actor}_{log.Category}_{log.StartedAt}";
         }
     }
+
+    public static string GetLog(this EventLog log)
+    {
+        if (log.Category == "Action")
+        {
+            return $"{log.Actor}Action|{log.Data["Name"]}|{log.Data["Duration"] ?? null}|{log.StartedAt}";
+        }
+        else if (log.Category == "Collision")
+        {
+            return $"{log.Actor}|{log.Category}|Impact={log.Data["Impact"]}|Duration={log.Data["Duration"]}|Lock={log.Data["LockDuration"]}|{log.StartedAt}";
+        }
+        return null;
+    }
 }
+

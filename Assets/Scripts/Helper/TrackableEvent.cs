@@ -58,14 +58,14 @@ namespace SumoHelper
 [Serializable]
 public class EventParameter
 {
-    public ISumoAction Action;
-    public PlayerSide Side;
-    public bool Bool;
-    public float Float;
-    public BounceEvent BounceEvent;
-    public BattleState BattleState;
+    public readonly ISumoAction Action;
+    public readonly PlayerSide Side;
+    public readonly bool Bool;
+    public readonly float Float;
+    public readonly BounceEvent BounceEvent;
+    public readonly BattleState BattleState;
     public BattleWinner? Winner;
-    public SkillType SkillType;
+    public readonly SkillType SkillType;
 
     public EventParameter(
         ISumoAction actionParam = null,
