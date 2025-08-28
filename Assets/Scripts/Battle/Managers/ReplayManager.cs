@@ -13,6 +13,7 @@ using UnityEngine.UI;
 using SumoCore;
 using SumoManager;
 using UnityEngine.EventSystems;
+using Unity.VisualScripting;
 
 public class ReplayManager : MonoBehaviour
 {
@@ -115,9 +116,10 @@ public class ReplayManager : MonoBehaviour
             LoadGameFromBattle(Log);
             return;
         }
-
-        // if (LoadFromPath)
-            // LoadGameFromPath();
+#if DEBUG
+        if (LoadFromPath)
+            LoadGameFromPath();
+#endif
     }
 
     void OnEnable()
@@ -192,8 +194,8 @@ public class ReplayManager : MonoBehaviour
         InterpolateBot(rightRigidBody, rightEvents, ref rightEventIndex);
 
         ShowActionChart();
-        ShowMostActionChart(PlayerSide.Left);
-        ShowMostActionChart(PlayerSide.Right);
+        ShowMostActionChart();
+
 
         // Experimental
         // ShowAllChart();
@@ -336,39 +338,40 @@ public class ReplayManager : MonoBehaviour
         ));
     }
 
+#if DEBUG
+    public void LoadGameFromPath()
+    {
+        string basePath = Path.Combine(Application.persistentDataPath, "Logs");
+        string folder = EditorUtility.OpenFolderPanel("Select Replay Folder", basePath, "");
 
-    // public void LoadGameFromPath()
-    // {
-    //     string basePath = Path.Combine(Application.persistentDataPath, "Logs");
-    //     string folder = EditorUtility.OpenFolderPanel("Select Replay Folder", basePath, "");
+        if (string.IsNullOrEmpty(folder)) return;
 
-    //     if (string.IsNullOrEmpty(folder)) return;
+        string[] files = Directory.GetFiles(folder, "game_*.json");
+        if (files.Count() == 0)
+        {
+            Debug.LogError("Folder doesn't contain games");
+            return;
+        }
 
-    //     string[] files = Directory.GetFiles(folder, "game_*.json");
-    //     if (files.Count() == 0)
-    //     {
-    //         Debug.LogError("Folder doesn't contain games");
-    //         return;
-    //     }
+        foreach (var file in files)
+        {
+            string json = File.ReadAllText(file);
+            var log = JsonConvert.DeserializeObject<GameLog>(json);
+            gameLogs.Add(log);
+        }
 
-    //     foreach (var file in files)
-    //     {
-    //         string json = File.ReadAllText(file);
-    //         var log = JsonConvert.DeserializeObject<GameLog>(json);
-    //         gameLogs.Add(log);
-    //     }
+        string[] metadataFile = Directory.GetFiles(folder, "metadata.json");
+        string jsonMetaData = File.ReadAllText(metadataFile[0]);
+        metadata = JsonConvert.DeserializeObject<BattleLog>(jsonMetaData);
 
-    //     string[] metadataFile = Directory.GetFiles(folder, "metadata.json");
-    //     string jsonMetaData = File.ReadAllText(metadataFile[0]);
-    //     metadata = JsonConvert.DeserializeObject<BattleLog>(jsonMetaData);
+        metadata.LeftPlayerStats.WinPerGame = 0;
+        metadata.RightPlayerStats.WinPerGame = 0;
+        metadata.LeftPlayerStats.ActionTaken = 0;
+        metadata.RightPlayerStats.ActionTaken = 0;
 
-    //     metadata.LeftPlayerStats.WinPerGame = 0;
-    //     metadata.RightPlayerStats.WinPerGame = 0;
-    //     metadata.LeftPlayerStats.ActionTaken = 0;
-    //     metadata.RightPlayerStats.ActionTaken = 0;
-
-    //     Init();
-    // }
+        Init();
+    }
+#endif
 
     public void LoadGameFromBattle(BattleLog battleLog)
     {
@@ -546,6 +549,46 @@ public class ReplayManager : MonoBehaviour
         return $"{minutes:00}:{seconds:00}";
     }
 
+    private void ShowMostActionChart()
+    {
+        ChartManager chartManager = MostActionChartLeft;
+        if (chartManager == null)
+        {
+            throw new Exception("Chart object is not assigned");
+        }
+
+        var topActions = 3;
+        var group = new string[] { "Left", "Right" };
+
+        var leftMostActs = GetChartMostAction(PlayerSide.Left, topActions);
+        var rightMostActs = GetChartMostAction(PlayerSide.Right, topActions);
+        
+        List<float> data = new();
+        List<string> categories = new();
+        List<Color> categoryColors = new() { Color.green, Color.red};
+
+        for (int i = 0; i < leftMostActs.Count(); i++)
+        {
+            data.Add(leftMostActs[i].Value);
+            categories.Add(leftMostActs[i].Key);
+        }
+        for (int i = 0; i < rightMostActs.Count(); i++)
+        {
+            data.Add(rightMostActs[i].Value);
+            categories.Add(rightMostActs[i].Key);
+        }
+
+        var chart = ChartSeries.CreateGroup(
+            $"{currentRoundIndex + 1}",
+            data.ToArray(),
+            2,
+            categories.Count(),
+            group, categories.ToArray(), categoryColors: categoryColors.ToArray());
+
+        MostActionChartLeft.AddChartSeries(chart);
+        MostActionChartLeft.DrawChart();
+    }
+
     private void ShowActionChart()
     {
         int timeFrame = 1;
@@ -566,11 +609,11 @@ public class ReplayManager : MonoBehaviour
         var leftAmount = actionTakensMap.Select((x) => x.Value.Item1).ToArray();
         var rightAmount = actionTakensMap.Select((x) => x.Value.Item2).ToArray();
 
-        ChartSeries chartLeft = new(
+        ChartSeries chartLeft = ChartSeries.Create(
             $"P1_Round_{currentRoundIndex + 1}",
             leftAmount, ChartSeries.ChartType.Line, Color.green);
 
-        ChartSeries chartRight = new(
+        ChartSeries chartRight = ChartSeries.Create(
             $"P2_Round_{currentRoundIndex + 1}",
             rightAmount, ChartSeries.ChartType.Line, Color.red);
 
@@ -597,11 +640,8 @@ public class ReplayManager : MonoBehaviour
         ActionPerSecondChart.DrawChart();
     }
 
-    private void ShowMostActionChart(PlayerSide side)
+    private List<KeyValuePair<string, float>> GetChartMostAction(PlayerSide side, int topActions)
     {
-        ChartManager chartManager = side == PlayerSide.Left ? MostActionChartLeft : MostActionChartRight;
-        if (chartManager == null) return;
-
         Dictionary<string, float> mostActions = new();
 
         foreach (var action in side == PlayerSide.Left ? leftActionMap : rightActionMap)
@@ -620,34 +660,34 @@ public class ReplayManager : MonoBehaviour
 
         var mostActionList = mostActions.ToList();
         mostActionList.Sort((a, b) => b.Value.CompareTo(a.Value));
-        mostActionList = mostActionList.Take(3).ToList();
+        mostActionList = mostActionList.Take(topActions).ToList();
+        return mostActionList;
 
-        ChartSeries chart = new(
-            $"P1_Round_{currentRoundIndex + 1}",
-            mostActionList.Select((x) => x.Value).ToArray(),
-            ChartSeries.ChartType.Bar,
-            side == PlayerSide.Left ? Color.green : Color.red);
+        // ChartSeries chart = ChartSeries.Create(
+        //     $"{side}_Round_{currentRoundIndex + 1}",
+        //     mostActionList.Select((x) => (float)x.Value).ToArray(),
+        //     ChartSeries.ChartType.Bar,
+        //     side == PlayerSide.Left ? Color.green.WithAlpha(0.1f) : Color.red.WithAlpha(0.1f), 5f, side == PlayerSide.Left ? Color.green.WithAlpha(0.1f) : Color.red.WithAlpha(0.1f));
 
-        void setup()
-        {
-            chartManager.Setup(
-                xGridSpacing: 0,
-                onXLabelCreated: (index) =>
-                {
-                    if (index <= mostActionList.Count)
-                    {
-                        return mostActionList[(int)index - 1].Key;
-                    }
-                    else
-                    {
-                        return "";
-                    }
-                });
-        }
-        chart.OnPrepareToDraw = setup;
+        // chart.onXLabelCreated = (index) =>
+        //         {
+        //             if (index <= mostActionList.Count)
+        //             {
+        //                 return mostActionList[(int)index - 1].Key;
+        //             }
+        //             else
+        //             {
+        //                 return "";
+        //             }
+        //         };
 
-        chartManager.AddChartSeries(chart);
-        chartManager.DrawChart();
+        // void setup()
+        // {
+        //     chartManager.Setup(
+        //         xGridSpacing: 0);
+        // }
+        // chart.OnPrepareToDraw = setup;
+        // return chart;
     }
 
     public void BackToBattle()

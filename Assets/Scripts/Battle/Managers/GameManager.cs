@@ -133,7 +133,6 @@ public class PlayerProfile
         {
             Parts[e.Key] = LoadSprite($"{e.Key}_1");
         });
-        Debug.Log("Parts loaded!");
     }
 
     private Sprite LoadSprite(string path)
@@ -142,7 +141,7 @@ public class PlayerProfile
         var prefab = Resources.Load<Sprite>($"{basePath}/{path}");
         if (prefab == null)
         {
-            Debug.LogError($"Prefab not found at Resources/{path}");
+            Debug.LogError($"Sprite not found at Resources/{path}");
             return null;
         }
         return prefab;
