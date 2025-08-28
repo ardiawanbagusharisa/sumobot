@@ -12,7 +12,7 @@ public class ChartManager : MonoBehaviour
     [SerializeField] Color _gridColour = Color.white;
     [Range(1f, 20f)][SerializeField] float _brushSize = 3f;
     [Range(0f, 2f)][SerializeField] float _wiggleSize = 1f;
-    [Range(12f, 24f)][SerializeField] int _fontSize = 12;
+    [Range(12f, 32f)][SerializeField] int _fontSize = 12;
     [Range(12f, 24f)][SerializeField] int _sidePanelFontSize = 14;
 
     [Header("ChartManager Settings")]
@@ -58,7 +58,7 @@ public class ChartManager : MonoBehaviour
             for (int j = 1; j < data.Length - 1; j++)
                 data[j] = Random.Range(0f, 50f);
 
-            _chartSeriesList.Add(ChartSeries.Create($"Series {i + 1}", data, (ChartSeries.ChartType)(i % 2), Random.ColorHSV()));
+            _chartSeriesList.Add(ChartSeries.Create($"Series {i + 1}", data, ChartSeries.ChartType.Bar, Random.ColorHSV()));
 
         }
     }
@@ -146,11 +146,15 @@ public class ChartManager : MonoBehaviour
             _yGridSpacing = (float)yGridSpacing;
     }
 
-    public void AddChartSeries(ChartSeries chart)
+    public void AddChartSeries(ChartSeries chart, bool sidePanel = false)
     {
         var idx = _chartSeriesList.FindIndex((x) => x.name == chart.name);
         if (idx == -1)
+        {
+            if (sidePanel)
+                AddSidePanel(chart);
             _chartSeriesList.Add(chart);
+        }
         else
         {
             UpdateChartSeries(chart);
@@ -161,7 +165,9 @@ public class ChartManager : MonoBehaviour
         int chartIndex = _chartSeriesList.FindIndex((x) => x.name == chart.name);
         if (chartIndex != -1)
         {
+            bool isCurrentChartVisible = _chartSeriesList[chartIndex].isVisible;
             _chartSeriesList[chartIndex] = chart;
+            _chartSeriesList[chartIndex].isVisible = isCurrentChartVisible;
         }
     }
 
@@ -175,24 +181,33 @@ public class ChartManager : MonoBehaviour
 
         foreach (ChartSeries series in _chartSeriesList)
         {
-            GameObject toggleObj = Instantiate(_togglePrefab, _sidePanelParent);
-            Toggle toggle = toggleObj.GetComponent<Toggle>();
-            Text label = toggleObj.GetComponentInChildren<Text>();
-
-            toggle.isOn = series.isVisible;
-            label.text = series.name;
-            label.color = series.axesColor;
-            label.font = _labelFont;
-            label.fontSize = _sidePanelFontSize;
-
-            toggle.onValueChanged.AddListener(isOn =>
-            {
-                series.isVisible = isOn;
-                DrawChart();
-            });
+            AddSidePanel(series);
         }
 
         LayoutRebuilder.ForceRebuildLayoutImmediate(_sidePanelParent);
+    }
+    private void AddSidePanel(ChartSeries series)
+    {
+        GameObject toggleObj = Instantiate(_togglePrefab, _sidePanelParent);
+        Toggle toggle = toggleObj.GetComponent<Toggle>();
+        Text label = toggleObj.GetComponentInChildren<Text>();
+
+        toggle.isOn = series.isVisible;
+        label.text = series.name;
+        label.color = series.labelColor;
+        label.font = _labelFont;
+        label.fontSize = _sidePanelFontSize;
+
+        toggle.onValueChanged.AddListener(isOn =>
+        {
+            Debug.Log($"Toggle clicked {series.name} {isOn}");
+            ChartSeries runningChart = _chartSeriesList.Find((el) => el.name == series.name);
+            if (runningChart != null)
+            {
+                runningChart.isVisible = isOn;
+                DrawChart();
+            }
+        });
     }
     void ClearCanvas(RenderTexture canvas, Color color)
     {
@@ -235,18 +250,20 @@ public class ChartManager : MonoBehaviour
             if (!series.isVisible || series.data == null || series.data.Length == 0)
                 continue;
 
-            // Add zero at first and end index
-            if (series.data[0] != 0)
+            if (series.chartType != ChartSeries.ChartType.GroupBar)
             {
-                var temp = series.data.ToList();
-                temp.Insert(0, 0);
-                series.data = temp.ToArray();
-            }
-            if (series.data.Last() != 0)
-            {
-                var temp = series.data.ToList();
-                temp.Add(0);
-                series.data = temp.ToArray();
+                if (series.data[0] != 0)
+                {
+                    var temp = series.data.ToList();
+                    temp.Insert(0, 0);
+                    series.data = temp.ToArray();
+                }
+                if (series.data.Last() != 0)
+                {
+                    var temp = series.data.ToList();
+                    temp.Add(0);
+                    series.data = temp.ToArray();
+                }
             }
 
             series.OnPrepareToDraw?.Invoke();
@@ -273,14 +290,9 @@ public class ChartManager : MonoBehaviour
             DrawGrid(globalMin, globalMax, chartWidth, chartHeight);
 
         if (_drawLabels)
-        {
             DrawLabels(globalMin, globalMax, chartWidth, chartHeight,
                     _chartSeriesList.Where(s => s.isVisible && s.data != null).Select(s => s.data.Length).DefaultIfEmpty(0).Max());
 
-        }
-
-
-        // Loop through all series
         for (var index = 0; index < _chartSeriesList.Count; index++)
         {
             var series = _chartSeriesList[index];
@@ -299,73 +311,55 @@ public class ChartManager : MonoBehaviour
                 {
                     for (int cat = 0; cat < series.categoryCount; cat++)
                     {
-                        int groupIndex = group * series.categoryCount + cat;
-                        if (groupIndex >= series.data.Length) continue;
+                        int dataIndex = group * series.categoryCount + cat;
+                        if (dataIndex >= series.data.Length) continue;
 
-                        float value = series.data[groupIndex];
-                        if (value == 0)
-                            continue;
-                        if (groupIndex < 1 || series.categoryNames.Count() == 0)
-                            continue;
-                        string catName = series.categoryNames[groupIndex - 1];
+                        float value = series.data[dataIndex];
+
                         float y = _paddingBottom + (value - minVal) / range * chartHeight;
                         float x = _paddingLeft + group * groupWidth + cat * barWidth;
 
-                        // Draw rectangle instead of line
-                        // Rect barRect = new Rect(x, _paddingBottom, barWidth, y - _paddingBottom);
+                        // Color: use per-category if defined, else fallback by group
+                        Color barColor = (series.categoryColors != null && series.categoryColors.Length > cat)
+                            ? series.categoryColors[group]
+                            : (group == 0 ? Color.green : Color.red);
 
-                        Color barColor = Color.green;
-                        if (groupIndex <= Mathf.FloorToInt(series.categoryCount / series.groupCount))
-                        {
-                            barColor = Color.green;
-                        }
-                        else
-                        {
-                            barColor = Color.red;
-                        }
-
-                        for (int dx = 0; dx < Mathf.CeilToInt(barWidth); dx++)
-                        {
-                            float xPos = x + dx;
-                            Vector2 start = new Vector2(xPos, _paddingBottom);
-                            Vector2 end = new Vector2(xPos, y);
-
-                            DrawLine(start, end, barColor, 1f, 1f);
-                        }
-
-                        // === Vertical Label inside the bar ===
-                        Vector2 labelPos = new Vector2(
-                            x + barWidth / 2f,
-                            y + value / 2f // middle of the bar height
+                        // Draw bar
+                        DrawRect(
+                            new Vector2(x, _paddingBottom),
+                            new Vector2(x + barWidth, y),
+                            barColor,
+                            1f, _wiggleSize
                         );
 
-                        CreateLabel(catName, labelPos, Color.white, rotation: 90f);
-
+                        // Label inside bar
+                        if (series.categoryNames != null && cat < series.categoryNames.Length)
+                        {
+                            Vector2 labelPos = new Vector2(x + barWidth / 2f, y / 2f);
+                            CreateLabel(series.categoryNames[cat], labelPos, Color.white, rotation: 90f);
+                        }
                     }
+
+                    string groupLabel = (series.groupNames != null && group < series.groupNames.Length)
+                        ? series.groupNames[group]
+                        : "Group " + (group + 1);
+
+                    Vector2 groupLabelPos = new Vector2(
+                        _paddingLeft + group * groupWidth + groupWidth / 2f,
+                        _paddingBottom - 20f
+                    );
+                    CreateLabel(groupLabel, groupLabelPos, series.labelColor, rotation: 0f);
                 }
             }
-
-            else
-             if (series.chartType == ChartSeries.ChartType.Bar)
+            else if (series.chartType == ChartSeries.ChartType.Bar)
             {
-                // === TIGHT-PACKED GROUPED BAR CHART (NO SPACING) ===
-                float[] data = series.data;
-                int dataCount = data.Length;
-
-                if (dataCount <= 1) continue; // Skip if no meaningful bars
-
-                // === Step 1: Set group X position (no spacing between products) ===
-                // Use only one bar per group, but place both bars at same X (touching)
-                float groupX = _paddingLeft + (index * 0f); // 0 spacing — no gap between products
-                float barWidth = 1f; // Full width — no spacing
-
-                // === Step 2: Draw each bar (no spacing between them) ===
+                var data = series.data;
+                var dataCount = series.data.Count();
                 for (int i = 0; i < dataCount; i++)
                 {
-                    float x = groupX + (i * 0f); // No spacing — all bars at same X offset (0 spacing)
+                    float x = _paddingLeft + i / (float)(dataCount - 1) * chartWidth;
                     float y = _paddingBottom + (data[i] - globalMin) / (globalMax - globalMin) * chartHeight;
 
-                    // Draw vertical bar from bottom to y
                     Vector2 start = new Vector2(x, _paddingBottom);
                     Vector2 end = new Vector2(x, y);
                     DrawLine(start, end, series.axesColor, series.brushSize, _wiggleSize);
@@ -373,24 +367,19 @@ public class ChartManager : MonoBehaviour
             }
             else if (series.chartType == ChartSeries.ChartType.Line)
             {
-                // === ORIGINAL LINE CHART (no change, just draw as before) ===
-                float[] data = series.data;
-                int dataCount = data.Length;
-
-                for (int i = 1; i < dataCount; i++)
+                var data = series.data;
+                var dataCount = series.data.Count();
+                for (int i = 0; i < dataCount; i++)
                 {
+                    float x = _paddingLeft + i / (float)(dataCount - 1) * chartWidth;
+                    float y = _paddingBottom + (data[i] - globalMin) / (globalMax - globalMin) * chartHeight;
+
+                    if (i == 0 || i == dataCount - 1)
+                        continue;
+
                     float x0 = _paddingLeft + (i - 1) / (float)(dataCount - 1) * chartWidth;
                     float y0 = _paddingBottom + (data[i - 1] - globalMin) / (globalMax - globalMin) * chartHeight;
-                    float x1 = _paddingLeft + (i) / (float)(dataCount - 1) * chartWidth;
-                    float y1 = _paddingBottom + (data[i] - globalMin) / (globalMax - globalMin) * chartHeight;
-
-                    DrawLine(
-                        new Vector2(x0, y0),
-                        new Vector2(x1, y1),
-                        series.axesColor,
-                        series.brushSize,
-                        _wiggleSize
-                    );
+                    DrawLine(new Vector2(x0, y0), new Vector2(x, y), series.axesColor, series.brushSize, _wiggleSize);
                 }
             }
         }
@@ -429,6 +418,34 @@ public class ChartManager : MonoBehaviour
         );
     }
 
+    void DrawRect(Vector2 min, Vector2 max, Color brushColor, float brushSize, float wiggleSize)
+    {
+        int kernel = _drawComputeShader.FindKernel("Update");
+
+        _drawComputeShader.SetBool("_UseRect", true);
+        _drawComputeShader.SetVector("_RectMin", new Vector4(min.x, min.y, 0, 0));
+        _drawComputeShader.SetVector("_RectMax", new Vector4(max.x, max.y, 0, 0));
+        _drawComputeShader.SetVector("_BrushColour", brushColor);
+        _drawComputeShader.SetFloat("_BrushSize", brushSize);
+        _drawComputeShader.SetFloat("_WiggleSize", wiggleSize);
+
+
+        _drawComputeShader.SetInt("_CanvasWidth", _canvasRenderTexture.width);
+        _drawComputeShader.SetInt("_CanvasHeight", _canvasRenderTexture.height);
+        _drawComputeShader.SetTexture(kernel, "_Canvas", _canvasRenderTexture);
+
+        _drawComputeShader.Dispatch(
+            kernel,
+            Mathf.CeilToInt(_canvasRenderTexture.width / 8f),
+            Mathf.CeilToInt(_canvasRenderTexture.height / 8f),
+            1
+        );
+
+        // Reset flag (so future calls don’t accidentally stay in rect mode)
+        _drawComputeShader.SetBool("_UseRect", false);
+    }
+
+
     private List<(float value, float y)> CalculateYAxisGridPoints(float minVal, float maxVal, float chartHeight)
     {
         var points = new List<(float value, float y)>();
@@ -451,14 +468,22 @@ public class ChartManager : MonoBehaviour
         return points;
     }
 
-    private List<(int index, float x)> CalculateXAxisGridPoints(int dataCount, float chartWidth)
+    private List<(int index, float x)> CalculateXAxisGridPoints(int maxLen, float chartWidth)
     {
         var points = new List<(int index, float x)>();
-        for (int i = 0; i < dataCount; i++)
+        if (maxLen <= 0)
+            return points;
+
+        float left = _paddingLeft;
+        int spacing = Mathf.Max(1, _xGridDataSpacing);
+        float xSpacingFactor = Mathf.Max(1, maxLen - 1);
+
+        for (int i = 0; i < maxLen; i += spacing)
         {
-            float x = _paddingLeft + i / (float)(dataCount - 1) * chartWidth;
+            float x = left + chartWidth * i / xSpacingFactor;
             points.Add((i, x));
         }
+
         return points;
     }
 
@@ -471,7 +496,14 @@ public class ChartManager : MonoBehaviour
         float bottom = _paddingBottom;
         float top = _canvasRenderTexture.height - _paddingTop;
 
-        int maxLen = _chartSeriesList.Where(s => s.isVisible && s.data != null).Select(s => s.data.Length).DefaultIfEmpty(0).Max();
+        int maxLen = _chartSeriesList.Where(s => s.isVisible && s.data != null).Select(s =>
+        {
+            // if (s.chartType == ChartSeries.ChartType.GroupBar)
+            // {
+            //     return s.groupCount;
+            // }
+            return s.data.Length;
+        }).DefaultIfEmpty(0).Max();
         if (maxLen == 0)
             return;
 
@@ -646,25 +678,25 @@ public class ChartSeries
         Color? labelColor = null
     )
     {
-        var chart = new ChartSeries();
-        chart.name = name;
-        chart.data = data;
-        chart.chartType = type;
-        chart.axesColor = axesColor ?? Color.white;
-        chart.brushSize = brushSize;
-        chart.labelColor = labelColor ?? Color.white;
+        var chart = new ChartSeries
+        {
+            name = name,
+            data = data,
+            chartType = type,
+            axesColor = axesColor ?? Color.white,
+            brushSize = brushSize,
+            labelColor = labelColor ?? Color.white,
 
-        // Set default formatters
-        chart.onXLabelCreated = index => index.ToString();
-        chart.onYLabelCreated = value => value.ToString("0.0");
+            // Set default formatters
+            onXLabelCreated = index => index.ToString(),
+            onYLabelCreated = value => value.ToString("0.0")
+        };
         return chart;
     }
 
     public static ChartSeries CreateGroup(
         string name,
         float[] data,
-        int groupCount,
-        int categoryCount,
         string[] groupNames,
         string[] categoryNames,
         float brushSize = 3f,
@@ -672,17 +704,18 @@ public class ChartSeries
         Color? labelColor = null,
         Color? axesColor = null
     )
+
     {
         var chart = Create(name, data, ChartType.GroupBar, axesColor, brushSize, labelColor);
 
-        chart.groupCount = groupCount;
-        chart.categoryCount = categoryCount;
+        chart.groupCount = groupNames.Count();
+        chart.categoryCount = data.Length / chart.groupCount;
         chart.groupNames = groupNames;
         chart.categoryNames = categoryNames;
         List<Color> catColors = new();
         if (categoryColors == null)
         {
-            for (var i = 0; i < groupCount; i++)
+            for (var i = 0; i < chart.groupCount; i++)
             {
                 catColors.Add(Color.white);
             }

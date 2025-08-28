@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using SumoHelper;
@@ -171,7 +172,7 @@ namespace SumoCore
         public void AssignSkill(SkillType type = SkillType.Boost)
         {
             Skill = SumoSkill.CreateSkill(this, type);
-            Events[OnSkillAssigned].Invoke(new() { SkillType = type, Side = Side });
+            Events[OnSkillAssigned].Invoke(new(skillType:type,sideParam:Side));
         }
 
         public void Reset()
@@ -541,11 +542,8 @@ namespace SumoCore
             {
                 ISumoAction action = Actions.Dequeue();
 
-                EventParameter actionParam = new(sideParam: Side, actionParam: action, boolParam: true);
-                Events[OnAction]?.Invoke(actionParam);
                 action.Execute(this);
-                actionParam.Bool = false;
-                Events[OnAction]?.Invoke(actionParam);
+                Events[OnAction]?.Invoke(new(sideParam: Side, actionParam: action));
             }
         }
         #endregion
