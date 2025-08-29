@@ -53,6 +53,7 @@ public class ReplayManager : MonoBehaviour
     public ScrollRect LogEvents;
     public TMP_Text GameDurationUI;
     public TMP_Text GameBestOf;
+    public TMP_Text PauseTxtUI;
 
     public TMP_Text LeftBotName;
     public TMP_Text LeftSkillType;
@@ -78,7 +79,8 @@ public class ReplayManager : MonoBehaviour
     private int currentGameIndex = 0;
     private int currentRoundIndex = 0;
     private float currentTime = 0f;
-    private bool isPlaying = false;
+    public bool isPlaying = false;
+    private bool isBuffer = false;
 
     private List<EventLog> currentRoundEvents = new();
     private float currentRoundDuration = 0f;
@@ -162,7 +164,12 @@ public class ReplayManager : MonoBehaviour
 
     void Update()
     {
-        if (!isPlaying || !IsEnable) return;
+        if (Input.GetKeyUp(KeyCode.Space))
+        {
+            TogglePause();
+        }
+
+        if (!isPlaying || !IsEnable || isBuffer) return;
 
         currentTime += Time.deltaTime * playbackSpeed;
 
@@ -203,7 +210,7 @@ public class ReplayManager : MonoBehaviour
 
     void FixedUpdate()
     {
-        if (!isPlaying || !IsEnable) return;
+        if (!isPlaying || !IsEnable || isBuffer) return;
 
         InterpolateBot(leftRigidBody, leftEvents, ref leftEventIndex);
         InterpolateBot(rightRigidBody, rightEvents, ref rightEventIndex);
@@ -230,8 +237,11 @@ public class ReplayManager : MonoBehaviour
         rightRigidBody.interpolation = RigidbodyInterpolation2D.Interpolate;
 
         LoadRound(currentGameIndex, currentRoundIndex);
+
         if (autoStart)
+        {
             isPlaying = true;
+        }
 
         PreviousGameButton?.onClick.AddListener(GoToPreviousGame);
         NextGameButton?.onClick.AddListener(GoToNextGame);
@@ -261,6 +271,8 @@ public class ReplayManager : MonoBehaviour
     #region Core Logics
     void LoadRound(int gameIdx, int roundIdx)
     {
+        isBuffer = true;
+
         leftRigidBody.MovePosition(originalBotPosition.Item1);
         leftRigidBody.MoveRotation(originalBotRotation.Item1);
         rightRigidBody.MovePosition(originalBotPosition.Item2);
@@ -286,6 +298,9 @@ public class ReplayManager : MonoBehaviour
 
         leftEventIndex = 0;
         rightEventIndex = 0;
+
+        isBuffer = false;
+
     }
 
     void InterpolateBot(Rigidbody2D rigidBody, List<EventLog> events, ref int index)
@@ -558,6 +573,7 @@ public class ReplayManager : MonoBehaviour
     {
         isDraggingSlider = false;
         isPlaying = false;
+        isBuffer = true;
 
         ResetReplay(includeEvents: false);
 
@@ -617,11 +633,19 @@ public class ReplayManager : MonoBehaviour
         yield return null;
 
         isPlaying = true;
+        isBuffer = false;
+    }
+
+    public void TogglePause()
+    {
+        isPlaying = !isPlaying;
+
+        PauseTxtUI.text = isPlaying ? "Pause" : "Continue";
     }
 
     #endregion
 
-
+    #region Chart
     string FormatTime(float time)
     {
         int minutes = Mathf.FloorToInt(time / 60f);
@@ -818,11 +842,13 @@ public class ReplayManager : MonoBehaviour
     {
         ChartContainer.SetActive(false);
     }
+    #endregion
+
     public void OnDrag(EventParameter param)
     {
         autoScrollLog = false;
     }
-
+    
     public void BackToBattle()
     {
         GameManager.Instance.Replay_BackToBattle();
