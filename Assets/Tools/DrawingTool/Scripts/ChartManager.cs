@@ -156,9 +156,7 @@ public class ChartManager : MonoBehaviour
             _chartSeriesList.Add(chart);
         }
         else
-        {
             UpdateChartSeries(chart);
-        }
     }
     public void UpdateChartSeries(ChartSeries chart)
     {
@@ -176,8 +174,7 @@ public class ChartManager : MonoBehaviour
         if (_sidePanelParent == null || _togglePrefab == null || _chartSeriesList == null)
             return;
 
-        foreach (Transform toggle in _sidePanelParent)
-            Destroy(toggle.gameObject);
+        ClearSidePanels();
 
         foreach (ChartSeries series in _chartSeriesList)
         {
@@ -200,13 +197,14 @@ public class ChartManager : MonoBehaviour
 
         toggle.onValueChanged.AddListener(isOn =>
         {
-            Debug.Log($"Toggle clicked {series.name} {isOn}");
             ChartSeries runningChart = _chartSeriesList.Find((el) => el.name == series.name);
             if (runningChart != null)
             {
                 runningChart.isVisible = isOn;
                 DrawChart();
             }
+
+            series.onVisibilityChanged.Invoke(isOn);
         });
     }
     void ClearCanvas(RenderTexture canvas, Color color)
@@ -225,6 +223,12 @@ public class ChartManager : MonoBehaviour
     public void ClearChartSeries()
     {
         _chartSeriesList.Clear();
+    }
+
+    public void ClearSidePanels()
+    {
+        foreach (Transform toggle in _sidePanelParent)
+            Destroy(toggle.gameObject);
     }
 
     public void DrawChart()
@@ -648,25 +652,19 @@ public class ChartSeries
 
     public System.Action OnPrepareToDraw;
 
-    // ✅ X-axis label formatter (e.g., "Player 1", "Player 2")
     public System.Func<int, string> onXLabelCreated;
 
-    // ✅ Y-axis label formatter (e.g., "50%", "100")
     public System.Func<float, string> onYLabelCreated;
+    public System.Func<bool, dynamic> onVisibilityChanged;
 
-    // ✅ NEW: Group count (how many groups in the dataset)
     public int groupCount { get; set; }
 
-    // ✅ NEW: category count (how many actions per group)
     public int categoryCount { get; set; }
 
-    // ✅ NEW: group names (e.g., ["Player 1", "Player 2"])
     public string[] groupNames { get; set; }
 
-    // ✅ NEW: category names (e.g., ["Buy", "Chat", "Like"])
     public string[] categoryNames { get; set; }
 
-    // ✅ NEW: per-category colors (optional)
     public Color[] categoryColors { get; set; }
 
     public static ChartSeries Create(
