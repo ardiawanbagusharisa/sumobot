@@ -4605,7 +4605,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6930594686332527008, guid: 6bb05384eaab28e49b0dbe041f18a9f4, type: 3}
       propertyPath: _xGridDataSpacing
-      value: 50
+      value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 6930594686332527008, guid: 6bb05384eaab28e49b0dbe041f18a9f4, type: 3}
       propertyPath: _sidePanelFontSize
@@ -9698,7 +9698,7 @@ MonoBehaviour:
   RightActionTaken: {fileID: 2455486309740782780}
   ChartContainer: {fileID: 1688242982}
   Chart: {fileID: 555332423}
-  ActionTimeInterval: 2
+  EventTimeInterval: 2
   isPlaying: 0
 --- !u!114 &5618815223005329189
 MonoBehaviour:
