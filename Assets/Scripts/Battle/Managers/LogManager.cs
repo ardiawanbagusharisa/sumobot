@@ -40,10 +40,13 @@ namespace SumoManager
             public int CreatedAt;
             public float BattleTime;
             public float CountdownTime;
+            public float ActionInterval;
             public int RoundType;
             public int SimulationAmount;
             public int SimulationAISwapInterval;
             public float SimulationTimeScale;
+            public Dictionary<string, float> ArenaCenter = new();
+            public float ArenaRadius;
             public PlayerStats LeftPlayerStats = new();
             public PlayerStats RightPlayerStats = new();
 
@@ -256,6 +259,14 @@ namespace SumoManager
 
             Log.LeftPlayerStats.Name = leftPlayer.Profile.Name;
             Log.RightPlayerStats.Name = rightPlayer.Profile.Name;
+
+            Log.ActionInterval = BattleManager.Instance.ActionInterval;
+            Log.ArenaCenter = new()
+            {
+                {"X", BattleManager.Instance.Arena.transform.position.x},
+                {"Y", BattleManager.Instance.Arena.transform.position.y},
+            };
+            Log.ArenaRadius = BattleManager.Instance.ArenaRadius;
 
             if (logTakenAction && Log.Games.Count > 0)
             {
