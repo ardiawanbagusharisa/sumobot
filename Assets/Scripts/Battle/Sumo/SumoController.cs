@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using SumoHelper;
@@ -14,7 +13,10 @@ namespace SumoCore
         Left,
         Right,
     }
-
+    
+    /// <summary>
+    /// Handles robot movement, input, and collision physics
+    /// </summary>
     public class SumoController : MonoBehaviour
     {
         #region Robot Stats Properties
@@ -172,7 +174,7 @@ namespace SumoCore
         public void AssignSkill(SkillType type = SkillType.Boost)
         {
             Skill = SumoSkill.CreateSkill(this, type);
-            Events[OnSkillAssigned].Invoke(new(skillType:type,sideParam:Side));
+            Events[OnSkillAssigned].Invoke(new(skillType: type, sideParam: Side));
         }
 
         public void Reset()
@@ -462,16 +464,6 @@ namespace SumoCore
             }
 
             return impact;
-        }
-
-        public void FreezeMovement()
-        {
-            RigidBody.constraints = RigidbodyConstraints2D.FreezePosition;
-        }
-
-        public void ResetFreezeMovement()
-        {
-            RigidBody.constraints = RigidbodyConstraints2D.None;
         }
 
         public void ResetBounceResistance()

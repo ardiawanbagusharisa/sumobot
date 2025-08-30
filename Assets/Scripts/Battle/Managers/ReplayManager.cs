@@ -12,6 +12,7 @@ using System.Collections;
 using UnityEngine.UI;
 using SumoCore;
 using SumoManager;
+using Unity.Mathematics;
 
 public class ReplayManager : MonoBehaviour
 {
@@ -71,7 +72,7 @@ public class ReplayManager : MonoBehaviour
 
     public GameObject ChartContainer;
     public ChartManager Chart;
-    public float ActionTimeInterval = 2f;
+    public float EventTimeInterval = 2f;
     #endregion
 
     #region Runtime (readonly) properties 
@@ -210,17 +211,21 @@ public class ReplayManager : MonoBehaviour
 
     void FixedUpdate()
     {
-        if (!isPlaying || !IsEnable || isBuffer) return;
 
-        InterpolateBot(leftRigidBody, leftEvents, ref leftEventIndex);
-        InterpolateBot(rightRigidBody, rightEvents, ref rightEventIndex);
+
+        if (isPlaying && IsEnable && !isBuffer)
+        {
+            InterpolateBot(leftRigidBody, leftEvents, ref leftEventIndex);
+            InterpolateBot(rightRigidBody, rightEvents, ref rightEventIndex);
+        }
 
         if (ChartContainer == null || Chart == null)
             return;
         if (!ChartContainer.activeSelf)
             return;
 
-        ShowActionChart();
+        ShowEventChart("Action");
+        ShowEventChart("Collision");
         ShowMostActionChart();
     }
     #endregion
@@ -653,33 +658,70 @@ public class ReplayManager : MonoBehaviour
         return $"{minutes:00}:{seconds:00}";
     }
 
-    private void ShowActionChart()
+    private void ShowEventChart(string category)
     {
-        int timeFrame = 1;
-
-        Dictionary<int, (float, float)> actionTakensMap = new();
-
-        for (float i = 0; i < currentTime; i += ActionTimeInterval)
-        {
-            int leftActionAmount = leftActionMap.Values.Where((x) => x.UpdatedAt >= i && x.UpdatedAt < (i + ActionTimeInterval)).Count();
-
-            int rightActionAmount = rightActionMap.Values.Where((x) => x.UpdatedAt >= i && x.UpdatedAt < (i + ActionTimeInterval)).Count();
-
-            actionTakensMap[timeFrame] = (leftActionAmount, rightActionAmount);
-
-            timeFrame += 1;
-        }
-
-        var leftAmount = actionTakensMap.Select((x) => x.Value.Item1).ToArray();
-        var rightAmount = actionTakensMap.Select((x) => x.Value.Item2).ToArray();
-
         ChartSeries chartLeft = ChartSeries.Create(
-            "Action per Seconds (Left)",
-            leftAmount, ChartSeries.ChartType.Line, Color.green);
+            category,
+            $"{category}/sec (Left)",
+            ChartSeries.ChartType.Line, Color.green);
 
         ChartSeries chartRight = ChartSeries.Create(
-            "Action per Seconds (Right)",
-            rightAmount, ChartSeries.ChartType.Line, Color.red);
+            category,
+            $"{category}/Sec (Right)",
+            ChartSeries.ChartType.Line, Color.red);
+
+        if (chartVisibilityMap.TryGetValue(chartLeft.name, out var isLVisible))
+            chartLeft.isVisible = isLVisible;
+        else
+            chartVisibilityMap.Add(chartLeft.name, chartLeft.isVisible);
+
+        if (chartVisibilityMap.TryGetValue(chartRight.name, out var isRVisible))
+            chartRight.isVisible = isRVisible;
+        else
+            chartVisibilityMap.Add(chartRight.name, chartRight.isVisible);
+
+        if (chartLeft.isVisible || chartRight.isVisible)
+        {
+            int timeFrame = 1;
+
+            Dictionary<int, (float, float)> eventsMap = new();
+
+            for (float i = 0; i < currentTime; i += EventTimeInterval)
+            {
+                int leftEventAmount = 0;
+                int rightEventAmount = 0;
+
+                if (chartLeft.isVisible)
+                    leftEventAmount = leftEvents.Where((x) =>
+                    {
+                        if (category == "Collision")
+                            if (x.Target.Count() == 0)
+                                return false;
+
+                        return x.Category == category && x.UpdatedAt >= i && x.UpdatedAt < (i + EventTimeInterval);
+                    }).Count();
+
+                if (chartRight.isVisible)
+                    rightEventAmount = rightEvents.Where((x) =>
+                    {
+                        if (category == "Collision")
+                            if (x.Target.Count() == 0)
+                                return false;
+
+                        return x.Category == category && x.UpdatedAt >= i && x.UpdatedAt < (i + EventTimeInterval);
+                    }).Count();
+
+                eventsMap[timeFrame] = (leftEventAmount, rightEventAmount);
+
+                timeFrame += 1;
+            }
+
+            if (chartLeft.isVisible)
+                chartLeft.data = eventsMap.Select((x) => x.Value.Item1).ToArray();
+
+            if (chartRight.isVisible)
+                chartRight.data = eventsMap.Select((x) => x.Value.Item2).ToArray();
+        }
 
         chartLeft.onVisibilityChanged = (isOn) =>
         {
@@ -694,32 +736,28 @@ public class ReplayManager : MonoBehaviour
 
         chartLeft.onXLabelCreated = (index) =>
                 {
-                    if (ActionTimeInterval > 1.0f)
+                    if (EventTimeInterval > 1.0f)
                     {
-                        float xlabel = index * ActionTimeInterval;
+                        float xlabel = index * EventTimeInterval;
                         return Mathf.Floor(xlabel).ToString("0.#");
                     }
                     return index.ToString();
                 };
+
         chartRight.onXLabelCreated = (index) =>
                 {
-                    if (ActionTimeInterval > 1.0f)
+                    if (EventTimeInterval > 1.0f)
                     {
-                        float xlabel = index * ActionTimeInterval;
+                        float xlabel = index * EventTimeInterval;
                         return Mathf.Floor(xlabel).ToString("0.#");
                     }
                     return index.ToString();
                 };
 
-        if (chartVisibilityMap.TryGetValue(chartLeft.name, out var isLVisible))
-            chartLeft.isVisible = isLVisible;
-        else
-            chartVisibilityMap.Add(chartLeft.name, true);
-
-        if (chartVisibilityMap.TryGetValue(chartRight.name, out var isRVisible))
-            chartRight.isVisible = isRVisible;
-        else
-            chartVisibilityMap.Add(chartRight.name, true);
+        if (chartLeft.isVisible && chartRight.isVisible)
+        {
+            Chart.XGridDataSpacing = Mathf.FloorToInt(EventTimeInterval);
+        }
 
         Chart.AddChartSeries(chartLeft, true);
         Chart.AddChartSeries(chartRight, true);
@@ -732,80 +770,49 @@ public class ReplayManager : MonoBehaviour
         var groupLabels = new string[] { "Left", "Right" };
         List<Color> categoryColors = new() { Color.green, Color.red };
 
-        var leftMostActs = GetChartMostAction(PlayerSide.Left, topActions);
-        var rightMostActs = GetChartMostAction(PlayerSide.Right, topActions);
-
-        List<float> data = new();
-        List<string> categories = new();
-
-        for (int i = 0; i < leftMostActs.Count(); i++)
-        {
-            data.Add(leftMostActs[i].Value);
-            categories.Add(leftMostActs[i].Key);
-        }
-        for (int i = 0; i < rightMostActs.Count(); i++)
-        {
-            data.Add(rightMostActs[i].Value);
-            categories.Add(rightMostActs[i].Key);
-        }
-
         var chart = ChartSeries.CreateGroup(
             $"Most Action Takens",
-            data.ToArray(),
-            groupLabels,
-            categories.ToArray(),
+            groupNames: groupLabels,
             categoryColors: categoryColors.ToArray()
             );
-        chart.isVisible = false;
 
-        chart.onVisibilityChanged = (isOn) =>
-        {
-            chartVisibilityMap[chart.name] = isOn;
-            return null;
-        };
+        // Default visibility
+        chart.isVisible = false;
 
         if (chartVisibilityMap.TryGetValue(chart.name, out var isVisible))
             chart.isVisible = isVisible;
         else
             chartVisibilityMap.Add(chart.name, chart.isVisible);
 
+        if (chart.isVisible)
+        {
+            var leftMostActs = GetChartMostAction(PlayerSide.Left, topActions);
+            var rightMostActs = GetChartMostAction(PlayerSide.Right, topActions);
+
+            List<float> data = new();
+            List<string> categories = new();
+
+            for (int i = 0; i < leftMostActs.Count(); i++)
+            {
+                data.Add(leftMostActs[i].Value);
+                categories.Add(leftMostActs[i].Key);
+            }
+            for (int i = 0; i < rightMostActs.Count(); i++)
+            {
+                data.Add(rightMostActs[i].Value);
+                categories.Add(rightMostActs[i].Key);
+            }
+
+            chart.data = data.ToArray();
+            chart.categoryNames = categories.ToArray();
+        }
+
+        chart.onVisibilityChanged = (isOn) =>
+        {
+            chartVisibilityMap[chart.name] = isOn;
+            return null;
+        };
         Chart.AddChartSeries(chart, true);
-        Chart.DrawChart();
-    }
-
-    private void ShowContactMadeChart()
-    {
-        var topActions = 3;
-        var groupLabels = new string[] { "Left", "Right" };
-        List<Color> categoryColors = new() { Color.green, Color.red };
-
-        var leftMostActs = GetChartMostAction(PlayerSide.Left, topActions);
-        var rightMostActs = GetChartMostAction(PlayerSide.Right, topActions);
-
-        List<float> data = new();
-        List<string> categories = new();
-
-        for (int i = 0; i < leftMostActs.Count(); i++)
-        {
-            data.Add(leftMostActs[i].Value);
-            categories.Add(leftMostActs[i].Key);
-        }
-
-        for (int i = 0; i < rightMostActs.Count(); i++)
-        {
-            data.Add(rightMostActs[i].Value);
-            categories.Add(rightMostActs[i].Key);
-        }
-
-        var chart = ChartSeries.CreateGroup(
-            $"{currentRoundIndex + 1}",
-            data.ToArray(),
-            groupLabels,
-            categories.ToArray(),
-            categoryColors: categoryColors.ToArray()
-            );
-
-        Chart.AddChartSeries(chart);
         Chart.DrawChart();
     }
 
@@ -874,11 +881,11 @@ public static class ExtReplayManager
         var color = log.Actor == "Left" ? "#92C382" : "#FF6364";
         if (log.Category == "Action")
         {
-            return $"<color={color}>[{log.StartedAt:F2}] {log.Actor} | Action | {log.Data["Name"]} | {log.Data["Duration"] ?? null}</color>";
+            return $"<color={color}>[{log.StartedAt:F2}] {log.Actor} | Action | {log.Data["Name"]} | {log.Data["Duration"]:F2}</color>";
         }
         else if (log.Category == "Collision")
         {
-            return $"[{log.StartedAt:F2}] {log.Actor} | Collision | Impact={log.Data["Impact"]} Dur={log.Data["Duration"]} Lock={log.Data["LockDuration"]}";
+            return $"[{log.StartedAt:F2}] {log.Actor} | Collision | Impact={log.Data["Impact"]:F2} Dur={log.Data["Duration"]:F2} Lock={log.Data["LockDuration"]:F2}";
         }
         return null;
     }
