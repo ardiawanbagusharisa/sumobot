@@ -44,6 +44,7 @@ public class ChartManager : MonoBehaviour
 
     ColorPalette _colorPalette;
     RenderTexture _canvasRenderTexture;
+    private RenderTexture _blitTexture;
 
     private void DebugPopulateSeries()
     {
@@ -105,7 +106,11 @@ public class ChartManager : MonoBehaviour
                 enableRandomWrite = true
             };
             _canvasRenderTexture.Create();
-            _rawImage.texture = _canvasRenderTexture;
+
+            _blitTexture = new RenderTexture(rectWidth, rectHeight, 0, RenderTextureFormat.ARGB32);
+            _blitTexture.Create();
+
+            _rawImage.texture = _blitTexture;
         }
 
         ClearCanvas(_canvasRenderTexture, _backgroundColour);
@@ -205,6 +210,7 @@ public class ChartManager : MonoBehaviour
         _drawComputeShader.SetInt("_CanvasWidth", canvas.width);
         _drawComputeShader.SetInt("_CanvasHeight", canvas.height);
         _drawComputeShader.Dispatch(initK, Mathf.CeilToInt(canvas.width / 8f), Mathf.CeilToInt(canvas.height / 8f), 1);
+        Graphics.Blit(_canvasRenderTexture, _blitTexture);
 
         foreach (Transform child in _labelParent)
             Destroy(child.gameObject);
@@ -427,6 +433,8 @@ public class ChartManager : MonoBehaviour
             Mathf.CeilToInt(_canvasRenderTexture.height / 8f),
             1
         );
+
+        Graphics.Blit(_canvasRenderTexture, _blitTexture);
     }
 
     void DrawRect(Vector2 min, Vector2 max, Color brushColor, float brushSize, float wiggleSize)
@@ -451,6 +459,7 @@ public class ChartManager : MonoBehaviour
             Mathf.CeilToInt(_canvasRenderTexture.height / 8f),
             1
         );
+        Graphics.Blit(_canvasRenderTexture, _blitTexture);
 
         // Reset flag (so future calls don’t accidentally stay in rect mode)
         _drawComputeShader.SetBool("_UseRect", false);

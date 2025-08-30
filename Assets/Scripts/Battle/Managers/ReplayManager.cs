@@ -13,6 +13,7 @@ using UnityEngine.UI;
 using SumoCore;
 using SumoManager;
 using Unity.Mathematics;
+using Unity.VisualScripting;
 
 public class ReplayManager : MonoBehaviour
 {
@@ -767,12 +768,24 @@ public class ReplayManager : MonoBehaviour
     private void ShowMostActionChart()
     {
         var topActions = 3;
-        var groupLabels = new string[] { "Left", "Right" };
-        List<Color> categoryColors = new() { Color.green, Color.red };
+
+        List<string> groupLabels = new() { };
+        List<Color> categoryColors = new() { };
+
+        if (leftActionMap.Count > 0)
+        {
+            groupLabels.Add("Left");
+            categoryColors.Add(Color.green);
+        }
+        if (rightActionMap.Count > 0)
+        {
+            groupLabels.Add("Right");
+            categoryColors.Add(Color.red);
+        }
 
         var chart = ChartSeries.CreateGroup(
             $"Most Action Takens",
-            groupNames: groupLabels,
+            groupNames: groupLabels.ToArray(),
             categoryColors: categoryColors.ToArray()
             );
 
