@@ -602,7 +602,7 @@ public class ReplayManager : MonoBehaviour
 
                     var log = eventLog.GetLog();
                     if (log != null)
-                        logMap.Add(key, eventLog.GetLog());
+                        logMap.TryAdd(key, eventLog.GetLog());
                 }
             }
 
@@ -617,7 +617,7 @@ public class ReplayManager : MonoBehaviour
 
                     var log = eventLog.GetLog();
                     if (log != null)
-                        logMap.Add(key, eventLog.GetLog());
+                        logMap.TryAdd(key, eventLog.GetLog());
                 }
             }
         }
@@ -848,7 +848,7 @@ public class ReplayManager : MonoBehaviour
     {
         autoScrollLog = false;
     }
-    
+
     public void BackToBattle()
     {
         GameManager.Instance.Replay_BackToBattle();
