@@ -62,13 +62,11 @@ public class GameManager : MonoBehaviour
     public void Battle_ShowReplay()
     {
         ShowReplay = true;
-        // SceneUtils.SetSceneActive("Battle", false);
         SceneManager.LoadScene("Replay");
     }
     public void Replay_BackToBattle()
     {
         SceneManager.LoadScene("Battle");
-        // SceneUtils.SetSceneActive("Battle", true);
         ShowReplay = false;
     }
 
@@ -120,11 +118,6 @@ public class PlayerProfile
         CurrentCostume = objectCostume;
         CurrentCostume.UpdateSideColor();
         CurrentCostume.AttachObject(Parts);
-    }
-
-    public void AttachToUI(SumoCostume uiPreview)
-    {
-        CurrentCostume.AttachToUI(uiPreview);
     }
 
     public void PrepareParts()
