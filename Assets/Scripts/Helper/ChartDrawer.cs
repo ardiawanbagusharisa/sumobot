@@ -17,7 +17,7 @@ public abstract class Drawer
     {
         bool isSupportCompute = SystemInfo.supportsComputeShaders;
         Debug.Log($"IsComputeShaderSupport: {isSupportCompute}");
-        
+
         // Force override (e.g., for testing or debugging)
         if (force == DrawBackend.Material)
             return new MaterialDrawer(image, material, background);
@@ -196,6 +196,10 @@ public class MaterialDrawer : Drawer
 
     public override void Init()
     {
+        Rect rect = Image.rectTransform.rect;
+        Width = Mathf.CeilToInt(rect.width);
+        Height = Mathf.CeilToInt(rect.height);
+        
         if (CanvasRT != null) CanvasRT.Release();
         if (TempCanvasRT != null) TempCanvasRT.Release();
 
