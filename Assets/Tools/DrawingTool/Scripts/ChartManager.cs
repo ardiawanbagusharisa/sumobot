@@ -1,13 +1,11 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
-using UnityEditor.TerrainTools;
 using UnityEngine;
 using UnityEngine.UI;
 
 public class ChartManager : MonoBehaviour
 {
     [Header("UI Elements")]
-    [SerializeField] ComputeShader _drawComputeShader;
     [SerializeField] RawImage _rawImage;
     [SerializeField] Color _backgroundColour = Color.white;
     [SerializeField] Color _gridColour = Color.white;
@@ -42,9 +40,10 @@ public class ChartManager : MonoBehaviour
     [SerializeField] private int _numFixColors = 0;
     [SerializeField] private int _numSeries = 3;
 
+    [SerializeField] ComputeShader drawShader;
+    [SerializeField] Material drawMaterial;
     ColorPalette _colorPalette;
-    RenderTexture _canvasRenderTexture;
-    private RenderTexture _blitTexture;
+    public Drawer drawer;
 
     private void DebugPopulateSeries()
     {
@@ -60,14 +59,13 @@ public class ChartManager : MonoBehaviour
             for (int j = 1; j < data.Length - 1; j++)
                 data[j] = Random.Range(0f, 50f);
 
-            _chartSeriesList.Add(ChartSeries.Create(id: i.ToString(), $"Series {i + 1}", ChartSeries.ChartType.Bar, Random.ColorHSV(), data));
+            _chartSeriesList.Add(ChartSeries.Create($"Series {i + 1}", ChartSeries.ChartType.Bar, Random.ColorHSV(), data));
 
         }
     }
 
     private void Start()
     {
-        Init();
         if (_enableDebugData)
             DebugPopulateSeries();
         if (_enablePallete)
@@ -76,44 +74,26 @@ public class ChartManager : MonoBehaviour
         DrawChart();
     }
 
-    private void OnEnable()
-    {
-        DrawChart();
-    }
-
-    private void OnRectTransformDimensionsChange()
+    void OnEnable()
     {
         Init();
-        DrawChart();
     }
+
+    // private void OnEnable()
+    // {
+    //     DrawChart();
+    // }
+
+    // private void OnRectTransformDimensionsChange()
+    // {
+    //     Init();
+    //     DrawChart();
+    // }
 
     private void Init()
     {
-        Rect rect = _rawImage.rectTransform.rect;
-        int rectWidth = Mathf.CeilToInt(rect.width);
-        int rectHeight = Mathf.CeilToInt(rect.height);
-
-        if (_canvasRenderTexture == null || _canvasRenderTexture.width != rectWidth || _canvasRenderTexture.height != rectHeight)
-        {
-            if (_canvasRenderTexture != null)
-            {
-                _canvasRenderTexture.Release();
-                Destroy(_canvasRenderTexture);
-            }
-
-            _canvasRenderTexture = new RenderTexture(rectWidth, rectHeight, 0, RenderTextureFormat.ARGB32)
-            {
-                enableRandomWrite = true
-            };
-            _canvasRenderTexture.Create();
-
-            _blitTexture = new RenderTexture(rectWidth, rectHeight, 0, RenderTextureFormat.ARGB32);
-            _blitTexture.Create();
-
-            _rawImage.texture = _blitTexture;
-        }
-
-        ClearCanvas(_canvasRenderTexture, _backgroundColour);
+        drawer = Drawer.CreateDrawer(_rawImage, drawMaterial, drawShader, _backgroundColour);
+        drawer.Init();
     }
 
     public void InitPalette()
@@ -152,6 +132,11 @@ public class ChartManager : MonoBehaviour
         }
         else
             UpdateChartSeries(chart);
+    }
+
+    public ChartSeries GetChartSeries(string name)
+    {
+        return _chartSeriesList.Find((el) => el.name == name);
     }
     public void UpdateChartSeries(ChartSeries chart)
     {
@@ -202,19 +187,7 @@ public class ChartManager : MonoBehaviour
             series.onVisibilityChanged.Invoke(isOn);
         });
     }
-    void ClearCanvas(RenderTexture canvas, Color color)
-    {
-        int initK = _drawComputeShader.FindKernel("InitBackground");
-        _drawComputeShader.SetVector("_BackgroundColour", color);
-        _drawComputeShader.SetTexture(initK, "_Canvas", canvas);
-        _drawComputeShader.SetInt("_CanvasWidth", canvas.width);
-        _drawComputeShader.SetInt("_CanvasHeight", canvas.height);
-        _drawComputeShader.Dispatch(initK, Mathf.CeilToInt(canvas.width / 8f), Mathf.CeilToInt(canvas.height / 8f), 1);
-        Graphics.Blit(_canvasRenderTexture, _blitTexture);
 
-        foreach (Transform child in _labelParent)
-            Destroy(child.gameObject);
-    }
 
     public void ClearChartSeries()
     {
@@ -227,17 +200,22 @@ public class ChartManager : MonoBehaviour
             Destroy(toggle.gameObject);
     }
 
+    private void ClearCanvas()
+    {
+        drawer.ClearCanvas(_backgroundColour);
+        foreach (Transform child in _labelParent)
+            Destroy(child.gameObject);
+    }
+
     public void DrawChart()
     {
-        ClearCanvas(_canvasRenderTexture, _backgroundColour);
+        ClearCanvas();
 
         if (_chartSeriesList == null || _chartSeriesList.Count == 0 || !_chartSeriesList.Any(s => s.isVisible))
             return;
 
-        float canvasWidth = _canvasRenderTexture.width;
-        float canvasHeight = _canvasRenderTexture.height;
-        float chartWidth = canvasWidth - _paddingLeft - _paddingRight;
-        float chartHeight = canvasHeight - _paddingTop - _paddingBottom;
+        float chartWidth = drawer.Width - _paddingLeft - _paddingRight;
+        float chartHeight = drawer.Height - _paddingTop - _paddingBottom;
 
         // Scaling 
         float globalMin = float.MaxValue;
@@ -310,7 +288,7 @@ public class ChartManager : MonoBehaviour
 
                     Vector2 start = new Vector2(x, _paddingBottom);
                     Vector2 end = new Vector2(x, y);
-                    DrawLine(start, end, series.axesColor, series.brushSize, _wiggleSize);
+                    drawer.DrawLine(start, end, series.axesColor, series.brushSize, _wiggleSize);
 
                     var label = IsAnyGroupBar() ? series.onXLabelCreated != null ? series.onXLabelCreated(i) : i.ToString() : null;
                     if (label != null)
@@ -333,7 +311,7 @@ public class ChartManager : MonoBehaviour
 
                     float x0 = _paddingLeft + (i - 1) / (float)(dataCount - 1) * chartWidth;
                     float y0 = _paddingBottom + (data[i - 1] - globalMin) / (globalMax - globalMin) * chartHeight;
-                    DrawLine(new Vector2(x0, y0), new Vector2(x, y), series.axesColor, series.brushSize, _wiggleSize);
+                    drawer.DrawLine(new Vector2(x0, y0), new Vector2(x, y), series.axesColor, series.brushSize, _wiggleSize);
 
                     var label = IsAnyGroupBar() ? series.onXLabelCreated != null ? series.onXLabelCreated(i) : i.ToString() : null;
                     if (label != null)
@@ -359,7 +337,12 @@ public class ChartManager : MonoBehaviour
 
                         float value = series.data[dataIndex];
 
-                        float y = _paddingBottom + (value - minVal) / range * chartHeight;
+                        float y = 0;
+                        if (Mathf.Approximately(maxVal, minVal))
+                            y = _paddingBottom + chartHeight * 0.5f;
+                        else
+                            y = _paddingBottom + (value - minVal) / range * chartHeight;
+
                         float x = _paddingLeft + group * groupWidth + cat * barWidth;
 
                         // Color: use per-category if defined, else fallback by group
@@ -368,7 +351,7 @@ public class ChartManager : MonoBehaviour
                             : (group == 0 ? Color.green : Color.red);
 
                         // Draw bar
-                        DrawRect(
+                        drawer.DrawRect(
                             new Vector2(x, _paddingBottom),
                             new Vector2(x + barWidth, y),
                             barColor,
@@ -405,65 +388,15 @@ public class ChartManager : MonoBehaviour
     private void DrawAxes()
     {
         float left = _paddingLeft;
-        float right = _canvasRenderTexture.width - _paddingRight;
+        float right = drawer.Width - _paddingRight;
         float bottom = _paddingBottom;
-        float top = _canvasRenderTexture.height - _paddingTop;
+        float top = drawer.Height - _paddingTop;
 
-        DrawLine(new Vector2(left, bottom), new Vector2(right, bottom), _gridColour, _brushSize, _wiggleSize);
-        DrawLine(new Vector2(left, bottom), new Vector2(left, top), _gridColour, _brushSize, _wiggleSize);
+        drawer.DrawLine(new Vector2(left, bottom), new Vector2(right, bottom), _gridColour, _brushSize, _wiggleSize);
+        drawer.DrawLine(new Vector2(left, bottom), new Vector2(left, top), _gridColour, _brushSize, _wiggleSize);
     }
 
-    void DrawLine(Vector2 from, Vector2 to, Color brushColor, float brushSize, float wiggleSize, string id = "default")
-    {
-        int updateKernel = _drawComputeShader.FindKernel("Update");
 
-        _drawComputeShader.SetBool("_MouseDown", true);
-        _drawComputeShader.SetVector("_PreviousMousePosition", new Vector4(from.x, from.y, 0, 0));
-        _drawComputeShader.SetVector("_MousePosition", new Vector4(to.x, to.y, 0, 0));
-        _drawComputeShader.SetFloat("_BrushSize", brushSize);
-        _drawComputeShader.SetFloat("_WiggleSize", wiggleSize);
-        _drawComputeShader.SetVector("_BrushColour", brushColor);
-        _drawComputeShader.SetInt("_CanvasWidth", _canvasRenderTexture.width);
-        _drawComputeShader.SetInt("_CanvasHeight", _canvasRenderTexture.height);
-        _drawComputeShader.SetTexture(updateKernel, "_Canvas", _canvasRenderTexture);
-
-        _drawComputeShader.Dispatch(
-            updateKernel,
-            Mathf.CeilToInt(_canvasRenderTexture.width / 8f),
-            Mathf.CeilToInt(_canvasRenderTexture.height / 8f),
-            1
-        );
-
-        Graphics.Blit(_canvasRenderTexture, _blitTexture);
-    }
-
-    void DrawRect(Vector2 min, Vector2 max, Color brushColor, float brushSize, float wiggleSize)
-    {
-        int kernel = _drawComputeShader.FindKernel("Update");
-
-        _drawComputeShader.SetBool("_UseRect", true);
-        _drawComputeShader.SetVector("_RectMin", new Vector4(min.x, min.y, 0, 0));
-        _drawComputeShader.SetVector("_RectMax", new Vector4(max.x, max.y, 0, 0));
-        _drawComputeShader.SetVector("_BrushColour", brushColor);
-        _drawComputeShader.SetFloat("_BrushSize", brushSize);
-        _drawComputeShader.SetFloat("_WiggleSize", wiggleSize);
-
-
-        _drawComputeShader.SetInt("_CanvasWidth", _canvasRenderTexture.width);
-        _drawComputeShader.SetInt("_CanvasHeight", _canvasRenderTexture.height);
-        _drawComputeShader.SetTexture(kernel, "_Canvas", _canvasRenderTexture);
-
-        _drawComputeShader.Dispatch(
-            kernel,
-            Mathf.CeilToInt(_canvasRenderTexture.width / 8f),
-            Mathf.CeilToInt(_canvasRenderTexture.height / 8f),
-            1
-        );
-        Graphics.Blit(_canvasRenderTexture, _blitTexture);
-
-        // Reset flag (so future calls don’t accidentally stay in rect mode)
-        _drawComputeShader.SetBool("_UseRect", false);
-    }
 
 
     private List<(float value, float y)> CalculateYAxisGridPoints(float minVal, float maxVal, float chartHeight)
@@ -507,9 +440,9 @@ public class ChartManager : MonoBehaviour
     private void DrawGrid(float minVal, float maxVal, float chartWidth, float chartHeight)
     {
         float left = _paddingLeft;
-        float right = _canvasRenderTexture.width - _paddingRight;
+        float right = drawer.Width - _paddingRight;
         float bottom = _paddingBottom;
-        float top = _canvasRenderTexture.height - _paddingTop;
+        float top = drawer.Height - _paddingTop;
 
         int maxLen = _chartSeriesList.Where(s => s.isVisible && s.data != null).Select(s => s.data.Length).DefaultIfEmpty(0).Max();
 
@@ -519,13 +452,13 @@ public class ChartManager : MonoBehaviour
         var yPoints = CalculateYAxisGridPoints(minVal, maxVal, chartHeight);
         foreach (var (value, y) in yPoints)
         {
-            DrawLine(new Vector2(left, y), new Vector2(right, y), _gridColour, 1f, _wiggleSize);
+            drawer.DrawLine(new Vector2(left, y), new Vector2(right, y), _gridColour, 1f, _wiggleSize);
         }
 
         var xPoints = CalculateXAxisGridPoints(maxLen, chartWidth);
         foreach (var (index, x) in xPoints)
         {
-            DrawLine(new Vector2(x, bottom), new Vector2(x, top), _gridColour, 1f, _wiggleSize);
+            drawer.DrawLine(new Vector2(x, bottom), new Vector2(x, top), _gridColour, 1f, _wiggleSize);
         }
     }
 
@@ -540,7 +473,7 @@ public class ChartManager : MonoBehaviour
         var yGridPoints = CalculateYAxisGridPoints(minVal, maxVal, chartHeight);
         foreach (var (value, y) in yGridPoints)
         {
-            var series = visibleSeries.FirstOrDefault(s => s.data.Contains(value)); // or any logic
+            var series = visibleSeries.FirstOrDefault(s => s.data.Contains(value));
             if (series != null && series.onYLabelCreated != null)
             {
                 string label = series.onYLabelCreated(value);
@@ -636,6 +569,11 @@ public class ChartManager : MonoBehaviour
             rt.anchoredPosition = localPoint;
         }
     }
+
+    void OnDestroy()
+    {
+        drawer.Release();
+    }
 }
 
 [System.Serializable]
@@ -648,7 +586,6 @@ public class ChartSeries
         GroupBar
     }
 
-    public string id;
     public string name;
     public float[] data; // Flattened array: [val1, val2, ..., valN] where N = groupCount * categoryCount
     public Color axesColor;
@@ -682,7 +619,6 @@ public class ChartSeries
     public Color[] categoryColors { get; set; }
 
     public static ChartSeries Create(
-        string id,
         string name,
         ChartType type,
         Color? axesColor = null,
@@ -693,7 +629,6 @@ public class ChartSeries
     {
         var chart = new ChartSeries
         {
-            id = id,
             name = name,
             data = data,
             chartType = type,
@@ -719,7 +654,7 @@ public class ChartSeries
         Color? axesColor = null
     )
     {
-        var chart = Create(System.Guid.NewGuid().ToString(), name, ChartType.GroupBar, axesColor, data, brushSize, labelColor);
+        var chart = Create(name, ChartType.GroupBar, axesColor, data, brushSize, labelColor);
 
         chart.groupCount = groupNames.Count();
         chart.groupNames = groupNames;
