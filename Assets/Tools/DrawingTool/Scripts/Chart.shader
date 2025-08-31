@@ -1,4 +1,4 @@
-Shader "Custom/Draw"
+Shader "Chart/Draw"
 {
     Properties
     {

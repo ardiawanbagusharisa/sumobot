@@ -44,6 +44,7 @@ public class ChartManager : MonoBehaviour
     [SerializeField] Material drawMaterial;
     ColorPalette _colorPalette;
     public Drawer drawer;
+    public DrawBackend ForceDraw = DrawBackend.Dynamic;
 
     private void DebugPopulateSeries()
     {
@@ -92,7 +93,7 @@ public class ChartManager : MonoBehaviour
 
     private void Init()
     {
-        drawer = Drawer.CreateDrawer(_rawImage, drawMaterial, drawShader, _backgroundColour);
+        drawer = Drawer.CreateDrawer(_rawImage, drawMaterial, drawShader, _backgroundColour, ForceDraw);
         drawer.Init();
     }
 
