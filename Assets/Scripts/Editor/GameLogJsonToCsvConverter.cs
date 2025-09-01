@@ -1,6 +1,6 @@
+#if UNITY_EDITOR
 namespace SumoEditor
 {
-#if UNITY_EDITOR
     using System;
     using System.IO;
     using System.Linq;
@@ -223,5 +223,5 @@ namespace SumoEditor
             return input;
         }
     }
-#endif
 }
+#endif

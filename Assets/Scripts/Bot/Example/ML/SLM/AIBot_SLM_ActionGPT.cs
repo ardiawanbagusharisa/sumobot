@@ -7,12 +7,15 @@ using SumoManager;
 using Unity.InferenceEngine;
 using UnityEngine;
 using System.Threading.Tasks;
-using System;
-using System.IO;
 
 namespace ML.LanguageModels
 {
-
+    public enum ModelState
+    {
+        Initializing,
+        Initialzed,
+        Standby,
+    }
     class AIBot_SLM_ActionGPT : Bot
     {
         public override string ID => "Sumo_ActionGPT";
@@ -24,8 +27,7 @@ namespace ML.LanguageModels
         public Model runtimeModel;
         public Worker engine;
         private SumoAPI api;
-        private bool isInitialized = false;
-
+        private ModelState modelLoadState = ModelState.Standby;
         private BPETokenizer tokenizer;
         private BattleState state;
         private bool isGenerating = false;
@@ -41,7 +43,16 @@ namespace ML.LanguageModels
                 prompt = null;
                 ClearCommands();
                 isGenerating = false;
-                CreateEngine();
+                if (modelLoadState != ModelState.Initialzed)
+                {
+                    CreateEngine();
+                }
+            }
+            else if (state == BattleState.Battle_End || state == BattleState.Battle_Reset)
+            {
+                engine?.Dispose();
+                engine = null;
+                modelLoadState = ModelState.Standby;
             }
         }
 
@@ -60,6 +71,8 @@ namespace ML.LanguageModels
                 return;
             }
             tokenizer = new(tokenizerAsset);
+
+            CreateEngine();
         }
 
         public override void OnBotUpdate()
@@ -116,9 +129,8 @@ namespace ML.LanguageModels
 
                     engine?.SetInput("input_ids", tensor);
                     engine?.Schedule();
-
-                    using var output = (Tensor<float>)engine.PeekOutput(0).ReadbackAndClone();
-                    await Task.Yield();
+                    var tensorOutput = (Tensor<float>)engine.PeekOutput(0);
+                    using var output = await tensorOutput.ReadbackAndCloneAsync();
                     float[] logits = output.DownloadToArray();
                     tensor.Dispose();
                     output.Dispose();
@@ -222,19 +234,21 @@ namespace ML.LanguageModels
 
         private void CreateEngine()
         {
-            if (isInitialized)
+            if (modelLoadState == ModelState.Initializing)
                 return;
+
+            modelLoadState = ModelState.Initializing;
 
             engine?.Dispose();
 
             if (runtimeModel == null)
             {
-                ModelAsset modelAsset = Resources.Load($"ML/Models/SLM/action_gpt") as ModelAsset;
+                ModelAsset modelAsset = Resources.Load($"ML/Models/SLM/action_gpt_fp16") as ModelAsset;
                 runtimeModel = ModelLoader.Load(modelAsset);
             }
 
             engine = new Worker(runtimeModel, BackendType.CPU);
-            isInitialized = true;
+            modelLoadState = ModelState.Initialzed;
         }
 
         public override void OnBotDestroy()

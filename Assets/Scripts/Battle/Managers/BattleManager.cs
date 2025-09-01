@@ -423,7 +423,7 @@ namespace SumoManager
             private set;
         } = new Dictionary<int, SumoController>();
 
-        public Dictionary<int, Round> Rounds = new Dictionary<int, Round>();
+        public Dictionary<int, Round> Rounds = new();
 
         public int LeftWinCount;
         public int RightWinCount;
@@ -523,7 +523,7 @@ namespace SumoManager
 
     public static class BattleExt
     {
-        public static SumoController GetRobotWinner(this BattleWinner? battleWinner, Battle battle)
+        public static SumoController ToController(this BattleWinner? battleWinner, Battle battle)
         {
             switch (battleWinner)
             {
