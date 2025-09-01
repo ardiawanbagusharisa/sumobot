@@ -129,9 +129,8 @@ namespace ML.LanguageModels
 
                     engine?.SetInput("input_ids", tensor);
                     engine?.Schedule();
-
-                    using var output = (Tensor<float>)engine.PeekOutput(0).ReadbackAndClone();
-                    await Task.Yield();
+                    var tensorOutput = (Tensor<float>)engine.PeekOutput(0);
+                    using var output = await tensorOutput.ReadbackAndCloneAsync();
                     float[] logits = output.DownloadToArray();
                     tensor.Dispose();
                     output.Dispose();

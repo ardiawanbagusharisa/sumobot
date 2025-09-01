@@ -53,7 +53,8 @@ public class ReplayManager : MonoBehaviour
     public TMP_Text GameUI;
     public TMP_Text RoundUI;
     public TMP_Text LogUI;
-    public ScrollRect LogEvents;
+    public ScrollRect LogScrollRect;
+    public Scrollbar LogScrollbar;
     public TMP_Text GameDurationUI;
     public TMP_Text GameBestOf;
     public TMP_Text PauseTxtUI;
@@ -136,11 +137,11 @@ public class ReplayManager : MonoBehaviour
         if (ScrollEvent != null)
             ScrollEvent.Events[CustomHandlerListener.OnScrolling].Subscribe(OnDrag);
 
-        if (LogEvents != null)
+        if (LogScrollbar != null)
         {
-            LogEvents.onValueChanged.AddListener((val) =>
+            LogScrollbar.onValueChanged.AddListener((val) =>
             {
-                if (val.magnitude < 0.01f)
+                if (val < 0.01f)
                 {
                     autoScrollLog = true;
                 }
@@ -475,7 +476,7 @@ public class ReplayManager : MonoBehaviour
 
             if (autoScrollLog)
             {
-                LogEvents.verticalNormalizedPosition = 0f;
+                LogScrollRect.verticalNormalizedPosition = 0f;
             }
         }
     }
