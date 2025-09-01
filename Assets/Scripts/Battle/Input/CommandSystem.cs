@@ -189,9 +189,7 @@ namespace SumoInput
                 foreach (var cmd in allCommands.Keys)
                 {
                     if (cmd.StartsWith(input, StringComparison.OrdinalIgnoreCase))
-                    {
                         return cmd;
-                    }
                 }
             }
             return "";
@@ -222,7 +220,7 @@ namespace SumoInput
             // Extract command name and arguments 
             int parenStart = trimmed.IndexOf('(');
             int parenEnd = trimmed.IndexOf(')');
-            string command = "";
+            string command;
             string rawArgs = "";
 
             if (parenStart > 0 && parenEnd > parenStart)
