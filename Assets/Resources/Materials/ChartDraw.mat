@@ -41,7 +41,7 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
-    - _BrushSize: 3
+    - _BrushSize: 1
     - _EnableExternalAlpha: 0
     - _IsEraser: 0
     - _MouseDown: 1
@@ -52,10 +52,10 @@ Material:
     - _BackgroundColour: {r: 0, g: 0, b: 0, a: 0}
     - _BrushColour: {r: 1, g: 0, b: 0, a: 1}
     - _Color: {r: 1, g: 1, b: 1, a: 1}
-    - _MousePosition: {r: 1162.75, g: 605, b: 0, a: 0}
-    - _PreviousMousePosition: {r: 999.5, g: 20, b: 0, a: 0}
-    - _RectMax: {r: 1326, g: 458.75, b: 0, a: 0}
-    - _RectMin: {r: 999.5, g: 20, b: 0, a: 0}
+    - _MousePosition: {r: 999.5, g: 20, b: 0, a: 0}
+    - _PreviousMousePosition: {r: 673, g: 20, b: 0, a: 0}
+    - _RectMax: {r: 1326, g: 90.2, b: 0, a: 0}
+    - _RectMin: {r: 1108.3334, g: 20, b: 0, a: 0}
     - _RendererColor: {r: 1, g: 1, b: 1, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
