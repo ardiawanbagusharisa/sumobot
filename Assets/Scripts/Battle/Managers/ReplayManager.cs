@@ -23,17 +23,17 @@ public class ReplayManager : MonoBehaviour
     #region Replay Configuration properties
     [Header("Replay Configuration")]
     public bool IsEnable = false;
+    public bool LoadFromPath = true;
 
     [Range(0f, 5f)]
     public float playbackSpeed = 1f;
     public bool autoStart = true;
     public Transform leftPlayer;
     public Transform rightPlayer;
-    #endregion
 
-    [Header("Replay Configuration")]
-    public bool LoadFromPath = true;
     public CustomHandlerListener ScrollEvent;
+    public CustomHandlerListener TimerSlider;
+    #endregion
 
 
     #region Replay control properties
@@ -150,6 +150,12 @@ public class ReplayManager : MonoBehaviour
 
         if (TimeSliderUI != null)
             TimeSliderUI.onValueChanged.AddListener(OnTimeSliderChanged);
+
+        if (TimerSlider != null)
+        {
+            TimerSlider.Events[CustomHandlerListener.OnPressDown].Subscribe(OnTimeSliderPointerDown);
+            TimerSlider.Events[CustomHandlerListener.OnPressUp].Subscribe(OnTimeSliderPointerUp);
+        }
     }
 
 
@@ -163,6 +169,12 @@ public class ReplayManager : MonoBehaviour
 
         if (ScrollEvent != null)
             ScrollEvent.Events[CustomHandlerListener.OnScrolling].Unsubscribe(OnDrag);
+
+        if (TimerSlider != null)
+        {
+            TimerSlider.Events[CustomHandlerListener.OnPressDown].Unsubscribe(OnTimeSliderPointerDown);
+            TimerSlider.Events[CustomHandlerListener.OnPressUp].Unsubscribe(OnTimeSliderPointerUp);
+        }
     }
 
 
@@ -566,12 +578,12 @@ public class ReplayManager : MonoBehaviour
         }
     }
 
-    public void OnTimeSliderPointerDown()
+    public void OnTimeSliderPointerDown(EventParameter _)
     {
         isDraggingSlider = true;
     }
 
-    public void OnTimeSliderPointerUp()
+    public void OnTimeSliderPointerUp(EventParameter _)
     {
         isDraggingSlider = false;
         isBuffer = true;
@@ -664,17 +676,17 @@ public class ReplayManager : MonoBehaviour
             $"{category}/Sec (Right)",
             ChartSeries.ChartType.Line, Color.red);
 
-        if (chartVisibilityMap.TryGetValue(chartLeft.name, out var isLVisible))
-            chartLeft.isVisible = isLVisible;
+        if (chartVisibilityMap.TryGetValue(chartLeft.Name, out var isLVisible))
+            chartLeft.IsVisible = isLVisible;
         else
-            chartVisibilityMap.Add(chartLeft.name, chartLeft.isVisible);
+            chartVisibilityMap.Add(chartLeft.Name, chartLeft.IsVisible);
 
-        if (chartVisibilityMap.TryGetValue(chartRight.name, out var isRVisible))
-            chartRight.isVisible = isRVisible;
+        if (chartVisibilityMap.TryGetValue(chartRight.Name, out var isRVisible))
+            chartRight.IsVisible = isRVisible;
         else
-            chartVisibilityMap.Add(chartRight.name, chartRight.isVisible);
+            chartVisibilityMap.Add(chartRight.Name, chartRight.IsVisible);
 
-        if (chartLeft.isVisible || chartRight.isVisible)
+        if (chartLeft.IsVisible || chartRight.IsVisible)
         {
             int timeFrame = 1;
 
@@ -685,7 +697,7 @@ public class ReplayManager : MonoBehaviour
                 int leftEventAmount = 0;
                 int rightEventAmount = 0;
 
-                if (chartLeft.isVisible)
+                if (chartLeft.IsVisible)
                 {
                     Dictionary<string, EventLog> leftEventsMap = new();
                     foreach (var x in leftEvents)
@@ -703,7 +715,7 @@ public class ReplayManager : MonoBehaviour
                 }
 
 
-                if (chartRight.isVisible)
+                if (chartRight.IsVisible)
                 {
                     Dictionary<string, EventLog> rightEventsMap = new();
                     foreach (var x in rightEvents)
@@ -725,25 +737,25 @@ public class ReplayManager : MonoBehaviour
                 timeFrame += 1;
             }
 
-            if (chartLeft.isVisible)
-                chartLeft.data = eventsMap.Select((x) => x.Value.Item1).ToArray();
+            if (chartLeft.IsVisible)
+                chartLeft.Data = eventsMap.Select((x) => x.Value.Item1).ToArray();
 
-            if (chartRight.isVisible)
-                chartRight.data = eventsMap.Select((x) => x.Value.Item2).ToArray();
+            if (chartRight.IsVisible)
+                chartRight.Data = eventsMap.Select((x) => x.Value.Item2).ToArray();
         }
 
-        chartLeft.onVisibilityChanged = (isOn) =>
+        chartLeft.OnVisible = (isOn) =>
         {
-            chartVisibilityMap[chartLeft.name] = isOn;
+            chartVisibilityMap[chartLeft.Name] = isOn;
             return null;
         };
-        chartRight.onVisibilityChanged = (isOn) =>
+        chartRight.OnVisible = (isOn) =>
         {
-            chartVisibilityMap[chartRight.name] = isOn;
+            chartVisibilityMap[chartRight.Name] = isOn;
             return null;
         };
 
-        chartLeft.onXLabelCreated = (index) =>
+        chartLeft.OnDrawVerticalLabel = (index) =>
                 {
                     if (EventTimeInterval > 1.0f)
                     {
@@ -753,7 +765,7 @@ public class ReplayManager : MonoBehaviour
                     return index.ToString();
                 };
 
-        chartRight.onXLabelCreated = (index) =>
+        chartRight.OnDrawVerticalLabel = (index) =>
                 {
                     if (EventTimeInterval > 1.0f)
                     {
@@ -763,9 +775,9 @@ public class ReplayManager : MonoBehaviour
                     return index.ToString();
                 };
 
-        if (chartLeft.isVisible && chartRight.isVisible)
+        if (chartLeft.IsVisible && chartRight.IsVisible)
         {
-            Chart.XGridDataSpacing = Mathf.FloorToInt(EventTimeInterval);
+            Chart.XGridSpacing = Mathf.FloorToInt(EventTimeInterval);
         }
 
         Chart.AddChartSeries(chartLeft, true);
@@ -797,12 +809,12 @@ public class ReplayManager : MonoBehaviour
             categoryColors: categoryColors.ToArray()
             );
 
-        if (chartVisibilityMap.TryGetValue(chart.name, out var isVisible))
-            chart.isVisible = isVisible;
+        if (chartVisibilityMap.TryGetValue(chart.Name, out var isVisible))
+            chart.IsVisible = isVisible;
         else
-            chartVisibilityMap.Add(chart.name, chart.isVisible);
+            chartVisibilityMap.Add(chart.Name, chart.IsVisible);
 
-        if (chart.isVisible)
+        if (chart.IsVisible)
         {
             var leftMostActs = GetChartMostAction(PlayerSide.Left, topActions);
             var rightMostActs = GetChartMostAction(PlayerSide.Right, topActions);
@@ -821,13 +833,13 @@ public class ReplayManager : MonoBehaviour
                 categories.Add(rightMostActs[i].Key);
             }
 
-            chart.data = data.ToArray();
-            chart.categoryNames = categories.ToArray();
+            chart.Data = data.ToArray();
+            chart.CategoryNames = categories.ToArray();
         }
 
-        chart.onVisibilityChanged = (isOn) =>
+        chart.OnVisible = (isOn) =>
         {
-            chartVisibilityMap[chart.name] = isOn;
+            chartVisibilityMap[chart.Name] = isOn;
             return null;
         };
 

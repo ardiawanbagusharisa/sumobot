@@ -1869,7 +1869,7 @@ GameObject:
   - component: {fileID: 873451233}
   - component: {fileID: 873451232}
   m_Layer: 5
-  m_Name: Background
+  m_Name: BG
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -3768,7 +3768,7 @@ GameObject:
   - component: {fileID: 1573589488}
   - component: {fileID: 1573589487}
   m_Layer: 5
-  m_Name: GameIndexTxt (1)
+  m_Name: RoundTxt
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -3904,7 +3904,7 @@ GameObject:
   - component: {fileID: 1573997881}
   - component: {fileID: 1573997880}
   m_Layer: 5
-  m_Name: Background (1)
+  m_Name: BG_Dark
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -4522,17 +4522,45 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 0}
     - target: {fileID: 6930594686332527008, guid: 6bb05384eaab28e49b0dbe041f18a9f4, type: 3}
+      propertyPath: fontSize
+      value: 20
+      objectReference: {fileID: 0}
+    - target: {fileID: 6930594686332527008, guid: 6bb05384eaab28e49b0dbe041f18a9f4, type: 3}
+      propertyPath: rawImage
+      value: 
+      objectReference: {fileID: 1693549889}
+    - target: {fileID: 6930594686332527008, guid: 6bb05384eaab28e49b0dbe041f18a9f4, type: 3}
       propertyPath: ForceDraw
       value: 2
       objectReference: {fileID: 0}
+    - target: {fileID: 6930594686332527008, guid: 6bb05384eaab28e49b0dbe041f18a9f4, type: 3}
+      propertyPath: labelFont
+      value: 
+      objectReference: {fileID: 12800000, guid: e0e99e628350d7044928c4b687b38743, type: 3}
     - target: {fileID: 6930594686332527008, guid: 6bb05384eaab28e49b0dbe041f18a9f4, type: 3}
       propertyPath: drawShader
       value: 
       objectReference: {fileID: 7200000, guid: b7693c64b34d47349b558fab0883549a, type: 3}
     - target: {fileID: 6930594686332527008, guid: 6bb05384eaab28e49b0dbe041f18a9f4, type: 3}
+      propertyPath: labelParent
+      value: 
+      objectReference: {fileID: 1693549888}
+    - target: {fileID: 6930594686332527008, guid: 6bb05384eaab28e49b0dbe041f18a9f4, type: 3}
+      propertyPath: panelParent
+      value: 
+      objectReference: {fileID: 1693549887}
+    - target: {fileID: 6930594686332527008, guid: 6bb05384eaab28e49b0dbe041f18a9f4, type: 3}
+      propertyPath: XGridSpacing
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 6930594686332527008, guid: 6bb05384eaab28e49b0dbe041f18a9f4, type: 3}
       propertyPath: drawMaterial
       value: 
       objectReference: {fileID: 2100000, guid: 505e0ed3e7cad49e098daa8ff1196c07, type: 2}
+    - target: {fileID: 6930594686332527008, guid: 6bb05384eaab28e49b0dbe041f18a9f4, type: 3}
+      propertyPath: togglePrefab
+      value: 
+      objectReference: {fileID: 5764030369368055304, guid: 131f1cfa4c0374d25bc099f4be362444, type: 3}
     - target: {fileID: 6930594686332527008, guid: 6bb05384eaab28e49b0dbe041f18a9f4, type: 3}
       propertyPath: _togglePrefab
       value: 
@@ -4542,7 +4570,19 @@ PrefabInstance:
       value: 50
       objectReference: {fileID: 0}
     - target: {fileID: 6930594686332527008, guid: 6bb05384eaab28e49b0dbe041f18a9f4, type: 3}
+      propertyPath: enablePallete
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6930594686332527008, guid: 6bb05384eaab28e49b0dbe041f18a9f4, type: 3}
+      propertyPath: panelFontSize
+      value: 24
+      objectReference: {fileID: 0}
+    - target: {fileID: 6930594686332527008, guid: 6bb05384eaab28e49b0dbe041f18a9f4, type: 3}
       propertyPath: _enablePallete
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6930594686332527008, guid: 6bb05384eaab28e49b0dbe041f18a9f4, type: 3}
+      propertyPath: enableDebugData
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 6930594686332527008, guid: 6bb05384eaab28e49b0dbe041f18a9f4, type: 3}
@@ -4558,8 +4598,16 @@ PrefabInstance:
       value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 6930594686332527008, guid: 6bb05384eaab28e49b0dbe041f18a9f4, type: 3}
+      propertyPath: palleteSrcTexture
+      value: 
+      objectReference: {fileID: 2800000, guid: 7380a57273b890f41914b17540683323, type: 3}
+    - target: {fileID: 6930594686332527008, guid: 6bb05384eaab28e49b0dbe041f18a9f4, type: 3}
       propertyPath: _sidePanelFontSize
       value: 24
+      objectReference: {fileID: 0}
+    - target: {fileID: 6930594686332527008, guid: 6bb05384eaab28e49b0dbe041f18a9f4, type: 3}
+      propertyPath: backgroundColour.a
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 6930594686332527008, guid: 6bb05384eaab28e49b0dbe041f18a9f4, type: 3}
       propertyPath: _backgroundColour.a
@@ -4586,6 +4634,27 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 6bb05384eaab28e49b0dbe041f18a9f4, type: 3}
+--- !u!224 &1693549887 stripped
+RectTransform:
+  m_CorrespondingSourceObject: {fileID: 4783769575960624349, guid: 6bb05384eaab28e49b0dbe041f18a9f4, type: 3}
+  m_PrefabInstance: {fileID: 1693549886}
+  m_PrefabAsset: {fileID: 0}
+--- !u!224 &1693549888 stripped
+RectTransform:
+  m_CorrespondingSourceObject: {fileID: 1122596814710704312, guid: 6bb05384eaab28e49b0dbe041f18a9f4, type: 3}
+  m_PrefabInstance: {fileID: 1693549886}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1693549889 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 7546318497430834926, guid: 6bb05384eaab28e49b0dbe041f18a9f4, type: 3}
+  m_PrefabInstance: {fileID: 1693549886}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1344c3c82d62a2a41a3576d8abb8e3ea, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &1772143614
 GameObject:
   m_ObjectHideFlags: 0
@@ -5101,7 +5170,7 @@ GameObject:
   - component: {fileID: 2008787188}
   - component: {fileID: 2008787187}
   m_Layer: 5
-  m_Name: GameIndexTxt
+  m_Name: GameTxt
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -5810,13 +5879,13 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 5891423006793377266}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 0.20392157, g: 0.36862746, b: 0.7019608, a: 1}
+  m_Color: {r: 0.27058825, g: 0.46666667, b: 0.8784314, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -6435,7 +6504,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1602813354131192071}
   - component: {fileID: 4433264065820114394}
-  - component: {fileID: 4205587451081902999}
+  - component: {fileID: 4433264065820114395}
   m_Layer: 5
   m_Name: TimeSlider
   m_TagString: Untagged
@@ -8324,18 +8393,6 @@ RectTransform:
   m_AnchoredPosition: {x: -7.999878, y: -16}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
---- !u!114 &4205587451081902999
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1332842956853914864}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 8ecbaffdd4230483c9dbbe711dce944a, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!222 &4208802818748634581
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -8427,6 +8484,18 @@ MonoBehaviour:
   m_OnValueChanged:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &4433264065820114395
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1332842956853914864}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9cdce7c5286e54a36a8d965db6ff1960, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!114 &4485519434183630890
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -9621,12 +9690,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   IsEnable: 1
+  LoadFromPath: 1
   playbackSpeed: 1
   autoStart: 1
   leftPlayer: {fileID: 2277774824289782991}
   rightPlayer: {fileID: 2277774823266066402}
-  LoadFromPath: 1
   ScrollEvent: {fileID: 34595651}
+  TimerSlider: {fileID: 4433264065820114395}
   TimeSliderUI: {fileID: 4433264065820114394}
   TimeLabel: {fileID: 1789844038278628782}
   PreviousGameButton: {fileID: 8664789870355638680}

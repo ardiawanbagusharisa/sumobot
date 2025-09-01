@@ -57,8 +57,8 @@ namespace SumoInput
             TurnLeft.Events[CustomHandlerListener.OnHold].Subscribe(inputProvider.OnTurnLeftButtonPressed);
             TurnRight.Events[CustomHandlerListener.OnHold].Subscribe(inputProvider.OnTurnRightButtonPressed);
 
-            Dash.Events[CustomHandlerListener.OnPress].Subscribe(inputProvider.OnDashButtonPressed);
-            Skill.Events[CustomHandlerListener.OnPress].Subscribe(inputProvider.OnSkillButtonPressed);
+            Dash.Events[CustomHandlerListener.OnPressDown].Subscribe(inputProvider.OnDashButtonPressed);
+            Skill.Events[CustomHandlerListener.OnPressDown].Subscribe(inputProvider.OnSkillButtonPressed);
 
             BattleManager.Instance.Events[BattleManager.OnBattleChanged].Subscribe(OnBattleChanged);
         }
@@ -69,8 +69,8 @@ namespace SumoInput
             TurnLeft.Events[CustomHandlerListener.OnHold].Unsubscribe(inputProvider.OnTurnLeftButtonPressed);
             TurnRight.Events[CustomHandlerListener.OnHold].Unsubscribe(inputProvider.OnTurnRightButtonPressed);
 
-            Dash.Events[CustomHandlerListener.OnPress].Unsubscribe(inputProvider.OnDashButtonPressed);
-            Skill.Events[CustomHandlerListener.OnPress].Unsubscribe(inputProvider.OnSkillButtonPressed);
+            Dash.Events[CustomHandlerListener.OnPressDown].Unsubscribe(inputProvider.OnDashButtonPressed);
+            Skill.Events[CustomHandlerListener.OnPressDown].Unsubscribe(inputProvider.OnSkillButtonPressed);
 
             BattleManager.Instance.Events[BattleManager.OnBattleChanged].Unsubscribe(OnBattleChanged);
         }

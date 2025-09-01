@@ -4,7 +4,6 @@ using UnityEditor;
 using System;
 using System.Collections.Generic;
 using SumoBot;
-using SumoManager;
 using SumoCore;
 
 [CustomEditor(typeof(BotManager))]
