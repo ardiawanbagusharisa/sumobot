@@ -8,12 +8,15 @@ uint _CanvasWidth;
 uint _CanvasHeight;
 float4 _PreviousMousePosition;
 float4 _MousePosition;
+float4 _RectMin;
+float4 _RectMax;
 float _BrushSize;
 float _WiggleSize;
 float4 _BrushColour;
 float4 _BackgroundColour;
 bool _MouseDown;
 bool _IsEraser;
+bool _UseRect;
 
 float4 Brush(
     float2 pixelPos,
@@ -57,6 +60,33 @@ float4 Brush(
     return float4(col, a);
 }
 
+float4 DrawRect(
+    float2 pixelPos,
+    float4 currentColor,
+    float4 brushColor,
+    float2 rectMin,     // bottom-left corner
+    float2 rectMax,     // top-right corner
+    bool isEraser
+)
+{
+    // Check if pixel lies inside rectangle
+    bool inside = (pixelPos.x >= rectMin.x && pixelPos.x <= rectMax.x &&
+                   pixelPos.y >= rectMin.y && pixelPos.y <= rectMax.y);
+
+    if (!inside) return currentColor;
+
+    if (isEraser)
+    {
+        // Eraser replaces with background
+        return float4(_BackgroundColour.rgb, 0.0);
+    }
+
+    // Blend RGB and max alpha
+    float3 col = lerp(currentColor.rgb, brushColor.rgb, 1.0);
+    float a = max(currentColor.a, 1.0);
+    return float4(col, a);
+}
+
 [numthreads(8, 8, 1)]
 void InitBackground(uint3 id : SV_DispatchThreadID)
 {
@@ -73,12 +103,26 @@ void Update(uint3 id : SV_DispatchThreadID)
     if (id.x >= _CanvasWidth || id.y >= _CanvasHeight)
         return;
 
-    _Canvas[id.xy] = Brush(
-        id.xy,
-        _Canvas[id.xy],
-        _BrushColour,
-        _BrushSize,
-        _PreviousMousePosition.xy,
-        _MousePosition.xy
-    );
+    if (_UseRect)
+    {
+        _Canvas[id.xy] = DrawRect(
+            id.xy,
+            _Canvas[id.xy],
+            _BrushColour,
+            _RectMin.xy,
+            _RectMax.xy,
+            _IsEraser
+        );
+    }
+    else
+    {
+        _Canvas[id.xy] = Brush(
+            id.xy,
+            _Canvas[id.xy],
+            _BrushColour,
+            _BrushSize,
+            _PreviousMousePosition.xy,
+            _MousePosition.xy
+        );
+    }
 }

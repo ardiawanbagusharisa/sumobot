@@ -13,7 +13,10 @@ namespace SumoCore
         Left,
         Right,
     }
-
+    
+    /// <summary>
+    /// Handles robot movement, input, and collision physics
+    /// </summary>
     public class SumoController : MonoBehaviour
     {
         #region Robot Stats Properties
@@ -171,7 +174,7 @@ namespace SumoCore
         public void AssignSkill(SkillType type = SkillType.Boost)
         {
             Skill = SumoSkill.CreateSkill(this, type);
-            Events[OnSkillAssigned].Invoke(new() { SkillType = type, Side = Side });
+            Events[OnSkillAssigned].Invoke(new(skillType: type, sideParam: Side));
         }
 
         public void Reset()
@@ -463,16 +466,6 @@ namespace SumoCore
             return impact;
         }
 
-        public void FreezeMovement()
-        {
-            RigidBody.constraints = RigidbodyConstraints2D.FreezePosition;
-        }
-
-        public void ResetFreezeMovement()
-        {
-            RigidBody.constraints = RigidbodyConstraints2D.None;
-        }
-
         public void ResetBounceResistance()
         {
             BounceResistance = reserverdBounceResistance;
@@ -541,11 +534,8 @@ namespace SumoCore
             {
                 ISumoAction action = Actions.Dequeue();
 
-                EventParameter actionParam = new(sideParam: Side, actionParam: action, boolParam: true);
-                Events[OnAction]?.Invoke(actionParam);
                 action.Execute(this);
-                actionParam.Bool = false;
-                Events[OnAction]?.Invoke(actionParam);
+                Events[OnAction]?.Invoke(new(sideParam: Side, actionParam: action));
             }
         }
         #endregion
