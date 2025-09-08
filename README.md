@@ -7,7 +7,7 @@ Sumobot is a 2D, top-down sumo robot battle game intended to encourage player to
 3. Players may use the AI scripts they have created as portfolio. Imagine, you are a top player in one of the leaderboards, it proves that you have technical skill. Therefore, it increase your chance to find a software or AI engineering job, hopefully. 
 
 ### For Players
-If you are the players of Sumobot and want to join for the AI competition, please go here: link.  
+If you are the players of Sumobot and want to learn how to create your own AI script or want join for the AI competition, please go here: link.  
 
 ### For Developers
 If you are a developer who want to contribute in building the platform, please go here: link. 
