@@ -113,13 +113,11 @@ namespace SumoCore
             if (UI)
                 return;
 
-            Debug.Log($"SpriteRenderers {SpriteRenderers.Count}");
             SpriteRenderers.ToList().ForEach((part) =>
             {
                 sprites.TryGetValue(part.Key, out var sprite);
                 if (sprite != null)
                 {
-                    Debug.Log($"Replacing sprite {part.Key}");
                     SpriteRenderers[part.Key].sprite = sprite;
                 }
             });

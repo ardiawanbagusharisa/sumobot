@@ -47,7 +47,6 @@ namespace SumoManager
         public CooldownUIGroupSet LeftSkillUI;
         public CooldownUIGroupSet LeftDashUI;
 
-        // [Todo] Temporary
         public GameObject LeftDashBuff;
         public GameObject LeftSkillBuff;
 
@@ -229,7 +228,7 @@ Left Shift / Right Shift - Dash
                     Timer.SetText(battle.BattleTime.ToString());
             }
 
-            if (battle.CurrentState == BattleState.Battle_Reset || battle.CurrentState == BattleState.PostBattle_ShowResult)
+            if (battle.CurrentState == BattleState.Battle_Countdown || battle.CurrentState == BattleState.Battle_Reset || battle.CurrentState == BattleState.PostBattle_ShowResult)
             {
                 LeftDashBuff.SetActive(false);
                 LeftSkillBuff.SetActive(false);
@@ -315,7 +314,7 @@ Left Shift / Right Shift - Dash
                     rightPlayer.Events[SumoController.OnSkillAssigned].Unsubscribe(OnSkillAssigned);
                     break;
                 case BattleState.PostBattle_ShowResult:
-                    SumoController winner = battle.GetBattleWinner().GetRobotWinner(battle);
+                    SumoController winner = battle.GetBattleWinner().ToController(battle);
                     if (winner != null)
                     {
                         if (winner.Side == PlayerSide.Left)

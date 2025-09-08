@@ -1,11 +1,10 @@
+#if UNITY_EDITOR
 namespace SumoEditor
 {
     using System.IO;
 
-#if UNITY_EDITOR
     using UnityEditor;
     using UnityEngine;
-#endif
 
     public static class Utility
     {
@@ -17,11 +16,9 @@ namespace SumoEditor
             if (!Directory.Exists(logFolder))
                 Directory.CreateDirectory(logFolder);
 
-#if UNITY_EDITOR
         EditorUtility.RevealInFinder(logFolder);
-#else
             Debug.Log("Logs folder: " + logFolder);
-#endif
         }
     }
 }
+#endif

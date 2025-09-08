@@ -1,7 +1,7 @@
+#if UNITY_EDITOR
 namespace SumoEditor
 {
     using SumoHelper;
-#if UNITY_EDITOR
     using UnityEditor;
     using UnityEngine;
 
@@ -79,5 +79,5 @@ namespace SumoEditor
             return lines * (EditorGUIUtility.singleLineHeight + 2);
         }
     }
-#endif
 }
+#endif

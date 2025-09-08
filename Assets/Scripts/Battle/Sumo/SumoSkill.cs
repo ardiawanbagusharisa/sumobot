@@ -94,7 +94,7 @@ namespace SumoCore
                 CooldownRoutine = null;
             }
 
-            controller.ResetFreezeMovement();
+            controller.RigidBody.constraints = RigidbodyConstraints2D.None;
             controller.ResetBounceResistance();
             controller.ResetMoveSpeed();
             controller.ResetDashSpeed();
@@ -139,7 +139,7 @@ namespace SumoCore
         public void ActivateStone()
         {
             usedAt = BattleManager.Instance.ElapsedTime;
-            controller.FreezeMovement();
+            controller.RigidBody.constraints = RigidbodyConstraints2D.FreezePosition;
             controller.BounceResistance *= StoneMultiplier;
         }
 
@@ -154,7 +154,7 @@ namespace SumoCore
                     controller.ResetDashSpeed();
                     break;
                 case SkillType.Stone:
-                    controller.ResetFreezeMovement();
+                    controller.RigidBody.constraints = RigidbodyConstraints2D.None;
                     controller.ResetBounceResistance();
                     break;
             }
