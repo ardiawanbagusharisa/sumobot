@@ -68,6 +68,8 @@ namespace SumoManager
 
         [Header("Battle UI - Guide Menu")]
         public GameObject GuidePanel;
+        public GameObject ButtonGuide;
+        public GameObject ButtonMainMenu;
         public TMP_Text GuideContent;
         public Button GuideGameplayTab;
         public Button GuideRulesTab;
@@ -538,13 +540,19 @@ Left Shift / Right Shift - Dash
             {
                 GuidePanel.SetActive(true);
                 ShowGameplayGuide();
+                ButtonGuide.SetActive(false);
+                ButtonMainMenu.SetActive(false);
             }
         }
 
         public void HideGuide()
         {
-            if (GuidePanel != null)
+            if (GuidePanel != null) 
+            {
+                ButtonGuide.SetActive(true);
+                ButtonMainMenu.SetActive(true);
                 GuidePanel.SetActive(false);
+            }
         }
 
         public void ShowGameplayGuide() => ShowGuide(GuideTab.Gameplay);
