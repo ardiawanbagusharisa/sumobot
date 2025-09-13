@@ -27940,15 +27940,30 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2130233538}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: b33ce51748b63457ebe9b59f80ac599c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  TotalSimulations: 1
-  TimeScale: 10
+  DefaultTimeScale: 15
   SimulationOnStart: 1
-  SwapAIInterval: 5
+  UseCheckpoint: 1
+  RoundCountdown: 1
+  Setting:
+    Timers: 0f0000001e0000003c00000078000000
+    ActionIntervals:
+    - 0.1
+    - 0.5
+    - 1
+    Iteration: 100
+    RoundSystem: 010000000300000005000000
+    Skills: 0000000001000000
+    SelectedAgents: []
+    ExcludedAgents:
+    - Bot_Template
+    - Bot_LLM_ActionGPT
+    - Bot_SLM_ActionGPT
+    - Bot_ML_Classification
 --- !u!114 &2130233545
 MonoBehaviour:
   m_ObjectHideFlags: 0

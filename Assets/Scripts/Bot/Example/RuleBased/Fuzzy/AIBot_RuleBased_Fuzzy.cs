@@ -12,10 +12,10 @@ namespace SumoBot.RuleBased.Fuzzy
     class AIBot_RuleBased_Fuzzy : Bot
     {
         public override string ID => Name;
-        public override SkillType SkillType => DefaultSkillType;
+        public override SkillType DefaultSkillType => SkillType;
 
-        public string Name = "Fuzzy";
-        public SkillType DefaultSkillType = SkillType.Boost;
+        public string Name = "Bot_FuzzyLogic";
+        public SkillType SkillType = SkillType.Boost;
 
         public FuzzySugeno Fuzzy = new();
         public int topActions = 2;
