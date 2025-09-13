@@ -18,8 +18,8 @@ namespace SumoBot
     public class AlBot_FSM : Bot
     {
         #region Runtime Properties
-        public override string ID => "FSM_Bot";
-        public override SkillType SkillType => SkillType.Boost;
+        public override string ID => "Bot_FSM";
+        public override SkillType DefaultSkillType => SkillType.Boost;
         #endregion
 
         #region State Threshold Properties

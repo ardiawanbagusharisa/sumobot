@@ -10,8 +10,8 @@ using System.IO;
 public class AIBot_PPO : Bot
 {
     #region Bot Template Properties
-    public override string ID => "AIBot_PPO";
-    public override SkillType SkillType => SkillType.Boost;
+    public override string ID => "Bot_PPO";
+    public override SkillType DefaultSkillType => SkillType.Boost;
     private SumoAPI api;
     #endregion
 
@@ -24,7 +24,7 @@ public class AIBot_PPO : Bot
 
     #region NN & PPO Properties
     public float clipEpsilon = 0.2f;
-    public float learningRate = 0.0003f;
+    public float learningRate = 0.01f;
     public float valueLossCoefficient = 0.3f;
     public float entropyCoefficient = 0.02f;
     public int ppoEpochs = 15;
@@ -90,12 +90,14 @@ public class AIBot_PPO : Bot
         if (state == BattleState.Battle_End)
         {
             ClearCommands();
+#if UNITY_EDITOR
             if (saveModel)
             {
-                string path = Path.Combine("Assets/Resources/ML/Models/RL/", modelFileName, ".json");
+                string path = "Assets/Resources/ML/Models/RL/" + modelFileName + ".json";
                 PPO.Save(path);
                 Debug.Log($"Saved PPO to {path}");
             }
+#endif
         }
     }
 
@@ -154,8 +156,10 @@ public class AIBot_PPO : Bot
             (policyLoss, valueLoss, totalLoss) = PPO.CalculateLoss(lastExp, probs, value, returnVal, clipEpsilon, valueLossCoefficient, entropyCoefficient);
         }
 
+#if UNITY_EDITOR
         if (saveModel)
             LogPPOLearning(totalEpisodes, stepInEpisode, posX, posY, angle, distanceNormalized, probs, action, reward, entropy, policyLoss, valueLoss, totalLoss, advantage, clippedRatio, returnVal);
+#endif
 
         lastState = state;
         lastAction = action;
@@ -251,7 +255,7 @@ public class AIBot_PPO : Bot
 
     private void LogPPOLearning(int episode, int step, float posX, float posY, float angle, float distN, float[] actionProbs, int action, float reward, float entropy, float policyLoss, float valueLoss, float totalLoss, float advantage, float clippedRatio, float returnVal)
     {
-        string path = Path.Combine("Assets/Resources/ML/Models/RL/", csvLogFileName);
+        string path = "Assets/Resources/ML/Models/RL/" + csvLogFileName;
         bool writeHeader = !File.Exists(path);
         using (StreamWriter sw = new StreamWriter(path, true))
         {
@@ -276,12 +280,14 @@ public class AIBot_PPO : Bot
 
     private void OnApplicationQuit()
     {
+#if UNITY_EDITOR
         if (saveModel)
         {
-            string path = Path.Combine("Assets/Resources/ML/Models/RL/", modelFileName, ".json");
+            string path = "Assets/Resources/ML/Models/RL/" + modelFileName + ".json";
             PPO.Save(path);
             Debug.Log($"Saved PPO to {path}");
         }
+#endif
     }
     #endregion
 }

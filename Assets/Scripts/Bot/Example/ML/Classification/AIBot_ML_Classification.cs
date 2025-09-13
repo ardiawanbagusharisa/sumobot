@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using SumoBot;
 using SumoCore;
 using SumoInput;
@@ -10,14 +11,15 @@ using UnityEngine;
 
 class AIBot_ML_Classification : Bot
 {
-    public override string ID => "ML_Classification";
-
-    public override SkillType SkillType => SkillType.Boost;
+    public override string ID => "Bot_ML_Classification";
+    public override SkillType DefaultSkillType => SkillType.Boost;
+    public override bool UseAsync => true;
 
     public Model runtimeModel;
     public Worker engine;
     private SumoAPI api;
     private bool isInitializing = false;
+    private bool isGenerating = false;
     private readonly List<string> labels = new()
     {
         "Accelerate", "Dash", "SkillBoost", "TurnLeft", "TurnRight"
@@ -51,30 +53,28 @@ class AIBot_ML_Classification : Bot
                 api.MyRobot.Position.x,
                 api.MyRobot.Position.y,
                 Normalize360(api.MyRobot.Rotation),
-                // api.MyRobot.LinearVelocity.magnitude,
-                // api.MyRobot.AngularVelocity,
-                // api.MyRobot.IsDashActive ? 1 : 0,
-                // api.MyRobot.Skill.IsActive ? 1 : 0,
-                // api.MyRobot.IsOutFromArena ? 1 : 0,
-                // Enemy
                 api.EnemyRobot.Position.x,
                 api.EnemyRobot.Position.y,
                 Normalize360(api.EnemyRobot.Rotation),
-                // api.EnemyRobot.LinearVelocity.magnitude,
-                // api.EnemyRobot.AngularVelocity,
-                // api.EnemyRobot.IsDashActive ? 1 : 0,
-                // api.EnemyRobot.Skill.IsActive ? 1 : 0,
-                // api.EnemyRobot.IsOutFromArena ? 1 : 0,
              };
+        _ = Run(inputs);
+        Submit();
+    }
+
+    async Task Run(float[] inputs)
+    {
+        if (isGenerating) return;
+        isGenerating = true;
+
         Tensor<float> inputTensor = new(new TensorShape(1, 6), inputs);
 
         engine.Schedule(inputTensor);
 
         // output actions at 0
-        Tensor<float> outputTensorAct = (engine.PeekOutput(0) as Tensor<float>).ReadbackAndClone();
+        Tensor<float> outputTensorAct = await (engine.PeekOutput(0) as Tensor<float>).ReadbackAndCloneAsync();
 
         // output actions at 1
-        Tensor<float> outputTensorDur = (engine.PeekOutput(1) as Tensor<float>).ReadbackAndClone();
+        Tensor<float> outputTensorDur = await (engine.PeekOutput(1) as Tensor<float>).ReadbackAndCloneAsync();
 
         var outputTensorActRes = outputTensorAct.DownloadToArray();
         var outputTensorDurRes = outputTensorDur.DownloadToArray()[0];
@@ -92,7 +92,8 @@ class AIBot_ML_Classification : Bot
         var action = GetAction(predictedLabel, outputTensorDurRes);
 
         Enqueue(action);
-        Submit();
+
+        isGenerating = false;
     }
 
     float Normalize360(float angle)

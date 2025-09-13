@@ -98,7 +98,7 @@ namespace SumoBot
             }
         }
 
-        public void Assign(Bot param, PlayerSide side)
+        public void Assign(Bot param, PlayerSide side, SkillType? skillType = null, bool destroyScriptInstance = true)
         {
             BattleManager instance = BattleManager.Instance;
             SumoController leftPlayer = instance.Battle.LeftPlayer;
@@ -106,12 +106,12 @@ namespace SumoBot
 
             if (side == PlayerSide.Left)
             {
-                UnInit(leftPlayer);
+                UnInit(leftPlayer, destroyScriptInstance);
                 Left = param;
             }
             else
             {
-                UnInit(rightPlayer);
+                UnInit(rightPlayer, destroyScriptInstance);
                 Right = param;
             }
 
@@ -119,13 +119,13 @@ namespace SumoBot
             if (instance.CurrentState >= BattleState.Battle_Preparing)
             {
                 if (side == PlayerSide.Left)
-                    Init(leftPlayer);
+                    Init(leftPlayer, skillType);
                 else
-                    Init(rightPlayer);
+                    Init(rightPlayer, skillType);
             }
         }
 
-        public void Init(SumoController controller)
+        public void Init(SumoController controller, SkillType? skillType = null)
         {
             if (!BotEnabled || !enabled)
                 return;
@@ -136,8 +136,9 @@ namespace SumoBot
                 {
                     InputProvider = controller.InputProvider,
                     Actions = new(),
+                    SkillType = skillType ?? Left.DefaultSkillType
                 };
-                controller.AssignSkill(Left.SkillType);
+                controller.AssignSkill(leftConfig.SkillType);
                 controller.Events[SumoController.OnBounce].Subscribe(OnLeftBounce);
                 Left.Init(leftConfig);
                 Left.OnBotInit(leftConfig.InputProvider.API);
@@ -149,15 +150,16 @@ namespace SumoBot
                 {
                     InputProvider = controller.InputProvider,
                     Actions = new(),
+                    SkillType = skillType ?? Left.DefaultSkillType
                 };
-                controller.AssignSkill(Right.SkillType);
+                controller.AssignSkill(rightConfig.SkillType);
                 controller.Events[SumoController.OnBounce].Subscribe(OnRightBounce);
                 Right.Init(rightConfig);
                 Right.OnBotInit(rightConfig.InputProvider.API);
             }
         }
 
-        public void UnInit(SumoController controller)
+        public void UnInit(SumoController controller, bool destroyScriptInstance = true)
         {
             if (!BotEnabled || !enabled)
                 return;
@@ -166,14 +168,16 @@ namespace SumoBot
             {
                 controller.Events[SumoController.OnBounce].Unsubscribe(OnLeftBounce);
                 Left.OnBotDestroy();
-                Destroy(Left);
+                if (destroyScriptInstance)
+                    Destroy(Left);
             }
 
             if (RightEnabled && Right != null && controller.Side == PlayerSide.Right)
             {
                 controller.Events[SumoController.OnBounce].Unsubscribe(OnRightBounce);
                 Right.OnBotDestroy();
-                Destroy(Right);
+                if (destroyScriptInstance)
+                    Destroy(Right);
             }
 
         }
@@ -221,6 +225,7 @@ namespace SumoBot
         public InputProvider InputProvider;
         public Queue<ISumoAction> Actions;
         public bool IsOnUpdate = false;
+        public SkillType SkillType;
 
         public void Submit()
         {

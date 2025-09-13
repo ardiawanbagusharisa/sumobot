@@ -10,8 +10,8 @@ namespace SumoBot
     public class AIBot_BT : Bot
     {
         #region Runtime Properties
-        public override string ID => "BT_Bot";
-        public override SkillType SkillType => SkillType.Boost;
+        public override string ID => "Bot_BT";
+        public override SkillType DefaultSkillType => SkillType.Boost;
         #endregion
 
         #region Behavior Tree Parameters

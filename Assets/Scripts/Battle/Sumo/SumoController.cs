@@ -13,7 +13,7 @@ namespace SumoCore
         Left,
         Right,
     }
-    
+
     /// <summary>
     /// Handles robot movement, input, and collision physics
     /// </summary>

@@ -10,7 +10,7 @@ public class AIBot_NN : Bot
 {
     #region Bot Template Properties
     public override string ID => "Bot_NN";
-    public override SkillType SkillType => SkillType.Boost;
+    public override SkillType DefaultSkillType => SkillType.Boost;
     private SumoAPI api;
     #endregion
 
@@ -80,13 +80,14 @@ public class AIBot_NN : Bot
         if (state == BattleState.Battle_End)
         {
             ClearCommands();
+#if UNITY_EDITOR
             if (saveModel)
             {
-                //string path = Path.Combine(Application.persistentDataPath, modelFileName);
                 string path = "Assets/Resources/ML/Models/NN/" + modelFileName + ".json";
                 NN.Save(path);
                 Debug.Log($"Saved NN to {path}");
             }
+#endif
         }
     }
 
@@ -140,7 +141,7 @@ public class AIBot_NN : Bot
         }
         if (!api.MyRobot.Skill.IsSkillOnCooldown && skill > 0.05f) // && angle < dashSkillAngle
         {
-            if (SkillType == SkillType.Boost || (SkillType == SkillType.Stone && api.DistanceNormalized(api.MyRobot.Position, api.BattleInfo.ArenaPosition) > 0.8f))
+            if (DefaultSkillType == SkillType.Boost || (DefaultSkillType == SkillType.Stone && api.DistanceNormalized(api.MyRobot.Position, api.BattleInfo.ArenaPosition) > 0.8f))
             {
                 Enqueue(new SkillAction(InputType.Script));
             }
@@ -156,8 +157,10 @@ public class AIBot_NN : Bot
 
         NN.Train(inputs, targetOutputs, learningRate);
 
+#if UNITY_EDITOR
         if (saveModel)
             LogNNLearning(inputs, outputs, targetOutputs, CalculateLoss(outputs, targetOutputs));
+#endif
     }
 
     void ResetEpisode()
@@ -168,13 +171,14 @@ public class AIBot_NN : Bot
 
     void OnApplicationQuit()
     {
+#if UNITY_EDITOR
         if (saveModel)
         {
-            string modelPath = "ML/Models/NN/" + modelFileName + ".json";
-            string path = Path.Combine(Application.streamingAssetsPath, modelPath);
+            string path = "Assets/Resources/ML/Models/NN/" + modelFileName + ".json";
             NN.Save(path);
             Debug.Log($"Saved NN to {path}");
         }
+#endif
     }
 
     private void LogNNLearning(float[] inputs, float[] outputs, float[] targets, float loss)

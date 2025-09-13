@@ -212,16 +212,24 @@ namespace SumoManager
 
         #region Core Battle Log methods
 
-        public static void InitLog()
+        public static void InitLog(params string[] folderPaths)
         {
             string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-            string folderName = $"battle_{timestamp}";
 
-            logFolderPath = Path.Combine(Application.persistentDataPath, "Logs", folderName);
+            if (folderPaths.Length > 0)
+            {
+                var combinedPaths = folderPaths.ToList();
+                combinedPaths.Insert(0, "Simulation");
+                combinedPaths.Insert(0, Application.persistentDataPath);
+                logFolderPath = Path.Combine(combinedPaths.ToArray());
+            }
+            else
+                logFolderPath = Path.Combine(Application.persistentDataPath, "Logs", $"battle_{timestamp}");
+
             Directory.CreateDirectory(logFolderPath);
         }
 
-        public static void InitBattle(BattleSimulator simulator = null)
+        public static void InitBattle(BattleConfig simConfig = null)
         {
             BattleManager battleManager = BattleManager.Instance;
 
@@ -231,9 +239,9 @@ namespace SumoManager
                 CountdownTime = battleManager.CountdownTime,
                 BattleTime = battleManager.BattleTime,
                 RoundType = (int)battleManager.RoundSystem,
-                SimulationAmount = simulator?.TotalSimulations ?? 0,
-                SimulationTimeScale = simulator?.TimeScale ?? 0,
-                SimulationAISwapInterval = simulator?.SwapAIInterval ?? 0,
+                SimulationAmount = simConfig?.Iteration ?? 0,
+                SimulationTimeScale = simConfig?.TimeScale ?? 0,
+                // SimulationAISwapInterval = simConfig?.SwapAIInterval ?? 0,
                 CreatedAt = (int)DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
             };
 

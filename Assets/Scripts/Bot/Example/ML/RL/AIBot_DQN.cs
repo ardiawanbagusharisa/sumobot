@@ -12,7 +12,7 @@ public class AIBot_DQN : Bot
 {
     #region Bot Template Properties
     public override string ID => "Bot_DQN";
-    public override SkillType SkillType => SkillType.Boost;
+    public override SkillType DefaultSkillType => SkillType.Boost;
     private SumoAPI api;
     #endregion
 
@@ -26,7 +26,7 @@ public class AIBot_DQN : Bot
     #region NN Properties 
     public float epsilon = 0.1f;
     public float discountFactor = 0.99f;
-    public float learningRate = 0.001f;
+    public float learningRate = 0.01f;
     public int replayBufferSize = 10000;
     public int batchSize = 64;
     public float maxEpisodeTime = 10f;
@@ -94,13 +94,14 @@ public class AIBot_DQN : Bot
         if (state == BattleState.Battle_End)
         {
             ClearCommands();
+#if UNITY_EDITOR
             if (saveModel)
             {
-                //string path = Path.Combine(Application.persistentDataPath, modelFileName);
                 string path = "Assets/Resources/ML/Models/RL/" + modelFileName + ".json";
                 DQN.Save(path);
                 Debug.Log($"Saved RL to {path}");
             }
+#endif
         }
     }
 
@@ -171,8 +172,10 @@ public class AIBot_DQN : Bot
 
             float loss = CalculateLoss(outputs, targets);
 
+#if UNITY_EDITOR
             if (saveModel)
                 LogDQNLearning(exp.state, outputs, targets, exp.reward, loss, totalEpisodes + 1);
+#endif
 
             DQN.Train(replayBuffer, batchSize, learningRate, discountFactor);
         }
@@ -183,7 +186,6 @@ public class AIBot_DQN : Bot
 
     private void LogDQNLearning(float[] inputs, float[] outputs, float[] targets, float reward, float loss, int episode)
     {
-        //string path = Path.Combine(Application.persistentDataPath, csvLogFileName);
         string path = "Assets/Resources/ML/Models/RL/" + csvLogFileName;
         bool writeHeader = !File.Exists(path);
         using (StreamWriter sw = new StreamWriter(path, true))
@@ -256,13 +258,14 @@ public class AIBot_DQN : Bot
 
     void OnApplicationQuit()
     {
+#if UNITY_EDITOR
         if (saveModel)
         {
-            //string path = Path.Combine(Application.persistentDataPath, modelFileName);
             string path = "Assets/Resources/ML/Models/RL/" + modelFileName + ".json";
             DQN.Save(path);
             Debug.Log($"Saved DQN to {path}");
         }
+#endif
     }
 
 }

@@ -16,7 +16,7 @@ namespace SumoBot.EA.MCTS
         public float Iterations = 100;
         public float UCBConstant = 1.41f;
         public float ScoreLimit = -300;
-        public string Name = "MCTS Example";
+        public string Name = "Bot_MCTS";
         public SkillType DefaultSkillType = SkillType.Boost;
     }
 
@@ -24,7 +24,7 @@ namespace SumoBot.EA.MCTS
     {
         public AI_MCTS_Config config = new();
         public override string ID => config.Name;
-        public override SkillType SkillType => config.DefaultSkillType;
+        public override SkillType DefaultSkillType => config.DefaultSkillType;
 
 
         #region Runtime properties
