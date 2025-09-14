@@ -13,6 +13,7 @@ public class CostumeManager : MonoBehaviour
 
     public void SaveAndBack()
     {
+        SFXManager.Instance.Play2D("ui_accept");
         GameManager.Instance.BotCreator_SaveAndBack();
     }
 }
