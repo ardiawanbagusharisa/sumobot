@@ -27945,7 +27945,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b33ce51748b63457ebe9b59f80ac599c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  DefaultTimeScale: 15
+  DefaultTimeScale: 20
   SimulationOnStart: 1
   UseCheckpoint: 1
   RoundCountdown: 1
