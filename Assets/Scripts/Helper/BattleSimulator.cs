@@ -65,6 +65,8 @@ namespace SumoHelper
 
             _configs = GenerateConfigs(Agents);
 
+            checkpoint.TotalConfigs = _configs.Count();
+
             ApplyConfig(_configs[currentConfigIndex]);
 
             BattleManager.Instance.Events[BattleManager.OnBattleChanged].Subscribe(OnBattleStateChanged);
@@ -138,7 +140,7 @@ namespace SumoHelper
 
                     while (BattleManager.Instance.CurrentState != BattleState.PostBattle_ShowResult)
                     {
-                        yield return null;
+                        yield return new WaitForEndOfFrame();
                     }
 
                     yield return new WaitForSecondsRealtime(1);
@@ -146,7 +148,6 @@ namespace SumoHelper
                     checkpoint.ConfigIndex = currentConfigIndex;
                     if (UseCheckpoint)
                         SaveCheckpoint(checkpoint);
-                    yield return new WaitForSecondsRealtime(1);
                     yield return new WaitForEndOfFrame();
                 }
 
@@ -338,6 +339,7 @@ namespace SumoHelper
     public class SimulationCheckpoint
     {
         public SimulationSetting Setting;
+        public int TotalConfigs;
         public int ConfigIndex;
         public int Iteration;
     }
