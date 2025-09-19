@@ -40,7 +40,7 @@ namespace SumoManager
         public TMP_Dropdown LeftInputType;
         public TMP_Dropdown LeftSkill;
         public TMP_Dropdown LeftScript;
-        public Button LeftCostumeBtn;
+        public Button LeftCustomBtn;
         public GameObject LeftCrown;
         public TMP_Text LeftScore;
         public TMP_Text LeftFinalScore;
@@ -55,7 +55,7 @@ namespace SumoManager
         public TMP_Dropdown RightInputType;
         public TMP_Dropdown RightSkill;
         public TMP_Dropdown RightScript;
-        public Button RightCostumeBtn;
+        public Button RightCustomBtn;
         public GameObject RightCrown;
         public TMP_Text RightScore;
         public TMP_Text RightFinalScore;
@@ -68,6 +68,9 @@ namespace SumoManager
 
         [Header("Battle UI - Guide Menu")]
         public GameObject GuidePanel;
+        public GameObject ButtonGuide;
+        public GameObject ButtonMainMenu;
+        public GameObject ButtonResume;
         public TMP_Text GuideContent;
         public Button GuideGameplayTab;
         public Button GuideRulesTab;
@@ -267,8 +270,8 @@ Left Shift / Right Shift - Dash
                     LeftFinalScore.SetText("");
                     RightFinalScore.SetText("");
 
-                    LeftCostumeBtn.onClick.AddListener(() => CreateCostume(leftPlayer.Profile.ID));
-                    RightCostumeBtn.onClick.AddListener(() => CreateCostume(rightPlayer.Profile.ID));
+                    LeftCustomBtn.onClick.AddListener(() => CreateCostume(leftPlayer.Profile.ID));
+                    RightCustomBtn.onClick.AddListener(() => CreateCostume(rightPlayer.Profile.ID));
                     break;
                 case BattleState.Battle_Preparing:
                     battle.LeftPlayer.Events[SumoController.OnSkillAssigned].Subscribe(OnSkillAssigned);
@@ -414,11 +417,13 @@ Left Shift / Right Shift - Dash
         #region Battle player config
         public void CreateCostume(string id)
         {
+            SFXManager.Instance.Play2D("ui_accept");
             GameManager.Instance.Battle_LoadCostumeScene(id);
         }
 
         public void SetDefaultSkill(PlayerSide side, int type)
         {
+            SFXManager.Instance.Play2D("ui_accept");
             if (side == PlayerSide.Left)
                 BattleManager.Instance.Battle.LeftPlayer.AssignSkill(type == 0 ? SkillType.Boost : SkillType.Stone);
             else
@@ -427,6 +432,7 @@ Left Shift / Right Shift - Dash
 
         public void SetInputMode(PlayerSide side, int type)
         {
+            SFXManager.Instance.Play2D("ui_accept");
             InputType changedType;
             switch (type)
             {
@@ -491,6 +497,7 @@ Left Shift / Right Shift - Dash
 
         private void OnBotSelect(PlayerSide side, int index)
         {
+            SFXManager.Instance.Play2D("ui_accept");
             var botManager = BattleManager.Instance.BotManager;
             var botTypes = BotUtility.GetAllBotTypes();
             var bot = ScriptableObject.CreateInstance(botTypes[index]) as Bot;
@@ -511,40 +518,54 @@ Left Shift / Right Shift - Dash
         #region Battle menu
         public void Pause()
         {
+            SFXManager.Instance.Play2D("ui_accept");
             PausePanel.SetActive(true);
             Time.timeScale = 0;
         }
 
         public void Resume()
         {
+            SFXManager.Instance.Play2D("ui_accept");
             PausePanel.SetActive(false);
             Time.timeScale = 1;
         }
 
         public void Restart()
         {
+            SFXManager.Instance.Play2D("ui_accept");
             Time.timeScale = 1;
             SceneManager.LoadScene(SceneManager.GetActiveScene().name);
         }
 
         public void ShowReplay()
         {
+            SFXManager.Instance.Play2D("ui_accept");
             GameManager.Instance.Battle_ShowReplay();
         }
 
         public void ShowGuide()
         {
+            SFXManager.Instance.Play2D("ui_accept");
             if (GuidePanel != null)
             {
                 GuidePanel.SetActive(true);
                 ShowGameplayGuide();
+                ButtonGuide.SetActive(false);
+                ButtonMainMenu.SetActive(false);
+                ButtonResume.SetActive(false);
             }
         }
 
         public void HideGuide()
         {
-            if (GuidePanel != null)
+            SFXManager.Instance.Play2D("ui_accept");
+            if (GuidePanel != null) 
+            {
+                ButtonGuide.SetActive(true);
+                ButtonMainMenu.SetActive(true);
                 GuidePanel.SetActive(false);
+                ButtonResume.SetActive(true);
+            }
         }
 
         public void ShowGameplayGuide() => ShowGuide(GuideTab.Gameplay);
@@ -553,6 +574,7 @@ Left Shift / Right Shift - Dash
 
         private void ShowGuide(GuideTab tab)
         {
+            SFXManager.Instance.Play2D("ui_accept");
             GuideContent.text = guideContentsMap[tab].Trim();
 
             foreach (var button in guideButtonsMap)

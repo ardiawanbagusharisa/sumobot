@@ -150,6 +150,7 @@ namespace SumoManager
         #region API methods
         public void Battle_Start()
         {
+            SFXManager.Instance.Play2D("ui_accept");
             if (CurrentState == BattleState.Battle_Preparing ||
                 CurrentState == BattleState.Battle_Countdown ||
                 CurrentState == BattleState.Battle_Ongoing)

@@ -22,6 +22,7 @@ public class PartSwitcher : MonoBehaviour
 
     public void UpdateSprite(int direction)
     {
+        SFXManager.Instance.Play2D("ui_accept_small");
         if (GameManager.Instance.GetProfileById() == null)
             return;
 
