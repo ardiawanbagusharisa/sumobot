@@ -148,6 +148,7 @@ namespace SumoCore
         {
             if (collision.CompareTag("Arena/Floor") && !IsOutOfArena)
             {
+                SFXManager.Instance.Play2D("collision_big");
                 IsOutOfArena = true;
                 Events[OnOutOfArena]?.Invoke(new EventParameter(sideParam: Side));
             }
@@ -378,6 +379,11 @@ namespace SumoCore
 
             StopOngoingAction();
             LogManager.FlushActionLog(Side);
+
+            if (isActor) 
+                SFXManager.Instance.Play2D("collision_small");
+            else
+                SFXManager.Instance.Play2D("collision_big");
 
             if (!isActor) return;
 

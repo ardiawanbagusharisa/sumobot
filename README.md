@@ -1,19 +1,17 @@
-# sumobot
-A repo for sumobot: AI Competition Game with the goal is to encourage player to learn basic programming and also AI. 
+# Sumobot
+Sumobot is a 2D, top-down sumo robot battle game intended to encourage player to learn the very basic of programming and artificial intelligence (AI). Inspired by real [Sumobot competition](https://www.sumobot.ca/competition) and [Battlesnake](https://play.battlesnake.com/leaderboards), we want to make this game (also AI competition platform) to be as simple and as open as possible. 
 
-Sumobot is a 2D, top-down sumo robot battle intended to encourage player to learn the very basic of programming and artificial intelligence (AI). Inspired by real Sumobot competition and Battlesnake, we want to make this game as simple and as open as possible. 
+[Header image]
 
-#### Our noble purposes are: 
-1. Encourage players to learn basic programming, or at least the concept of computational and logical thinking. 
-2. Enhance the players' motivation to learn about artificial intelligence (AI), because in the future there would be more jobs related to STEM. 
-3. Create a sense of experimentation for the players to develop their logical thinking by creating interesting feature such as evolving in-game objects, level editor, live coding, and AI submission. 
-4. Players may use the AI scripts they have created as portfolio. Imagine, you are a top player in one of the leaderboards, it proves that you have technical skill. Therefore, it increase your chance to find a software or AI engineering job, hopefully. 
+# Our purposes 
+1. Enhance the players' motivation and encourage players to learn at least the concept of computational thinking, and eventually programming basics and AI. It is predicted that in the future there would be more jobs related to STEM including AI. 
+2. Create a sense of experimentation for the players to develop their logical thinking by providing live command terminal and AI script submission. 
+3. Players may use the AI scripts they have created as portfolio. Imagine, you are a top player in one of the leaderboards, it proves that you have technical skill. Therefore, it increase your chance to find a software or AI engineering job, hopefully. 
 
-#### References: 
-1. [Sumobot competition](https://www.sumobot.ca/competition), the real robotic competition. 
-2. [Battlesnake](https://play.battlesnake.com/leaderboards), an online, web-based 2D snake game where player compete to reach the top of leaderboards using various programming languages. 
-3. [Tiny Glade](https://pouncelight.games/tiny-glade/), we like the procedural system and would like to implement in our level editor. 
+## For Players
+Go to [players page](https://github.com/ardiawanbagusharisa/sumobot/wiki/Players-Page) if you are a Sumobot player and want to learn how to play the game, and how to create your own AI script or want join for the AI competition. 
 
-If you want to contribute to this project, go to our [Wiki page](https://github.com/ardiawanbagusharisa/sumobot/wiki).  
+## For Developers
+Go to [developers page](https://github.com/ardiawanbagusharisa/sumobot/wiki/Developers-Page) if you are a developer who want to contribute in building the platform. 
 
 ---
