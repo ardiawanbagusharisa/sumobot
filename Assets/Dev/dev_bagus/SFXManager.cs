@@ -83,6 +83,22 @@ public class SFXManager : MonoBehaviour
         src.PlayOneShot(clip, vol);
     }
 
+    public (AudioSource, float vol, float pitch) GetAudioSource(string key)
+    {
+        var (clip, vol, pitch) = Pick(key);
+        if (clip == null) return (null, -1, -1);
+
+
+        var src = GetNext2DSource();
+        if (!src) return (null, -1, -1); // destroyed during shutdown or couldn't recreate
+
+        src.clip = clip;
+        src.volume = vol;
+        src.pitch = pitch;
+
+        return (src, vol, pitch);
+    }
+
     /// <summary>Play a random clip from a bank at a position (3D).</summary>
     public void Play3D(string key, Vector3 position, float spatialBlend = 1f, float maxDistance = 25f, float minDistance = 1f)
     {
@@ -150,6 +166,7 @@ public class SFXManager : MonoBehaviour
             var replacement = Create2DSource();
             if (replacement)
             {
+                src.Stop();
                 pool[idx] = replacement;
                 src = replacement;
             }

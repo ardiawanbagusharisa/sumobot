@@ -131,6 +131,7 @@ namespace SumoCore
 
         public void ActivateBoost()
         {
+            SFXManager.Instance.Play2D("actions_boost");
             usedAt = BattleManager.Instance.ElapsedTime;
             controller.MoveSpeed *= BoostMultiplier;
             controller.DashSpeed *= BoostMultiplier;
@@ -138,6 +139,7 @@ namespace SumoCore
 
         public void ActivateStone()
         {
+            SFXManager.Instance.Play2D("actions_stone");
             usedAt = BattleManager.Instance.ElapsedTime;
             controller.RigidBody.constraints = RigidbodyConstraints2D.FreezePosition;
             controller.BounceResistance *= StoneMultiplier;
