@@ -120,6 +120,7 @@ namespace SumoInput
             ISumoAction action = param.Action;
             actionLastUsedMap[action.Type] = Time.time;
             actionInputTypeMap[action.Type] = action.InputUsed;
+           
         }
 
         void UpdateButtonState(ActionType actionType, bool active)

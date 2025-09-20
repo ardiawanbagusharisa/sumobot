@@ -45,6 +45,18 @@ namespace SumoCore
         public float TieBreakerLockDuration = 0.8f;
         #endregion
 
+        #region Sound Effect
+        [Header("Sound Effect")]
+
+        private float fadeSpeed = 100;          // smooth fade
+        public float accelerateBasePitch = 0.1f;          // smooth fade
+        public float accelerateHighPitch = 3f;          // smooth fade
+
+        private float targetVolume = 0f;
+        private float targetPitch = 1f;
+
+        #endregion
+
         #region General Properties
         [Header("General Info")]
         public PlayerSide Side;
@@ -99,6 +111,11 @@ namespace SumoCore
         private int rotationDirection;
         private bool isTurning = false;
         private ISumoAction lastTurnAction;
+        private float lastRotation;
+
+        // SFX
+        private (AudioSource src, float vol, float pitch) accelerateSource;
+        private (AudioSource src, float vol, float pitch) turningSource;
         #endregion
 
 
@@ -125,6 +142,11 @@ namespace SumoCore
 
             if (IsMovementDisabled)
                 moveLockTime -= Time.deltaTime;
+
+            if (Time.timeScale != 1 && accelerateSource.src != null)
+            {
+                accelerateSource.src.volume = 0;
+            }
         }
 
         void FixedUpdate()
@@ -135,8 +157,11 @@ namespace SumoCore
             }
 
             HandleStopping();
-            HandlingAccelerating();
+            HandleAccelerating();
             HandleTurning();
+
+            SetAccelerateSFX();
+            SetTurnSFX();
         }
 
         void OnCollisionEnter2D(Collision2D collision)
@@ -172,6 +197,53 @@ namespace SumoCore
             SetSkillEnabled(false);
         }
 
+        private void SetAccelerateSFX()
+        {
+            if (accelerateSource.src == null) return;
+            if (!SFXManager.Instance.gameObject.activeSelf) return;
+
+            float speed = RigidBody.linearVelocity.magnitude;
+            float normalized = Mathf.Clamp01(speed / (IsDashActive ? DashSpeed : MoveSpeed));
+
+            if (normalized > 0.95)
+            {
+                normalized = Random.Range(0.9f, normalized);
+            }
+
+            // Decide target values based on velocity
+            targetVolume = normalized * accelerateSource.vol;                // louder with speed
+            targetPitch = Mathf.Lerp(accelerateBasePitch, accelerateHighPitch, normalized); // higher pitch with speed
+
+            // Smoothly adjust
+            accelerateSource.src.volume = Mathf.MoveTowards(accelerateSource.src.volume, targetVolume, fadeSpeed * Time.deltaTime);
+            accelerateSource.src.pitch = Mathf.MoveTowards(accelerateSource.pitch, targetPitch, fadeSpeed * Time.deltaTime);
+        }
+
+        private void SetTurnSFX()
+        {
+            if (turningSource.src == null) return;
+            if (!SFXManager.Instance.gameObject.activeSelf) return;
+
+            // Compute angular speed from delta rotation
+            float currentRotation = transform.eulerAngles.y;
+            float delta = Mathf.DeltaAngle(lastRotation, currentRotation); // signed difference
+            float angularSpeed = Mathf.Abs(delta) / Time.deltaTime;
+
+            Debug.Log($"angularSpeed {angularSpeed}");
+
+            // Normalize
+            float normalized = Mathf.Clamp01(angularSpeed / RotateSpeed);
+
+            Debug.Log($"normalized {normalized}");
+
+            // Drive SFX
+            targetVolume = normalized * turningSource.vol; // louder when turning faster
+            targetPitch = Mathf.Lerp(0.9f, 1.3f, normalized); // slight pitch change
+
+            turningSource.src.volume = Mathf.MoveTowards(turningSource.src.volume, targetVolume, fadeSpeed * Time.deltaTime);
+            turningSource.src.pitch = Mathf.MoveTowards(turningSource.pitch, targetPitch, fadeSpeed * Time.deltaTime);
+        }
+
         public void AssignSkill(SkillType type = SkillType.Boost)
         {
             Skill = SumoSkill.CreateSkill(this, type);
@@ -190,6 +262,10 @@ namespace SumoCore
             RigidBody.angularVelocity = 0;
             RigidBody.angularDamping = 0;
             LastDashTime = 0;
+            lastRotation = transform.eulerAngles.y;
+            turningSource = SFXManager.Instance.GetAudioSource("actions_turn");
+            accelerateSource = SFXManager.Instance.GetAudioSource("actions_accelerate");
+
         }
         #endregion
 
@@ -239,6 +315,7 @@ namespace SumoCore
                 if (IsDashOnCooldown)
                     return;
 
+                SFXManager.Instance.Play2D("actions_dash");
                 action.Duration = DashDuration;
                 speed = DashSpeed;
                 LastDashTime = time;
@@ -269,12 +346,19 @@ namespace SumoCore
             isTurning = true;
         }
 
-        void HandlingAccelerating()
+        void HandleAccelerating()
         {
             if (IsMovementDisabled) return;
 
+
             if (accelerateTimeRemaining > 0f && lastAccelerateAction != null)
             {
+                if (!accelerateSource.src.isPlaying)
+                {
+                    accelerateSource.src.loop = true;
+                    accelerateSource.src.Play();
+                }
+
                 RigidBody.linearVelocity = movementVelocity;
                 accelerateTimeRemaining -= Time.fixedDeltaTime;
                 Log(lastAccelerateAction, false);
@@ -290,6 +374,9 @@ namespace SumoCore
             if (!isTurning || IsMovementDisabled || lastTurnAction == null)
                 return;
 
+            if (!turningSource.src.isPlaying)
+                turningSource.src.Play();
+
             float angularStep = RotateSpeed * Time.fixedDeltaTime;
 
             // Clamp step to remaining angle
@@ -297,9 +384,11 @@ namespace SumoCore
             step *= rotationDirection;
 
             float newRotation = RigidBody.rotation + step;
+            lastRotation = newRotation;
             RigidBody.MoveRotation(newRotation);
 
             remainingAngle -= Mathf.Abs(step);
+
 
             Log(lastTurnAction, false);
 
@@ -380,7 +469,7 @@ namespace SumoCore
             StopOngoingAction();
             LogManager.FlushActionLog(Side);
 
-            if (isActor) 
+            if (isActor)
                 SFXManager.Instance.Play2D("collision_small");
             else
                 SFXManager.Instance.Play2D("collision_big");
@@ -482,6 +571,8 @@ namespace SumoCore
             if (RigidBody.linearVelocity.magnitude < StopTreshold)
             {
                 RigidBody.linearVelocity = Vector2.zero;
+                if (accelerateSource.src != null && accelerateSource.src.isPlaying)
+                    accelerateSource.src.loop = false;
                 return;
             }
 

@@ -97,7 +97,10 @@ namespace SumoManager
             BotManager = GetComponent<BotManager>();
 
             if (simulator.enabled)
+            {
                 simulator.PrepareSimulation();
+                SFXManager.Instance.gameObject.SetActive(false);
+            }
             else
             {
                 LogManager.UnregisterAction();
@@ -150,7 +153,6 @@ namespace SumoManager
         #region API methods
         public void Battle_Start()
         {
-            SFXManager.Instance.Play2D("ui_accept");
             if (CurrentState == BattleState.Battle_Preparing ||
                 CurrentState == BattleState.Battle_Countdown ||
                 CurrentState == BattleState.Battle_Ongoing)
@@ -213,6 +215,7 @@ namespace SumoManager
             float timer = CountdownTime;
             while (timer > 0 && CurrentState == BattleState.Battle_Countdown)
             {
+                SFXManager.Instance.Play2D("ui_accept_small");
                 Events[OnCountdownChanged].Invoke(new EventParameter(floatParam: timer));
                 yield return new WaitForSeconds(1f);
                 timer -= 1f;
@@ -317,6 +320,7 @@ namespace SumoManager
 
                 // Battle
                 case BattleState.Battle_Preparing:
+                    SFXManager.Instance.Play2D("ui_accept");
                     LogManager.SetPlayerBots(BotManager.Left, BotManager.Right);
                     LogManager.UpdateMetadata(logTakenAction: false);
                     LogManager.StartGameLog();

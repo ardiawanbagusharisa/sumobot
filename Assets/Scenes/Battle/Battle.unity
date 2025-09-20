@@ -523,7 +523,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 110, y: -0.0002746582}
+  m_AnchoredPosition: {x: 110, y: -0.00024414062}
   m_SizeDelta: {x: -220, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &21595485
@@ -4035,33 +4035,35 @@ MonoBehaviour:
     - {fileID: 8300000, guid: 527c528cc3411de44857c02d8149c9f5, type: 3}
     volume: 0.5
     pitchRange: {x: 0.95, y: 1.05}
+  - key: actions_accelerate
+    clips:
+    - {fileID: 8300000, guid: c760186cc7762482faf5bb3496ed19db, type: 3}
+    volume: 0.1
+    pitchRange: {x: 0.95, y: 1.05}
   - key: collision_big
     clips:
     - {fileID: 8300000, guid: 42d13941a3cdfe54fbed6fc079f23983, type: 3}
     volume: 0.5
     pitchRange: {x: 0.95, y: 1.05}
-  - key: actions_accelerate
-    clips: []
-    volume: 0.5
-    pitchRange: {x: 0.95, y: 1.05}
   - key: actions_turn
-    clips: []
-    volume: 0.5
+    clips:
+    - {fileID: 8300000, guid: 7188677a2cb2d5048a4fb3dc51eb3b4c, type: 3}
+    volume: 0.1
     pitchRange: {x: 0.95, y: 1.05}
   - key: actions_dash
     clips:
-    - {fileID: 8300000, guid: 8f23d161e68bd0d409f66f6d8f58cff7, type: 3}
-    volume: 0.5
+    - {fileID: 8300000, guid: 60b59fc12f67648fbabb226feba73200, type: 3}
+    volume: 0.25
     pitchRange: {x: 0.95, y: 1.05}
   - key: actions_boost
     clips:
     - {fileID: 8300000, guid: d06cfe397719f834b865352565195196, type: 3}
-    - {fileID: 8300000, guid: d39fa89191914bf41844c758613a2c9f, type: 3}
-    volume: 0.5
+    volume: 0.4
     pitchRange: {x: 0.95, y: 1.05}
   - key: actions_stone
-    clips: []
-    volume: 0.5
+    clips:
+    - {fileID: 8300000, guid: d06cfe397719f834b865352565195196, type: 3}
+    volume: 0.4
     pitchRange: {x: 0.95, y: 1.05}
   poolSize: 12
   dontDestroyOnLoad: 1
@@ -7286,8 +7288,16 @@ PrefabInstance:
       value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 5583292103176566768, guid: e48db3198e16346af866a9419a1964cc, type: 3}
+      propertyPath: fadeSpeed
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 5583292103176566768, guid: e48db3198e16346af866a9419a1964cc, type: 3}
       propertyPath: CollisionBaseForce
       value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 5583292103176566768, guid: e48db3198e16346af866a9419a1964cc, type: 3}
+      propertyPath: accelerateHighPitch
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 6772123260480660960, guid: e48db3198e16346af866a9419a1964cc, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
@@ -24630,7 +24640,7 @@ MonoBehaviour:
   RightInputType: 1
   RoundSystem: 3
   BattleTime: 60
-  CountdownTime: 3
+  CountdownTime: 1
   ActionInterval: 0.1
   StartPositions:
   - {fileID: 1987440270}
@@ -24745,7 +24755,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2130233538}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: b33ce51748b63457ebe9b59f80ac599c, type: 3}
   m_Name: 
