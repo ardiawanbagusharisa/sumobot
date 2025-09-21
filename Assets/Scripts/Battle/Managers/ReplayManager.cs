@@ -141,6 +141,7 @@ public class ReplayManager : MonoBehaviour
         {
             LogScrollbar.onValueChanged.AddListener((val) =>
             {
+                Debug.Log($"LogScrollBar.onValueChanged {val}");
                 if (val < 0.01f)
                 {
                     autoScrollLog = true;
@@ -466,29 +467,31 @@ public class ReplayManager : MonoBehaviour
         var current = currentRoundEvents.LastOrDefault(e => e.UpdatedAt <= currentTime);
         if (current != null)
         {
-            GameUI.SetText($"Game {currentGameIndex + 1}");
-            RoundUI.SetText($"Round {currentRoundIndex + 1}");
-            GameDurationUI.SetText($"Duration: {metadata.BattleTime}");
-            GameBestOf.SetText($"Best Of: {metadata.RoundType}");
+            GameUI.SetText($"Game: {currentGameIndex + 1}");
+            RoundUI.SetText($"Round: {currentRoundIndex + 1}");
+            GameDurationUI?.SetText($"Duration: {metadata.BattleTime}");
+            GameBestOf.SetText($"Modes: PvP, Best-of-{metadata.RoundType}");
 
             metadata.LeftPlayerStats.ActionTaken = leftActionMap.Count;
             metadata.RightPlayerStats.ActionTaken = rightActionMap.Count;
 
-            LeftBotName.SetText(metadata.LeftPlayerStats.Bot);
-            LeftSkillType.SetText(metadata.LeftPlayerStats.SkillType);
-            LeftWinCount.SetText(metadata.LeftPlayerStats.WinPerGame.ToString());
-            LeftActionTaken.SetText(metadata.LeftPlayerStats.ActionTaken.ToString());
+            LeftBotName?.SetText(metadata.LeftPlayerStats.Bot);
+            LeftSkillType?.SetText(metadata.LeftPlayerStats.SkillType);
+            LeftWinCount?.SetText(metadata.LeftPlayerStats.WinPerGame.ToString());
+            LeftActionTaken?.SetText(metadata.LeftPlayerStats.ActionTaken.ToString());
 
-            RightBotName.SetText(metadata.RightPlayerStats.Bot);
-            RightSkillType.SetText(metadata.RightPlayerStats.SkillType);
-            RightWinCount.SetText(metadata.RightPlayerStats.WinPerGame.ToString());
-            RightActionTaken.SetText(metadata.RightPlayerStats.ActionTaken.ToString());
+            RightBotName?.SetText(metadata.RightPlayerStats.Bot);
+            RightSkillType?.SetText(metadata.RightPlayerStats.SkillType);
+            RightWinCount?.SetText(metadata.RightPlayerStats.WinPerGame.ToString());
+            RightActionTaken?.SetText(metadata.RightPlayerStats.ActionTaken.ToString());
 
             LogUI.text = string.Join("\n", logMap.Values.ToList());
 
             if (autoScrollLog)
             {
                 LogScrollRect.verticalNormalizedPosition = 0f;
+                Canvas.ForceUpdateCanvases();
+
             }
         }
     }
@@ -599,6 +602,11 @@ public class ReplayManager : MonoBehaviour
         {
             leftEventIndex = leftEvents.IndexOf(lastLeft.LastOrDefault());
             rightEventIndex = rightEvents.IndexOf(lastRight.LastOrDefault());
+
+            if (leftEventIndex == -1)
+                leftEventIndex = 0;
+            if (rightEventIndex == -1)
+                rightEventIndex = 0;
 
             leftActionMap.Clear();
             rightActionMap.Clear();
@@ -919,7 +927,7 @@ public static class ExtReplayManager
 
     public static string GetLogText(this EventLog log)
     {
-        var color = log.Actor == "Left" ? "#92C382" : "#FF6364";
+        var color = log.Actor == "Left" ? "#2f731bff" : "#861b1bff";
         if (log.Category == "Action")
         {
             return $"<color={color}>[{log.StartedAt:F2}] {log.Actor} | Action | {log.Data["Name"]} | {log.Data["Duration"]:F2}</color>";
