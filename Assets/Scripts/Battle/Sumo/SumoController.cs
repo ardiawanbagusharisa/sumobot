@@ -229,12 +229,8 @@ namespace SumoCore
             float delta = Mathf.DeltaAngle(lastRotation, currentRotation); // signed difference
             float angularSpeed = Mathf.Abs(delta) / Time.deltaTime;
 
-            Debug.Log($"angularSpeed {angularSpeed}");
-
             // Normalize
             float normalized = Mathf.Clamp01(angularSpeed / RotateSpeed);
-
-            Debug.Log($"normalized {normalized}");
 
             // Drive SFX
             targetVolume = normalized * turningSource.vol; // louder when turning faster
