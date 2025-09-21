@@ -7,6 +7,7 @@ using System.Linq;
 using SumoCore;
 using System;
 using System.IO;
+using Unity.VisualScripting;
 
 namespace SumoHelper
 {
@@ -27,9 +28,45 @@ namespace SumoHelper
         private int firstConfigIndex = 0;
         private SimulationCheckpoint checkpoint;
 
+        #region No-Graphic simulation setting
+        private static int ConfigStart = -1;
+        private static int ConfigEnd = -1;
+        private static bool Batched = false;
+        #endregion
+
         void OnDisable()
         {
             BattleManager.Instance.Events[BattleManager.OnBattleChanged].Unsubscribe(OnBattleStateChanged);
+        }
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+        static void ReadArgs()
+        {
+            string[] args = Environment.GetCommandLineArgs();
+
+            foreach (string arg in args)
+            {
+                if (arg.StartsWith("--configStart="))
+                {
+                    string value = arg.Substring("--configStart=".Length);
+                    if (int.TryParse(value, out int start))
+                        ConfigStart = start;
+                }
+
+                if (arg.StartsWith("--configEnd="))
+                {
+                    string value = arg.Substring("--configEnd=".Length);
+                    if (int.TryParse(value, out int end))
+                        ConfigEnd = end;
+                }
+
+                if (ConfigStart > 0 && ConfigEnd > 0)
+                {
+                    Batched = true;
+                }
+            }
+
+            Debug.Log($"[BatchedCommandLineArgs] ConfigStart={ConfigStart}, ConfigEnd={ConfigEnd}");
         }
 
         public void PrepareSimulation()
@@ -64,6 +101,13 @@ namespace SumoHelper
             BattleManager.Instance.BotManager.RightEnabled = true;
 
             _configs = GenerateConfigs(Agents);
+
+            if (Batched)
+            {
+                Debug.Log($"Applied Config: StartAt {ConfigStart}, EndAt {ConfigEnd}");
+                currentConfigIndex = ConfigStart;
+                SaveCheckpoint(checkpoint);
+            }
 
             checkpoint.TotalConfigs = _configs.Count();
 
@@ -116,7 +160,7 @@ namespace SumoHelper
         {
             yield return new WaitForSeconds(0.5f);
 
-            for (currentConfigIndex = checkpoint.ConfigIndex; currentConfigIndex < _configs.Count; currentConfigIndex++)
+            for (currentConfigIndex = checkpoint.ConfigIndex; currentConfigIndex < (Batched ? (ConfigEnd + 1) : _configs.Count); currentConfigIndex++)
             {
                 BattleConfig cfg = _configs[currentConfigIndex];
 
@@ -146,7 +190,7 @@ namespace SumoHelper
                     yield return new WaitForSecondsRealtime(1);
                     checkpoint.Iteration = iter;
                     checkpoint.ConfigIndex = currentConfigIndex;
-                    if (UseCheckpoint)
+                    if (UseCheckpoint && !Batched)
                         SaveCheckpoint(checkpoint);
                     yield return new WaitForEndOfFrame();
                 }
@@ -340,6 +384,8 @@ namespace SumoHelper
     {
         public SimulationSetting Setting;
         public int TotalConfigs;
+
+        [DoNotSerialize]
         public int ConfigIndex;
         public int Iteration;
     }

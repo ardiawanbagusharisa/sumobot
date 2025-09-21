@@ -349,7 +349,7 @@ namespace SumoCore
 
             if (accelerateTimeRemaining > 0f && lastAccelerateAction != null)
             {
-                if (!accelerateSource.src.isPlaying)
+                if (accelerateSource.src != null && !accelerateSource.src.isPlaying)
                 {
                     accelerateSource.src.loop = true;
                     accelerateSource.src.Play();
@@ -370,7 +370,7 @@ namespace SumoCore
             if (!isTurning || IsMovementDisabled || lastTurnAction == null)
                 return;
 
-            if (!turningSource.src.isPlaying)
+            if (turningSource.src != null && !turningSource.src.isPlaying)
                 turningSource.src.Play();
 
             float angularStep = RotateSpeed * Time.fixedDeltaTime;

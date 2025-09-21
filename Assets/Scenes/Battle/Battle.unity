@@ -19032,6 +19032,10 @@ PrefabInstance:
       value: 5
       objectReference: {fileID: 0}
     - target: {fileID: 5583292103176566768, guid: e48db3198e16346af866a9419a1964cc, type: 3}
+      propertyPath: accelerateHighPitch
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 5583292103176566768, guid: e48db3198e16346af866a9419a1964cc, type: 3}
       propertyPath: Skill.BoostMultiplier
       value: 1.8
       objectReference: {fileID: 0}
@@ -24755,7 +24759,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2130233538}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: b33ce51748b63457ebe9b59f80ac599c, type: 3}
   m_Name: 
@@ -24765,12 +24769,12 @@ MonoBehaviour:
   UseCheckpoint: 1
   RoundCountdown: 1
   Setting:
-    Timers: 0f0000001e0000003c00000078000000
+    Timers: 0f0000001e0000002d0000003c000000
     ActionIntervals:
     - 0.1
+    - 0.2
     - 0.5
-    - 1
-    Iteration: 100
+    Iteration: 50
     RoundSystem: 010000000300000005000000
     Skills: 0000000001000000
     SelectedAgents: []

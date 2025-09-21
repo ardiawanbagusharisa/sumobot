@@ -72,6 +72,8 @@ public class SFXManager : MonoBehaviour
     /// <summary>Play a random clip from a bank as 2D (non-positional).</summary>
     public void Play2D(string key)
     {
+        if (!gameObject.activeSelf) return;
+
         var (clip, vol, pitch) = Pick(key);
         if (clip == null) return;
 
@@ -85,6 +87,8 @@ public class SFXManager : MonoBehaviour
 
     public (AudioSource, float vol, float pitch) GetAudioSource(string key)
     {
+        if (!gameObject.activeSelf) return (null, -1, -1);
+
         var (clip, vol, pitch) = Pick(key);
         if (clip == null) return (null, -1, -1);
 
@@ -102,6 +106,8 @@ public class SFXManager : MonoBehaviour
     /// <summary>Play a random clip from a bank at a position (3D).</summary>
     public void Play3D(string key, Vector3 position, float spatialBlend = 1f, float maxDistance = 25f, float minDistance = 1f)
     {
+        if (!gameObject.activeSelf) return;
+        
         var (clip, vol, pitch) = Pick(key);
         if (clip == null) return;
 
