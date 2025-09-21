@@ -11,13 +11,34 @@ namespace SumoEditor
         [MenuItem("Tools/Open Log Folder")]
         public static void OpenLogFolder()
         {
-            string logFolder = Path.Combine(Application.persistentDataPath, "Logs");
+            string folder = Path.Combine(Application.persistentDataPath, "Logs");
 
-            if (!Directory.Exists(logFolder))
-                Directory.CreateDirectory(logFolder);
+            if (!Directory.Exists(folder))
+                Directory.CreateDirectory(folder);
 
-        EditorUtility.RevealInFinder(logFolder);
-            Debug.Log("Logs folder: " + logFolder);
+            EditorUtility.RevealInFinder(folder);
+        }
+
+        [MenuItem("Tools/Open Simulation Setting")]
+        public static void OpenSimulationSettingFolder()
+        {
+            string folder = Path.Combine(Application.persistentDataPath, "Settings");
+
+            if (!Directory.Exists(folder))
+                Directory.CreateDirectory(folder);
+
+            EditorUtility.RevealInFinder(folder);
+        }
+
+        [MenuItem("Tools/Open Simulation Result")]
+        public static void OpenResultSimulationFolder()
+        {
+            string folder = Path.Combine(Application.persistentDataPath, "Simulation");
+
+            if (!Directory.Exists(folder))
+                Directory.CreateDirectory(folder);
+
+            EditorUtility.RevealInFinder(folder);
         }
     }
 }
