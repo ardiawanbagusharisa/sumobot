@@ -106,10 +106,10 @@ namespace SumoHelper
             {
                 Debug.Log($"Applied Config: StartAt {ConfigStart}, EndAt {ConfigEnd}");
                 currentConfigIndex = ConfigStart;
-                SaveCheckpoint(checkpoint);
             }
 
             checkpoint.TotalConfigs = _configs.Count();
+            SaveCheckpoint(checkpoint);
 
             ApplyConfig(_configs[currentConfigIndex]);
 
@@ -384,8 +384,6 @@ namespace SumoHelper
     {
         public SimulationSetting Setting;
         public int TotalConfigs;
-
-        [DoNotSerialize]
         public int ConfigIndex;
         public int Iteration;
     }
