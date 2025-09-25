@@ -174,7 +174,7 @@ namespace SumoHelper
                 {
                     Debug.Log($"[Simulation] Config {currentConfigIndex + 1}/{_configs.Count}, Iteration {iter}/{cfg.Iteration} | " +
                               $"{cfg.AgentLeft.ID} vs {cfg.AgentRight.ID} | " +
-                              $"Timer={cfg.Timer}, Interval={cfg.ActionInterval}, SkillLeft={cfg.SkillSetLeft}, SkillRight={cfg.SkillSetRight}");
+                              $"RoundSystem={cfg.RoundSystem}, Timer={cfg.Timer}, Interval={cfg.ActionInterval}, SkillLeft={cfg.SkillSetLeft}, SkillRight={cfg.SkillSetRight}");
 
                     yield return new WaitForSeconds(1);
 
@@ -253,7 +253,7 @@ namespace SumoHelper
                     foreach (var roundSystem in Setting.RoundSystem)
                     {
                         foreach (var timer in Setting.Timers)
-                        {
+                        { 
                             foreach (var interval in Setting.ActionIntervals)
                             {
                                 if (Setting.Skills.Length > 0)
