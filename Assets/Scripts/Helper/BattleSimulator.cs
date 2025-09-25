@@ -160,7 +160,7 @@ namespace SumoHelper
         {
             yield return new WaitForSeconds(0.5f);
 
-            for (currentConfigIndex = checkpoint.ConfigIndex; currentConfigIndex < (Batched ? (ConfigEnd + 1) : _configs.Count); currentConfigIndex++)
+            for (currentConfigIndex = ConfigStart; currentConfigIndex < (Batched ? (ConfigEnd + 1) : _configs.Count); currentConfigIndex++)
             {
                 BattleConfig cfg = _configs[currentConfigIndex];
 
