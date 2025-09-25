@@ -106,7 +106,9 @@ namespace SumoHelper
             {
                 Debug.Log($"Applied Config: StartAt {ConfigStart}, EndAt {ConfigEnd}");
                 currentConfigIndex = ConfigStart;
+                firstConfigIndex = ConfigStart;
                 checkpoint.ConfigIndex = ConfigStart;
+                checkpoint.Iteration = 1;
             }
             else
             {
