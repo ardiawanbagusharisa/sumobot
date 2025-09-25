@@ -106,6 +106,7 @@ namespace SumoHelper
             {
                 Debug.Log($"Applied Config: StartAt {ConfigStart}, EndAt {ConfigEnd}");
                 currentConfigIndex = ConfigStart;
+                checkpoint.ConfigIndex = ConfigStart;
             }
 
             checkpoint.TotalConfigs = _configs.Count();
@@ -160,7 +161,7 @@ namespace SumoHelper
         {
             yield return new WaitForSeconds(0.5f);
 
-            for (currentConfigIndex = ConfigStart; currentConfigIndex < (Batched ? (ConfigEnd + 1) : _configs.Count); currentConfigIndex++)
+            for (currentConfigIndex = checkpoint.ConfigIndex; currentConfigIndex < (Batched ? (ConfigEnd + 1) : _configs.Count); currentConfigIndex++)
             {
                 BattleConfig cfg = _configs[currentConfigIndex];
 
