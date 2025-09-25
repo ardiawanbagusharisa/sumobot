@@ -40,6 +40,8 @@ public class SFXManager : MonoBehaviour
     private Transform poolRoot;          // parent for pooled sources
     private bool isQuitting = false;     // avoid recreating on quit
 
+    private bool isActive => Instance != null && gameObject != null && gameObject.activeSelf;
+
     void Awake()
     {
         if (Instance != null && Instance != this) { Destroy(gameObject); return; }
@@ -72,7 +74,7 @@ public class SFXManager : MonoBehaviour
     /// <summary>Play a random clip from a bank as 2D (non-positional).</summary>
     public void Play2D(string key)
     {
-        if (!gameObject.activeSelf) return;
+        if (!isActive) return;
 
         var (clip, vol, pitch) = Pick(key);
         if (clip == null) return;
@@ -87,7 +89,7 @@ public class SFXManager : MonoBehaviour
 
     public (AudioSource, float vol, float pitch) GetAudioSource(string key)
     {
-        if (!gameObject.activeSelf) return (null, -1, -1);
+        if (!isActive) return (null, -1, -1);
 
         var (clip, vol, pitch) = Pick(key);
         if (clip == null) return (null, -1, -1);
@@ -106,8 +108,8 @@ public class SFXManager : MonoBehaviour
     /// <summary>Play a random clip from a bank at a position (3D).</summary>
     public void Play3D(string key, Vector3 position, float spatialBlend = 1f, float maxDistance = 25f, float minDistance = 1f)
     {
-        if (!gameObject.activeSelf) return;
-        
+        if (!isActive) return;
+
         var (clip, vol, pitch) = Pick(key);
         if (clip == null) return;
 
@@ -133,6 +135,8 @@ public class SFXManager : MonoBehaviour
     /// <summary>Manually add/replace a bank at runtime.</summary>
     public void SetBank(SFXBank bank)
     {
+        if (!isActive) return;
+        
         if (bank == null || string.IsNullOrWhiteSpace(bank.key)) return;
         bankMap[bank.key] = bank;
     }
