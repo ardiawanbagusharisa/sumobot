@@ -60,7 +60,7 @@ namespace SumoHelper
                         ConfigEnd = end;
                 }
 
-                if (ConfigStart > 0 && ConfigEnd > 0)
+                if (ConfigStart > -1 && ConfigEnd > -1)
                 {
                     Batched = true;
                 }
