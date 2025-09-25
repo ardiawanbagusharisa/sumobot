@@ -108,9 +108,12 @@ namespace SumoHelper
                 currentConfigIndex = ConfigStart;
                 checkpoint.ConfigIndex = ConfigStart;
             }
+            else
+            {
+                SaveCheckpoint(checkpoint);
+            }
 
             checkpoint.TotalConfigs = _configs.Count();
-            SaveCheckpoint(checkpoint);
 
             ApplyConfig(_configs[currentConfigIndex]);
 
@@ -253,7 +256,7 @@ namespace SumoHelper
                     foreach (var roundSystem in Setting.RoundSystem)
                     {
                         foreach (var timer in Setting.Timers)
-                        { 
+                        {
                             foreach (var interval in Setting.ActionIntervals)
                             {
                                 if (Setting.Skills.Length > 0)
