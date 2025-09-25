@@ -8,6 +8,7 @@ using SumoCore;
 using System;
 using System.IO;
 using Unity.VisualScripting;
+using System.Text.RegularExpressions;
 
 namespace SumoHelper
 {
@@ -170,12 +171,20 @@ namespace SumoHelper
             {
                 BattleConfig cfg = _configs[currentConfigIndex];
 
+                int resumeAt = GetResumeIterations(cfg);
+                checkpoint.Iteration = resumeAt;
+                if (resumeAt >= cfg.Iteration)
+                {
+                    Debug.Log($"[Skip] {currentConfigIndex} already completed {cfg.Iteration} iterations.");
+                    continue;
+                }
+
                 if (currentConfigIndex > firstConfigIndex)
                 {
                     ApplyConfig(_configs[currentConfigIndex]);
                 }
 
-                for (int iter = checkpoint.Iteration; iter <= cfg.Iteration; iter++)
+                for (int iter = resumeAt; iter <= cfg.Iteration; iter++)
                 {
                     Debug.Log($"[Simulation] Config {currentConfigIndex + 1}/{_configs.Count}, Iteration {iter}/{cfg.Iteration} | " +
                               $"{cfg.AgentLeft.ID} vs {cfg.AgentRight.ID} | " +
@@ -225,14 +234,12 @@ namespace SumoHelper
             else
                 Time.timeScale = cfg.TimeScale;
 
-            var path = new string[]{
-                $"{cfg.AgentLeft.ID}_vs_{cfg.AgentRight.ID}",
-                $"Timer_{cfg.Timer}__ActInterval_{cfg.ActionInterval}__Round_{cfg.RoundSystem}__SkillLeft_{cfg.SkillSetLeft}__SkillRight_{cfg.SkillSetRight}",
-            };
+            var path = GetSavedPath(cfg);
 
             LogManager.UnregisterAction();
             LogManager.InitLog(path);
             LogManager.InitBattle(cfg);
+
             var newBattle = new Battle(Guid.NewGuid().ToString(), cfg.RoundSystem);
             newBattle.LeftPlayer = BattleManager.Instance.Battle.LeftPlayer;
             newBattle.RightPlayer = BattleManager.Instance.Battle.RightPlayer;
@@ -349,6 +356,45 @@ namespace SumoHelper
             }
 
             return checkpoint;
+        }
+
+        private int GetResumeIterations(BattleConfig cfg)
+        {
+            var path = GetSavedPath(cfg).ToList();
+            path.Insert(0, "Simulation");
+            path.Insert(0, Application.persistentDataPath);
+            string folder = Path.Combine(path.ToArray());
+            if (!Directory.Exists(folder))
+                return 0;
+
+            var files = Directory.GetFiles(folder, "game_*.json");
+
+            int maxIndex = -1;
+            Regex regex = new(@"game_(\d+)\.json");
+
+            foreach (var file in files)
+            {
+                var match = regex.Match(Path.GetFileName(file));
+                if (match.Success && int.TryParse(match.Groups[1].Value, out int idx))
+                {
+                    if (idx > maxIndex) maxIndex = idx;
+                }
+            }
+
+            // if we already hit target, skip
+            if (maxIndex + 1 >= cfg.Iteration)
+                return cfg.Iteration;
+
+            // resume at last file (to re-run it)
+            return Math.Max(0, maxIndex);
+        }
+
+        private string[] GetSavedPath(BattleConfig cfg)
+        {
+            return new string[]{
+                $"{cfg.AgentLeft.ID}_vs_{cfg.AgentRight.ID}",
+                $"Timer_{cfg.Timer}__ActInterval_{cfg.ActionInterval}__Round_{cfg.RoundSystem}__SkillLeft_{cfg.SkillSetLeft}__SkillRight_{cfg.SkillSetRight}",
+            };
         }
     }
 
