@@ -232,7 +232,6 @@ namespace SumoManager
         private static void LoadPreviousBattle()
         {
             if (!Directory.Exists(logFolderPath)) return;
-
             string[] files = Directory.GetFiles(logFolderPath, "game_*.json");
 
             foreach (var file in files)
@@ -241,6 +240,8 @@ namespace SumoManager
                 var log = JsonConvert.DeserializeObject<GameLog>(json);
                 Log.Games.Add(log);
             }
+            
+            Debug.Log($"[LogManager] Previous games successfully loaded ({Log.Games.Count} games)");
         }
 
         public static void InitBattle(BattleConfig simConfig = null)
@@ -259,7 +260,8 @@ namespace SumoManager
                 CreatedAt = (int)DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
             };
 
-            LoadPreviousBattle();
+            if (simConfig != null)
+                LoadPreviousBattle();
 
             SaveBattle();
         }
