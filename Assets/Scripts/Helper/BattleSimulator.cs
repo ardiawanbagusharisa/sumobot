@@ -170,8 +170,9 @@ namespace SumoHelper
 
             for (currentConfigIndex = checkpoint.ConfigIndex; currentConfigIndex < (Batched ? ConfigEnd : _configs.Count); currentConfigIndex++)
             {
-                BattleConfig cfg = _configs[currentConfigIndex];
+                Time.timeScale = 1;
 
+                BattleConfig cfg = _configs[currentConfigIndex];
                 var (resumeAt, gameLogs) = GetResumeIterations(cfg);
                 checkpoint.Iteration = resumeAt;
                 if (resumeAt >= cfg.Iteration)
@@ -187,6 +188,9 @@ namespace SumoHelper
 
                 LogManager.Log.Games = gameLogs;
                 yield return new WaitForSecondsRealtime(1);
+
+                if (!cfg.AgentLeft.UseAsync && !cfg.AgentRight.UseAsync)
+                    Time.timeScale = cfg.TimeScale;
 
                 for (int iter = resumeAt; iter <= cfg.Iteration; iter++)
                 {
@@ -243,11 +247,6 @@ namespace SumoHelper
             newBattle.LeftPlayer = BattleManager.Instance.Battle.LeftPlayer;
             newBattle.RightPlayer = BattleManager.Instance.Battle.RightPlayer;
             BattleManager.Instance.Battle = newBattle;
-
-            if (cfg.AgentLeft.UseAsync || cfg.AgentRight.UseAsync)
-                Time.timeScale = 1f;
-            else
-                Time.timeScale = cfg.TimeScale;
         }
 
         private void SetBot(BattleConfig cfg)
