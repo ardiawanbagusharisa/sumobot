@@ -9,6 +9,7 @@ using System;
 using System.IO;
 using Unity.VisualScripting;
 using System.Text.RegularExpressions;
+using Newtonsoft.Json;
 
 namespace SumoHelper
 {
@@ -171,7 +172,7 @@ namespace SumoHelper
             {
                 BattleConfig cfg = _configs[currentConfigIndex];
 
-                int resumeAt = GetResumeIterations(cfg);
+                var (resumeAt, gameLogs) = GetResumeIterations(cfg);
                 checkpoint.Iteration = resumeAt;
                 if (resumeAt >= cfg.Iteration)
                 {
@@ -182,8 +183,10 @@ namespace SumoHelper
                 if (currentConfigIndex > firstConfigIndex)
                 {
                     ApplyConfig(_configs[currentConfigIndex]);
-                    yield return new WaitForSecondsRealtime(1);
                 }
+
+                LogManager.Log.Games = gameLogs;
+                yield return new WaitForSecondsRealtime(1);
 
                 for (int iter = resumeAt; iter <= cfg.Iteration; iter++)
                 {
@@ -230,10 +233,10 @@ namespace SumoHelper
             BattleManager.Instance.BattleTime = cfg.Timer;
             BattleManager.Instance.ActionInterval = cfg.ActionInterval;
 
-            var path = GetSavedPath(cfg);
+            var name = GetFolderName(cfg);
 
             LogManager.UnregisterAction();
-            LogManager.InitLog(path);
+            LogManager.InitLog(name);
             LogManager.InitBattle(cfg);
 
             var newBattle = new Battle(Guid.NewGuid().ToString(), cfg.RoundSystem);
@@ -359,38 +362,44 @@ namespace SumoHelper
             return checkpoint;
         }
 
-        private int GetResumeIterations(BattleConfig cfg)
+        private (int, List<LogManager.GameLog>) GetResumeIterations(BattleConfig cfg)
         {
-            var path = GetSavedPath(cfg).ToList();
+            var path = GetFolderName(cfg).ToList();
             path.Insert(0, "Simulation");
             path.Insert(0, Application.persistentDataPath);
             string folder = Path.Combine(path.ToArray());
             if (!Directory.Exists(folder))
-                return 0;
+                return (0, new());
 
             var files = Directory.GetFiles(folder, "game_*.json");
 
-            int maxIndex = -1;
-            Regex regex = new(@"game_(\d+)\.json");
-
+            List<LogManager.GameLog> gameLogs = new();
             foreach (var file in files)
             {
-                var match = regex.Match(Path.GetFileName(file));
-                if (match.Success && int.TryParse(match.Groups[1].Value, out int idx))
+                string json = File.ReadAllText(file);
+                var log = JsonConvert.DeserializeObject<LogManager.GameLog>(json);
+                try
                 {
-                    if (idx > maxIndex) maxIndex = idx;
+                    if (log.Index > -1)
+                    {
+                        gameLogs.Add(log);
+                    }
+                }
+                catch (Exception)
+                {
+                    break;
                 }
             }
 
             // if we already hit target, skip
-            if (maxIndex + 1 >= cfg.Iteration)
-                return cfg.Iteration;
+            if (gameLogs.Count >= cfg.Iteration)
+                return (cfg.Iteration, gameLogs);
 
             // resume at last file (to re-run it)
-            return Math.Max(0, maxIndex);
+            return (Math.Max(0, gameLogs.Count - 1), gameLogs);
         }
 
-        private string[] GetSavedPath(BattleConfig cfg)
+        private string[] GetFolderName(BattleConfig cfg)
         {
             return new string[]{
                 $"{cfg.AgentLeft.ID}_vs_{cfg.AgentRight.ID}",
