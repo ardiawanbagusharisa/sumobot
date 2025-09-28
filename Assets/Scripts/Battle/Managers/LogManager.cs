@@ -229,21 +229,6 @@ namespace SumoManager
             Directory.CreateDirectory(logFolderPath);
         }
 
-        private static void LoadPreviousBattle()
-        {
-            if (!Directory.Exists(logFolderPath)) return;
-            string[] files = Directory.GetFiles(logFolderPath, "game_*.json");
-
-            foreach (var file in files)
-            {
-                string json = File.ReadAllText(file);
-                var log = JsonConvert.DeserializeObject<GameLog>(json);
-                Log.Games.Add(log);
-            }
-            
-            Debug.Log($"[LogManager] Previous games successfully loaded ({Log.Games.Count} games)");
-        }
-
         public static void InitBattle(BattleConfig simConfig = null)
         {
             BattleManager battleManager = BattleManager.Instance;
@@ -259,9 +244,6 @@ namespace SumoManager
                 // SimulationAISwapInterval = simConfig?.SwapAIInterval ?? 0,
                 CreatedAt = (int)DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
             };
-
-            if (simConfig != null)
-                LoadPreviousBattle();
 
             SaveBattle();
         }
