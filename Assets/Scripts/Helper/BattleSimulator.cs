@@ -182,6 +182,7 @@ namespace SumoHelper
                 if (currentConfigIndex > firstConfigIndex)
                 {
                     ApplyConfig(_configs[currentConfigIndex]);
+                    yield return new WaitForSecondsRealtime(1);
                 }
 
                 for (int iter = resumeAt; iter <= cfg.Iteration; iter++)
