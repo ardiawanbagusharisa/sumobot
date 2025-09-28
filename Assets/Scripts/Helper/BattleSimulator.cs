@@ -61,7 +61,7 @@ namespace SumoHelper
                         ConfigEnd = end;
                 }
 
-                if (ConfigStart > -1 && ConfigEnd > -1)
+                if (ConfigStart > -1 && ConfigEnd > -1 && Application.isBatchMode)
                 {
                     Batched = true;
                 }
@@ -165,7 +165,7 @@ namespace SumoHelper
 
         private IEnumerator RunSimulations()
         {
-            yield return new WaitForSeconds(0.5f);
+            yield return new WaitForSecondsRealtime(0.5f);
 
             for (currentConfigIndex = checkpoint.ConfigIndex; currentConfigIndex < (Batched ? ConfigEnd : _configs.Count); currentConfigIndex++)
             {
@@ -187,11 +187,11 @@ namespace SumoHelper
 
                 for (int iter = resumeAt; iter <= cfg.Iteration; iter++)
                 {
-                    Debug.Log($"[Simulation] Config {currentConfigIndex + 1}/{_configs.Count}, Iteration {iter}/{cfg.Iteration} | " +
+                    Debug.Log($"[Simulation] Config {currentConfigIndex}/{_configs.Count}, Iteration {iter}/{cfg.Iteration} | " +
                               $"{cfg.AgentLeft.ID} vs {cfg.AgentRight.ID} | " +
                               $"RoundSystem={cfg.RoundSystem}, Timer={cfg.Timer}, Interval={cfg.ActionInterval}, SkillLeft={cfg.SkillSetLeft}, SkillRight={cfg.SkillSetRight}");
 
-                    yield return new WaitForSeconds(1);
+                    yield return new WaitForSecondsRealtime(1);
 
                     if (SimulationOnStart || currentConfigIndex > 0 || iter > 1)
                     {
@@ -230,11 +230,6 @@ namespace SumoHelper
             BattleManager.Instance.BattleTime = cfg.Timer;
             BattleManager.Instance.ActionInterval = cfg.ActionInterval;
 
-            if (cfg.AgentLeft.UseAsync || cfg.AgentRight.UseAsync)
-                Time.timeScale = 1f;
-            else
-                Time.timeScale = cfg.TimeScale;
-
             var path = GetSavedPath(cfg);
 
             LogManager.UnregisterAction();
@@ -245,6 +240,11 @@ namespace SumoHelper
             newBattle.LeftPlayer = BattleManager.Instance.Battle.LeftPlayer;
             newBattle.RightPlayer = BattleManager.Instance.Battle.RightPlayer;
             BattleManager.Instance.Battle = newBattle;
+
+            if (cfg.AgentLeft.UseAsync || cfg.AgentRight.UseAsync)
+                Time.timeScale = 1f;
+            else
+                Time.timeScale = cfg.TimeScale;
         }
 
         private void SetBot(BattleConfig cfg)
