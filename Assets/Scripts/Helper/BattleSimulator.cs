@@ -169,7 +169,7 @@ namespace SumoHelper
                 }
             }
 
-            Logger.Info($"[Simulation] Loaded {Agents.Count}\nagents: {string.Join(", ", Agents.Select(a => a.ID))}",true);
+            Logger.Info($"[Simulation] Loaded {Agents.Count}\nagents: {string.Join(", ", Agents.Select(a => a.ID))}", true);
         }
 
         private IEnumerator RunSimulations()
@@ -394,7 +394,7 @@ namespace SumoHelper
                 }
                 catch (Exception e)
                 {
-                    Logger.Error($"[BattleSimulator] Got error, this iteration will be simulated. Error cause: {e}", true);
+                    Logger.Error($"[BattleSimulator] Config number {currentConfigIndex}, iteration number {gameLogs.Count + 1}, this iteration will be simulated. Error cause: {e}", true);
                     break;
                 }
             }
