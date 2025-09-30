@@ -67,7 +67,7 @@ namespace ML.LanguageModels
             TextAsset tokenizerAsset = Resources.Load<TextAsset>(tokenizerPath);
             if (tokenizerAsset == null)
             {
-                Debug.LogError("Tokenizer JSON not found in Resources!");
+                Logger.Error("Tokenizer JSON not found in Resources!");
                 return;
             }
             tokenizer = new(tokenizerAsset);
@@ -107,7 +107,7 @@ namespace ML.LanguageModels
         {
             if (prompt != null)
             {
-                Debug.Log($"prompt {prompt}");
+                Logger.Info($"prompt {prompt}");
 
                 int[] input = tokenizer.Encode(prompt);
                 int blockSize = 128;
@@ -148,7 +148,7 @@ namespace ML.LanguageModels
                 isGenerating = false;
 
                 string generated = tokenizer.Decode(outputTokens);
-                Debug.Log("🧠 Generated Output:\n" + generated);
+                Logger.Info("🧠 Generated Output:\n" + generated);
 
                 if (generated != null)
                 {
@@ -198,7 +198,7 @@ namespace ML.LanguageModels
                             dur = 0.1f;
                         }
 
-                        Debug.Log($"action: {act} {dur}");
+                        Logger.Info($"action: {act} {dur}");
                         var parsedAct = GetAction(act, dur);
                         Enqueue(parsedAct);
                     }

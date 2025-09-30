@@ -70,20 +70,20 @@
 //             if (loadModel && File.Exists(modelFilePath))
 //             {
 //                 LoadModel();
-//                 Debug.Log("Loaded pre-trained model from: " + modelFilePath);
+//                 Logger.Info("Loaded pre-trained model from: " + modelFilePath);
 //                 epsilon = minEpsilon; // Start with minimal exploration if exists
 //             }
 //             else
 //             {
 //                 qNetwork = new NeuralNetwork(INPUT_SIZE, HIDDEN_SIZE, OUTPUT_SIZE);
-//                 Debug.Log("Initialized new model. Starting training from scratch.");
+//                 Logger.Info("Initialized new model. Starting training from scratch.");
 //                 epsilon = 1.0f; // Start with full exploration if not exists
 //             }
 
 //             lastState = null; 
 //             trainingStepTimer = 0f;
 
-//             Debug.Log($"NN Bot Initialized. Side: {mySide}");
+//             Logger.Info($"NN Bot Initialized. Side: {mySide}");
 //         }
 
 //         public override void OnBattleStateChanged(BattleState state, BattleWinner? winner)
@@ -102,7 +102,7 @@
 //                 lastState = null;
 
 //                 epsilon = Mathf.Max(minEpsilon, epsilon * epsilonDecay); 
-//                 Debug.Log("Battle ended. Model saved and episode context reset.");
+//                 Logger.Info("Battle ended. Model saved and episode context reset.");
 //             }
 //         }
 
@@ -120,7 +120,7 @@
 //             else
 //                 tempReward = 0f;
 
-//             Debug.Log($"Collision detected! Temp Reward: {tempReward} (My Speed: {myRobot.LinearVelocity.magnitude}, Enemy Speed: {enemyRobot.LinearVelocity.magnitude})");
+//             Logger.Info($"Collision detected! Temp Reward: {tempReward} (My Speed: {myRobot.LinearVelocity.magnitude}, Enemy Speed: {enemyRobot.LinearVelocity.magnitude})");
 //         }
 
 //         public override void OnBotUpdate()
@@ -303,7 +303,7 @@
 //                 tempReward = 0f;
 //             }
 
-//             Debug.Log($"Reward Calculation: {reward}");
+//             Logger.Info($"Reward Calculation: {reward}");
 //             return reward;
 //         }
 
@@ -348,11 +348,11 @@
 //                 SerializableNeuralNetworkData dataToSave = qNetwork.ToSerializableData();
 //                 string json = JsonUtility.ToJson(dataToSave);
 //                 File.WriteAllText(modelFilePath, json);
-//                 Debug.Log("Model saved successfully to: " + modelFilePath);
+//                 Logger.Info("Model saved successfully to: " + modelFilePath);
 //             }
 //             catch (Exception e)
 //             {
-//                 Debug.LogError("Failed to save model: " + e.Message);
+//                 Logger.Error("Failed to save model: " + e.Message);
 //             }
 
 //         }
@@ -368,7 +368,7 @@
 //                 {
 //                     qNetwork = new NeuralNetwork(loadedData.inputSize, loadedData.hiddenSize, loadedData.outputSize);
 //                     qNetwork.LoadFromSerializableData(loadedData); 
-//                     Debug.Log("Model loaded successfully from: " + modelFilePath);
+//                     Logger.Info("Model loaded successfully from: " + modelFilePath);
 //                 }
 //                 else
 //                 {
@@ -377,7 +377,7 @@
 //             }
 //             catch (Exception e)
 //             {
-//                 Debug.LogError("Failed to load model: " + e.Message);
+//                 Logger.Error("Failed to load model: " + e.Message);
 //                 qNetwork = new NeuralNetwork(INPUT_SIZE, HIDDEN_SIZE, OUTPUT_SIZE);
 //             }
 //         }
@@ -467,7 +467,7 @@
 //         public float[] FeedForward(float[] inputs) 
 //         {
 //             if (inputs.Length != inputSize) {
-//                 Debug.LogError($"Input array size mismatch! Expected {inputSize}, got {inputs.Length}");
+//                 Logger.Error($"Input array size mismatch! Expected {inputSize}, got {inputs.Length}");
 //                 return new float[outputSize];
 //             }
 
@@ -577,7 +577,7 @@
 //         {
 //             if (data.inputSize != this.inputSize || data.hiddenSize != this.hiddenSize || data.outputSize != this.outputSize)
 //             {
-//                 Debug.LogError("Model architecture mismatch during loading! Attempting to load with new architecture.");
+//                 Logger.Error("Model architecture mismatch during loading! Attempting to load with new architecture.");
 //                 // Re-initialize arrays with new sizes if dimensions don't match
 //                 this.inputSize = data.inputSize;
 //                 this.hiddenSize = data.hiddenSize;
@@ -614,7 +614,7 @@
 //             float[,] array2D = new float[rows, cols];
 //             if (arrayFlat.Length != rows * cols)
 //             {
-//                 Debug.LogError($"Reshape error: Flat array size {arrayFlat.Length} does not match target 2D size {rows}x{cols}={rows * cols}");
+//                 Logger.Error($"Reshape error: Flat array size {arrayFlat.Length} does not match target 2D size {rows}x{cols}={rows * cols}");
 //                 return new float[rows, cols];
 //             }
 

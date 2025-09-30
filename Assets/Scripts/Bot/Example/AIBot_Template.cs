@@ -27,9 +27,9 @@ namespace SumoBot
             PlayerSide hitter = bounceEvent.Actor;
 
             if (hitter == api.MyRobot.Side)
-                Debug.Log($"My AI sent hit to enemy!");
+                Logger.Info($"My AI sent hit to enemy!");
             else
-                Debug.Log($"My AI got hit!");
+                Logger.Info($"My AI got hit!");
 
         }
 
@@ -57,7 +57,7 @@ namespace SumoBot
             var faceTowardArena = FacingFormula(targetPos: api.BattleInfo.ArenaPosition);
             var faceTowardEnemy = FacingFormula(targetPos: api.EnemyRobot.Position);
 
-            Debug.Log($"[{api.MyRobot.Side}] Template.OnBotUpdate:\nDistance Score: {distanceScore}\nAngle Score: {angleScore}\n AngleToEnemy: {angleToEnemy}\n Distance From Arena: {distanceFromArena}\n Face Toward Arena: {faceTowardArena}\n Face Toward Enemy: {faceTowardEnemy}");
+            Logger.Info($"[{api.MyRobot.Side}] Template.OnBotUpdate:\nDistance Score: {distanceScore}\nAngle Score: {angleScore}\n AngleToEnemy: {angleToEnemy}\n Distance From Arena: {distanceFromArena}\n Face Toward Arena: {faceTowardArena}\n Face Toward Enemy: {faceTowardEnemy}");
 
             var previousEvent = api.Log.GetLastEvents();
 
@@ -75,7 +75,7 @@ namespace SumoBot
                 return "Undefined type";
             });
 
-            Debug.Log($"Last Actions {previousEvent.Count}: {string.Join("\n", list)}");
+            Logger.Info($"Last Actions {previousEvent.Count}: {string.Join("\n", list)}");
 
 
             // To activate the queued actions

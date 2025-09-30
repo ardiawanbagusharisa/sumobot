@@ -31,7 +31,7 @@ namespace SumoInput
 
             if (Accelerate == null || TurnLeft == null || TurnRight == null || Dash == null || Skill == null)
             {
-                Debug.LogError("One or more ButtonPointerHandler references are not assigned in the Inspector!");
+                Logger.Error("One or more ButtonPointerHandler references are not assigned in the Inspector!");
                 return;
             }
 

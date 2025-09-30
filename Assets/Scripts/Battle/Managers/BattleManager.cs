@@ -202,7 +202,7 @@ namespace SumoManager
                         {"outPlayerSide", controller.Side},
                         {"skill", controller.Skill.Type},
                     });
-            Debug.Log($"Player registered: {side}");
+            Logger.Info($"Player registered: {side}");
         }
 
         IEnumerator AllPlayersReady()
@@ -268,7 +268,7 @@ namespace SumoManager
         {
             if (CurrentState != BattleState.Battle_Ongoing)
                 return;
-            Debug.Log("OnPlayerOutOfArena");
+            Logger.Info("OnPlayerOutOfArena");
             PlayerSide Side = param.Side;
             SumoController winner = Side == PlayerSide.Left ? Battle.RightPlayer : Battle.LeftPlayer;
 
@@ -286,7 +286,7 @@ namespace SumoManager
 
         private void TransitionToState(BattleState newState)
         {
-            Debug.Log($"State Transition: {CurrentState} → {newState}");
+            Logger.Info($"State Transition: {CurrentState} → {newState}");
             CurrentState = newState;
 
             if (Battle.CurrentRound == null || Battle.CurrentRound.RoundNumber == 0)
@@ -383,7 +383,7 @@ namespace SumoManager
                         Battle.CurrentRound = new Round(previousRound + 1, Mathf.CeilToInt(BattleTime));
                         LogManager.StartRound(Battle.CurrentRound.RoundNumber);
 
-                        Debug.Log($"CurrentRound.RoundNumber {Battle.CurrentRound.RoundNumber}");
+                        Logger.Info($"CurrentRound.RoundNumber {Battle.CurrentRound.RoundNumber}");
 
                         TransitionToState(BattleState.Battle_Countdown);
                     }
@@ -464,7 +464,7 @@ namespace SumoManager
 
         public BattleWinner? GetBattleWinner()
         {
-            Debug.Log($"[Battle][GetBattleWinner] leftWinCount: {LeftWinCount}, rightWinCount: {RightWinCount}");
+            Logger.Info($"[Battle][GetBattleWinner] leftWinCount: {LeftWinCount}, rightWinCount: {RightWinCount}");
 
             int winningTreshold = 0;
 

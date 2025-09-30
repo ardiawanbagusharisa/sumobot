@@ -55,14 +55,14 @@ public class AIBot_DQN : Bot
         if (loadModel)
         {
             DQN = DeepQNetwork.Load(path);
-            Debug.Log($"Loaded DQN from {path}");
+            Logger.Info($"Loaded DQN from {path}");
         }
         else
         {
             // 4 Inputs: Position X, Position Y, Angle, Distance Normalized
             // 5 Outputs: Accelerate, TurnLeft, TurnRight, Dash, Skill 
             DQN = new DeepQNetwork(input, hidden, output);
-            Debug.Log("Created new DQN");
+            Logger.Info("Created new DQN");
         }
 
         totalEpisodes = 0;
@@ -78,8 +78,8 @@ public class AIBot_DQN : Bot
         if (timer >= maxEpisodeTime)
         {
             ResetEpisode();
-            Debug.Log($"Angle: {api.Angle()}, Dist: {api.Distance().magnitude} {api.Distance()}, DistN: {api.DistanceNormalized()}");
-            Debug.Log($"MyPos: {api.MyRobot.Position}, MyRot: {api.MyRobot.Rotation}, EnemyPos: {api.EnemyRobot.Position}, EnemyRotation: {api.EnemyRobot.Rotation}");
+            Logger.Info($"Angle: {api.Angle()}, Dist: {api.Distance().magnitude} {api.Distance()}, DistN: {api.DistanceNormalized()}");
+            Logger.Info($"MyPos: {api.MyRobot.Position}, MyRot: {api.MyRobot.Rotation}, EnemyPos: {api.EnemyRobot.Position}, EnemyRotation: {api.EnemyRobot.Rotation}");
         }
         if (totalEpisodes >= maxTotalEpisodes)
         {
@@ -99,7 +99,7 @@ public class AIBot_DQN : Bot
             {
                 string path = "Assets/Resources/ML/Models/RL/" + modelFileName + ".json";
                 DQN.Save(path);
-                Debug.Log($"Saved RL to {path}");
+                Logger.Info($"Saved RL to {path}");
             }
 #endif
         }
@@ -263,7 +263,7 @@ public class AIBot_DQN : Bot
         {
             string path = "Assets/Resources/ML/Models/RL/" + modelFileName + ".json";
             DQN.Save(path);
-            Debug.Log($"Saved DQN to {path}");
+            Logger.Info($"Saved DQN to {path}");
         }
 #endif
     }

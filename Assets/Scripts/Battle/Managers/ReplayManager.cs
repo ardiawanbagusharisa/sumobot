@@ -141,7 +141,7 @@ public class ReplayManager : MonoBehaviour
         {
             LogScrollbar.onValueChanged.AddListener((val) =>
             {
-                Debug.Log($"LogScrollBar.onValueChanged {val}");
+                Logger.Info($"LogScrollBar.onValueChanged {val}");
                 if (val < 0.01f)
                 {
                     autoScrollLog = true;
@@ -208,7 +208,7 @@ public class ReplayManager : MonoBehaviour
                 {
                     DisplayCurrentEventInfo();
                     isPlaying = false;
-                    Debug.Log("Replay finished.");
+                    Logger.Info("Replay finished.");
                     return;
                 }
 
@@ -415,7 +415,7 @@ public class ReplayManager : MonoBehaviour
         string[] files = Directory.GetFiles(folder, "game_*.json");
         if (files.Count() == 0)
         {
-            Debug.LogError("Folder doesn't contain games");
+            Logger.Error("Folder doesn't contain games");
             return;
         }
 
@@ -443,7 +443,7 @@ public class ReplayManager : MonoBehaviour
     {
         if (battleLog.Games.Count() == 0)
         {
-            Debug.LogError("BattleLog doesn't contain games");
+            Logger.Error("BattleLog doesn't contain games");
             return;
         }
 

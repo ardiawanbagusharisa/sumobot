@@ -44,7 +44,7 @@ public class AIBot_NN : Bot
         if (loadModel)
         {
             NN = NeuralNetwork.Load(path);
-            Debug.Log($"Loaded NN from {path}");
+            Logger.Info($"Loaded NN from {path}");
             return;
         }
         else
@@ -52,7 +52,7 @@ public class AIBot_NN : Bot
             // 4 Inputs: Position X, Position Y, Angle, Distance Normalized
             // 5 Outputs: Accelerate, TurnLeft, TurnRight, Dash, Skill 
             NN = new NeuralNetwork(input, hidden, output);
-            Debug.Log("Created new NN");
+            Logger.Info("Created new NN");
         }
 
         totalEpisodes = 0;
@@ -68,14 +68,14 @@ public class AIBot_NN : Bot
         if (timer >= maxEpisodeTime)
         {
             ResetEpisode();
-            Debug.Log($"Angle: {api.Angle()}, Dist: {api.Distance().magnitude} {api.Distance()}, DistN: {api.DistanceNormalized()}");
-            Debug.Log($"MyPos: {api.MyRobot.Position}, MyRot: {api.MyRobot.Rotation}, EnemyPos: {api.EnemyRobot.Position}, EnemyRotation: {api.EnemyRobot.Rotation}");
+            Logger.Info($"Angle: {api.Angle()}, Dist: {api.Distance().magnitude} {api.Distance()}, DistN: {api.DistanceNormalized()}");
+            Logger.Info($"MyPos: {api.MyRobot.Position}, MyRot: {api.MyRobot.Rotation}, EnemyPos: {api.EnemyRobot.Position}, EnemyRotation: {api.EnemyRobot.Rotation}");
         }
     }
 
     public override void OnBattleStateChanged(BattleState state, BattleWinner? winner)
     {
-        Debug.Log($"{state}. Winner: {winner}");
+        Logger.Info($"{state}. Winner: {winner}");
 
         if (state == BattleState.Battle_End)
         {
@@ -85,7 +85,7 @@ public class AIBot_NN : Bot
             {
                 string path = "Assets/Resources/ML/Models/NN/" + modelFileName + ".json";
                 NN.Save(path);
-                Debug.Log($"Saved NN to {path}");
+                Logger.Info($"Saved NN to {path}");
             }
 #endif
         }
@@ -176,7 +176,7 @@ public class AIBot_NN : Bot
         {
             string path = "Assets/Resources/ML/Models/NN/" + modelFileName + ".json";
             NN.Save(path);
-            Debug.Log($"Saved NN to {path}");
+            Logger.Info($"Saved NN to {path}");
         }
 #endif
     }
