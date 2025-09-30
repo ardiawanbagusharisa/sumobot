@@ -394,7 +394,7 @@ namespace SumoHelper
                 }
                 catch (Exception e)
                 {
-                    Logger.Info($"[BattleSimulator] Got error, this iteration will be simulated. Error cause: {e}", true);
+                    Logger.Error($"[BattleSimulator] Got error, this iteration will be simulated. Error cause: {e}", true);
                     break;
                 }
             }
