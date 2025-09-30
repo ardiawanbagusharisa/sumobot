@@ -381,8 +381,18 @@ namespace SumoHelper
             var files = Directory.GetFiles(folder, "game_*.json");
 
             List<LogManager.GameLog> gameLogs = new();
+
+            bool isExceed = false;
             foreach (var file in files)
             {
+                if ((gameLogs.Count + 1) > cfg.Iteration)
+                {
+                    Logger.Info($"[BattleSimulator] Config number {currentConfigIndex}, has exceeding games, 1 index file deleted");
+                    File.Delete(file);
+                    isExceed = true;
+                    continue;
+                }
+
                 try
                 {
                     string json = File.ReadAllText(file);
@@ -401,7 +411,14 @@ namespace SumoHelper
 
             // if we already hit target, skip
             if (gameLogs.Count >= cfg.Iteration)
+            {
+                if (isExceed)
+                {
+                    gameLogs.RemoveAt(cfg.Iteration - 1);
+                    return (cfg.Iteration - 1, gameLogs);
+                }
                 return (cfg.Iteration, gameLogs);
+            }
 
             // resume at last file (to re-run it)
             return (Math.Max(0, gameLogs.Count - 1), gameLogs);
