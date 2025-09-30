@@ -200,9 +200,9 @@ namespace SumoHelper
                 if (!cfg.AgentLeft.UseAsync && !cfg.AgentRight.UseAsync)
                     Time.timeScale = cfg.TimeScale;
 
-                for (int iter = resumeAt; iter <= cfg.Iteration; iter++)
+                for (int iter = resumeAt; iter < cfg.Iteration; iter++)
                 {
-                    Logger.Info($"[Simulation] Config {currentConfigIndex}/{_configs.Count}, Iteration {iter}/{cfg.Iteration} | " +
+                    Logger.Info($"[Simulation] Config {currentConfigIndex}/{_configs.Count}, Iteration {iter+1}/{cfg.Iteration} | " +
                               $"{cfg.AgentLeft.ID} vs {cfg.AgentRight.ID} | " +
                               $"RoundSystem={cfg.RoundSystem}, Timer={cfg.Timer}, Interval={cfg.ActionInterval}, SkillLeft={cfg.SkillSetLeft}, SkillRight={cfg.SkillSetRight}", true);
 
@@ -390,7 +390,7 @@ namespace SumoHelper
 
                 if (i > cfg.Iteration - 1)
                 {
-                    Logger.Info($"[BattleSimulator] Config number {currentConfigIndex}, has exceeding games, 1 index file deleted");
+                    Logger.Info($"[BattleSimulator] Config number {currentConfigIndex}, has exceeding games, 1 index file deleted", true);
                     File.Delete(file);
                     isExceed = true;
                     continue;
