@@ -424,7 +424,7 @@ namespace SumoHelper
             }
 
             // resume at last file (to re-run it)
-            return (Math.Max(1, gameLogs.Count), gameLogs);
+            return (Math.Max(1, gameLogs.Count - (isExceed ? 0 : 1)), gameLogs);
         }
 
         private string[] GetFolderName(BattleConfig cfg)
