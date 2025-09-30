@@ -418,7 +418,7 @@ namespace SumoHelper
                 if (isExceed)
                 {
                     gameLogs.RemoveAt(cfg.Iteration - 1);
-                    return (cfg.Iteration, gameLogs);
+                    return (cfg.Iteration - 1, gameLogs);
                 }
                 return (cfg.Iteration, gameLogs);
             }
