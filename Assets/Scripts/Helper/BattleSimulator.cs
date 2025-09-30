@@ -202,7 +202,7 @@ namespace SumoHelper
 
                 for (int iter = resumeAt; iter < cfg.Iteration; iter++)
                 {
-                    Logger.Info($"[Simulation] Config {currentConfigIndex}/{_configs.Count}, Iteration {iter+1}/{cfg.Iteration} | " +
+                    Logger.Info($"[Simulation] Config {currentConfigIndex}/{_configs.Count}, Iteration {iter}/{cfg.Iteration} | " +
                               $"{cfg.AgentLeft.ID} vs {cfg.AgentRight.ID} | " +
                               $"RoundSystem={cfg.RoundSystem}, Timer={cfg.Timer}, Interval={cfg.ActionInterval}, SkillLeft={cfg.SkillSetLeft}, SkillRight={cfg.SkillSetRight}", true);
 
@@ -418,13 +418,13 @@ namespace SumoHelper
                 if (isExceed)
                 {
                     gameLogs.RemoveAt(cfg.Iteration - 1);
-                    return (cfg.Iteration - 1, gameLogs);
+                    return (cfg.Iteration, gameLogs);
                 }
                 return (cfg.Iteration, gameLogs);
             }
 
             // resume at last file (to re-run it)
-            return (Math.Max(0, gameLogs.Count - 1), gameLogs);
+            return (Math.Max(1, gameLogs.Count), gameLogs);
         }
 
         private string[] GetFolderName(BattleConfig cfg)
