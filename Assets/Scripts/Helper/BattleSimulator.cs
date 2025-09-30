@@ -383,9 +383,12 @@ namespace SumoHelper
             List<LogManager.GameLog> gameLogs = new();
 
             bool isExceed = false;
-            foreach (var file in files)
+
+            for (int i = 0; i < files.Length; i++)
             {
-                if ((gameLogs.Count + 1) > cfg.Iteration)
+                var file = files[i];
+
+                if (i > cfg.Iteration - 1)
                 {
                     Logger.Info($"[BattleSimulator] Config number {currentConfigIndex}, has exceeding games, 1 index file deleted");
                     File.Delete(file);
