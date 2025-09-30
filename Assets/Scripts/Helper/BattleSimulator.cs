@@ -375,17 +375,18 @@ namespace SumoHelper
             List<LogManager.GameLog> gameLogs = new();
             foreach (var file in files)
             {
-                string json = File.ReadAllText(file);
-                var log = JsonConvert.DeserializeObject<LogManager.GameLog>(json);
                 try
                 {
+                    string json = File.ReadAllText(file);
+                    var log = JsonConvert.DeserializeObject<LogManager.GameLog>(json);
                     if (log.Index > -1)
                     {
                         gameLogs.Add(log);
                     }
                 }
-                catch (Exception)
+                catch (Exception e)
                 {
+                    Debug.Log($"[BattleSimulator] Got error, this iteration will be simulated. Error cause: {e}");
                     break;
                 }
             }
