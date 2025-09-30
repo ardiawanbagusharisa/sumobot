@@ -86,9 +86,9 @@ class AIBot_ML_Classification : Bot
         int predictedIndex = ArgMax(outputTensorActRes);
         string predictedLabel = labels[predictedIndex];
 
-        Debug.Log($"$outputTensorArr {string.Join(", ", outputTensorActRes.Select((x) => $"{x}"))}");
-        Debug.Log($"$predictedLabel {predictedLabel}");
-        Debug.Log($"$predictedDuraation {outputTensorDurRes}");
+        Logger.Info($"$outputTensorArr {string.Join(", ", outputTensorActRes.Select((x) => $"{x}"))}");
+        Logger.Info($"$predictedLabel {predictedLabel}");
+        Logger.Info($"$predictedDuraation {outputTensorDurRes}");
         var action = GetAction(predictedLabel, outputTensorDurRes);
 
         Enqueue(action);
@@ -140,7 +140,7 @@ class AIBot_ML_Classification : Bot
 
         engine = new Worker(runtimeModel, BackendType.CPU);
         isInitializing = false;
-        Debug.Log($"Engine worker of MLP created!");
+        Logger.Info($"Engine worker of MLP created!");
     }
 
     public override void OnBotDestroy()

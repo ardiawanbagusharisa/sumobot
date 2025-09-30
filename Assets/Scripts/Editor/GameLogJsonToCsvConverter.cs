@@ -1,14 +1,15 @@
 #if UNITY_EDITOR
 namespace SumoEditor
 {
-    using System;
     using System.IO;
     using System.Linq;
     using System.Collections.Generic;
     using UnityEditor;
     using UnityEngine;
+    using logger = Logger;
     using Newtonsoft.Json.Linq;
     using System.Text.RegularExpressions;
+    using System;
 
     public class GameLogJsonToCsvConverter : EditorWindow
     {
@@ -205,11 +206,11 @@ namespace SumoEditor
 
 
                 EditorUtility.DisplayDialog("Success", "CSV generated successfully!", "OK");
-                Debug.Log("CSV saved to: " + outputPath);
+                logger.Info("CSV saved to: " + outputPath);
             }
             catch (Exception ex)
             {
-                Debug.LogError("Error: " + ex.Message);
+                logger.Error("Error: " + ex.Message);
                 EditorUtility.DisplayDialog("Error", "Failed to generate CSV.\n" + ex.Message, "OK");
             }
         }

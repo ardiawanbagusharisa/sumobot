@@ -134,7 +134,7 @@ public class PlayerProfile
         var prefab = Resources.Load<Sprite>($"{basePath}/{path}");
         if (prefab == null)
         {
-            Debug.LogError($"Sprite not found at Resources/{path}");
+            Logger.Error($"Sprite not found at Resources/{path}");
             return null;
         }
         return prefab;

@@ -8,7 +8,6 @@ using SumoCore;
 using System;
 using System.IO;
 using Unity.VisualScripting;
-using System.Text.RegularExpressions;
 using Newtonsoft.Json;
 
 namespace SumoHelper
@@ -62,13 +61,22 @@ namespace SumoHelper
                         ConfigEnd = end;
                 }
 
+                if (arg.StartsWith("--batchLogFile="))
+                {
+                    string value = arg.Substring("--batchLogFile=".Length);
+                    if (value == "nul")
+                        Logger.BatchLogPath = null;
+                    else
+                        Logger.BatchLogPath = Path.Combine(Application.persistentDataPath, value);
+                }
+
                 if (ConfigStart > -1 && ConfigEnd > -1 && Application.isBatchMode)
                 {
                     Batched = true;
                 }
             }
 
-            Debug.Log($"[BatchedCommandLineArgs] ConfigStart={ConfigStart}, ConfigEnd={ConfigEnd}");
+            Logger.Info($"[BatchedCommandLineArgs] ConfigStart={ConfigStart}, ConfigEnd={ConfigEnd}", true);
         }
 
         public void PrepareSimulation()
@@ -106,7 +114,7 @@ namespace SumoHelper
 
             if (Batched)
             {
-                Debug.Log($"Applied Config: StartAt {ConfigStart}, EndAt {ConfigEnd}");
+                Logger.Info($"[Simulation] Applied Config: StartAt {ConfigStart}, EndAt {ConfigEnd}", true);
                 currentConfigIndex = ConfigStart;
                 firstConfigIndex = ConfigStart;
                 checkpoint.ConfigIndex = ConfigStart;
@@ -161,7 +169,7 @@ namespace SumoHelper
                 }
             }
 
-            Debug.Log($"Loaded {Agents.Count}\nagents: {string.Join(", ", Agents.Select(a => a.ID))}");
+            Logger.Info($"[Simulation] Loaded {Agents.Count}\nagents: {string.Join(", ", Agents.Select(a => a.ID))}",true);
         }
 
         private IEnumerator RunSimulations()
@@ -177,7 +185,7 @@ namespace SumoHelper
                 checkpoint.Iteration = resumeAt;
                 if (resumeAt >= cfg.Iteration)
                 {
-                    Debug.Log($"[Skip] {currentConfigIndex} already completed {cfg.Iteration} iterations.");
+                    Logger.Info($"[Simulation][Skip] {currentConfigIndex} already completed {cfg.Iteration} iterations.", true);
                     continue;
                 }
 
@@ -194,9 +202,9 @@ namespace SumoHelper
 
                 for (int iter = resumeAt; iter <= cfg.Iteration; iter++)
                 {
-                    Debug.Log($"[Simulation] Config {currentConfigIndex}/{_configs.Count}, Iteration {iter}/{cfg.Iteration} | " +
+                    Logger.Info($"[Simulation] Config {currentConfigIndex}/{_configs.Count}, Iteration {iter}/{cfg.Iteration} | " +
                               $"{cfg.AgentLeft.ID} vs {cfg.AgentRight.ID} | " +
-                              $"RoundSystem={cfg.RoundSystem}, Timer={cfg.Timer}, Interval={cfg.ActionInterval}, SkillLeft={cfg.SkillSetLeft}, SkillRight={cfg.SkillSetRight}");
+                              $"RoundSystem={cfg.RoundSystem}, Timer={cfg.Timer}, Interval={cfg.ActionInterval}, SkillLeft={cfg.SkillSetLeft}, SkillRight={cfg.SkillSetRight}", true);
 
                     yield return new WaitForSecondsRealtime(1);
 
@@ -221,7 +229,7 @@ namespace SumoHelper
                 checkpoint.Iteration = 1;
             }
 
-            Debug.Log("All simulations complete.");
+            Logger.Info("[Simulation] All simulations complete.", true);
 #if UNITY_EDITOR
             UnityEditor.EditorApplication.isPlaying = false;
 #else
@@ -312,8 +320,8 @@ namespace SumoHelper
                 }
             }
 
-            Debug.Log($"Generated configs: {configs.Count}");
-            Debug.Log($"Game will run {configs.Aggregate(0, (sum, cfg) => sum + cfg.Iteration)} matches in total.");
+            Logger.Info($"Generated configs: {configs.Count}", true);
+            Logger.Info($"Game will run {configs.Aggregate(0, (sum, cfg) => sum + cfg.Iteration)} matches in total.", true);
             return configs;
         }
 
@@ -386,7 +394,7 @@ namespace SumoHelper
                 }
                 catch (Exception e)
                 {
-                    Debug.Log($"[BattleSimulator] Got error, this iteration will be simulated. Error cause: {e}");
+                    Logger.Info($"[BattleSimulator] Got error, this iteration will be simulated. Error cause: {e}", true);
                     break;
                 }
             }

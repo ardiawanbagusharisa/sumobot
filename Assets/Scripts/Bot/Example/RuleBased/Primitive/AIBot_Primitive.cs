@@ -25,14 +25,14 @@ namespace SumoBot.RuleBased.Primitive
         public override void OnBotInit(SumoAPI botAPI)
         {
             api = botAPI;
-            Debug.Log($"api {api.BattleInfo.ArenaPosition}");
+            Logger.Info($"api {api.BattleInfo.ArenaPosition}");
         }
 
         public override void OnBotUpdate()
         {
             float angleToEnemy = api.Angle();
-            Debug.Log($"Angle To Enemy {angleToEnemy}");
-            Debug.Log($"Angle To Enemy Norm {api.Angle(normalized: true)}");
+            Logger.Info($"Angle To Enemy {angleToEnemy}");
+            Logger.Info($"Angle To Enemy Norm {api.Angle(normalized: true)}");
             SumoBotAPI myState = api.MyRobot;
             float angleInDur = Mathf.Abs(angleToEnemy) / myState.RotateSpeed;
 
@@ -73,7 +73,7 @@ namespace SumoBot.RuleBased.Primitive
         public override void OnBattleStateChanged(BattleState state, BattleWinner? winner)
         {
             currState = state;
-            Debug.Log($"winner {winner}");
+            Logger.Info($"winner {winner}");
         }
     }
 }

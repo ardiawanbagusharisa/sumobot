@@ -54,12 +54,12 @@ public class AIBot_PPO : Bot
         if (loadModel)
         {
             PPO = ProximalPolicyOptimization.Load(path);
-            Debug.Log($"Loaded PPO from {path}");
+            Logger.Info($"Loaded PPO from {path}");
         }
         else
         {
             PPO = new ProximalPolicyOptimization(input, hidden, output); // 4 Inputs: Position X, Position Y, Angle, Distance Normalized
-            Debug.Log("Created new PPO");
+            Logger.Info("Created new PPO");
         }
 
         totalEpisodes = 0;
@@ -74,8 +74,8 @@ public class AIBot_PPO : Bot
         if (timer >= maxEpisodeTime)
         {
             ResetEpisode();
-            Debug.Log($"Angle: {api.Angle():F2}, Dist: {api.Distance().magnitude:F2}, DistN: {api.DistanceNormalized():F2}");
-            Debug.Log($"MyPos: {api.MyRobot.Position}, MyRot: {api.MyRobot.Rotation:F2}, EnemyPos: {api.EnemyRobot.Position}, EnemyRot: {api.EnemyRobot.Rotation:F2}");
+            Logger.Info($"Angle: {api.Angle():F2}, Dist: {api.Distance().magnitude:F2}, DistN: {api.DistanceNormalized():F2}");
+            Logger.Info($"MyPos: {api.MyRobot.Position}, MyRot: {api.MyRobot.Rotation:F2}, EnemyPos: {api.EnemyRobot.Position}, EnemyRot: {api.EnemyRobot.Rotation:F2}");
         }
         if (totalEpisodes >= maxTotalEpisodes)
         {
@@ -95,7 +95,7 @@ public class AIBot_PPO : Bot
             {
                 string path = "Assets/Resources/ML/Models/RL/" + modelFileName + ".json";
                 PPO.Save(path);
-                Debug.Log($"Saved PPO to {path}");
+                Logger.Info($"Saved PPO to {path}");
             }
 #endif
         }
@@ -202,7 +202,7 @@ public class AIBot_PPO : Bot
         if (myRobot.IsDashOnCooldown && Mathf.Abs(angle) < angleThreshold)
             reward += 0.5f;
 
-        Debug.Log($"Reward: {reward:F2} | EndReward: {endReward:F2} | Angle: {(1 - Mathf.Abs(angle) / 180f):F2} | Dist: {(1 - distNormalized):F2}");
+        Logger.Info($"Reward: {reward:F2} | EndReward: {endReward:F2} | Angle: {(1 - Mathf.Abs(angle) / 180f):F2} | Dist: {(1 - distNormalized):F2}");
 
         return reward;
     }
@@ -285,7 +285,7 @@ public class AIBot_PPO : Bot
         {
             string path = "Assets/Resources/ML/Models/RL/" + modelFileName + ".json";
             PPO.Save(path);
-            Debug.Log($"Saved PPO to {path}");
+            Logger.Info($"Saved PPO to {path}");
         }
 #endif
     }
@@ -374,7 +374,7 @@ public class ProximalPolicyOptimization
     {
         if (input.Length != inputSize)
         {
-            Debug.LogError($"Input size mismatch: expected {inputSize}, got {input.Length}");
+            Logger.Error($"Input size mismatch: expected {inputSize}, got {input.Length}");
             return (new float[outputSize], 0f);
         }
 
@@ -523,14 +523,14 @@ public class ProximalPolicyOptimization
 
             if (batchCount > 0)
             {
-                Debug.Log($"Epoch {epoch}: Avg Policy Loss={totalPolicyLoss / batchCount:F4}, Avg Value Loss={totalValueLoss / batchCount:F4}, Avg Total Loss={totalLoss / batchCount:F4}");
+                Logger.Info($"Epoch {epoch}: Avg Policy Loss={totalPolicyLoss / batchCount:F4}, Avg Value Loss={totalValueLoss / batchCount:F4}, Avg Total Loss={totalLoss / batchCount:F4}");
             }
         }
 
         float w1Mag = CalculateWeightMagnitude(weights1);
         float w2Mag = CalculateWeightMagnitude(weights2);
         float wValueMag = CalculateWeightMagnitude(weightsValue);
-        Debug.Log($"Weight Magnitudes: W1={w1Mag:F3}, W2={w2Mag:F3}, WValue={wValueMag:F3}");
+        Logger.Info($"Weight Magnitudes: W1={w1Mag:F3}, W2={w2Mag:F3}, WValue={wValueMag:F3}");
     }
 
     private float CalculateEntropy(float[] probs)
@@ -541,7 +541,7 @@ public class ProximalPolicyOptimization
                 entropy -= probs[i] * Mathf.Log(probs[i]);
         float sum = 0f;
         for (int i = 0; i < probs.Length; i++) sum += probs[i];
-        Debug.Log($"Probs sum: {sum:F6}, Entropy: {entropy:F4}"); // Debug prob sum
+        Logger.Info($"Probs sum: {sum:F6}, Entropy: {entropy:F4}"); // Debug prob sum
         return entropy;
     }
 

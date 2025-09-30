@@ -50,7 +50,7 @@ public class BotSelector : Editor
                 Bot right = CreateInstance(botTypes[selector.rightBotIndex]) as Bot;
                 selector.Assign(left, PlayerSide.Left);
                 selector.Assign(right, PlayerSide.Right);
-                Debug.Log($"Assigned {botNames[selector.leftBotIndex]} (Left), {botNames[selector.rightBotIndex]} (Right)");
+                Logger.Info($"Assigned {botNames[selector.leftBotIndex]} (Left), {botNames[selector.rightBotIndex]} (Right)");
             }
 
         if (GUI.changed)

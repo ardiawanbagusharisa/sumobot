@@ -157,7 +157,7 @@ namespace SumoInput
                     }
                     catch (Exception e)
                     {
-                        Debug.LogError(e);
+                        Logger.Error(e);
                     }
                 }
             }

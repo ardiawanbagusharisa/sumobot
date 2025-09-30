@@ -107,10 +107,10 @@ namespace SumoCore
 
             if (IsSkillOnCooldown)
             {
-                Debug.Log($"[Skill][{Type}] is on cooldown");
+                Logger.Info($"[Skill][{Type}] is on cooldown");
                 return false;
             }
-            Debug.Log($"[Skill][{Type}] activated!");
+            Logger.Info($"[Skill][{Type}] activated!");
 
             IsActive = true;
             controller.Log(action);
@@ -166,7 +166,7 @@ namespace SumoCore
         {
             yield return new WaitForSeconds(TotalCooldown);
 
-            Debug.Log($"[Skill][{Type}] cooldown end!");
+            Logger.Info($"[Skill][{Type}] cooldown end!");
         }
 
         public override string ToString()

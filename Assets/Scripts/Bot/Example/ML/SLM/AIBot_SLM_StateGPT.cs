@@ -79,7 +79,7 @@
 //             // if (currentAction != null)
 //             // {
 //             //     actionTimer = api.MyRobot.ActiveActions.TryGetValue(currentAction.Type, out float duration) ? duration : 0;
-//             //     Debug.Log($"Current Action: {currentAction.FullName}, Timer: {actionTimer:F2}");
+//             //     Logger.Info($"Current Action: {currentAction.FullName}, Timer: {actionTimer:F2}");
 //             //     if (actionTimer <= 0f)
 //             //     {
 //             //         sequentialActions.Clear();
@@ -100,7 +100,7 @@
 //         {
 //             if (sequentialActions.Count == 0 && currentAction == null && prompt != null)
 //             {
-//                 Debug.Log($"prompt {prompt}");
+//                 Logger.Info($"prompt {prompt}");
 
 //                 int[] input = tokenizer.Encode(prompt);
 //                 int blockSize = 128;
@@ -140,7 +140,7 @@
 //                 isGenerating = false;
 
 //                 string generated = tokenizer.Decode(outputTokens);
-//                 Debug.Log("🧠 Generated Output:\n" + generated);
+//                 Logger.Info("🧠 Generated Output:\n" + generated);
 //             }
 
 //             // yield return null;

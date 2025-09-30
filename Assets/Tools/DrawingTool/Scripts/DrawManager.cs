@@ -273,7 +273,7 @@ public class DrawManager : MonoBehaviour
         tex.Apply();
 
         System.IO.File.WriteAllBytes(path, tex.EncodeToPNG());
-        Debug.Log($"Saved PNG to: {path}");
+        Logger.Info($"Saved PNG to: {path}");
 
         RenderTexture.active = prevRT;
         Destroy(tex);
@@ -288,7 +288,7 @@ public class DrawManager : MonoBehaviour
     {
         if (_paletteSourceTexture == null)
         {
-            Debug.LogError("Drawing Color Source Texture is missing! Cannot generate palette.");
+            Logger.Error("Drawing Color Source Texture is missing! Cannot generate palette.");
             SetBrushColor(Color.black);
             return;
         }
@@ -317,7 +317,7 @@ public class DrawManager : MonoBehaviour
             {
                 _colorPreviewImage.color = generatedColors[index];
                 SetBrushColor(generatedColors[index]);
-                Debug.Log($"Picked color: {_paletteButtons[index]}");
+                Logger.Info($"Picked color: {_paletteButtons[index]}");
             });
         }
 
@@ -326,6 +326,6 @@ public class DrawManager : MonoBehaviour
         else 
             SetBrushColor(Color.black); 
 
-        Debug.Log("Drawing tool palette initialized.");
+        Logger.Info("Drawing tool palette initialized.");
     }
 }

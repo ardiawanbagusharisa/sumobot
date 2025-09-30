@@ -90,7 +90,7 @@ namespace SumoBot
                     break;
             }
             Submit(); 
-            Debug.Log($"Current State: {currentState}");
+            Logger.Info($"Current State: {currentState}");
         }
 
         public override void OnBotCollision(BounceEvent param)
@@ -119,7 +119,7 @@ namespace SumoBot
         private void TransitionToState(BotState newState)
         {
             if (currentState == newState) return;
-            Debug.Log($"Transitioning from {currentState} to {newState}");
+            Logger.Info($"Transitioning from {currentState} to {newState}");
             currentState = newState;
             stateTimer = 0f;
             ClearCommands();

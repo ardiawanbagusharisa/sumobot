@@ -231,7 +231,7 @@ namespace SumoBot
         {
             if (!IsOnUpdate)
             {
-                Debug.LogError("Submit() can only be called during OnBotUpdate().");
+                Logger.Error("Submit() can only be called during OnBotUpdate().");
                 throw new Exception("Submit() can only be called during OnBotUpdate().");
             }
 

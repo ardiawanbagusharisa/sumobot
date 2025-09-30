@@ -45,7 +45,7 @@ public class RobotController : MonoBehaviour
     public void SpecialSkill()
     {
         // Implement a unique skill here
-        Debug.Log("Special skill activated!");
+        Logger.Info("Special skill activated!");
     }
 
     public string GetStatus()

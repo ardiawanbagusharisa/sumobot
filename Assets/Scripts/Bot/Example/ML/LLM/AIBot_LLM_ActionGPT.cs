@@ -77,7 +77,7 @@ namespace ML.LanguageModels
                 }
 
                 string responseText = www.downloadHandler.text;
-                Debug.Log("Raw Response: " + responseText);
+                Logger.Info("Raw Response: " + responseText);
 
                 isGenerating = false;
                 var resp = JsonConvert.DeserializeObject<ActionResponse>(responseText);

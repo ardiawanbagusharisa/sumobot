@@ -90,7 +90,7 @@ public class ChartManager : MonoBehaviour
     {
         if (palleteSrcTexture == null || chartSeriesList.Count == 0)
         {
-            Debug.LogError("Source Texture is missing! Cannot generate palette.");
+            Logger.Error("Source Texture is missing! Cannot generate palette.");
             return;
         }
 
@@ -99,7 +99,7 @@ public class ChartManager : MonoBehaviour
 
         if (generatedColors == null || generatedColors.Count == 0)
         {
-            Debug.LogError("Generated colors list is empty! Cannot apply colors to chart series.");
+            Logger.Error("Generated colors list is empty! Cannot apply colors to chart series.");
             return;
         }
 
@@ -108,7 +108,7 @@ public class ChartManager : MonoBehaviour
             chartSeriesList[i].AxesColor = generatedColors[i];
         }
 
-        Debug.Log("Drawing tool palette initialized.");
+        Logger.Info("Drawing tool palette initialized.");
     }
 
     public void AddChartSeries(ChartSeries chart, bool sidePanel = false)
