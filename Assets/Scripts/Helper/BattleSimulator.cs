@@ -422,14 +422,14 @@ namespace SumoHelper
             {
                 if (isExceed)
                 {
-                    return (cfg.Iteration - 1, gameLogs.Take(cfg.Iteration - 1).ToList());
+                    return (cfg.Iteration - 1, gameLogs.Take(cfg.Iteration - 2).ToList());
                 }
                 return (cfg.Iteration, gameLogs);
             }
 
-            var max = gameLogs.Count - (isExceed ? 0 : 1);
+            var max = gameLogs.Count - 1;
             // resume at last file (to re-run it)
-            return (Math.Max(0, max), gameLogs.Take(max).ToList());
+            return (Math.Max(0, max), gameLogs.Take(Math.Max(0, max - 1)).ToList());
         }
 
         private string[] GetFolderName(BattleConfig cfg)
