@@ -24601,6 +24601,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 2130233539}
+  - component: {fileID: 2130233546}
   - component: {fileID: 2130233544}
   - component: {fileID: 2130233545}
   - component: {fileID: 2130233540}
@@ -24759,25 +24760,28 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2130233538}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: b33ce51748b63457ebe9b59f80ac599c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  DefaultTimeScale: 20
+  DefaultTimeScale: 15
   SimulationOnStart: 1
   UseCheckpoint: 1
   RoundCountdown: 1
   Setting:
-    Timers: 0f0000001e0000002d0000003c000000
+    Timers: 2d0000003c000000
     ActionIntervals:
     - 0.1
     - 0.2
-    - 0.5
-    Iteration: 50
-    RoundSystem: 010000000300000005000000
-    Skills: 0000000001000000
-    SelectedAgents: []
+    Iteration: 10
+    RoundSystem: 0100000003000000
+    Skills: 01000000
+    SelectedAgents:
+    - Bot_BT
+    - Bot_MCTS
+    - Bot_NN
+    - Bot_Primitive
     ExcludedAgents:
     - Bot_Template
     - Bot_LLM_ActionGPT
@@ -24795,12 +24799,28 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 01a1d4e8448fd40dda16697ad78845aa, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  LeftEnabled: 0
+  LeftEnabled: 1
   Left: {fileID: 715032728}
-  RightEnabled: 0
+  RightEnabled: 1
   Right: {fileID: 1709403126}
   leftBotIndex: 11
   rightBotIndex: 3
+--- !u!114 &2130233546
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2130233538}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a7a03daeb604142c7b15cc48e7ab4601, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  TotalSimulations: 5
+  TimeScale: 1
+  SimulationOnStart: 1
+  SwapAIInterval: 0
 --- !u!1 &2132169806
 GameObject:
   m_ObjectHideFlags: 0

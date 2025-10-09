@@ -85,6 +85,10 @@ namespace SumoHelper
             UnityEditor.EditorApplication.isPlaying = true;
 #endif
 
+            BGMManager.Instance.Stop(true);
+            SFXManager.Instance.gameObject.SetActive(false);
+            BGMManager.Instance.gameObject.SetActive(false);
+
             if (UseCheckpoint)
                 checkpoint = LoadCheckpoint();
             else
@@ -118,7 +122,7 @@ namespace SumoHelper
                 currentConfigIndex = ConfigStart;
                 firstConfigIndex = ConfigStart;
                 checkpoint.ConfigIndex = ConfigStart;
-                checkpoint.Iteration = 1;
+                checkpoint.Iteration = 0;
             }
             else
             {
@@ -195,7 +199,7 @@ namespace SumoHelper
                 }
 
                 LogManager.Log.Games = gameLogs;
-                yield return new WaitForSecondsRealtime(1);
+                yield return new WaitForEndOfFrame();
 
                 if (!cfg.AgentLeft.UseAsync && !cfg.AgentRight.UseAsync)
                     Time.timeScale = cfg.TimeScale;
@@ -208,7 +212,7 @@ namespace SumoHelper
 
                     yield return new WaitForSecondsRealtime(1);
 
-                    if (SimulationOnStart || currentConfigIndex > 0 || iter > 1)
+                    if (SimulationOnStart || currentConfigIndex > 0 || iter > 0)
                     {
                         BattleManager.Instance.Battle_Start();
                     }
@@ -226,7 +230,7 @@ namespace SumoHelper
                     yield return new WaitForEndOfFrame();
                 }
 
-                checkpoint.Iteration = 1;
+                checkpoint.Iteration = 0;
             }
 
             Logger.Info("[Simulation] All simulations complete.", true);
@@ -252,6 +256,7 @@ namespace SumoHelper
             LogManager.InitBattle(cfg);
 
             var newBattle = new Battle(Guid.NewGuid().ToString(), cfg.RoundSystem);
+            // Apply previous players to new battle
             newBattle.LeftPlayer = BattleManager.Instance.Battle.LeftPlayer;
             newBattle.RightPlayer = BattleManager.Instance.Battle.RightPlayer;
             BattleManager.Instance.Battle = newBattle;
@@ -417,14 +422,14 @@ namespace SumoHelper
             {
                 if (isExceed)
                 {
-                    gameLogs.RemoveAt(cfg.Iteration - 1);
-                    return (cfg.Iteration - 1, gameLogs);
+                    return (cfg.Iteration - 1, gameLogs.Take(cfg.Iteration - 1).ToList());
                 }
                 return (cfg.Iteration, gameLogs);
             }
 
+            var max = gameLogs.Count - (isExceed ? 0 : 1);
             // resume at last file (to re-run it)
-            return (Math.Max(1, gameLogs.Count - (isExceed ? 0 : 1)), gameLogs);
+            return (Math.Max(0, max), gameLogs.Take(max).ToList());
         }
 
         private string[] GetFolderName(BattleConfig cfg)
@@ -478,3 +483,4 @@ namespace SumoHelper
         public int Iteration;
     }
 }
+

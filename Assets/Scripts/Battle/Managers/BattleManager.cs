@@ -97,13 +97,7 @@ namespace SumoManager
             BotManager = GetComponent<BotManager>();
 
             if (simulator.enabled)
-            {
                 simulator.PrepareSimulation();
-                BGMManager.Instance.Stop(true);
-                
-                SFXManager.Instance.gameObject.SetActive(false);
-                BGMManager.Instance.gameObject.SetActive(false);
-            }
             else
             {
                 LogManager.UnregisterAction();

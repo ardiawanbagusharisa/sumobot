@@ -241,7 +241,6 @@ namespace SumoManager
                 RoundType = (int)battleManager.RoundSystem,
                 SimulationAmount = simConfig?.Iteration ?? 0,
                 SimulationTimeScale = simConfig?.TimeScale ?? 0,
-                // SimulationAISwapInterval = simConfig?.SwapAIInterval ?? 0,
                 CreatedAt = (int)DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
             };
 
@@ -274,6 +273,7 @@ namespace SumoManager
                 {"X", BattleManager.Instance.Arena.transform.position.x},
                 {"Y", BattleManager.Instance.Arena.transform.position.y},
             };
+            
             Log.ArenaRadius = BattleManager.Instance.ArenaRadius;
 
             if (logTakenAction && Log.Games.Count > 0)

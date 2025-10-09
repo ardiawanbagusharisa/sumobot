@@ -110,7 +110,6 @@ namespace SumoBot.EA.MCTS
 
         EA_MCTS_Node Decide()
         {
-            Logger.Info($"testing {api.Angle(normalized: true)}");
             for (int i = 0; i < config.Iterations; i++)
             {
                 EA_MCTS_Node selected = root.Select(config);
