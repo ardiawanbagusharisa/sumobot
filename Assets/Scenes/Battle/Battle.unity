@@ -24818,7 +24818,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   TotalSimulations: 5
-  TimeScale: 1
+  TimeScale: 5
   SimulationOnStart: 1
   SwapAIInterval: 0
 --- !u!1 &2132169806
