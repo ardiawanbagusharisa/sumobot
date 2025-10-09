@@ -13,7 +13,6 @@ namespace SumoEditor
 
     public class SimLogToCSV : EditorWindow
     {
-
         [MenuItem("Tools/Simulation Log to CSV")]
         public static void ShowWindow()
         {
