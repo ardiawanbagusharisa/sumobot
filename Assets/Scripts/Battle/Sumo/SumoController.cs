@@ -545,6 +545,7 @@ namespace SumoCore
 
             if (torque > 0 && impact > 0)
             {
+                Debug.Log($"Bounce Direction: {(impact * direction).magnitude}");
                 RigidBody.AddForce(impact * direction, ForceMode2D.Impulse);
                 RigidBody.AddTorque(torque * Torque, ForceMode2D.Impulse);
                 RigidBody.angularDamping = 0.5f;
