@@ -25,7 +25,10 @@ namespace SumoEditor
 
             if (GUILayout.Button("Convert to CSV", GUILayout.Height(40)))
             {
-                ConvertAllConfigs(Path.Combine(Application.persistentDataPath, "Simulation"));
+                // ConvertAllConfigs(Path.Combine(Application.persistentDataPath, "Simulation"));
+                var name = "Timer_30__ActInterval_0.5__Round_BestOf5__SkillLeft_Stone__SkillRight_Boost";
+                var path = Path.Combine(Application.persistentDataPath, "Simulation", "Bot_NN_vs_Bot_UtilityAI", "Timer_30__ActInterval_0.5__Round_BestOf5__SkillLeft_Stone__SkillRight_Boost");
+                ConvertLogsToCsv(path, Path.Combine(path, $"{name}.csv"));
             }
         }
 
@@ -213,7 +216,7 @@ namespace SumoEditor
             }
             catch (Exception ex)
             {
-                logger.Error("Error: " + ex.Message);
+                logger.Error($"Error reading config from {folderPath} : {ex.Message}, {ex.Source}");
                 EditorUtility.DisplayDialog("Error", "Failed to generate CSV.\n" + ex.Message, "OK");
             }
         }

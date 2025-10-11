@@ -24760,7 +24760,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2130233538}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: b33ce51748b63457ebe9b59f80ac599c, type: 3}
   m_Name: 
@@ -24770,18 +24770,15 @@ MonoBehaviour:
   UseCheckpoint: 1
   RoundCountdown: 1
   Setting:
-    Timers: 2d0000003c000000
+    Timers: 0f0000001e0000002d0000003c000000
     ActionIntervals:
     - 0.1
     - 0.2
-    Iteration: 10
-    RoundSystem: 0100000003000000
-    Skills: 01000000
-    SelectedAgents:
-    - Bot_BT
-    - Bot_MCTS
-    - Bot_NN
-    - Bot_Primitive
+    - 0.5
+    Iteration: 50
+    RoundSystem: 010000000300000005000000
+    Skills: 0000000001000000
+    SelectedAgents: []
     ExcludedAgents:
     - Bot_Template
     - Bot_LLM_ActionGPT
@@ -24812,7 +24809,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2130233538}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a7a03daeb604142c7b15cc48e7ab4601, type: 3}
   m_Name: 
