@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Drawing;
 using System.Linq;
 using SumoHelper;
 using SumoInput;
@@ -48,13 +49,12 @@ namespace SumoCore
         #region Sound Effect
         [Header("Sound Effect")]
 
-        private float fadeSpeed = 100;          // smooth fade
-        public float accelerateBasePitch = 0.1f;          // smooth fade
+        private float fadeSpeed = 100;                  // smooth fade
+        public float accelerateBasePitch = 0.1f;        // smooth fade
         public float accelerateHighPitch = 3f;          // smooth fade
 
         private float targetVolume = 0f;
         private float targetPitch = 1f;
-
         #endregion
 
         #region General Properties
@@ -322,6 +322,9 @@ namespace SumoCore
 
             movementVelocity = direction.normalized * speed;
             accelerateTimeRemaining = action.Duration;
+
+            Vector2 facingDir = Quaternion.Euler(0, 0, RigidBody.rotation) * Vector2.up;
+            VFXManager.Instance.PlayAccelerationTrail(transform, facingDir);
         }
 
         public void Turn(ISumoAction action)
@@ -365,7 +368,9 @@ namespace SumoCore
         void HandleTurning()
         {
             if (!isTurning || IsMovementDisabled || lastTurnAction == null)
+            {
                 return;
+            }
 
             if (turningSource.src != null && !turningSource.src.isPlaying)
                 turningSource.src.Play();
@@ -390,6 +395,11 @@ namespace SumoCore
                 lastTurnAction = null;
                 isTurning = false;
             }
+
+            Vector2 facingDir = Quaternion.Euler(0, 0, RigidBody.rotation) * Vector2.up;
+            int dirSign = rotationDirection; // +1 = right (CW), -1 = left (CCW)
+            VFXManager.Instance.PlayTurnTrail(transform, facingDir, dirSign);
+
         }
 
         public void SetSkillEnabled(bool value)
@@ -463,9 +473,15 @@ namespace SumoCore
             LogManager.FlushActionLog(Side);
 
             if (isActor)
+            {
                 SFXManager.Instance.Play2D("collision_small");
-            else
+                VFXManager.Instance.PlayCollisionSpark(collision.contacts[0].point, enemyVelocity);
+            }
+            else 
+            {
                 SFXManager.Instance.Play2D("collision_big");
+                VFXManager.Instance.PlayCollisionSpark(collision.contacts[0].point, actorVelocity);
+            }
 
             if (!isActor) return;
 
@@ -596,11 +612,15 @@ namespace SumoCore
                 if (action is DashAction)
                 {
                     action.Duration = DashDuration;
+                    Vector2 facing = Quaternion.Euler(0, 0, RigidBody.rotation) * Vector2.up;
+                    VFXManager.Instance.PlayDash(transform, facing);
                 }
                 else if (action is SkillAction)
                 {
                     action.Type = Skill.Type.ToActionType();
                     action.Duration = Skill.TotalDuration;
+                    Vector2 facing = Quaternion.Euler(0, 0, RigidBody.rotation) * Vector2.up;
+                    VFXManager.Instance.PlayDash(transform, facing);
                 }
 
                 Actions.Enqueue(action);

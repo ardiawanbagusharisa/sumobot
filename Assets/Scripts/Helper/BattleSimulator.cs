@@ -133,8 +133,9 @@ namespace SumoHelper
             UnityEditor.EditorApplication.isPlaying = true;
 #endif
             BGMManager.Instance.Stop(true);
-            SFXManager.Instance.gameObject.SetActive(false);
             BGMManager.Instance.gameObject.SetActive(false);
+            SFXManager.Instance.gameObject.SetActive(false);
+            VFXManager.Instance.gameObject.SetActive(false);
 
             if (Mode == SimulatorMode.Simple)
             {

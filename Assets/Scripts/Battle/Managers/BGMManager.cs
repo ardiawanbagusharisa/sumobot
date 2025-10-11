@@ -8,7 +8,7 @@ public class BGMManager : MonoBehaviour
     public static BGMManager Instance { get; private set; }
 
     [Header("Playback List")]
-    [SerializeField] private List<AudioClip> tracks = new List<AudioClip>();
+    [SerializeField] private List<AudioClip> tracks = new();
 
     [Header("Options")]
     [SerializeField] private bool dontDestroyOnLoad = true;
