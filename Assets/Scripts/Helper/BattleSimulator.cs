@@ -24,6 +24,7 @@ namespace SumoHelper
         public SimulationSetting Setting;
 
         private List<Bot> Agents = new();
+        private List<Bot> DifferentAgents = new();
         private List<BattleConfig> _configs;
         private int currentConfigIndex = 0;
         private int firstConfigIndex = 0;
@@ -114,7 +115,14 @@ namespace SumoHelper
             BattleManager.Instance.BotManager.LeftEnabled = true;
             BattleManager.Instance.BotManager.RightEnabled = true;
 
-            _configs = GenerateConfigs(Agents);
+            if (Setting.DifferentAgents.Length > 0)
+            {
+                _configs = GenerateConfigs(Agents, DifferentAgents);
+            }
+            else
+            {
+                _configs = GenerateConfigs(Agents);
+            }
 
             if (Batched)
             {
@@ -159,6 +167,12 @@ namespace SumoHelper
                 var botInstance = ScriptableObject.CreateInstance(item) as Bot;
                 if (botInstance != null)
                 {
+                    if (Setting.DifferentAgents.Length > 0)
+                    {
+                        if (Setting.DifferentAgents.Contains(botInstance.ID))
+                            DifferentAgents.Add(botInstance);
+                    }
+
                     if (Setting.SelectedAgents.Length > 0)
                     {
                         if (Setting.SelectedAgents.Contains(botInstance.ID))
@@ -172,8 +186,8 @@ namespace SumoHelper
                     }
                 }
             }
-
-            Logger.Info($"[Simulation] Loaded {Agents.Count}\nagents: {string.Join(", ", Agents.Select(a => a.ID))}", true);
+            var totalAgents = Agents.Concat(DifferentAgents);
+            Logger.Info($"[Simulation] Loaded {totalAgents.Count()}\nagents: {string.Join(", ", totalAgents.Select(a => a.ID))}", true);
         }
 
         private IEnumerator RunSimulations()
@@ -330,6 +344,75 @@ namespace SumoHelper
             return configs;
         }
 
+        private List<BattleConfig> GenerateConfigs(List<Bot> allAgents, List<Bot> newAgents)
+        {
+            var configs = new List<BattleConfig>();
+
+            foreach (var newAgent in newAgents)
+            {
+                foreach (var opponent in allAgents.Concat(newAgents))
+                {
+                    if (newAgent == opponent)
+                        continue;
+
+                    if (configs.Any((x) => (x.AgentLeft.ID == newAgent.ID && x.AgentRight.ID == opponent.ID) || (x.AgentLeft.ID == opponent.ID && x.AgentRight.ID == newAgent.ID)))
+                        continue;
+
+                    foreach (var roundSystem in Setting.RoundSystem)
+                    {
+                        foreach (var timer in Setting.Timers)
+                        {
+                            foreach (var interval in Setting.ActionIntervals)
+                            {
+                                foreach (var leftSkill in Setting.Skills)
+                                {
+                                    foreach (var rightSkill in Setting.Skills)
+                                    {
+                                        // Case 1: new agent on the left
+                                        configs.Add(new BattleConfig
+                                        {
+                                            AgentLeft = newAgent,
+                                            AgentRight = opponent,
+                                            Timer = timer,
+                                            ActionInterval = interval,
+                                            SkillSetLeft = leftSkill,
+                                            SkillSetRight = rightSkill,
+                                            Iteration = Setting.Iteration,
+                                            TimeScale = DefaultTimeScale,
+                                            RoundSystem = roundSystem
+                                        });
+
+                                        // Case 2: new agent on the right
+                                        configs.Add(new BattleConfig
+                                        {
+                                            AgentLeft = opponent,
+                                            AgentRight = newAgent,
+                                            Timer = timer,
+                                            ActionInterval = interval,
+                                            SkillSetLeft = leftSkill,
+                                            SkillSetRight = rightSkill,
+                                            Iteration = Setting.Iteration,
+                                            TimeScale = DefaultTimeScale,
+                                            RoundSystem = roundSystem
+                                        });
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            Logger.Info($"Generated configs: {configs.Count}: {string.Join("\n", configs.Select((x) => $"{x.AgentLeft.ID}_vs_{x.AgentRight.ID}"))}", true);
+            Logger.Info($"Game will run {configs.Sum(cfg => cfg.Iteration)} matches in total.", true);
+            for (int i = 0; i < configs.Count(); i++)
+            {
+
+            }
+            return configs;
+        }
+
+
         private void SaveCheckpoint(SimulationCheckpoint checkpoint)
         {
             string folder = Path.Combine(Application.persistentDataPath, "Settings");
@@ -472,6 +555,9 @@ namespace SumoHelper
 
         [SerializeField, Tooltip("Run agents except these ExcludedAgents. Will be ignored when SelectedAgents filled")]
         public string[] ExcludedAgents = new string[] { "Bot_Template", "Bot_LLM_ActionGPT", "Bot_SLM_ActionGPT", "Bot_ML_Classification" };
+
+        public string[] DifferentAgents = new string[] { };
+
     }
 
     [Serializable]
