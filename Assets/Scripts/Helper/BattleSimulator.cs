@@ -181,8 +181,14 @@ namespace SumoHelper
                     else
                     {
                         if (Setting.ExcludedAgents.Length > 0)
+                        {
                             if (!Setting.ExcludedAgents.Contains(botInstance.ID))
-                                Agents.Add(botInstance);
+                                if (!Setting.DifferentAgents.Contains(botInstance.ID))
+                                    Agents.Add(botInstance);
+                        }
+                        else
+                        if (!Setting.DifferentAgents.Contains(botInstance.ID))
+                            Agents.Add(botInstance);
                     }
                 }
             }
