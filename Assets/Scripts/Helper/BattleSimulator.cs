@@ -96,15 +96,13 @@ namespace SumoHelper
                 checkpoint = new SimulationCheckpoint
                 {
                     Setting = Setting,
-                    Iteration = 1,
+                    Iteration = 0,
                 };
 
             if (Setting.Timers.Length == 0)
                 throw new Exception("Timers can't be empty");
             if (Setting.RoundSystem.Length == 0)
                 throw new Exception("RoundSystem can't be empty");
-            if (Setting.Iteration == 0)
-                throw new Exception("Iteration must > 0");
             if (Setting.SelectedAgents.Length == 1)
                 throw new Exception("SelectedAgents must > 1");
 
@@ -447,7 +445,7 @@ namespace SumoHelper
                 checkpoint = new SimulationCheckpoint
                 {
                     Setting = Setting,
-                    Iteration = 1,
+                    Iteration = 0,
                 };
             }
             else
