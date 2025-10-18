@@ -219,8 +219,8 @@ namespace SumoHelper
                 LogManager.Log.Games = gameLogs;
                 yield return new WaitForEndOfFrame();
 
-                if (!cfg.AgentLeft.UseAsync && !cfg.AgentRight.UseAsync)
-                    Time.timeScale = cfg.TimeScale;
+                // if (!cfg.AgentLeft.UseAsync && !cfg.AgentRight.UseAsync)
+                Time.timeScale = cfg.TimeScale;
 
                 for (int iter = resumeAt; iter < cfg.Iteration; iter++)
                 {
