@@ -246,7 +246,11 @@ namespace SumoHelper
                     if (UseCheckpoint && !Batched)
                         SaveCheckpoint(checkpoint);
                     yield return new WaitForEndOfFrame();
+
                 }
+                Logger.Info($"[Simulation] Config {currentConfigIndex}/{_configs.Count}, Completed | " +
+                              $"{cfg.AgentLeft.ID} vs {cfg.AgentRight.ID} | " +
+                              $"RoundSystem={cfg.RoundSystem}, Timer={cfg.Timer}, Interval={cfg.ActionInterval}, SkillLeft={cfg.SkillSetLeft}, SkillRight={cfg.SkillSetRight}", true);
 
                 checkpoint.Iteration = 0;
             }
