@@ -31,16 +31,7 @@ public static class Logger
         MaybeWriteToFile(formatted, writeToFile);
     }
 
-    public static void Error(object message, bool writeToFile = false)
-    {
-        if (!EnableLogs && !IsBatchMode) return;
-        string formatted = $"[ERROR] {message}";
-
-        Debug.LogError(formatted);
-        MaybeWriteToFile(formatted, writeToFile);
-    }
-    
-    public static void Error(string message, bool writeToFile = false)
+    public static void Error(object message, bool writeToFile = true)
     {
         if (!EnableLogs && !IsBatchMode) return;
         string formatted = $"[ERROR] {message}";
