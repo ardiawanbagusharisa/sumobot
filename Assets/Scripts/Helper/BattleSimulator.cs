@@ -497,9 +497,8 @@ namespace SumoHelper
                     string json = File.ReadAllText(file);
                     var log = JsonConvert.DeserializeObject<LogManager.GameLog>(json);
                     if (log.Index > -1)
-                    {
-                        gameLogs.Add(log);
-                    }
+                        if (log.Rounds.Count() >= GetWinningRound(cfg))
+                            gameLogs.Add(log);
                 }
                 catch (Exception e)
                 {
@@ -513,14 +512,18 @@ namespace SumoHelper
             {
                 if (isExceed)
                 {
-                    return (cfg.Iteration - 1, gameLogs.Take(cfg.Iteration - 2).ToList());
+                    return (cfg.Iteration - 1, gameLogs.Take(cfg.Iteration - 1).ToList());
                 }
                 return (cfg.Iteration, gameLogs);
             }
 
-            var max = gameLogs.Count - 1;
-            // resume at last file (to re-run it)
-            return (Math.Max(0, max), gameLogs.Take(Math.Max(0, max - 1)).ToList());
+            // [0, 1, 2, 3, 4, 5] -> Existing logs Count 6
+            // Max = Count - 1 => repeat on this iteration 5
+            // Max - 1 => load game logs 4
+            // Resume at last file (to re-run it)
+
+            var max = gameLogs.Count;
+            return (Math.Max(0, max), gameLogs.Take(Math.Max(0, max)).ToList());
         }
 
         private string[] GetFolderName(BattleConfig cfg)
@@ -529,6 +532,12 @@ namespace SumoHelper
                 $"{cfg.AgentLeft.ID}_vs_{cfg.AgentRight.ID}",
                 $"Timer_{cfg.Timer}__ActInterval_{cfg.ActionInterval}__Round_{cfg.RoundSystem}__SkillLeft_{cfg.SkillSetLeft}__SkillRight_{cfg.SkillSetRight}",
             };
+        }
+
+        private int GetWinningRound(BattleConfig cfg)
+        {
+            return Enum.GetValues(typeof(RoundSystem)).Cast<RoundSystem>().ToList().IndexOf(cfg.RoundSystem) + 1;
+
         }
     }
 
