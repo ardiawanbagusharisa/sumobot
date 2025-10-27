@@ -261,24 +261,21 @@ namespace SumoCore
             lastRotation = transform.eulerAngles.y;
             turningSource = SFXManager.Instance.GetAudioSource("actions_turn");
             accelerateSource = SFXManager.Instance.GetAudioSource("actions_accelerate");
-
         }
         #endregion
 
         #region Robot Action Methods
-        public void Log(ISumoAction action, bool isNewAction = true)
+        public void Log(ISumoAction action)
         {
             bool isActive = IsActionActive(action.Type);
-            if (isActive && isNewAction)
+            if (isActive)
             {
                 LogManager.FlushActionLog(Side, action, isActive);
                 PeriodicState state = isActive ? PeriodicState.Continues : PeriodicState.Start;
                 LogManager.CallActionLog(Side, action, state);
             }
             else
-            {
                 LogManager.CallActionLog(Side, action);
-            }
 
             ActiveActions[action.Type] = action.Duration;
         }
@@ -357,7 +354,7 @@ namespace SumoCore
 
                 RigidBody.linearVelocity = movementVelocity;
                 accelerateTimeRemaining -= Time.fixedDeltaTime;
-                Log(lastAccelerateAction, false);
+                Log(lastAccelerateAction);
             }
             else
             {
@@ -386,7 +383,7 @@ namespace SumoCore
             remainingAngle -= Mathf.Abs(step);
 
 
-            Log(lastTurnAction, false);
+            Log(lastTurnAction);
 
             if (remainingAngle <= 0.001f)
             {

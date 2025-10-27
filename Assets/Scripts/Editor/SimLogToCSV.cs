@@ -25,10 +25,7 @@ namespace SumoEditor
 
             if (GUILayout.Button("Convert to CSV", GUILayout.Height(40)))
             {
-                // ConvertAllConfigs(Path.Combine(Application.persistentDataPath, "Simulation"));
-                var name = "Timer_30__ActInterval_0.5__Round_BestOf5__SkillLeft_Stone__SkillRight_Boost";
-                var path = Path.Combine(Application.persistentDataPath, "Simulation", "Bot_NN_vs_Bot_UtilityAI", "Timer_30__ActInterval_0.5__Round_BestOf5__SkillLeft_Stone__SkillRight_Boost");
-                ConvertLogsToCsv(path, Path.Combine(path, $"{name}.csv"));
+                ConvertAllConfigs(Path.Combine(Application.persistentDataPath, "Simulation"));
             }
         }
 
@@ -54,6 +51,13 @@ namespace SumoEditor
                     string parentName = Path.GetFileName(Path.GetDirectoryName(configFolder)); // e.g. BOT_A_vs_BOT_B
 
                     string outputPath = Path.Combine(configFolder, $"{configName}.csv");
+
+                    // Skip if CSV already exists
+                    if (File.Exists(outputPath))
+                    {
+                        logger.Info($"[SimLogToCSV] Skipping {configName} (CSV already exists)");
+                        continue;
+                    }
 
                     logger.Info($"[SimLogToCSV] Running {i + 1}/{configFolders.Count()} -> {configName}");
                     EditorUtility.DisplayProgressBar("Converting Logs to CSV",
