@@ -13,6 +13,8 @@ namespace SumoEditor
 
     public class SimLogToCSV : EditorWindow
     {
+        private string includedAgents = "*";
+        
         [MenuItem("Tools/Simulation Log to CSV")]
         public static void ShowWindow()
         {
@@ -22,10 +24,17 @@ namespace SumoEditor
         private void OnGUI()
         {
             GUILayout.Label("Simulation Log JSON to CSV", EditorStyles.boldLabel);
+            GUILayout.Space(5);
+
+            GUILayout.Label("Included Agents (use * for all, or separate by ;)", EditorStyles.label);
+            includedAgents = EditorGUILayout.TextField("Included Agents", includedAgents);
+
+            GUILayout.Space(10);
 
             if (GUILayout.Button("Convert to CSV", GUILayout.Height(40)))
             {
-                ConvertAllConfigs(Path.Combine(Application.persistentDataPath, "Simulation"));
+                string simulationRoot = Path.Combine(Application.persistentDataPath, "Simulation");
+                ConvertAllConfigs(simulationRoot, includedAgents);
             }
         }
 
@@ -36,12 +45,36 @@ namespace SumoEditor
             return match.Success ? int.Parse(match.Groups[1].Value) : -1;
         }
 
-        public void ConvertAllConfigs(string simulationRoot)
+        public void ConvertAllConfigs(string simulationRoot, string IncludedAgents)
         {
             try
             {
+                // Split IncludedAgents (e.g. "Bot_SLM;Bot_ML_Classification")
+                var includedList = IncludedAgents == "*"
+                    ? null
+                    : IncludedAgents.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.RemoveEmptyEntries);
+
                 // Find all config folders recursively
                 var configFolders = Directory.GetDirectories(simulationRoot, "Timer_*", SearchOption.AllDirectories);
+
+                // Filter by IncludedAgents if not "*"
+                if (includedList != null)
+                {
+                    configFolders = configFolders
+                        .Where(folder =>
+                        {
+                            string parentName = Path.GetFileName(Path.GetDirectoryName(folder)); // e.g. "Bot_A_vs_Bot_B"
+                            return includedList.Any(agent => parentName.Contains(agent, StringComparison.OrdinalIgnoreCase));
+                        })
+                        .ToArray();
+                }
+
+                if (configFolders.Length == 0)
+                {
+                    EditorUtility.DisplayDialog("Info", "No matching folders found to convert.", "OK");
+                    return;
+                }
+
                 for (var i = 0; i < configFolders.Count(); i++)
                 {
                     var configFolder = configFolders[i];
@@ -60,9 +93,19 @@ namespace SumoEditor
                     }
 
                     logger.Info($"[SimLogToCSV] Running {i + 1}/{configFolders.Count()} -> {configName}");
-                    EditorUtility.DisplayProgressBar("Converting Logs to CSV",
-                    $"Processing {i + 1}/{configFolders.Count()} {configName}",
-                    (float)i + 1 / configFolders.Count());
+                    bool cancel = EditorUtility.DisplayCancelableProgressBar(
+                        "Converting Logs to CSV",
+                        $"Processing {i + 1}/{configFolders.Length}: {configName}",
+                        (float)(i + 1) / configFolders.Length
+                    );
+
+                    if (cancel)
+                    {
+                        logger.Info("[SimLogToCSV] Operation cancelled by user.");
+                        EditorUtility.ClearProgressBar();
+                        EditorUtility.DisplayDialog("Cancelled", "CSV conversion was cancelled by the user.", "OK");
+                        return; // Stop processing
+                    }
 
                     // Call your existing converter for this config folder
                     ConvertLogsToCsv(configFolder, outputPath);
