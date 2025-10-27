@@ -14,7 +14,7 @@ namespace SumoEditor
     public class SimLogToCSV : EditorWindow
     {
         private string includedAgents = "*";
-        
+
         [MenuItem("Tools/Simulation Log to CSV")]
         public static void ShowWindow()
         {
@@ -265,6 +265,7 @@ namespace SumoEditor
             {
                 logger.Error($"Error reading config from {folderPath} : {ex.Message}, {ex.Source}");
                 EditorUtility.DisplayDialog("Error", "Failed to generate CSV.\n" + ex.Message, "OK");
+                throw new Exception($"Failed to convert{folderPath}: {ex.Message}, {ex.Source}");
             }
         }
 
