@@ -47,7 +47,7 @@ namespace SumoEditor
 
         public void ConvertAllConfigs(string simulationRoot, string IncludedAgents)
         {
-            try
+            // try
             {
                 // Split IncludedAgents (e.g. "Bot_SLM;Bot_ML_Classification")
                 var includedList = IncludedAgents == "*"
@@ -114,12 +114,12 @@ namespace SumoEditor
                 EditorUtility.ClearProgressBar();
                 EditorUtility.DisplayDialog("Success", "All CSV files generated successfully!", "OK");
             }
-            catch (Exception ex)
-            {
-                logger.Error("Error: " + ex.Message);
-                EditorUtility.ClearProgressBar();
-                EditorUtility.DisplayDialog("Error", "Failed to generate CSVs.\n" + ex.Message, "OK");
-            }
+            // catch (Exception ex)
+            // {
+            //     logger.Error("Error: " + ex.Message);
+            //     EditorUtility.ClearProgressBar();
+            //     EditorUtility.DisplayDialog("Error", "Failed to generate CSVs.\n" + ex.Message, "OK");
+            // }
         }
 
 
