@@ -125,7 +125,7 @@ namespace SumoEditor
 
         private void ConvertLogsToCsv(string folderPath, string outputPath)
         {
-            try
+            // try
             {
                 var csvRows = new List<Dictionary<string, string>>();
 
@@ -261,12 +261,12 @@ namespace SumoEditor
                     }
                 }
             }
-            catch (Exception ex)
-            {
-                logger.Error($"Error reading config from {folderPath} : {ex.Message}, {ex.Source}");
-                EditorUtility.DisplayDialog("Error", "Failed to generate CSV.\n" + ex.Message, "OK");
-                throw new Exception($"Failed to convert{folderPath}: {ex.Message}, {ex.Source}");
-            }
+            // catch (Exception ex)
+            // {
+            //     logger.Error($"Error reading config from {folderPath} : {ex.Message}, {ex.Source}");
+            //     EditorUtility.DisplayDialog("Error", "Failed to generate CSV.\n" + ex.Message, "OK");
+            //     throw new Exception($"Failed to convert{folderPath}: {ex.Message}, {ex.Source}");
+            // }
         }
 
         private static string EscapeCsv(string input)
