@@ -65,10 +65,10 @@ class AIBot_ML_Classification : Bot
 
         engine.Schedule(inputTensor);
 
-        Tensor<float> outputTensorSkill =  (engine.PeekOutput("skill") as Tensor<float>).ReadbackAndClone();
-        Tensor<float> outputTensorDash =  (engine.PeekOutput("dash") as Tensor<float>).ReadbackAndClone();
-        Tensor<float> outputTensorMovement =  (engine.PeekOutput("movement") as Tensor<float>).ReadbackAndClone();
-        Tensor<float> outputTensorDuration =  (engine.PeekOutput("duration") as Tensor<float>).ReadbackAndClone();
+        Tensor<float> outputTensorSkill = await (engine.PeekOutput("skill") as Tensor<float>).ReadbackAndCloneAsync();
+        Tensor<float> outputTensorDash = await (engine.PeekOutput("dash") as Tensor<float>).ReadbackAndCloneAsync();
+        Tensor<float> outputTensorMovement = await (engine.PeekOutput("movement") as Tensor<float>).ReadbackAndCloneAsync();
+        Tensor<float> outputTensorDuration = await (engine.PeekOutput("duration") as Tensor<float>).ReadbackAndCloneAsync();
 
         var outputTensorSkillRes = outputTensorSkill.DownloadToArray()[0];
         var outputTensorDashRes = outputTensorDash.DownloadToArray()[0];
