@@ -22,7 +22,7 @@ class AIBot_ML_Classification : Bot
     private bool isGenerating = false;
     private readonly List<string> labels = new()
     {
-        "Accelerate", "Dash", "SkillBoost", "TurnLeft", "TurnRight"
+        "FWD", "TL", "TR"
     };
 
     public override void OnBattleStateChanged(BattleState state, BattleWinner? winner)
@@ -49,15 +49,7 @@ class AIBot_ML_Classification : Bot
     }
     public override void OnBotUpdate()
     {
-        var inputs = new float[] {
-                api.MyRobot.Position.x,
-                api.MyRobot.Position.y,
-                Normalize360(api.MyRobot.Rotation),
-                api.EnemyRobot.Position.x,
-                api.EnemyRobot.Position.y,
-                Normalize360(api.EnemyRobot.Rotation),
-             };
-        _ = Run(inputs);
+        _ = Run(GenerateState());
         Submit();
     }
 
@@ -66,62 +58,76 @@ class AIBot_ML_Classification : Bot
         if (isGenerating) return;
         isGenerating = true;
 
-        Tensor<float> inputTensor = new(new TensorShape(1, 6), inputs);
+        Logger.Info($"[ML][Classification] RUN with inputs: {string.Join(", ", inputs.Select((x) => x.ToString()).ToList())}");
+
+        Tensor<float> inputTensor = new(new TensorShape(1, 5), inputs);
+
 
         engine.Schedule(inputTensor);
 
-        // output actions at 0
-        Tensor<float> outputTensorAct = await (engine.PeekOutput(0) as Tensor<float>).ReadbackAndCloneAsync();
+        Tensor<float> outputTensorSkill = await (engine.PeekOutput("skill") as Tensor<float>).ReadbackAndCloneAsync();
+        Tensor<float> outputTensorDash = await (engine.PeekOutput("dash") as Tensor<float>).ReadbackAndCloneAsync();
+        Tensor<float> outputTensorMovement = await (engine.PeekOutput("movement") as Tensor<float>).ReadbackAndCloneAsync();
+        Tensor<float> outputTensorDuration = await (engine.PeekOutput("duration") as Tensor<float>).ReadbackAndCloneAsync();
 
-        // output actions at 1
-        Tensor<float> outputTensorDur = await (engine.PeekOutput(1) as Tensor<float>).ReadbackAndCloneAsync();
-
-        var outputTensorActRes = outputTensorAct.DownloadToArray();
-        var outputTensorDurRes = outputTensorDur.DownloadToArray()[0];
+        var outputTensorSkillRes = outputTensorSkill.DownloadToArray()[0];
+        var outputTensorDashRes = outputTensorDash.DownloadToArray()[0];
+        var outputTensorActionRes = outputTensorMovement.DownloadToArray();
+        var outputTensorDurationRes = outputTensorDuration.DownloadToArray()[0];
 
         inputTensor.Dispose();
-        outputTensorAct.Dispose();
-        outputTensorDur.Dispose();
+        outputTensorSkill.Dispose();
+        outputTensorDash.Dispose();
+        outputTensorMovement.Dispose();
+        outputTensorDuration.Dispose();
 
-        int predictedIndex = ArgMax(outputTensorActRes);
+        int predictedIndex = ArgMax(outputTensorActionRes);
         string predictedLabel = labels[predictedIndex];
 
-        Logger.Info($"$outputTensorArr {string.Join(", ", outputTensorActRes.Select((x) => $"{x}"))}");
-        Logger.Info($"$predictedLabel {predictedLabel}");
-        Logger.Info($"$predictedDuraation {outputTensorDurRes}");
-        var action = GetAction(predictedLabel, outputTensorDurRes);
+        Logger.Info($"[ML][Classification] Output Detail\nSkillProb: {outputTensorSkillRes:F2}\nDashProb: {outputTensorDashRes:F2}\nMovement: {predictedLabel}\nDuration: {outputTensorDurationRes:F2}");
 
-        Enqueue(action);
+        if (outputTensorSkillRes > 0.5f)
+            Enqueue(new SkillAction(InputType.Script, DefaultSkillType.ToActionType()));
+
+        if (outputTensorDashRes > 0.5f)
+            Enqueue(new DashAction(InputType.Script));
+
+        Enqueue(GetAction(predictedLabel, outputTensorDurationRes));
 
         isGenerating = false;
     }
 
-    float Normalize360(float angle)
+    public float[] GenerateState()
     {
-        angle %= 360f;
-        if (angle < 0) angle += 360f;
-        return angle;
+        var signedAngle = api.Angle();
+        var signedAngleScore = api.Angle(normalized: true);
+        var distanceToEnemy = 1 - api.DistanceNormalized();
+        var nearArena = api.Distance(targetPos: api.BattleInfo.ArenaPosition).magnitude / api.BattleInfo.ArenaRadius;
+
+        var centerToMe = api.Distance(targetPos: api.MyRobot.Position, oriPos: api.BattleInfo.ArenaPosition).normalized;
+
+        var zRot = api.MyRobot.Rotation % 360f;
+        if (zRot < 0) zRot += 360f;
+        Vector2 facingDir = Quaternion.Euler(0, 0, zRot) * Vector2.up;
+
+        var facingToOutside = Vector2.Dot(facingDir, centerToMe);
+        return new[] { signedAngle, signedAngleScore, distanceToEnemy, nearArena, facingToOutside };
     }
 
     private ISumoAction GetAction(string predictedAction, float duration)
     {
         switch (predictedAction)
         {
-            case "Accelerate":
+            case "FWD":
                 return new AccelerateAction(InputType.Script, Mathf.Max(0.1f, duration));
-            case "TurnLeft":
+            case "TL":
                 return new TurnAction(InputType.Script, ActionType.TurnLeft, Mathf.Max(0.1f, duration));
-            case "TurnRight":
+            case "TR":
                 return new TurnAction(InputType.Script, ActionType.TurnRight, Mathf.Max(0.1f, duration));
-            case "Dash":
-                return new DashAction(InputType.Script);
-            case "SkillStone":
-                return new SkillAction(InputType.Script, ActionType.SkillStone);
-            case "SkillBoost":
-                return new SkillAction(InputType.Script, ActionType.SkillBoost);
         }
         return new AccelerateAction(InputType.Script, 0.1f);
     }
+
 
     private void CreateEngine()
     {
@@ -134,7 +140,7 @@ class AIBot_ML_Classification : Bot
 
         if (runtimeModel == null)
         {
-            ModelAsset modelAsset = Resources.Load($"ML/Models/Classification/model") as ModelAsset;
+            ModelAsset modelAsset = Resources.Load($"ML/Models/Classification/ml_enhanced_actions") as ModelAsset;
             runtimeModel = ModelLoader.Load(modelAsset);
         }
 

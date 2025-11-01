@@ -19,7 +19,7 @@ namespace ML.LanguageModels
         public override SkillType DefaultSkillType => SkillType.Stone;
         public override bool UseAsync => true;
 
-        public string APIEndpoint = "http://localhost:8000/query";
+        public string APIEndpoint = "http://localhost:9999/query";
 
         public bool isGenerating = false;
 
@@ -42,7 +42,8 @@ namespace ML.LanguageModels
         {
             ActionRequest req = new()
             {
-                state = GenerateState()
+                state = GenerateState(),
+                top_k = "1"
             };
 
             _ = PostInferenceAsync(req);
@@ -144,5 +145,6 @@ namespace ML.LanguageModels
     public class ActionRequest
     {
         public string state;
+        public string top_k;
     }
 }

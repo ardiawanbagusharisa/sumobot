@@ -24760,7 +24760,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2130233538}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: b33ce51748b63457ebe9b59f80ac599c, type: 3}
   m_Name: 
@@ -24784,6 +24784,7 @@ MonoBehaviour:
     - Bot_LLM_ActionGPT
     - Bot_SLM_ActionGPT
     - Bot_ML_Classification
+    DifferentAgents: []
 --- !u!114 &2130233545
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -24800,8 +24801,8 @@ MonoBehaviour:
   Left: {fileID: 715032728}
   RightEnabled: 1
   Right: {fileID: 1709403126}
-  leftBotIndex: 11
-  rightBotIndex: 3
+  leftBotIndex: 6
+  rightBotIndex: 4
 --- !u!114 &2130233546
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -24809,7 +24810,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2130233538}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a7a03daeb604142c7b15cc48e7ab4601, type: 3}
   m_Name: 
