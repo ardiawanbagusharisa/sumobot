@@ -24801,8 +24801,8 @@ MonoBehaviour:
   Left: {fileID: 715032728}
   RightEnabled: 1
   Right: {fileID: 1709403126}
-  leftBotIndex: 6
-  rightBotIndex: 4
+  leftBotIndex: 5
+  rightBotIndex: 6
 --- !u!114 &2130233546
 MonoBehaviour:
   m_ObjectHideFlags: 0
