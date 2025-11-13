@@ -486,7 +486,7 @@ namespace SumoHelper
 
                 if (i > cfg.Iteration - 1)
                 {
-                    Logger.Info($"[BattleSimulator] Config number {currentConfigIndex}, has exceeding games, 1 index file deleted", true);
+                    Logger.Info($"[BattleSimulator] Config: {currentConfigIndex}, Matchup: {string.Join("/", path)} has exceeding games, 1 index file deleted", true);
                     File.Delete(file);
                     isExceed = true;
                     continue;
@@ -502,7 +502,7 @@ namespace SumoHelper
                 }
                 catch (Exception e)
                 {
-                    Logger.Error($"[BattleSimulator] Config number {currentConfigIndex}, iteration number {gameLogs.Count + 1}, this iteration will be simulated. Error cause: {e}", true);
+                    Logger.Error($"[BattleSimulator] Config: {currentConfigIndex}, Iteration: {gameLogs.Count + 1}. Matchup: {string.Join("/", path)}  Error cause: {e}", true);
                     break;
                 }
             }

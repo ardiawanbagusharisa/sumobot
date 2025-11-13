@@ -144,7 +144,7 @@ class AIBot_ML_Classification : Bot
             runtimeModel = ModelLoader.Load(modelAsset);
         }
 
-        engine = new Worker(runtimeModel, BackendType.CPU);
+        engine = new Worker(runtimeModel, BackendType.GPUPixel);
         isInitializing = false;
         Logger.Info($"Engine worker of MLP created!");
     }
