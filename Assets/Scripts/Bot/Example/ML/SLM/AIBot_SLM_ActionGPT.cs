@@ -128,11 +128,15 @@ namespace ML.LanguageModels
 
                     engine?.SetInput("input_ids", tensor);
                     engine?.Schedule();
+                    tensor?.Dispose();
+
                     var tensorOutput = (Tensor<float>)engine.PeekOutput(0);
                     using var output = await tensorOutput.ReadbackAndCloneAsync();
                     float[] logits = output.DownloadToArray();
-                    tensor.Dispose();
-                    output.Dispose();
+                    
+                    tensorOutput?.Dispose();
+                    tensor?.Dispose();
+                    output?.Dispose();
 
                     int nextToken = ArgMax(logits, inputSlice.Length - 1, vocabSize);
 
