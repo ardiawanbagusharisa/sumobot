@@ -246,7 +246,7 @@ namespace ML.LanguageModels
                 runtimeModel = ModelLoader.Load(modelAsset);
             }
 
-            engine = new Worker(runtimeModel, BackendType.CPU);
+            engine = new Worker(runtimeModel, BackendType.GPUPixel);
             modelLoadState = ModelState.Initialzed;
         }
 
