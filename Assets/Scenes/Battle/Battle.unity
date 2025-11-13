@@ -24760,12 +24760,12 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2130233538}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: b33ce51748b63457ebe9b59f80ac599c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  DefaultTimeScale: 15
+  DefaultTimeScale: 5
   SimulationOnStart: 1
   UseCheckpoint: 1
   RoundCountdown: 1
@@ -24781,10 +24781,9 @@ MonoBehaviour:
     SelectedAgents: []
     ExcludedAgents:
     - Bot_Template
+    DifferentAgents:
     - Bot_LLM_ActionGPT
-    - Bot_SLM_ActionGPT
     - Bot_ML_Classification
-    DifferentAgents: []
 --- !u!114 &2130233545
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -24797,9 +24796,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 01a1d4e8448fd40dda16697ad78845aa, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  LeftEnabled: 1
+  LeftEnabled: 0
   Left: {fileID: 715032728}
-  RightEnabled: 1
+  RightEnabled: 0
   Right: {fileID: 1709403126}
   leftBotIndex: 5
   rightBotIndex: 6
@@ -24810,7 +24809,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2130233538}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a7a03daeb604142c7b15cc48e7ab4601, type: 3}
   m_Name: 

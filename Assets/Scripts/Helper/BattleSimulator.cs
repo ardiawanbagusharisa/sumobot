@@ -226,7 +226,7 @@ namespace SumoHelper
                 {
                     Logger.Info($"[Simulation] Config {currentConfigIndex}/{_configs.Count}, Iteration {iter}/{cfg.Iteration} | " +
                               $"{cfg.AgentLeft.ID} vs {cfg.AgentRight.ID} | " +
-                              $"RoundSystem={cfg.RoundSystem}, Timer={cfg.Timer}, Interval={cfg.ActionInterval}, SkillLeft={cfg.SkillSetLeft}, SkillRight={cfg.SkillSetRight}", true);
+                              $"Timer={cfg.Timer}, ActInterval={cfg.ActionInterval}, Round={cfg.RoundSystem}, SkillLeft={cfg.SkillSetLeft}, SkillRight={cfg.SkillSetRight}", true);
 
                     yield return new WaitForSecondsRealtime(1);
 
@@ -250,7 +250,7 @@ namespace SumoHelper
                 }
                 Logger.Info($"[Simulation] Config {currentConfigIndex}/{_configs.Count}, Completed | " +
                               $"{cfg.AgentLeft.ID} vs {cfg.AgentRight.ID} | " +
-                              $"RoundSystem={cfg.RoundSystem}, Timer={cfg.Timer}, Interval={cfg.ActionInterval}, SkillLeft={cfg.SkillSetLeft}, SkillRight={cfg.SkillSetRight}", true);
+                              $"Timer={cfg.Timer}, ActInterval={cfg.ActionInterval}, Round={cfg.RoundSystem}, SkillLeft={cfg.SkillSetLeft}, SkillRight={cfg.SkillSetRight}", true);
 
                 checkpoint.Iteration = 0;
             }
