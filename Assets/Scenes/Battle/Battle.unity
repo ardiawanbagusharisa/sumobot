@@ -24778,11 +24778,12 @@ MonoBehaviour:
     Iteration: 50
     RoundSystem: 010000000300000005000000
     Skills: 0000000001000000
-    SelectedAgents: []
+    SelectedAgents:
+    - Bot_BT
+    - Bot_DQN
     ExcludedAgents:
     - Bot_Template
     DifferentAgents:
-    - Bot_LLM_ActionGPT
     - Bot_ML_Classification
 --- !u!114 &2130233545
 MonoBehaviour:
@@ -24796,9 +24797,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 01a1d4e8448fd40dda16697ad78845aa, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  LeftEnabled: 0
+  LeftEnabled: 1
   Left: {fileID: 715032728}
-  RightEnabled: 0
+  RightEnabled: 1
   Right: {fileID: 1709403126}
   leftBotIndex: 5
   rightBotIndex: 6
@@ -24815,7 +24816,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   TotalSimulations: 5
-  TimeScale: 5
+  TimeScale: 1
   SimulationOnStart: 1
   SwapAIInterval: 0
 --- !u!1 &2132169806

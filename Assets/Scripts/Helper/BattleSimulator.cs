@@ -191,7 +191,7 @@ namespace SumoHelper
                 }
             }
             var totalAgents = Agents.Concat(DifferentAgents);
-            Logger.Info($"[Simulation] Loaded {totalAgents.Count()}\nagents: {string.Join(", ", totalAgents.Select(a => a.ID))}", true);
+            Logger.Info($"[Simulation] Loaded {totalAgents.Count()}", true);
         }
 
         private IEnumerator RunSimulations()
@@ -413,10 +413,17 @@ namespace SumoHelper
 
             Logger.Info($"Generated configs: {configs.Count}: {string.Join("\n", configs.Select((x) => $"{x.AgentLeft.ID}_vs_{x.AgentRight.ID}"))}", true);
             Logger.Info($"Game will run {configs.Sum(cfg => cfg.Iteration)} matches in total.", true);
-            for (int i = 0; i < configs.Count(); i++)
-            {
 
-            }
+            configs = configs
+            .OrderBy(c => c.AgentLeft.ID)
+            .ThenBy(c => c.AgentRight.ID)
+            .ThenBy(c => c.RoundSystem)
+            .ThenBy(c => c.Timer)
+            .ThenBy(c => c.ActionInterval)
+            .ThenBy(c => c.SkillSetLeft)
+            .ThenBy(c => c.SkillSetRight)
+            .ToList();
+
             return configs;
         }
 
