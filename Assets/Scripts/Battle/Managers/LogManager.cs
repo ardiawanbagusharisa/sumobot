@@ -32,7 +32,11 @@ namespace SumoManager
 
     public class LogManager : MonoBehaviour
     {
+
         #region Log structures properties
+
+        public static string SINGLE_LOG_PATH = "Logs/Single";
+        public static string BATCH_LOG_PATH = "Logs/Batch";
         [Serializable]
         public class BattleLog
         {
@@ -212,19 +216,30 @@ namespace SumoManager
 
         #region Core Battle Log methods
 
-        public static void InitLog(params string[] folderPaths)
+        public static void InitLog(bool isBatch, string[] paths = null)
         {
             string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
 
-            if (folderPaths.Length > 0)
+            List<string> combinedPaths = new()
             {
-                var combinedPaths = folderPaths.ToList();
-                combinedPaths.Insert(0, "Simulation");
-                combinedPaths.Insert(0, Application.persistentDataPath);
-                logFolderPath = Path.Combine(combinedPaths.ToArray());
+                Application.persistentDataPath
+            };
+
+            if (isBatch && paths != null)
+            {
+                combinedPaths.Add(BATCH_LOG_PATH);
+                combinedPaths.Add(Path.Combine(paths));
             }
             else
-                logFolderPath = Path.Combine(Application.persistentDataPath, "Logs", $"battle_{timestamp}");
+            {
+                combinedPaths.Add(SINGLE_LOG_PATH);
+                combinedPaths.Add($"{timestamp}_single");
+            }
+
+
+            logFolderPath = Path.Combine(combinedPaths.ToArray());
+
+            Debug.Log($"PATH {logFolderPath}");
 
             Directory.CreateDirectory(logFolderPath);
         }
@@ -273,7 +288,7 @@ namespace SumoManager
                 {"X", BattleManager.Instance.Arena.transform.position.x},
                 {"Y", BattleManager.Instance.Arena.transform.position.y},
             };
-            
+
             Log.ArenaRadius = BattleManager.Instance.ArenaRadius;
 
             if (logTakenAction && Log.Games.Count > 0)
