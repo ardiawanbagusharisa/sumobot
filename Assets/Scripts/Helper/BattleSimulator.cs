@@ -12,19 +12,30 @@ using Newtonsoft.Json;
 
 namespace SumoHelper
 {
+    public enum SimulatorMode
+    {
+        Simple,
+        Advanced
+    }
+
     public class BattleSimulator : MonoBehaviour
     {
+        [Header("Simulator Mode")]
+        public SimulatorMode Mode = SimulatorMode.Simple;
+
+        [Header("Simple Mode Settings")]
+        public int TotalSimulations = 5;
+        public float SimpleTimeScale = 1f;
+        public int SwapAIInterval = 0;
+
+        [Header("Advanced Mode Settings")]
         public float DefaultTimeScale = 2f;
         public bool SimulationOnStart = false;
-
-        [SerializeField, Tooltip("If True, every iteration will be saved, and can continue it later including saved SimulationSetting")]
-        public bool UseCheckpoint = true;
 
         public int RoundCountdown = 3;
         public SimulationSetting Setting;
 
         private List<Bot> Agents = new();
-        private List<Bot> DifferentAgents = new();
         private List<BattleConfig> _configs;
         private int currentConfigIndex = 0;
         private int firstConfigIndex = 0;
@@ -38,7 +49,43 @@ namespace SumoHelper
 
         void OnDisable()
         {
-            BattleManager.Instance.Events[BattleManager.OnBattleChanged].Unsubscribe(OnBattleStateChanged);
+            if (Mode == SimulatorMode.Advanced)
+                BattleManager.Instance.Events[BattleManager.OnBattleChanged].Unsubscribe(OnBattleStateChanged);
+        }
+
+        private IEnumerator RunSimpleSimulations()
+        {
+            // Delay for preparing
+            yield return new WaitForSeconds(0.5f);
+
+            for (int i = 0; i < TotalSimulations; i++)
+            {
+                if (SwapAIInterval > 0 && i > 0 && (i % SwapAIInterval == 0))
+                {
+                    BattleManager.Instance.BotManager.Swap();
+                }
+                yield return new WaitForSeconds(1);
+
+                if (SimulationOnStart || i > 0)
+                {
+                    BattleManager.Instance.Battle_Start();
+                }
+
+                while (BattleManager.Instance.CurrentState != BattleState.PostBattle_ShowResult)
+                {
+                    yield return null; // wait frame
+                }
+
+                yield return new WaitForSeconds(1);
+                yield return new WaitForEndOfFrame(); // Delay if needed
+            }
+
+            Logger.Info("[Simple Simulation] Complete.", true);
+#if UNITY_EDITOR
+            UnityEditor.EditorApplication.isPlaying = false;
+#else
+            Application.Quit();
+#endif
         }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
@@ -85,19 +132,24 @@ namespace SumoHelper
 #if UNITY_EDITOR
             UnityEditor.EditorApplication.isPlaying = true;
 #endif
-
             BGMManager.Instance.Stop(true);
             SFXManager.Instance.gameObject.SetActive(false);
             BGMManager.Instance.gameObject.SetActive(false);
 
-            if (UseCheckpoint)
-                checkpoint = LoadCheckpoint();
+            if (Mode == SimulatorMode.Simple)
+            {
+                Time.timeScale = SimpleTimeScale;
+                Application.runInBackground = true;
+                StartCoroutine(RunSimpleSimulations());
+            }
             else
-                checkpoint = new SimulationCheckpoint
-                {
-                    Setting = Setting,
-                    Iteration = 0,
-                };
+                RunAdvancedSimulations();
+
+        }
+
+        private void RunAdvancedSimulations()
+        {
+            checkpoint = LoadCheckpoint();
 
             if (Setting.Timers.Length == 0)
                 throw new Exception("Timers can't be empty");
@@ -113,14 +165,7 @@ namespace SumoHelper
             BattleManager.Instance.BotManager.LeftEnabled = true;
             BattleManager.Instance.BotManager.RightEnabled = true;
 
-            if (Setting.DifferentAgents.Length > 0)
-            {
-                _configs = GenerateConfigs(Agents, DifferentAgents);
-            }
-            else
-            {
-                _configs = GenerateConfigs(Agents);
-            }
+            _configs = GenerateConfigs(Agents);
 
             if (Batched)
             {
@@ -165,12 +210,6 @@ namespace SumoHelper
                 var botInstance = ScriptableObject.CreateInstance(item) as Bot;
                 if (botInstance != null)
                 {
-                    if (Setting.DifferentAgents.Length > 0)
-                    {
-                        if (Setting.DifferentAgents.Contains(botInstance.ID))
-                            DifferentAgents.Add(botInstance);
-                    }
-
                     if (Setting.SelectedAgents.Length > 0)
                     {
                         if (Setting.SelectedAgents.Contains(botInstance.ID))
@@ -178,20 +217,12 @@ namespace SumoHelper
                     }
                     else
                     {
-                        if (Setting.ExcludedAgents.Length > 0)
-                        {
-                            if (!Setting.ExcludedAgents.Contains(botInstance.ID))
-                                if (!Setting.DifferentAgents.Contains(botInstance.ID))
-                                    Agents.Add(botInstance);
-                        }
-                        else
-                        if (!Setting.DifferentAgents.Contains(botInstance.ID))
-                            Agents.Add(botInstance);
+                        // If no agents selected, add all agents
+                        Agents.Add(botInstance);
                     }
                 }
             }
-            var totalAgents = Agents.Concat(DifferentAgents);
-            Logger.Info($"[Simulation] Loaded {totalAgents.Count()}", true);
+            Logger.Info($"[Simulation] Loaded {Agents.Count} agents", true);
         }
 
         private IEnumerator RunSimulations()
@@ -243,7 +274,7 @@ namespace SumoHelper
                     yield return new WaitForSecondsRealtime(1);
                     checkpoint.Iteration = iter;
                     checkpoint.ConfigIndex = currentConfigIndex;
-                    if (UseCheckpoint && !Batched)
+                    if (!Batched)
                         SaveCheckpoint(checkpoint);
                     yield return new WaitForEndOfFrame();
 
@@ -271,13 +302,14 @@ namespace SumoHelper
             BattleManager.Instance.BattleTime = cfg.Timer;
             BattleManager.Instance.ActionInterval = cfg.ActionInterval;
 
-            var name = GetFolderName(cfg);
+            var folder = GetFolderStructure(cfg);
 
             LogManager.UnregisterAction();
-            LogManager.InitLog(name);
+            LogManager.InitLog(true, folder);
             LogManager.InitBattle(cfg);
 
             var newBattle = new Battle(Guid.NewGuid().ToString(), cfg.RoundSystem);
+
             // Apply previous players to new battle
             newBattle.LeftPlayer = BattleManager.Instance.Battle.LeftPlayer;
             newBattle.RightPlayer = BattleManager.Instance.Battle.RightPlayer;
@@ -352,80 +384,6 @@ namespace SumoHelper
             return configs;
         }
 
-        private List<BattleConfig> GenerateConfigs(List<Bot> allAgents, List<Bot> newAgents)
-        {
-            var configs = new List<BattleConfig>();
-
-            foreach (var newAgent in newAgents)
-            {
-                foreach (var opponent in allAgents.Concat(newAgents))
-                {
-                    if (newAgent == opponent)
-                        continue;
-
-                    if (configs.Any((x) => (x.AgentLeft.ID == newAgent.ID && x.AgentRight.ID == opponent.ID) || (x.AgentLeft.ID == opponent.ID && x.AgentRight.ID == newAgent.ID)))
-                        continue;
-
-                    foreach (var roundSystem in Setting.RoundSystem)
-                    {
-                        foreach (var timer in Setting.Timers)
-                        {
-                            foreach (var interval in Setting.ActionIntervals)
-                            {
-                                foreach (var leftSkill in Setting.Skills)
-                                {
-                                    foreach (var rightSkill in Setting.Skills)
-                                    {
-                                        // Case 1: new agent on the left
-                                        configs.Add(new BattleConfig
-                                        {
-                                            AgentLeft = newAgent,
-                                            AgentRight = opponent,
-                                            Timer = timer,
-                                            ActionInterval = interval,
-                                            SkillSetLeft = leftSkill,
-                                            SkillSetRight = rightSkill,
-                                            Iteration = Setting.Iteration,
-                                            TimeScale = DefaultTimeScale,
-                                            RoundSystem = roundSystem
-                                        });
-
-                                        // Case 2: new agent on the right
-                                        configs.Add(new BattleConfig
-                                        {
-                                            AgentLeft = opponent,
-                                            AgentRight = newAgent,
-                                            Timer = timer,
-                                            ActionInterval = interval,
-                                            SkillSetLeft = leftSkill,
-                                            SkillSetRight = rightSkill,
-                                            Iteration = Setting.Iteration,
-                                            TimeScale = DefaultTimeScale,
-                                            RoundSystem = roundSystem
-                                        });
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            Logger.Info($"Generated configs: {configs.Count}: {string.Join("\n", configs.Select((x) => $"{x.AgentLeft.ID}_vs_{x.AgentRight.ID}"))}", true);
-            Logger.Info($"Game will run {configs.Sum(cfg => cfg.Iteration)} matches in total.", true);
-
-            configs = configs
-            .OrderBy(c => c.AgentLeft.ID)
-            .ThenBy(c => c.AgentRight.ID)
-            .ThenBy(c => c.RoundSystem)
-            .ThenBy(c => c.Timer)
-            .ThenBy(c => c.ActionInterval)
-            .ThenBy(c => c.SkillSetLeft)
-            .ThenBy(c => c.SkillSetRight)
-            .ToList();
-
-            return configs;
-        }
 
 
         private void SaveCheckpoint(SimulationCheckpoint checkpoint)
@@ -453,20 +411,68 @@ namespace SumoHelper
 
             if (checkpoint == null)
             {
+                Logger.Info("[Checkpoint] No existing checkpoint found. Creating new checkpoint.", true);
+                string newID = DateTime.Now.ToString("yyyyMMdd_HHmmss") + "_batch";
+                string createdAt = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+
                 checkpoint = new SimulationCheckpoint
                 {
+                    ID = newID,
+                    CreatedAt = createdAt,
                     Setting = Setting,
                     Iteration = 0,
+                    ConfigIndex = 0,
                 };
+
+                Logger.Info($"[Checkpoint] Created checkpoint ID: {checkpoint.ID} at {checkpoint.CreatedAt}", true);
             }
             else
             {
-                if (UseCheckpoint)
+                // Check if the configuration has changed
+                bool configurationChanged = !Setting.IsConfigurationEqual(checkpoint.Setting);
+
+                if (configurationChanged)
                 {
-                    Setting = checkpoint.Setting;
+                    Logger.Info("[Checkpoint] Configuration has changed. Resetting checkpoint.", true);
+                    Logger.Info($"[Checkpoint] Old Config: Agents={checkpoint.Setting.SelectedAgents?.Length ?? 0}, " +
+                              $"Timers={checkpoint.Setting.Timers?.Length ?? 0}, " +
+                              $"Intervals={checkpoint.Setting.ActionIntervals?.Length ?? 0}, " +
+                              $"Rounds={checkpoint.Setting.RoundSystem?.Length ?? 0}, " +
+                              $"Skills={checkpoint.Setting.Skills?.Length ?? 0}, " +
+                              $"Iteration={checkpoint.Setting.Iteration}", true);
+                    Logger.Info($"[Checkpoint] New Config: Agents={Setting.SelectedAgents?.Length ?? 0}, " +
+                              $"Timers={Setting.Timers?.Length ?? 0}, " +
+                              $"Intervals={Setting.ActionIntervals?.Length ?? 0}, " +
+                              $"Rounds={Setting.RoundSystem?.Length ?? 0}, " +
+                              $"Skills={Setting.Skills?.Length ?? 0}, " +
+                              $"Iteration={Setting.Iteration}", true);
+
+                    // Generate new ID and timestamp for reset checkpoint
+                    string newID = DateTime.Now.ToString("yyyyMMdd_HHmmss") + "_batch";
+                    string createdAt = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+
+                    // Reset checkpoint with new settings
+                    checkpoint = new SimulationCheckpoint
+                    {
+                        ID = newID,
+                        CreatedAt = createdAt,
+                        Setting = Setting,
+                        Iteration = 0,
+                        ConfigIndex = 0,
+                    };
+
+                    Logger.Info($"[Checkpoint] Created new checkpoint ID: {checkpoint.ID} at {checkpoint.CreatedAt}", true);
                 }
-                currentConfigIndex = checkpoint.ConfigIndex;
-                firstConfigIndex = checkpoint.ConfigIndex;
+                else
+                {
+                    Logger.Info("[Checkpoint] Configuration matches. Resuming from checkpoint.", true);
+                    Logger.Info($"[Checkpoint] Resuming checkpoint ID: {checkpoint.ID}, created at {checkpoint.CreatedAt}", true);
+                    Logger.Info($"[Checkpoint] Resuming from Config {checkpoint.ConfigIndex}, Iteration {checkpoint.Iteration}", true);
+
+                    Setting = checkpoint.Setting;
+                    currentConfigIndex = checkpoint.ConfigIndex;
+                    firstConfigIndex = checkpoint.ConfigIndex;
+                }
             }
 
             return checkpoint;
@@ -474,8 +480,9 @@ namespace SumoHelper
 
         private (int, List<LogManager.GameLog>) GetResumeIterations(BattleConfig cfg)
         {
-            var path = GetFolderName(cfg).ToList();
-            path.Insert(0, "Simulation");
+            var path = GetFolderStructure(cfg).ToList();
+            path.Insert(0, "Batch");
+            path.Insert(0, "Logs");
             path.Insert(0, Application.persistentDataPath);
             string folder = Path.Combine(path.ToArray());
             if (!Directory.Exists(folder))
@@ -533,9 +540,10 @@ namespace SumoHelper
             return (Math.Max(0, max), gameLogs.Take(Math.Max(0, max)).ToList());
         }
 
-        private string[] GetFolderName(BattleConfig cfg)
+        private string[] GetFolderStructure(BattleConfig cfg)
         {
             return new string[]{
+                checkpoint.ID,
                 $"{cfg.AgentLeft.ID}_vs_{cfg.AgentRight.ID}",
                 $"Timer_{cfg.Timer}__ActInterval_{cfg.ActionInterval}__Round_{cfg.RoundSystem}__SkillLeft_{cfg.SkillSetLeft}__SkillRight_{cfg.SkillSetRight}",
             };
@@ -565,28 +573,99 @@ namespace SumoHelper
     [Serializable]
     public class SimulationSetting
     {
+        public int Iteration;
+
+        [HideInInspector]
         public int[] Timers;
+
+        [HideInInspector]
         public float[] ActionIntervals;
 
-        public int Iteration;
+        [HideInInspector]
         public RoundSystem[] RoundSystem;
 
-        [SerializeField, Tooltip("If Skills is not specified, use skill from original script")]
+        [HideInInspector]
         public SkillType[] Skills;
 
-        [SerializeField, Tooltip("Run only these agents. If empty, run all scanned agents")]
+        [HideInInspector]
         public string[] SelectedAgents = new string[] { };
 
-        [SerializeField, Tooltip("Run agents except these ExcludedAgents. Will be ignored when SelectedAgents filled")]
-        public string[] ExcludedAgents = new string[] { "Bot_Template", "Bot_LLM_ActionGPT", "Bot_SLM_ActionGPT", "Bot_ML_Classification" };
+        public bool IsConfigurationEqual(SimulationSetting other)
+        {
+            if (other == null) return false;
 
-        public string[] DifferentAgents = new string[] { };
+            // Compare Iteration
+            if (Iteration != other.Iteration) return false;
 
+            // Compare Timers
+            if (Timers == null && other.Timers != null) return false;
+            if (Timers != null && other.Timers == null) return false;
+            if (Timers != null && other.Timers != null)
+            {
+                if (Timers.Length != other.Timers.Length) return false;
+                for (int i = 0; i < Timers.Length; i++)
+                {
+                    if (!other.Timers.Contains(Timers[i])) return false;
+                }
+            }
+
+            // Compare ActionIntervals
+            if (ActionIntervals == null && other.ActionIntervals != null) return false;
+            if (ActionIntervals != null && other.ActionIntervals == null) return false;
+            if (ActionIntervals != null && other.ActionIntervals != null)
+            {
+                if (ActionIntervals.Length != other.ActionIntervals.Length) return false;
+                for (int i = 0; i < ActionIntervals.Length; i++)
+                {
+                    if (!other.ActionIntervals.Contains(ActionIntervals[i])) return false;
+                }
+            }
+
+            // Compare RoundSystem
+            if (RoundSystem == null && other.RoundSystem != null) return false;
+            if (RoundSystem != null && other.RoundSystem == null) return false;
+            if (RoundSystem != null && other.RoundSystem != null)
+            {
+                if (RoundSystem.Length != other.RoundSystem.Length) return false;
+                for (int i = 0; i < RoundSystem.Length; i++)
+                {
+                    if (!other.RoundSystem.Contains(RoundSystem[i])) return false;
+                }
+            }
+
+            // Compare Skills
+            if (Skills == null && other.Skills != null) return false;
+            if (Skills != null && other.Skills == null) return false;
+            if (Skills != null && other.Skills != null)
+            {
+                if (Skills.Length != other.Skills.Length) return false;
+                for (int i = 0; i < Skills.Length; i++)
+                {
+                    if (!other.Skills.Contains(Skills[i])) return false;
+                }
+            }
+
+            // Compare SelectedAgents
+            if (SelectedAgents == null && other.SelectedAgents != null) return false;
+            if (SelectedAgents != null && other.SelectedAgents == null) return false;
+            if (SelectedAgents != null && other.SelectedAgents != null)
+            {
+                if (SelectedAgents.Length != other.SelectedAgents.Length) return false;
+                for (int i = 0; i < SelectedAgents.Length; i++)
+                {
+                    if (!other.SelectedAgents.Contains(SelectedAgents[i])) return false;
+                }
+            }
+
+            return true;
+        }
     }
 
     [Serializable]
     public class SimulationCheckpoint
     {
+        public string ID;
+        public string CreatedAt;
         public SimulationSetting Setting;
         public int TotalConfigs;
         public int ConfigIndex;

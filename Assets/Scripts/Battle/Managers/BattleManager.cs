@@ -97,14 +97,21 @@ namespace SumoManager
             BotManager = GetComponent<BotManager>();
 
             if (simulator.enabled)
-                simulator.PrepareSimulation();
-            else
             {
-                LogManager.UnregisterAction();
-                LogManager.InitLog();
-                LogManager.InitBattle();
-                Battle = new Battle(Guid.NewGuid().ToString(), RoundSystem);
+                if (simulator.Mode == SimulatorMode.Simple)
+                    Init();
+                simulator.PrepareSimulation();
             }
+            else
+                Init();
+        }
+
+        private void Init()
+        {
+            LogManager.UnregisterAction();
+            LogManager.InitLog(false);
+            LogManager.InitBattle();
+            Battle = new Battle(Guid.NewGuid().ToString(), RoundSystem);
         }
 
         void Start()

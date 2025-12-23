@@ -18,7 +18,7 @@ namespace ML.LanguageModels
     }
     class AIBot_SLM_ActionGPT : Bot
     {
-        public override string ID => "Bot_SLM_ActionGPT";
+        public override string ID => "Bot_SLM";
         public override SkillType DefaultSkillType => SkillType;
         public override bool UseAsync => true;
 
