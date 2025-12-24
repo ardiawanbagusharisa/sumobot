@@ -406,7 +406,15 @@ namespace SumoHelper
             if (File.Exists(path))
             {
                 string json = File.ReadAllText(path);
-                checkpoint = JsonUtility.FromJson<SimulationCheckpoint>(json);
+                try
+                {
+                    checkpoint = JsonUtility.FromJson<SimulationCheckpoint>(json);
+                }
+                catch (Exception)
+                {
+                    Logger.Info($"[Checkpoint] Failed to read ${path}. Will create a new one", true);
+                    checkpoint = null;
+                }
             }
 
             if (checkpoint == null)
