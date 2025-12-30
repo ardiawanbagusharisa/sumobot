@@ -34,7 +34,7 @@ namespace SumoCore
         [Header("Physics Stats")]
 
         public float StopDelay = 0.5f;
-        public float AngularStopDelay = 0.5f;
+        public float AngularStopDelay = 20f;
         public float StopTreshold = 0.1f;
         public float SlowDownRate = 2.0f;
 
@@ -558,9 +558,13 @@ namespace SumoCore
 
             if (torque > 0 && impact > 0)
             {
-                Debug.Log($"Bounce Direction: {(impact * direction).magnitude}");
+                // Calculate torque direction based on cross product of robot's facing direction and collision direction
+                Vector2 robotFacing = Quaternion.Euler(0, 0, RigidBody.rotation) * Vector2.up;
+                float crossProduct = robotFacing.x * direction.y - robotFacing.y * direction.x; // 2D cross product (z-component)
+                float torqueDirection = Mathf.Sign(crossProduct); // +1 for left turn, -1 for right turn
+
                 RigidBody.AddForce(impact * direction, ForceMode2D.Impulse);
-                RigidBody.AddTorque(torque * Torque, ForceMode2D.Impulse);
+                RigidBody.AddTorque(torque * Torque * torqueDirection, ForceMode2D.Impulse);
                 RigidBody.angularDamping = 0.5f;
             }
             else
@@ -591,7 +595,7 @@ namespace SumoCore
                 RigidBody.linearVelocity = Vector2.Lerp(RigidBody.linearVelocity, Vector2.zero, SlowDownRate * Time.deltaTime);
                 RigidBody.angularVelocity = Mathf.Lerp(RigidBody.angularVelocity, 0, SlowDownRate * Time.deltaTime);
             }
-
+            
             if (Mathf.Abs(RigidBody.angularVelocity) <= AngularStopDelay)
             {
                 RigidBody.angularVelocity = 0;
