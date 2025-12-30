@@ -27,7 +27,7 @@ public class PixelParticle : MonoBehaviour
         {
             _sr = gameObject.AddComponent<SpriteRenderer>();
             _sr.sprite = GetSquareSprite();
-            _sr.sortingLayerName = "Foreground";
+            //_sr.sortingLayerName = "Foreground";
         }
         _sr.sortingOrder = sortingOrder;
         _sr.color = color;
