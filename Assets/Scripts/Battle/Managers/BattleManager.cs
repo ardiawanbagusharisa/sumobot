@@ -237,18 +237,18 @@ namespace SumoManager
             }
 
             LogManager.FlushActionLog();
-            PlayerSide? side = LogManager.GetWinnerByContactMade();
-            if (side != null)
-            {
-                LogManager.SetRoundWinner(side.ToString());
-                Battle.SetRoundWinner(side == PlayerSide.Left ? Battle.LeftPlayer : Battle.RightPlayer);
-            }
-            else
-            {
-                LogManager.SetRoundWinner("Draw");
-                Battle.CurrentRound.RoundWinner = null;
-                Battle.Winners[Battle.CurrentRound.RoundNumber] = null;
-            }
+            // PlayerSide? side = LogManager.GetWinnerByContactMade();
+            // if (side == null)
+            // {
+            //     LogManager.SetRoundWinner(side.ToString());
+            //     Battle.SetRoundWinner(side == PlayerSide.Left ? Battle.LeftPlayer : Battle.RightPlayer);
+            // }
+            // else
+            // {
+            LogManager.SetRoundWinner("Draw");
+            Battle.CurrentRound.RoundWinner = null;
+            Battle.Winners[Battle.CurrentRound.RoundNumber] = null;
+            // }
 
             TransitionToState(BattleState.Battle_End);
         }
