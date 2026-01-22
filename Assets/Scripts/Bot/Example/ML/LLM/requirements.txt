@@ -1,0 +1,18 @@
+# LLM Training & API Requirements
+torch
+transformers
+datasets
+peft
+trl
+scikit-learn
+tqdm
+pymilvus
+psutil
+numpy
+
+# API Server
+fastapi
+uvicorn
+
+# Optional: GPU monitoring
+pynvml

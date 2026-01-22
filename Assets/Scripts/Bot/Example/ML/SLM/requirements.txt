@@ -1,0 +1,19 @@
+# Small Language Model (GPT-style) Requirements
+# For training small transformer models from scratch
+
+torch
+tokenizers
+numpy
+tqdm
+onnx
+onnxconverter-common
+onnxruntime
+
+# Used
+# torch>=2.1.0
+# tokenizers>=0.15.0
+# numpy>=1.24.0
+# tqdm>=4.66.0
+# onnx>=1.15.0
+# onnxconverter-common>=1.14.0
+# onnxruntime>=1.16.0
