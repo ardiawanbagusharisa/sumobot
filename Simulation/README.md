@@ -27,7 +27,7 @@ Clone Sumobot with `git clone https://github.com/ardiawanbagusharisa/sumobot.git
 
     - Timers - `15`, `30`, `45`, `60` | Match duration in seconds. Choose any combination.
     - ActionIntervals - `0.1`, `0.2`, `0.5` | Agent decision-making interval in seconds. Choose any combination.
-    - Skills - `0`, `1` | Skill settings: `0` = disabled, `1` = enabled. Choose any combination.
+    - Skills - `0`, `1` | Skill settings: `0` = Boost, `1` = Stone. Choose any combination.
     - RoundSystem - `1`, `3`, `5` | Best-of-N format: `1` = single match, `3` = best of 3, `5` = best of 5. Choose any combination.
     - Iteration - Any positive integer | Number of times to run each configuration (e.g., `50`, `100`)
     - Bot Selection - All 13 agents displayed on Battle Simualtor inspector under Bot Selection menu, you can choose any combination of the bot type or simulate all of them
