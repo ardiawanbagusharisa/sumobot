@@ -111,7 +111,7 @@ Clone Sumobot with `git clone https://github.com/ardiawanbagusharisa/sumobot.git
     3. Run `docker-compose up -d`, wait until done
     4. Wait 5-10 mins, or observe the status with running `docker logs sumobot-api -f --tail 20` until it shows `"GET /health HTTP/1.1" 200 OK`
     5. Done, you can run Bot_LLM which will hit the API contains process of Milvus vector search to get the action by the given bot state
-    6. (Optional) If you run long-running and many simulation instance, adjust the number of API worker to support extensive requests from Bot_LLM. At the api service line 83, adjust value of WORKER (default set to 4) depends on local machine capability. WORKER will spawn separated process to support API request concurrently from Bot_LLM.
+    6. (Optional) If you run long-running and many simulation instance, adjust the number of API worker to support extensive requests from Bot_LLM. Locate `Assets/Scripts/Bot/Example/ML/LLM/docker-compose.yml` file, at the api service line 83, adjust value of WORKER (default set to 4) depends on local machine capability. WORKER will spawn separated process to support API request concurrently from Bot_LLM.
 
 # Additional Information
 
