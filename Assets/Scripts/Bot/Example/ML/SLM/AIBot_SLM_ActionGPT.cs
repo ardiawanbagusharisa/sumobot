@@ -152,7 +152,7 @@ namespace ML.LanguageModels
                 isGenerating = false;
 
                 string generated = tokenizer.Decode(outputTokens);
-                Logger.Info("🧠 Generated Output:\n" + generated);
+                Logger.Info($"Generated Output:\n" + generated);
 
                 if (generated != null)
                 {
@@ -250,7 +250,7 @@ namespace ML.LanguageModels
                 runtimeModel = ModelLoader.Load(modelAsset);
             }
 
-            engine = new Worker(runtimeModel, BackendType.GPUPixel);
+            engine = new Worker(runtimeModel, BackendType.CPU);
             modelLoadState = ModelState.Initialzed;
         }
 
