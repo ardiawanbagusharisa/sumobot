@@ -107,7 +107,7 @@ Clone Sumobot with `git clone https://github.com/ardiawanbagusharisa/sumobot.git
     Since running Bot_LLM requires huge resource which can't be hosted on github, we need to use docker image that already hosted on docker hub.
 
     1. Install docker desktop ([Windows](https://docs.docker.com/desktop/setup/install/windows-install/) / [Mac](https://docs.docker.com/desktop/setup/install/mac-install/) / [Linux](https://docs.docker.com/desktop/setup/install/linux/))
-    2. Open terminal/powershell and change directory to the docker-compose.yml on `Assets/Scripts/Bot/Example/ML/LLM/docker-compose.yml`
+    2. Open terminal/powershell and change directory to the docker-compose.yml at `Assets/Scripts/Bot/Example/ML/LLM/docker-compose.yml`
     3. Run `docker-compose up -d`, wait until done
     4. Wait 5-10 mins, or observe the status with running `docker logs sumobot-api -f --tail 20` until it shows `"GET /health HTTP/1.1" 200 OK`
     5. Done, you can run Bot_LLM which will hit the API contains process of Milvus vector search to get the action by the given bot state
@@ -304,37 +304,3 @@ chmod +x /path/to/Sumobot.x86_64
 - **Check log files**: Look for errors in `log_*.txt`
 - **Run single config**: Test with batch size = 1
 - **Unity Player logs**: Check Unity player logs for crashes
-
----
-
-## Advanced Usage
-
-### Processing Specific Range
-```bash
-# Only process configs 50-150
-./run_simulator.sh "/path/to/Sumobot" 50 150 25
-```
-
-### Sequential Processing (No Parallelization)
-```bash
-# Batch size = total configs (single instance)
-./run_simulator.sh "/path/to/Sumobot" 0 100 100
-```
-
-### Maximum Parallelization
-```bash
-# Batch size = 1 (one instance per config)
-# WARNING: High overhead, only for very long simulations
-./run_simulator.sh "/path/to/Sumobot" 0 10 1
-```
-
-### Split Large Jobs
-```bash
-# Split 1000 configs into multiple runs
-./run_simulator.sh "/path/to/Sumobot" 0 250 25    # Run 1
-./run_simulator.sh "/path/to/Sumobot" 250 500 25  # Run 2
-./run_simulator.sh "/path/to/Sumobot" 500 750 25  # Run 3
-./run_simulator.sh "/path/to/Sumobot" 750 1000 25 # Run 4
-```
-
----

@@ -1,10 +1,6 @@
-# NOTE: This is for players who DON'T use train_llm.ipynb
-# If you're training your own model with train_llm.ipynb, you don't need Docker!
-# train_llm.ipynb uses Milvus Lite (local file: milvus_sumobot.db)
-#
-# For players using pre-trained models:
-# 1. Run: docker-compose up -d
-# 2. API will be available at http://localhost:9999
+# Sumobot Milvus VDB
+# Players just run: docker-compose up -d
+# API will be available at http://localhost:9999
 
 services:
   etcd:
@@ -66,12 +62,24 @@ services:
     restart: unless-stopped
 
   # Sumobot API - Pull from Docker Hub
+  # Change 'your-dockerhub-username' to your actual Docker Hub username
   api:
     container_name: sumobot-api
-    image: arbyazra123/sumobot-vdb-api:latest
+    image: ardiawanbagusharisa/sumobot-vdb-api:latest
     platform: linux/amd64
+    # Uncomment to build locally instead of pulling from Docker Hub:
+    # build:
+    #   context: .
+    #   dockerfile: Dockerfile
     ports:
       - "9999:9999"
+
+    # Mount your custom JSONL file for data import (optional)
+    # Uncomment and change the path to use your own dataset
+    # Default dataset is included in the image
+    # volumes:
+      # - ./custom_dataset.jsonl:/app/dataset/custom_dataset.jsonl
+      
     depends_on:
       - milvus-standalone
     networks:
@@ -81,6 +89,7 @@ services:
       - MILVUS_PORT=19530
       - PORT=9999          # API server port
       - WORKERS=4          # Number of workers (increase for more concurrency)
+      - BATCH_SIZE=5000    # Batch size for importing data
     restart: unless-stopped
 
   # Performance tuning:
