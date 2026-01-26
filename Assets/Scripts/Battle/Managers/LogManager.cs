@@ -32,7 +32,11 @@ namespace SumoManager
 
     public class LogManager : MonoBehaviour
     {
+
         #region Log structures properties
+
+        public static string SINGLE_LOG_PATH = "Logs/Single";
+        public static string BATCH_LOG_PATH = "Logs/Batch";
         [Serializable]
         public class BattleLog
         {
@@ -212,16 +216,35 @@ namespace SumoManager
 
         #region Core Battle Log methods
 
-        public static void InitLog()
+        public static void InitLog(bool isBatch, string[] paths = null)
         {
             string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-            string folderName = $"battle_{timestamp}";
 
-            logFolderPath = Path.Combine(Application.persistentDataPath, "Logs", folderName);
+            List<string> combinedPaths = new()
+            {
+                Application.persistentDataPath
+            };
+
+            if (isBatch && paths != null)
+            {
+                combinedPaths.Add(BATCH_LOG_PATH);
+                combinedPaths.Add(Path.Combine(paths));
+            }
+            else
+            {
+                combinedPaths.Add(SINGLE_LOG_PATH);
+                combinedPaths.Add($"{timestamp}_single");
+            }
+
+
+            logFolderPath = Path.Combine(combinedPaths.ToArray());
+
+            Debug.Log($"PATH {logFolderPath}");
+
             Directory.CreateDirectory(logFolderPath);
         }
 
-        public static void InitBattle(BattleSimulator simulator = null)
+        public static void InitBattle(BattleConfig simConfig = null)
         {
             BattleManager battleManager = BattleManager.Instance;
 
@@ -231,9 +254,8 @@ namespace SumoManager
                 CountdownTime = battleManager.CountdownTime,
                 BattleTime = battleManager.BattleTime,
                 RoundType = (int)battleManager.RoundSystem,
-                SimulationAmount = simulator?.TotalSimulations ?? 0,
-                SimulationTimeScale = simulator?.TimeScale ?? 0,
-                SimulationAISwapInterval = simulator?.SwapAIInterval ?? 0,
+                SimulationAmount = simConfig?.Iteration ?? 0,
+                SimulationTimeScale = simConfig?.TimeScale ?? 0,
                 CreatedAt = (int)DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
             };
 
@@ -266,6 +288,7 @@ namespace SumoManager
                 {"X", BattleManager.Instance.Arena.transform.position.x},
                 {"Y", BattleManager.Instance.Arena.transform.position.y},
             };
+
             Log.ArenaRadius = BattleManager.Instance.ArenaRadius;
 
             if (logTakenAction && Log.Games.Count > 0)

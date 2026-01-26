@@ -16,7 +16,7 @@ public abstract class Drawer
         DrawBackend force = DrawBackend.Dynamic)
     {
         bool isSupportCompute = SystemInfo.supportsComputeShaders;
-        Debug.Log($"IsComputeShaderSupport: {isSupportCompute}");
+        Logger.Info($"IsComputeShaderSupport: {isSupportCompute}");
 
         // Force override (e.g., for testing or debugging)
         if (force == DrawBackend.Material)

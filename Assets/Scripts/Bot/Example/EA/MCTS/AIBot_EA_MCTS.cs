@@ -16,7 +16,7 @@ namespace SumoBot.EA.MCTS
         public float Iterations = 100;
         public float UCBConstant = 1.41f;
         public float ScoreLimit = -300;
-        public string Name = "MCTS Example";
+        public string Name = "Bot_MCTS";
         public SkillType DefaultSkillType = SkillType.Boost;
     }
 
@@ -24,7 +24,7 @@ namespace SumoBot.EA.MCTS
     {
         public AI_MCTS_Config config = new();
         public override string ID => config.Name;
-        public override SkillType SkillType => config.DefaultSkillType;
+        public override SkillType DefaultSkillType => config.DefaultSkillType;
 
 
         #region Runtime properties
@@ -110,7 +110,6 @@ namespace SumoBot.EA.MCTS
 
         EA_MCTS_Node Decide()
         {
-            Debug.Log($"testing {api.Angle(normalized: true)}");
             for (int i = 0; i < config.Iterations; i++)
             {
                 EA_MCTS_Node selected = root.Select(config);
@@ -128,12 +127,12 @@ namespace SumoBot.EA.MCTS
 
             if (bestChild.totalReward <= config.ScoreLimit)
             {
-                Debug.Log($"[AIBot_EA_MCTS] LowestScoreToReInit reached {bestChild.totalReward}");
+                Logger.Info($"[AIBot_EA_MCTS] LowestScoreToReInit reached {bestChild.totalReward}");
                 InitNode();
                 return null;
             }
 
-            // Debug.Log($"[AIBot_EA_MCTS] selected-score: {bestChild.totalReward}, selected-action(s): {bestChild.ID} selected-visits: {bestChild.visits}, {string.Join("->", bestChild.actions.Select((x) => x.FullName))}");
+            // Logger.Info($"[AIBot_EA_MCTS] selected-score: {bestChild.totalReward}, selected-action(s): {bestChild.ID} selected-visits: {bestChild.visits}, {string.Join("->", bestChild.actions.Select((x) => x.FullName))}");
 
             lastActionsToEnemy = bestChild.actions;
 

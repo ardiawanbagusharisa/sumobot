@@ -11,8 +11,8 @@ namespace SumoBot.RuleBased.Utility
 {
     public class AIBot_RuleBased_Utility : Bot
     {
-        public override string ID => "Utility AI";
-        public override SkillType SkillType => SkillType.Boost;
+        public override string ID => "Bot_Utility";
+        public override SkillType DefaultSkillType => SkillType.Boost;
 
         private SumoAPI api;
 

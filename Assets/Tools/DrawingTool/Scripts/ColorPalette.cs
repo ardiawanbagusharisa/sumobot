@@ -18,7 +18,7 @@ public class ColorPalette
         // If usePreset = true, the first 3 colors will be fixed (black, white, gray)
         if (_inputTexture == null)
         {
-            Debug.LogError("Input texture is missing for color generation! Returning empty list.");
+            Logger.Error("Input texture is missing for color generation! Returning empty list.");
             return new List<Color>();
         }
 

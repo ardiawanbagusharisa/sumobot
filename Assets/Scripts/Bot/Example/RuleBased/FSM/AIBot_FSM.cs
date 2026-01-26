@@ -18,8 +18,8 @@ namespace SumoBot
     public class AlBot_FSM : Bot
     {
         #region Runtime Properties
-        public override string ID => "FSM_Bot";
-        public override SkillType SkillType => SkillType.Boost;
+        public override string ID => "Bot_FSM";
+        public override SkillType DefaultSkillType => SkillType.Boost;
         #endregion
 
         #region State Threshold Properties
@@ -90,7 +90,7 @@ namespace SumoBot
                     break;
             }
             Submit(); 
-            Debug.Log($"Current State: {currentState}");
+            Logger.Info($"Current State: {currentState}");
         }
 
         public override void OnBotCollision(BounceEvent param)
@@ -119,7 +119,7 @@ namespace SumoBot
         private void TransitionToState(BotState newState)
         {
             if (currentState == newState) return;
-            Debug.Log($"Transitioning from {currentState} to {newState}");
+            Logger.Info($"Transitioning from {currentState} to {newState}");
             currentState = newState;
             stateTimer = 0f;
             ClearCommands();

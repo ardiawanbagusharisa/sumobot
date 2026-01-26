@@ -18,11 +18,11 @@ namespace ML.LanguageModels
     }
     class AIBot_SLM_ActionGPT : Bot
     {
-        public override string ID => "Sumo_ActionGPT";
+        public override string ID => "Bot_SLM";
+        public override SkillType DefaultSkillType => SkillType;
+        public override bool UseAsync => true;
 
-        public override SkillType SkillType => DefaultSkillType;
-
-        public SkillType DefaultSkillType = SkillType.Stone;
+        public SkillType SkillType = SkillType.Stone;
 
         public Model runtimeModel;
         public Worker engine;
@@ -67,7 +67,7 @@ namespace ML.LanguageModels
             TextAsset tokenizerAsset = Resources.Load<TextAsset>(tokenizerPath);
             if (tokenizerAsset == null)
             {
-                Debug.LogError("Tokenizer JSON not found in Resources!");
+                Logger.Error("Tokenizer JSON not found in Resources!");
                 return;
             }
             tokenizer = new(tokenizerAsset);
@@ -107,8 +107,7 @@ namespace ML.LanguageModels
         {
             if (prompt != null)
             {
-
-                Debug.Log($"prompt {prompt}");
+                Logger.Info($"prompt {prompt}");
 
                 int[] input = tokenizer.Encode(prompt);
                 int blockSize = 128;
@@ -129,11 +128,15 @@ namespace ML.LanguageModels
 
                     engine?.SetInput("input_ids", tensor);
                     engine?.Schedule();
+                    tensor?.Dispose();
+
                     var tensorOutput = (Tensor<float>)engine.PeekOutput(0);
                     using var output = await tensorOutput.ReadbackAndCloneAsync();
                     float[] logits = output.DownloadToArray();
-                    tensor.Dispose();
-                    output.Dispose();
+                    
+                    tensorOutput?.Dispose();
+                    tensor?.Dispose();
+                    output?.Dispose();
 
                     int nextToken = ArgMax(logits, inputSlice.Length - 1, vocabSize);
 
@@ -149,7 +152,7 @@ namespace ML.LanguageModels
                 isGenerating = false;
 
                 string generated = tokenizer.Decode(outputTokens);
-                Debug.Log("🧠 Generated Output:\n" + generated);
+                Logger.Info($"Generated Output:\n" + generated);
 
                 if (generated != null)
                 {
@@ -199,7 +202,7 @@ namespace ML.LanguageModels
                             dur = 0.1f;
                         }
 
-                        Debug.Log($"action: {act} {dur}");
+                        Logger.Info($"action: {act} {dur}");
                         var parsedAct = GetAction(act, dur);
                         Enqueue(parsedAct);
                     }
@@ -219,17 +222,17 @@ namespace ML.LanguageModels
             switch (predictedAction)
             {
                 case "Accelerate":
-                    return new AccelerateAction(InputType.Script, Mathf.Max(0.1f, duration));
+                    return new AccelerateAction(InputType.Script, Mathf.Max(api.BattleInfo.MinActionTime, duration));
                 case "TurnLeft":
-                    return new TurnAction(InputType.Script, ActionType.TurnLeft, Mathf.Max(0.1f, duration));
+                    return new TurnAction(InputType.Script, ActionType.TurnLeft, Mathf.Max(api.BattleInfo.MinActionTime, duration));
                 case "TurnRight":
-                    return new TurnAction(InputType.Script, ActionType.TurnRight, Mathf.Max(0.1f, duration));
+                    return new TurnAction(InputType.Script, ActionType.TurnRight, Mathf.Max(api.BattleInfo.MinActionTime, duration));
                 case "Dash":
                     return new DashAction(InputType.Script);
                 case "Skill":
                     return new SkillAction(InputType.Script);
             }
-            return new AccelerateAction(InputType.Script, 0.1f);
+            return new AccelerateAction(InputType.Script, api.BattleInfo.MinActionTime);
         }
 
         private void CreateEngine()

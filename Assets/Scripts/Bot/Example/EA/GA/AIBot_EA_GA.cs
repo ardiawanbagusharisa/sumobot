@@ -15,7 +15,7 @@ namespace SumoBot.EA.GA
         public int GenerationCount = 7;
         public float MutationRate = 0.5f;
         public int ActionsPerInterval = 2;
-        public string Name = "Genetic Algorithm Example";
+        public string Name = "Bot_GA";
         public SkillType DefaultSkillType = SkillType.Boost;
     }
 
@@ -24,7 +24,7 @@ namespace SumoBot.EA.GA
         public AIBot_EA_GA_Config config = new();
 
         public override string ID => config.Name;
-        public override SkillType SkillType => config.DefaultSkillType;
+        public override SkillType DefaultSkillType => config.DefaultSkillType;
 
         public static List<ISumoAction> PossibleActions = new() {
             new TurnAction(InputType.Script, ActionType.TurnLeft, 0.1f),

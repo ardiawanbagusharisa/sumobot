@@ -96,18 +96,22 @@ namespace SumoManager
             simulator = GetComponent<BattleSimulator>();
             BotManager = GetComponent<BotManager>();
 
-            LogManager.UnregisterAction();
-            LogManager.InitLog();
-            Battle = new Battle(Guid.NewGuid().ToString(), RoundSystem);
-
             if (simulator.enabled)
             {
-                LogManager.InitBattle(simulator);
+                if (simulator.Mode == SimulatorMode.Simple)
+                    Init();
+                simulator.PrepareSimulation();
             }
             else
-            {
-                LogManager.InitBattle();
-            }
+                Init();
+        }
+
+        private void Init()
+        {
+            LogManager.UnregisterAction();
+            LogManager.InitLog(false);
+            LogManager.InitBattle();
+            Battle = new Battle(Guid.NewGuid().ToString(), RoundSystem);
         }
 
         void Start()
@@ -153,7 +157,6 @@ namespace SumoManager
         #region API methods
         public void Battle_Start()
         {
-            SFXManager.Instance.Play2D("ui_accept");
             if (CurrentState == BattleState.Battle_Preparing ||
                 CurrentState == BattleState.Battle_Countdown ||
                 CurrentState == BattleState.Battle_Ongoing)
@@ -200,7 +203,7 @@ namespace SumoManager
                         {"outPlayerSide", controller.Side},
                         {"skill", controller.Skill.Type},
                     });
-            Debug.Log($"Player registered: {side}");
+            Logger.Info($"Player registered: {side}");
         }
 
         IEnumerator AllPlayersReady()
@@ -216,6 +219,7 @@ namespace SumoManager
             float timer = CountdownTime;
             while (timer > 0 && CurrentState == BattleState.Battle_Countdown)
             {
+                SFXManager.Instance.Play2D("ui_accept_small");
                 Events[OnCountdownChanged].Invoke(new EventParameter(floatParam: timer));
                 yield return new WaitForSeconds(1f);
                 timer -= 1f;
@@ -228,23 +232,23 @@ namespace SumoManager
             float timer = BattleTime;
             while (timer > 0 && CurrentState == BattleState.Battle_Ongoing)
             {
-                timer -= 1f;
-                yield return new WaitForSeconds(1f);
+                timer -= Time.deltaTime;
+                yield return null;
             }
 
             LogManager.FlushActionLog();
-            PlayerSide? side = LogManager.GetWinnerByContactMade();
-            if (side != null)
-            {
-                LogManager.SetRoundWinner(side.ToString());
-                Battle.SetRoundWinner(side == PlayerSide.Left ? Battle.LeftPlayer : Battle.RightPlayer);
-            }
-            else
-            {
-                LogManager.SetRoundWinner("Draw");
-                Battle.CurrentRound.RoundWinner = null;
-                Battle.Winners[Battle.CurrentRound.RoundNumber] = null;
-            }
+            // PlayerSide? side = LogManager.GetWinnerByContactMade();
+            // if (side == null)
+            // {
+            //     LogManager.SetRoundWinner(side.ToString());
+            //     Battle.SetRoundWinner(side == PlayerSide.Left ? Battle.LeftPlayer : Battle.RightPlayer);
+            // }
+            // else
+            // {
+            LogManager.SetRoundWinner("Draw");
+            Battle.CurrentRound.RoundWinner = null;
+            Battle.Winners[Battle.CurrentRound.RoundNumber] = null;
+            // }
 
             TransitionToState(BattleState.Battle_End);
         }
@@ -265,7 +269,7 @@ namespace SumoManager
         {
             if (CurrentState != BattleState.Battle_Ongoing)
                 return;
-            Debug.Log("OnPlayerOutOfArena");
+            Logger.Info("OnPlayerOutOfArena");
             PlayerSide Side = param.Side;
             SumoController winner = Side == PlayerSide.Left ? Battle.RightPlayer : Battle.LeftPlayer;
 
@@ -283,7 +287,7 @@ namespace SumoManager
 
         private void TransitionToState(BattleState newState)
         {
-            Debug.Log($"State Transition: {CurrentState} → {newState}");
+            Logger.Info($"State Transition: {CurrentState} → {newState}");
             CurrentState = newState;
 
             if (Battle.CurrentRound == null || Battle.CurrentRound.RoundNumber == 0)
@@ -320,6 +324,7 @@ namespace SumoManager
 
                 // Battle
                 case BattleState.Battle_Preparing:
+                    SFXManager.Instance.Play2D("ui_accept");
                     LogManager.SetPlayerBots(BotManager.Left, BotManager.Right);
                     LogManager.UpdateMetadata(logTakenAction: false);
                     LogManager.StartGameLog();
@@ -379,7 +384,7 @@ namespace SumoManager
                         Battle.CurrentRound = new Round(previousRound + 1, Mathf.CeilToInt(BattleTime));
                         LogManager.StartRound(Battle.CurrentRound.RoundNumber);
 
-                        Debug.Log($"CurrentRound.RoundNumber {Battle.CurrentRound.RoundNumber}");
+                        Logger.Info($"CurrentRound.RoundNumber {Battle.CurrentRound.RoundNumber}");
 
                         TransitionToState(BattleState.Battle_Countdown);
                     }
@@ -460,7 +465,7 @@ namespace SumoManager
 
         public BattleWinner? GetBattleWinner()
         {
-            Debug.Log($"[Battle][GetBattleWinner] leftWinCount: {LeftWinCount}, rightWinCount: {RightWinCount}");
+            Logger.Info($"[Battle][GetBattleWinner] leftWinCount: {LeftWinCount}, rightWinCount: {RightWinCount}");
 
             int winningTreshold = 0;
 

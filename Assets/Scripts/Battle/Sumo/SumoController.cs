@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Drawing;
 using System.Linq;
 using SumoHelper;
 using SumoInput;
@@ -13,7 +14,7 @@ namespace SumoCore
         Left,
         Right,
     }
-    
+
     /// <summary>
     /// Handles robot movement, input, and collision physics
     /// </summary>
@@ -33,7 +34,7 @@ namespace SumoCore
         [Header("Physics Stats")]
 
         public float StopDelay = 0.5f;
-        public float AngularStopDelay = 0.5f;
+        public float AngularStopDelay = 20f;
         public float StopTreshold = 0.1f;
         public float SlowDownRate = 2.0f;
 
@@ -43,6 +44,17 @@ namespace SumoCore
         public float LockActorMultiplier = 0.95f;
         public float CollisionBaseForce = 4f;
         public float TieBreakerLockDuration = 0.8f;
+        #endregion
+
+        #region Sound Effect
+        [Header("Sound Effect")]
+
+        private float fadeSpeed = 100;                  // smooth fade
+        public float accelerateBasePitch = 0.1f;        // smooth fade
+        public float accelerateHighPitch = 3f;          // smooth fade
+
+        private float targetVolume = 0f;
+        private float targetPitch = 1f;
         #endregion
 
         #region General Properties
@@ -99,6 +111,11 @@ namespace SumoCore
         private int rotationDirection;
         private bool isTurning = false;
         private ISumoAction lastTurnAction;
+        private float lastRotation;
+
+        // SFX
+        private (AudioSource src, float vol, float pitch) accelerateSource;
+        private (AudioSource src, float vol, float pitch) turningSource;
         #endregion
 
 
@@ -125,6 +142,11 @@ namespace SumoCore
 
             if (IsMovementDisabled)
                 moveLockTime -= Time.deltaTime;
+
+            if (Time.timeScale != 1 && accelerateSource.src != null)
+            {
+                accelerateSource.src.volume = 0;
+            }
         }
 
         void FixedUpdate()
@@ -135,8 +157,11 @@ namespace SumoCore
             }
 
             HandleStopping();
-            HandlingAccelerating();
+            HandleAccelerating();
             HandleTurning();
+
+            SetAccelerateSFX();
+            SetTurnSFX();
         }
 
         void OnCollisionEnter2D(Collision2D collision)
@@ -172,6 +197,49 @@ namespace SumoCore
             SetSkillEnabled(false);
         }
 
+        private void SetAccelerateSFX()
+        {
+            if (accelerateSource.src == null) return;
+            if (!SFXManager.Instance.gameObject.activeSelf) return;
+
+            float speed = RigidBody.linearVelocity.magnitude;
+            float normalized = Mathf.Clamp01(speed / (IsDashActive ? DashSpeed : MoveSpeed));
+
+            if (normalized > 0.95)
+            {
+                normalized = Random.Range(0.9f, normalized);
+            }
+
+            // Decide target values based on velocity
+            targetVolume = normalized * accelerateSource.vol;                // louder with speed
+            targetPitch = Mathf.Lerp(accelerateBasePitch, accelerateHighPitch, normalized); // higher pitch with speed
+
+            // Smoothly adjust
+            accelerateSource.src.volume = Mathf.MoveTowards(accelerateSource.src.volume, targetVolume, fadeSpeed * Time.deltaTime);
+            accelerateSource.src.pitch = Mathf.MoveTowards(accelerateSource.pitch, targetPitch, fadeSpeed * Time.deltaTime);
+        }
+
+        private void SetTurnSFX()
+        {
+            if (turningSource.src == null) return;
+            if (!SFXManager.Instance.gameObject.activeSelf) return;
+
+            // Compute angular speed from delta rotation
+            float currentRotation = transform.eulerAngles.y;
+            float delta = Mathf.DeltaAngle(lastRotation, currentRotation); // signed difference
+            float angularSpeed = Mathf.Abs(delta) / Time.deltaTime;
+
+            // Normalize
+            float normalized = Mathf.Clamp01(angularSpeed / RotateSpeed);
+
+            // Drive SFX
+            targetVolume = normalized * turningSource.vol; // louder when turning faster
+            targetPitch = Mathf.Lerp(0.9f, 1.3f, normalized); // slight pitch change
+
+            turningSource.src.volume = Mathf.MoveTowards(turningSource.src.volume, targetVolume, fadeSpeed * Time.deltaTime);
+            turningSource.src.pitch = Mathf.MoveTowards(turningSource.pitch, targetPitch, fadeSpeed * Time.deltaTime);
+        }
+
         public void AssignSkill(SkillType type = SkillType.Boost)
         {
             Skill = SumoSkill.CreateSkill(this, type);
@@ -190,23 +258,24 @@ namespace SumoCore
             RigidBody.angularVelocity = 0;
             RigidBody.angularDamping = 0;
             LastDashTime = 0;
+            lastRotation = transform.eulerAngles.y;
+            turningSource = SFXManager.Instance.GetAudioSource("actions_turn");
+            accelerateSource = SFXManager.Instance.GetAudioSource("actions_accelerate");
         }
         #endregion
 
         #region Robot Action Methods
-        public void Log(ISumoAction action, bool isNewAction = true)
+        public void Log(ISumoAction action)
         {
             bool isActive = IsActionActive(action.Type);
-            if (isActive && isNewAction)
+            if (isActive)
             {
                 LogManager.FlushActionLog(Side, action, isActive);
                 PeriodicState state = isActive ? PeriodicState.Continues : PeriodicState.Start;
                 LogManager.CallActionLog(Side, action, state);
             }
             else
-            {
                 LogManager.CallActionLog(Side, action);
-            }
 
             ActiveActions[action.Type] = action.Duration;
         }
@@ -239,6 +308,7 @@ namespace SumoCore
                 if (IsDashOnCooldown)
                     return;
 
+                SFXManager.Instance.Play2D("actions_dash");
                 action.Duration = DashDuration;
                 speed = DashSpeed;
                 LastDashTime = time;
@@ -252,6 +322,9 @@ namespace SumoCore
 
             movementVelocity = direction.normalized * speed;
             accelerateTimeRemaining = action.Duration;
+
+            Vector2 facingDir = Quaternion.Euler(0, 0, RigidBody.rotation) * Vector2.up;
+            VFXManager.Instance.PlayAccelerationTrail(transform, facingDir);
         }
 
         public void Turn(ISumoAction action)
@@ -269,15 +342,22 @@ namespace SumoCore
             isTurning = true;
         }
 
-        void HandlingAccelerating()
+        void HandleAccelerating()
         {
             if (IsMovementDisabled) return;
 
+
             if (accelerateTimeRemaining > 0f && lastAccelerateAction != null)
             {
+                if (accelerateSource.src != null && !accelerateSource.src.isPlaying)
+                {
+                    accelerateSource.src.loop = true;
+                    accelerateSource.src.Play();
+                }
+
                 RigidBody.linearVelocity = movementVelocity;
                 accelerateTimeRemaining -= Time.fixedDeltaTime;
-                Log(lastAccelerateAction, false);
+                Log(lastAccelerateAction);
             }
             else
             {
@@ -288,7 +368,12 @@ namespace SumoCore
         void HandleTurning()
         {
             if (!isTurning || IsMovementDisabled || lastTurnAction == null)
+            {
                 return;
+            }
+
+            if (turningSource.src != null && !turningSource.src.isPlaying)
+                turningSource.src.Play();
 
             float angularStep = RotateSpeed * Time.fixedDeltaTime;
 
@@ -297,17 +382,24 @@ namespace SumoCore
             step *= rotationDirection;
 
             float newRotation = RigidBody.rotation + step;
+            lastRotation = newRotation;
             RigidBody.MoveRotation(newRotation);
 
             remainingAngle -= Mathf.Abs(step);
 
-            Log(lastTurnAction, false);
+
+            Log(lastTurnAction);
 
             if (remainingAngle <= 0.001f)
             {
                 lastTurnAction = null;
                 isTurning = false;
             }
+
+            Vector2 facingDir = Quaternion.Euler(0, 0, RigidBody.rotation) * Vector2.up;
+            int dirSign = rotationDirection; // +1 = right (CW), -1 = left (CCW)
+            VFXManager.Instance.PlayTurnTrail(transform, facingDir, dirSign);
+
         }
 
         public void SetSkillEnabled(bool value)
@@ -380,10 +472,16 @@ namespace SumoCore
             StopOngoingAction();
             LogManager.FlushActionLog(Side);
 
-            if (isActor) 
+            if (isActor)
+            {
                 SFXManager.Instance.Play2D("collision_small");
-            else
+                VFXManager.Instance.PlayCollisionSpark(collision.contacts[0].point, enemyVelocity);
+            }
+            else 
+            {
                 SFXManager.Instance.Play2D("collision_big");
+                VFXManager.Instance.PlayCollisionSpark(collision.contacts[0].point, actorVelocity);
+            }
 
             if (!isActor) return;
 
@@ -425,7 +523,7 @@ namespace SumoCore
             collisionLogger.Call();
             enemyRobot.collisionLogger.Call();
 
-            Debug.Log($"[BounceRule] - IsTieBreaker ({isTieBreaker})\nActor=>{Side},Target=>{enemyRobot.Side}\nActorVelocity=>{actorVelocity},TargetVelocity=>{enemyVelocity}\nActorCurrentSkill=> {Skill.Type} isActive:{Skill.IsActive}, TargetCurrentSkill=>{enemyRobot.Skill.Type} isActive: {enemyRobot.Skill.IsActive} \nActorImpact=>{actorImpact}, TargetImpact=>{targetImpact}\nActorLock=>{actorLockDuration}, TargetLock=>{targetLockDuration}");
+            Logger.Info($"[BounceRule] - IsTieBreaker ({isTieBreaker})\nActor=>{Side},Target=>{enemyRobot.Side}\nActorVelocity=>{actorVelocity},TargetVelocity=>{enemyVelocity}\nActorCurrentSkill=> {Skill.Type} isActive:{Skill.IsActive}, TargetCurrentSkill=>{enemyRobot.Skill.Type} isActive: {enemyRobot.Skill.IsActive} \nActorImpact=>{actorImpact}, TargetImpact=>{targetImpact}\nActorLock=>{actorLockDuration}, TargetLock=>{targetLockDuration}");
 
         }
 
@@ -460,8 +558,13 @@ namespace SumoCore
 
             if (torque > 0 && impact > 0)
             {
+                // Calculate torque direction based on cross product of robot's facing direction and collision direction
+                Vector2 robotFacing = Quaternion.Euler(0, 0, RigidBody.rotation) * Vector2.up;
+                float crossProduct = robotFacing.x * direction.y - robotFacing.y * direction.x; // 2D cross product (z-component)
+                float torqueDirection = Mathf.Sign(crossProduct); // +1 for left turn, -1 for right turn
+
                 RigidBody.AddForce(impact * direction, ForceMode2D.Impulse);
-                RigidBody.AddTorque(torque * Torque, ForceMode2D.Impulse);
+                RigidBody.AddTorque(torque * Torque * torqueDirection, ForceMode2D.Impulse);
                 RigidBody.angularDamping = 0.5f;
             }
             else
@@ -482,6 +585,8 @@ namespace SumoCore
             if (RigidBody.linearVelocity.magnitude < StopTreshold)
             {
                 RigidBody.linearVelocity = Vector2.zero;
+                if (accelerateSource.src != null && accelerateSource.src.isPlaying)
+                    accelerateSource.src.loop = false;
                 return;
             }
 
@@ -490,7 +595,7 @@ namespace SumoCore
                 RigidBody.linearVelocity = Vector2.Lerp(RigidBody.linearVelocity, Vector2.zero, SlowDownRate * Time.deltaTime);
                 RigidBody.angularVelocity = Mathf.Lerp(RigidBody.angularVelocity, 0, SlowDownRate * Time.deltaTime);
             }
-
+            
             if (Mathf.Abs(RigidBody.angularVelocity) <= AngularStopDelay)
             {
                 RigidBody.angularVelocity = 0;
@@ -511,11 +616,15 @@ namespace SumoCore
                 if (action is DashAction)
                 {
                     action.Duration = DashDuration;
+                    Vector2 facing = Quaternion.Euler(0, 0, RigidBody.rotation) * Vector2.up;
+                    VFXManager.Instance.PlayDash(transform, facing);
                 }
                 else if (action is SkillAction)
                 {
                     action.Type = Skill.Type.ToActionType();
                     action.Duration = Skill.TotalDuration;
+                    Vector2 facing = Quaternion.Euler(0, 0, RigidBody.rotation) * Vector2.up;
+                    VFXManager.Instance.PlayDash(transform, facing);
                 }
 
                 Actions.Enqueue(action);

@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using SumoBot;
 using SumoCore;
 using SumoInput;
@@ -10,17 +11,18 @@ using UnityEngine;
 
 class AIBot_ML_Classification : Bot
 {
-    public override string ID => "ML_Classification";
-
-    public override SkillType SkillType => SkillType.Boost;
+    public override string ID => "Bot_MLP";
+    public override SkillType DefaultSkillType => SkillType.Boost;
+    public override bool UseAsync => true;
 
     public Model runtimeModel;
     public Worker engine;
     private SumoAPI api;
     private bool isInitializing = false;
+    private bool isGenerating = false;
     private readonly List<string> labels = new()
     {
-        "Accelerate", "Dash", "SkillBoost", "TurnLeft", "TurnRight"
+        "FWD", "TL", "TR"
     };
 
     public override void OnBattleStateChanged(BattleState state, BattleWinner? winner)
@@ -47,80 +49,85 @@ class AIBot_ML_Classification : Bot
     }
     public override void OnBotUpdate()
     {
-        var inputs = new float[] {
-                api.MyRobot.Position.x,
-                api.MyRobot.Position.y,
-                Normalize360(api.MyRobot.Rotation),
-                // api.MyRobot.LinearVelocity.magnitude,
-                // api.MyRobot.AngularVelocity,
-                // api.MyRobot.IsDashActive ? 1 : 0,
-                // api.MyRobot.Skill.IsActive ? 1 : 0,
-                // api.MyRobot.IsOutFromArena ? 1 : 0,
-                // Enemy
-                api.EnemyRobot.Position.x,
-                api.EnemyRobot.Position.y,
-                Normalize360(api.EnemyRobot.Rotation),
-                // api.EnemyRobot.LinearVelocity.magnitude,
-                // api.EnemyRobot.AngularVelocity,
-                // api.EnemyRobot.IsDashActive ? 1 : 0,
-                // api.EnemyRobot.Skill.IsActive ? 1 : 0,
-                // api.EnemyRobot.IsOutFromArena ? 1 : 0,
-             };
-        Tensor<float> inputTensor = new(new TensorShape(1, 6), inputs);
-
-        engine.Schedule(inputTensor);
-
-        // output actions at 0
-        Tensor<float> outputTensorAct = (engine.PeekOutput(0) as Tensor<float>).ReadbackAndClone();
-
-        // output actions at 1
-        Tensor<float> outputTensorDur = (engine.PeekOutput(1) as Tensor<float>).ReadbackAndClone();
-
-        var outputTensorActRes = outputTensorAct.DownloadToArray();
-        var outputTensorDurRes = outputTensorDur.DownloadToArray()[0];
-
-        inputTensor.Dispose();
-        outputTensorAct.Dispose();
-        outputTensorDur.Dispose();
-
-        int predictedIndex = ArgMax(outputTensorActRes);
-        string predictedLabel = labels[predictedIndex];
-
-        Debug.Log($"$outputTensorArr {string.Join(", ", outputTensorActRes.Select((x) => $"{x}"))}");
-        Debug.Log($"$predictedLabel {predictedLabel}");
-        Debug.Log($"$predictedDuraation {outputTensorDurRes}");
-        var action = GetAction(predictedLabel, outputTensorDurRes);
-
-        Enqueue(action);
+        _ = Run(GenerateState());
         Submit();
     }
 
-    float Normalize360(float angle)
+    async Task Run(float[] inputs)
     {
-        angle %= 360f;
-        if (angle < 0) angle += 360f;
-        return angle;
+        if (isGenerating) return;
+        isGenerating = true;
+
+        Logger.Info($"[ML][Classification] RUN with inputs: {string.Join(", ", inputs.Select((x) => x.ToString()).ToList())}");
+
+        Tensor<float> inputTensor = new(new TensorShape(1, 5), inputs);
+
+
+        engine.Schedule(inputTensor);
+
+        Tensor<float> outputTensorSkill = await (engine.PeekOutput("skill") as Tensor<float>).ReadbackAndCloneAsync();
+        Tensor<float> outputTensorDash = await (engine.PeekOutput("dash") as Tensor<float>).ReadbackAndCloneAsync();
+        Tensor<float> outputTensorMovement = await (engine.PeekOutput("movement") as Tensor<float>).ReadbackAndCloneAsync();
+        Tensor<float> outputTensorDuration = await (engine.PeekOutput("duration") as Tensor<float>).ReadbackAndCloneAsync();
+
+        var outputTensorSkillRes = outputTensorSkill.DownloadToArray()[0];
+        var outputTensorDashRes = outputTensorDash.DownloadToArray()[0];
+        var outputTensorActionRes = outputTensorMovement.DownloadToArray();
+        var outputTensorDurationRes = outputTensorDuration.DownloadToArray()[0];
+
+        inputTensor.Dispose();
+        outputTensorSkill.Dispose();
+        outputTensorDash.Dispose();
+        outputTensorMovement.Dispose();
+        outputTensorDuration.Dispose();
+
+        int predictedIndex = ArgMax(outputTensorActionRes);
+        string predictedLabel = labels[predictedIndex];
+
+        Logger.Info($"[ML][Classification] Output Detail\nSkillProb: {outputTensorSkillRes:F2}\nDashProb: {outputTensorDashRes:F2}\nMovement: {predictedLabel}\nDuration: {outputTensorDurationRes:F2}");
+
+        if (outputTensorSkillRes > 0.5f)
+            Enqueue(new SkillAction(InputType.Script, DefaultSkillType.ToActionType()));
+
+        if (outputTensorDashRes > 0.5f)
+            Enqueue(new DashAction(InputType.Script));
+
+        Enqueue(GetAction(predictedLabel, outputTensorDurationRes));
+
+        isGenerating = false;
+    }
+
+    public float[] GenerateState()
+    {
+        var signedAngle = api.Angle();
+        var signedAngleScore = api.Angle(normalized: true);
+        var distanceToEnemy = 1 - api.DistanceNormalized();
+        var nearArena = api.Distance(targetPos: api.BattleInfo.ArenaPosition).magnitude / api.BattleInfo.ArenaRadius;
+
+        var centerToMe = api.Distance(targetPos: api.MyRobot.Position, oriPos: api.BattleInfo.ArenaPosition).normalized;
+
+        var zRot = api.MyRobot.Rotation % 360f;
+        if (zRot < 0) zRot += 360f;
+        Vector2 facingDir = Quaternion.Euler(0, 0, zRot) * Vector2.up;
+
+        var facingToOutside = Vector2.Dot(facingDir, centerToMe);
+        return new[] { signedAngle, signedAngleScore, distanceToEnemy, nearArena, facingToOutside };
     }
 
     private ISumoAction GetAction(string predictedAction, float duration)
     {
         switch (predictedAction)
         {
-            case "Accelerate":
+            case "FWD":
                 return new AccelerateAction(InputType.Script, Mathf.Max(0.1f, duration));
-            case "TurnLeft":
+            case "TL":
                 return new TurnAction(InputType.Script, ActionType.TurnLeft, Mathf.Max(0.1f, duration));
-            case "TurnRight":
+            case "TR":
                 return new TurnAction(InputType.Script, ActionType.TurnRight, Mathf.Max(0.1f, duration));
-            case "Dash":
-                return new DashAction(InputType.Script);
-            case "SkillStone":
-                return new SkillAction(InputType.Script, ActionType.SkillStone);
-            case "SkillBoost":
-                return new SkillAction(InputType.Script, ActionType.SkillBoost);
         }
         return new AccelerateAction(InputType.Script, 0.1f);
     }
+
 
     private void CreateEngine()
     {
@@ -133,13 +140,13 @@ class AIBot_ML_Classification : Bot
 
         if (runtimeModel == null)
         {
-            ModelAsset modelAsset = Resources.Load($"ML/Models/Classification/model") as ModelAsset;
+            ModelAsset modelAsset = Resources.Load($"ML/Models/Classification/ml_enhanced_actions") as ModelAsset;
             runtimeModel = ModelLoader.Load(modelAsset);
         }
 
         engine = new Worker(runtimeModel, BackendType.CPU);
         isInitializing = false;
-        Debug.Log($"Engine worker of MLP created!");
+        Logger.Info($"Engine worker of MLP created!");
     }
 
     public override void OnBotDestroy()
