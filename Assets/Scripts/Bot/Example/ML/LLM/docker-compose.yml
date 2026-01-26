@@ -1,0 +1,117 @@
+# Sumobot Milvus VDB
+# Players just run: docker-compose up -d
+# API will be available at http://localhost:9999
+
+services:
+  etcd:
+    container_name: sumobot-etcd
+    image: quay.io/coreos/etcd:v3.5.5
+    platform: linux/amd64
+    environment:
+      - ETCD_AUTO_COMPACTION_MODE=revision
+      - ETCD_AUTO_COMPACTION_RETENTION=1000
+      - ETCD_QUOTA_BACKEND_BYTES=4294967296
+      - ETCD_SNAPSHOT_COUNT=50000
+    command: >
+      etcd
+      -name etcd
+      -advertise-client-urls http://etcd:2379
+      -listen-client-urls http://0.0.0.0:2379
+      -listen-peer-urls http://0.0.0.0:2380
+      -initial-advertise-peer-urls http://etcd:2380
+      -initial-cluster etcd=http://etcd:2380
+      -data-dir /etcd
+    volumes:
+      - ./.volumes/etcd:/etcd
+    networks:
+      - milvus
+    restart: unless-stopped
+
+  minio:
+    container_name: sumobot-minio
+    image: minio/minio:RELEASE.2023-03-20T20-16-18Z
+    platform: linux/amd64
+    environment:
+      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_SECRET_KEY=minioadmin
+    command: server /minio_data
+    volumes:
+      - ./.volumes/minio:/minio_data
+    networks:
+      - milvus
+    restart: unless-stopped
+
+  milvus-standalone:
+    container_name: sumobot-milvus
+    image: milvusdb/milvus:v2.4.4
+    platform: linux/amd64
+    command: ["milvus", "run", "standalone"]
+    environment:
+      - ETCD_ENDPOINTS=etcd:2379
+      - MINIO_ADDRESS=minio:9000
+    volumes:
+      - ./.volumes/milvus:/var/lib/milvus
+    ports:
+      - "19530:19530"
+      - "9091:9091"
+    depends_on:
+      - etcd
+      - minio
+    networks:
+      - milvus
+    restart: unless-stopped
+
+  # Sumobot API - Pull from Docker Hub
+  # Change 'your-dockerhub-username' to your actual Docker Hub username
+  api:
+    container_name: sumobot-api
+    image: ardiawanbagusharisa/sumobot-vdb-api:latest
+    platform: linux/amd64
+    # Uncomment to build locally instead of pulling from Docker Hub:
+    # build:
+    #   context: .
+    #   dockerfile: Dockerfile
+    ports:
+      - "9999:9999"
+
+    # Mount your custom JSONL file for data import (optional)
+    # Uncomment and change the path to use your own dataset
+    # Default dataset is included in the image
+    # volumes:
+      # - ./custom_dataset.jsonl:/app/dataset/custom_dataset.jsonl
+      
+    depends_on:
+      - milvus-standalone
+    networks:
+      - milvus
+    environment:
+      - MILVUS_HOST=milvus-standalone
+      - MILVUS_PORT=19530
+      - PORT=9999          # API server port
+      - WORKERS=4          # Number of workers (increase for more concurrency)
+      - BATCH_SIZE=5000    # Batch size for importing data
+    restart: unless-stopped
+
+  # Performance tuning:
+  # - Increase WORKERS for higher throughput (e.g., WORKERS=8)
+  # - For 0.1s action intervals, WORKERS=4 handles ~400 concurrent requests
+  # - Each worker uses ~100MB RAM
+
+  # Optional: Attu (Milvus web UI for debugging)
+  # Uncomment to enable
+  # attu:
+  #   container_name: sumobot-attu
+  #   image: zilliz/attu:latest
+  #   environment:
+  #     - MILVUS_URL=milvus-standalone:19530
+  #   ports:
+  #     - "1233:3000"
+  #   depends_on:
+  #     - milvus-standalone
+  #   networks:
+  #     - milvus
+  #   restart: unless-stopped
+
+networks:
+  milvus:
+    driver: bridge

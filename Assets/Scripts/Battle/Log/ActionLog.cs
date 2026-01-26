@@ -33,7 +33,7 @@ namespace SumoLog
             var name = (string)map?["Name"];
             var duration = (float?)(double?)map?["Duration"] ?? 0f;
 
-            Debug.Log($"{name} | {duration}");
+            Logger.Info($"{name} | {duration}");
             ActionLog result = new()
             {
                 Action = ActionFactory.Parse(name, duration),

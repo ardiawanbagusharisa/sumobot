@@ -107,10 +107,10 @@ namespace SumoCore
 
             if (IsSkillOnCooldown)
             {
-                Debug.Log($"[Skill][{Type}] is on cooldown");
+                Logger.Info($"[Skill][{Type}] is on cooldown");
                 return false;
             }
-            Debug.Log($"[Skill][{Type}] activated!");
+            Logger.Info($"[Skill][{Type}] activated!");
 
             IsActive = true;
             controller.Log(action);
@@ -131,6 +131,7 @@ namespace SumoCore
 
         public void ActivateBoost()
         {
+            SFXManager.Instance.Play2D("actions_boost");
             usedAt = BattleManager.Instance.ElapsedTime;
             controller.MoveSpeed *= BoostMultiplier;
             controller.DashSpeed *= BoostMultiplier;
@@ -138,6 +139,7 @@ namespace SumoCore
 
         public void ActivateStone()
         {
+            SFXManager.Instance.Play2D("actions_stone");
             usedAt = BattleManager.Instance.ElapsedTime;
             controller.RigidBody.constraints = RigidbodyConstraints2D.FreezePosition;
             controller.BounceResistance *= StoneMultiplier;
@@ -164,7 +166,7 @@ namespace SumoCore
         {
             yield return new WaitForSeconds(TotalCooldown);
 
-            Debug.Log($"[Skill][{Type}] cooldown end!");
+            Logger.Info($"[Skill][{Type}] cooldown end!");
         }
 
         public override string ToString()

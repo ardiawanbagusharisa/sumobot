@@ -1,61 +1,40 @@
 #if UNITY_EDITOR
 namespace SumoEditor
 {
-    using System;
     using System.IO;
     using System.Linq;
     using System.Collections.Generic;
     using UnityEditor;
     using UnityEngine;
+    using logger = Logger;
     using Newtonsoft.Json.Linq;
     using System.Text.RegularExpressions;
+    using System;
 
-    public class GameLogJsonToCsvConverter : EditorWindow
+    public class SimLogToCSV : EditorWindow
     {
-        private string inputFolder = "";
-        private string outputFile = "";
+        private string includedAgents = "*";
 
-        [MenuItem("Tools/Game Log JSON to CSV")]
+        [MenuItem("Tools/Simulation Log to CSV")]
         public static void ShowWindow()
         {
-            GetWindow<GameLogJsonToCsvConverter>("JSON to CSV Converter");
+            GetWindow<SimLogToCSV>("JSON to CSV Converter");
         }
 
         private void OnGUI()
         {
-            GUILayout.Label("Game Log JSON to CSV", EditorStyles.boldLabel);
+            GUILayout.Label("Simulation Log JSON to CSV", EditorStyles.boldLabel);
+            GUILayout.Space(5);
+
+            GUILayout.Label("Included Agents (use * for all, or separate by ;)", EditorStyles.label);
+            includedAgents = EditorGUILayout.TextField("Included Agents", includedAgents);
 
             GUILayout.Space(10);
-            GUILayout.Label("1. Select Input Folder (JSON files):");
-            GUILayout.BeginHorizontal();
-            inputFolder = EditorGUILayout.TextField(inputFolder);
-            string logFolder = Path.Combine(Application.persistentDataPath, "Logs");
-            if (GUILayout.Button("Browse", GUILayout.Width(80)))
-            {
-                inputFolder = EditorUtility.OpenFolderPanel("Select Input Folder", logFolder, "");
-            }
-            GUILayout.EndHorizontal();
 
-            GUILayout.Space(10);
-            GUILayout.Label("2. Select Output CSV File:");
-            GUILayout.BeginHorizontal();
-            outputFile = EditorGUILayout.TextField(outputFile);
-            if (GUILayout.Button("Save As", GUILayout.Width(80)))
-            {
-                outputFile = EditorUtility.SaveFilePanel("Save CSV File", "", "game_logs.csv", "csv");
-            }
-            GUILayout.EndHorizontal();
-
-            GUILayout.Space(20);
             if (GUILayout.Button("Convert to CSV", GUILayout.Height(40)))
             {
-                if (string.IsNullOrEmpty(inputFolder) || string.IsNullOrEmpty(outputFile))
-                {
-                    EditorUtility.DisplayDialog("Error", "Please select both input folder and output file.", "OK");
-                    return;
-                }
-
-                ConvertLogsToCsv(inputFolder, outputFile);
+                string simulationRoot = Path.Combine(Application.persistentDataPath, "Simulation");
+                ConvertAllConfigs(simulationRoot, includedAgents);
             }
         }
 
@@ -64,6 +43,83 @@ namespace SumoEditor
             // e.g., game_001 -> 1
             var match = Regex.Match(filename, @"game_(\d+)");
             return match.Success ? int.Parse(match.Groups[1].Value) : -1;
+        }
+
+        public void ConvertAllConfigs(string simulationRoot, string IncludedAgents)
+        {
+            try
+            {
+                // Split IncludedAgents (e.g. "Bot_SLM;Bot_ML_Classification")
+                var includedList = IncludedAgents == "*"
+                    ? null
+                    : IncludedAgents.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.RemoveEmptyEntries);
+
+                // Find all config folders recursively
+                var configFolders = Directory.GetDirectories(simulationRoot, "Timer_*", SearchOption.AllDirectories);
+
+                // Filter by IncludedAgents if not "*"
+                if (includedList != null)
+                {
+                    configFolders = configFolders
+                        .Where(folder =>
+                        {
+                            string parentName = Path.GetFileName(Path.GetDirectoryName(folder)); // e.g. "Bot_A_vs_Bot_B"
+                            return includedList.Any(agent => parentName.Contains(agent, StringComparison.OrdinalIgnoreCase));
+                        })
+                        .ToArray();
+                }
+
+                if (configFolders.Length == 0)
+                {
+                    EditorUtility.DisplayDialog("Info", "No matching folders found to convert.", "OK");
+                    return;
+                }
+
+                for (var i = 0; i < configFolders.Count(); i++)
+                {
+                    var configFolder = configFolders[i];
+
+                    // Derive output CSV name from folder name
+                    string configName = Path.GetFileName(configFolder);
+                    string parentName = Path.GetFileName(Path.GetDirectoryName(configFolder)); // e.g. BOT_A_vs_BOT_B
+
+                    string outputPath = Path.Combine(configFolder, $"{configName}.csv");
+
+                    // Skip if CSV already exists
+                    if (File.Exists(outputPath))
+                    {
+                        logger.Info($"[SimLogToCSV] Skipping {configName} (CSV already exists)");
+                        continue;
+                    }
+
+                    logger.Info($"[SimLogToCSV] Running {i + 1}/{configFolders.Count()} -> {configName}");
+                    bool cancel = EditorUtility.DisplayCancelableProgressBar(
+                        "Converting Logs to CSV",
+                        $"Processing {i + 1}/{configFolders.Length}: {configName}",
+                        (float)(i + 1) / configFolders.Length
+                    );
+
+                    if (cancel)
+                    {
+                        logger.Info("[SimLogToCSV] Operation cancelled by user.");
+                        EditorUtility.ClearProgressBar();
+                        EditorUtility.DisplayDialog("Cancelled", "CSV conversion was cancelled by the user.", "OK");
+                        return; // Stop processing
+                    }
+
+                    // Call your existing converter for this config folder
+                    ConvertLogsToCsv(configFolder, outputPath);
+                }
+
+                EditorUtility.ClearProgressBar();
+                EditorUtility.DisplayDialog("Success", "All CSV files generated successfully!", "OK");
+            }
+            catch (Exception ex)
+            {
+                logger.Error("Error: " + ex.Message);
+                EditorUtility.ClearProgressBar();
+                EditorUtility.DisplayDialog("Error", "Failed to generate CSVs.\n" + ex.Message, "OK");
+            }
         }
 
 
@@ -95,6 +151,8 @@ namespace SumoEditor
 
                         foreach (var eventLog in round?["PlayerEvents"] as JArray ?? new JArray())
                         {
+                            if (eventLog?["Category"]?.ToString() == "LastPosition") continue;
+
                             var row = new Dictionary<string, string>
                             {
                                 ["GameIndex"] = (gameIndex + 1).ToString(),
@@ -109,7 +167,7 @@ namespace SumoEditor
                                 ["Actor"] = eventLog?["Actor"]?.ToString() == "Left" ? "0" : "1",
 
                                 ["Target"] = eventLog?["Target"]?.ToString() == "" ? "" : eventLog?["Target"]?.ToString() == "Left" ? "0" : "1",
-                                
+
                                 ["Category"] = eventLog?["Category"]?.ToString(),
                                 ["State"] = eventLog?["State"].ToString(),
                             };
@@ -202,15 +260,12 @@ namespace SumoEditor
                         writer.WriteLine(string.Join(",", values));
                     }
                 }
-
-
-                EditorUtility.DisplayDialog("Success", "CSV generated successfully!", "OK");
-                Debug.Log("CSV saved to: " + outputPath);
             }
             catch (Exception ex)
             {
-                Debug.LogError("Error: " + ex.Message);
+                logger.Error($"Error reading config from {folderPath} : {ex.Message}, {ex.Source}");
                 EditorUtility.DisplayDialog("Error", "Failed to generate CSV.\n" + ex.Message, "OK");
+                throw new Exception($"Failed to convert{folderPath}: {ex.Message}, {ex}");
             }
         }
 

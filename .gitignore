@@ -58,3 +58,4 @@ Thumbs.db
 # Ensure important Unity package files are included
 #!Packages/manifest.json
 #!Packages/packages-lock.json
+*__pycache__

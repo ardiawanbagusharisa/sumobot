@@ -193,6 +193,7 @@ namespace SumoBot
     public readonly struct BattleInfoAPI
     {
         public float ActionInterval { get; }
+        public float MinActionTime { get; }
         public float TimeLeft { get; }
         public float Duration { get; }
         public int BestOf { get; }
@@ -220,6 +221,7 @@ namespace SumoBot
 
             ArenaPosition = manager.Arena.transform.position;
             ArenaRadius = manager.ArenaRadius;
+            MinActionTime = ISumoAction.MinDuration;
         }
 
         /// <summary>

@@ -59,7 +59,7 @@
 //                   {
 //                       EnqueueAction(x.Index);
 //                       lastActions.Add(x.Index);
-//                       Debug.Log($"Action {x.Index} with Q-value {x.Value:F2} selected (threshold: {threshold:F2})");
+//                       Logger.Info($"Action {x.Index} with Q-value {x.Value:F2} selected (threshold: {threshold:F2})");
 //                   }
 //               });
 
@@ -69,10 +69,10 @@
 //        //    {
 //        //        EnqueueAction(i);
 //        //        lastActions.Add(i);
-//        //        // Debug.Log($"Action {i} with Q-value {qValues[i]:F2} selected (threshold: {threshold:F2})");
+//        //        // Logger.Info($"Action {i} with Q-value {qValues[i]:F2} selected (threshold: {threshold:F2})");
 //        //    }
 
-//        //    Debug.Log($"Action {i} with Q-value {qValues[i]:F2}");
+//        //    Logger.Info($"Action {i} with Q-value {qValues[i]:F2}");
 //        //}
 
 //        Submit();
@@ -92,7 +92,7 @@
 //        {
 //            TrainFromMemory();
 //            lastTrainTime = Time.time;
-//            Debug.Log($"Training game {gameCounter} time {lastTrainTime}, episode reward: {episodeReward:F2}, epsilon: {epsilon:F2}.");
+//            Logger.Info($"Training game {gameCounter} time {lastTrainTime}, episode reward: {episodeReward:F2}, epsilon: {epsilon:F2}.");
 //        }
 //    }
 
