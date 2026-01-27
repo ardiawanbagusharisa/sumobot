@@ -1,7 +1,9 @@
 # Sumobot
 Sumobot is a 2D, top-down sumo robot battle game intended to encourage player to learn the very basic of programming and artificial intelligence (AI). Inspired by real [Sumobot competition](https://www.sumobot.ca/competition) and [Battlesnake](https://play.battlesnake.com/leaderboards), we want to make this game (also AI competition platform) to be as simple and as open as possible. 
 
-[Header image]
+<p align="center">
+<img width="600" alt="Sumobot" src="https://github.com/user-attachments/assets/6ad93b14-fcd7-4cb0-af7f-20888053b1c0" />
+</p>p
 
 # Our purposes 
 1. Enhance the players' motivation and encourage players to learn at least the concept of computational thinking, and eventually programming basics and AI. It is predicted that in the future there would be more jobs related to STEM including AI. 
