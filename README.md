@@ -3,7 +3,7 @@ Sumobot is a 2D, top-down sumo robot battle game intended to encourage player to
 
 <p align="center">
 <img width="600" alt="Sumobot" src="https://github.com/user-attachments/assets/6ad93b14-fcd7-4cb0-af7f-20888053b1c0" />
-</p>p
+</p>
 
 # Our purposes 
 1. Enhance the players' motivation and encourage players to learn at least the concept of computational thinking, and eventually programming basics and AI. It is predicted that in the future there would be more jobs related to STEM including AI. 
