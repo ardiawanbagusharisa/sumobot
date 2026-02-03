@@ -71,6 +71,7 @@ namespace SumoManager
         public EventRegistry Events = new();
         public const string OnCountdownChanged = "OnCountdownChanged";  // [float]
         public const string OnBattleChanged = "OnBattleChanged"; // [Battle]
+        public const string OnActionUpdate = "OnActionUpdate"; // [Battle]
 
         private Coroutine battleTimerCoroutine;
         private Coroutine countdownCoroutine;
