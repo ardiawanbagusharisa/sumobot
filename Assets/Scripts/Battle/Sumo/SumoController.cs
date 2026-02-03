@@ -6,6 +6,7 @@ using SumoInput;
 using SumoLog;
 using SumoManager;
 using UnityEngine;
+using SumoPacing;
 
 namespace SumoCore
 {
@@ -61,6 +62,7 @@ namespace SumoCore
         [Header("General Info")]
         public PlayerSide Side;
         public InputProvider InputProvider;
+        public PacingController PacingController;
         public PlayerProfile Profile;
         #endregion
 
@@ -126,6 +128,9 @@ namespace SumoCore
             reservedMoveSpeed = MoveSpeed;
             reservedDashSpeed = DashSpeed;
             reserverdBounceResistance = BounceResistance;
+
+            // Initialize PacingController
+            PacingController = new PacingController(this);
         }
 
         void Update()
@@ -627,7 +632,18 @@ namespace SumoCore
                     VFXManager.Instance.PlayDash(transform, facing);
                 }
 
-                Actions.Enqueue(action);
+                // PacingController: Filter action based on target pacing
+                if (PacingController != null && PacingController.ShouldEnqueueAction(this, action))
+                {
+                    Actions.Enqueue(action);
+                    PacingController.RecordAction(this, action);
+                }
+                else if (PacingController == null)
+                {
+                    // Fallback: if no PacingController, enqueue normally
+                    Actions.Enqueue(action);
+                }
+                // If PacingController rejects action, it's simply not enqueued
             }
 
         }
