@@ -230,21 +230,22 @@ namespace PacingFramework
 			return Mathf.Clamp01(enemyFacingMe * iAmBehindEnemy);
 		}
 
-		//public float EvaluateTarget(float elapsed, float battleDuration) {
-		//	float duration = referenceDuration > 0f ? referenceDuration : Mathf.Max(1f, battleDuration);
-		//	float t = Mathf.Clamp01(elapsed / duration);
+		public float EvaluateTarget(float elapsed, float battleDuration) {
+			//	float duration = referenceDuration > 0f ? referenceDuration : Mathf.Max(1f, battleDuration);
+			//	float t = Mathf.Clamp01(elapsed / duration);
 
-		//	return pattern switch {
-		//		PacingPattern.ConstantLow => constantLow,
-		//		PacingPattern.ConstantBalanced => constantBalanced,
-		//		PacingPattern.ConstantHigh => constantHigh,
-		//		PacingPattern.LinearIncrease => t,
-		//		PacingPattern.LinearDecrease => 1f - t,
-		//		PacingPattern.ExponentialIncrease => Mathf.Pow(t, exponentialK),
-		//		PacingPattern.ExponentialDecrease => 1f - Mathf.Pow(t, exponentialK),
-		//		_ => Mathf.Clamp01(customCurve.Evaluate(t)),
-		//	};
-		//}
+			//	return pattern switch {
+			//		PacingPattern.ConstantLow => constantLow,
+			//		PacingPattern.ConstantBalanced => constantBalanced,
+			//		PacingPattern.ConstantHigh => constantHigh,
+			//		PacingPattern.LinearIncrease => t,
+			//		PacingPattern.LinearDecrease => 1f - t,
+			//		PacingPattern.ExponentialIncrease => Mathf.Pow(t, exponentialK),
+			//		PacingPattern.ExponentialDecrease => 1f - Mathf.Pow(t, exponentialK),
+			//		_ => Mathf.Clamp01(customCurve.Evaluate(t)),
+			//	};
+			return null;
+		}
 
 	}
 
