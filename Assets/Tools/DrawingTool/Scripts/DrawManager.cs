@@ -35,6 +35,12 @@ public class DrawManager : MonoBehaviour
     [SerializeField] private float _paddingBottom = 20f;
     [SerializeField] Color _gridColour = Color.white;
 
+    [Header("Canvas Outline")]
+    [SerializeField] private bool _isOutlineOn = true;
+    [SerializeField] private float _outlineThickness = 3f;
+    [SerializeField] private Color _outlineColor = Color.black;
+
+
     [Header("Color Palette Integration")]
     [SerializeField] private Texture2D _paletteSourceTexture;
     [SerializeField] private Image _colorPreviewImage;
@@ -76,6 +82,9 @@ public class DrawManager : MonoBehaviour
         if (_isGridOn) 
             DrawGrid();
         _gridButton.GetComponent<Image>().color = _isGridOn ? Color.white : Color.grey;
+
+        if (_isOutlineOn)
+        DrawCanvasOutline();
 
         InitPalette();
 
@@ -237,6 +246,49 @@ public class DrawManager : MonoBehaviour
             float x = left + i * _gridSpacing;
             if (x >= left && x <= right)
                 DrawLine(new Vector2(x, bottom), new Vector2(x, top), _gridColour);
+        }
+    }
+
+    private void DrawCanvasOutline()
+    {
+        float gridCenterX = _canvasGrid.width * 0.5f;
+        float gridCenterY = _canvasGrid.height * 0.5f;
+
+        float halfWidth  = _canvasRT.width * 0.5f;
+        float halfHeight = _canvasRT.height * 0.5f;
+
+        float left   = gridCenterX - halfWidth;
+        float right  = gridCenterX + halfWidth;
+        float bottom = gridCenterY - halfHeight;
+        float top    = gridCenterY + halfHeight;
+
+        for (int i = 0; i < _outlineThickness; i++)
+        {
+            float inset = i;
+
+            // Bottom
+            DrawLine(
+                new Vector2(left + inset, bottom + inset),
+                new Vector2(right - inset, bottom + inset),
+                _outlineColor);
+
+            // Top
+            DrawLine(
+                new Vector2(left + inset, top - inset),
+                new Vector2(right - inset, top - inset),
+                _outlineColor);
+
+            // Left
+            DrawLine(
+                new Vector2(left + inset, bottom + inset),
+                new Vector2(left + inset, top - inset),
+                _outlineColor);
+
+            // Right
+            DrawLine(
+                new Vector2(right - inset, bottom + inset),
+                new Vector2(right - inset, top - inset),
+                _outlineColor);
         }
     }
 
