@@ -4505,9 +4505,12 @@ MonoBehaviour:
   _paddingTop: 15
   _paddingBottom: 15
   _gridColour: {r: 1, g: 1, b: 1, a: 1}
-  _isOutlineOn: 1
-  _outlineThickness: 3
-  _outlineColor: {r: 0, g: 0, b: 0, a: 1}
+  _drawGridOutline: 1
+  _gridOutlineThickness: 3
+  _gridOutlineColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+  _drawDrawingOutline: 1
+  _drawingOutlineThickness: 3
+  _drawingOutlineColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
   _paletteSourceTexture: {fileID: 2800000, guid: 7380a57273b890f41914b17540683323, type: 3}
   _colorPreviewImage: {fileID: 82757220}
   _numFixColors: 3

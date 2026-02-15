@@ -34,14 +34,16 @@ public class DrawManager : MonoBehaviour
     [SerializeField] private float _paddingTop = 20f;
     [SerializeField] private float _paddingBottom = 20f;
     [SerializeField] Color _gridColour = Color.white;
+	[SerializeField] private bool _drawGridOutline = true;
+	[SerializeField] private float _gridOutlineThickness = 2f;
+	[SerializeField] private Color _gridOutlineColor = Color.black;
 
-    [Header("Canvas Outline")]
-    [SerializeField] private bool _isOutlineOn = true;
-    [SerializeField] private float _outlineThickness = 3f;
-    [SerializeField] private Color _outlineColor = Color.black;
+	[Header("Canvas Outline")]
+	[SerializeField] private bool _drawDrawingOutline = true;
+	[SerializeField] private float _drawingOutlineThickness = 2f;
+	[SerializeField] private Color _drawingOutlineColor = Color.grey;
 
-
-    [Header("Color Palette Integration")]
+	[Header("Color Palette Integration")]
     [SerializeField] private Texture2D _paletteSourceTexture;
     [SerializeField] private Image _colorPreviewImage;
     [SerializeField] private int _numFixColors = 3;
@@ -52,15 +54,18 @@ public class DrawManager : MonoBehaviour
     bool _isDrawing = false;
     RenderTexture _canvasRT;
     RenderTexture _canvasGrid;
+	private Vector2 _lastCanvasSize;
 
-    void Awake()
+	void Awake()
     {
         _saveButton.onClick.AddListener(SaveCurrentCanvas);
     }
 
     void Start()
     {
-        InitCanvas(ref _canvasRT, _rawImage);
+		_lastCanvasSize = _rawImage.rectTransform.rect.size;
+
+		InitCanvas(ref _canvasRT, _rawImage);
         InitCanvas(ref _canvasGrid, _rawImageGrid);
 
         _canvasRT.filterMode = FilterMode.Point;
@@ -79,12 +84,14 @@ public class DrawManager : MonoBehaviour
 
         _previousMousePos = Input.mousePosition;
 
-        if (_isGridOn) 
-            DrawGrid();
-        _gridButton.GetComponent<Image>().color = _isGridOn ? Color.white : Color.grey;
+		if (_isGridOn) {
+			DrawGrid();
+			DrawDrawingCanvasOutline();
+		}
+		_gridButton.GetComponent<Image>().color = _isGridOn ? Color.white : Color.grey;
 
-        if (_isOutlineOn)
-        DrawCanvasOutline();
+        if (_drawDrawingOutline)
+            DrawDrawingCanvasOutline();
 
         InitPalette();
 
@@ -94,7 +101,9 @@ public class DrawManager : MonoBehaviour
 
     void Update()
     {
-        Vector2 mousePos = Input.mousePosition;
+		CheckForResize();
+
+		Vector2 mousePos = Input.mousePosition;
         UpdatePointerPosition(mousePos);
 
         if (Input.GetMouseButtonUp(0))
@@ -134,7 +143,46 @@ public class DrawManager : MonoBehaviour
         _previousMousePos = mousePos;
     }
 
-    private void DispatchDraw(RenderTexture target, Vector2 from, Vector2 to, Color color, float brushSize, float wiggleSize, bool isEraser, bool mouseDown)
+	private void CheckForResize() {
+		Vector2 currentSize = _rawImage.rectTransform.rect.size;
+
+		if (currentSize != _lastCanvasSize) {
+			_lastCanvasSize = currentSize;
+			RecreateCanvases();
+		}
+	}
+
+	private void RecreateCanvases() {
+		// Release old textures
+		if (_canvasRT != null)
+			_canvasRT.Release();
+
+		if (_canvasGrid != null)
+			_canvasGrid.Release();
+
+		// Recreate
+		InitCanvas(ref _canvasRT, _rawImage);
+		InitCanvas(ref _canvasGrid, _rawImageGrid);
+
+		_canvasRT.filterMode = FilterMode.Point;
+		_canvasGrid.filterMode = FilterMode.Point;
+
+		_rawImage.texture = _canvasRT;
+		_rawImageGrid.texture = _canvasGrid;
+
+		ClearCanvas(_canvasRT, _backgroundColour);
+		ClearCanvas(_canvasGrid, Color.clear);
+
+		if (_isGridOn) {
+			DrawGrid();
+			DrawDrawingCanvasOutline();
+		}
+
+		if (_drawDrawingOutline)
+			DrawDrawingCanvasOutline();
+	}
+
+	private void DispatchDraw(RenderTexture target, Vector2 from, Vector2 to, Color color, float brushSize, float wiggleSize, bool isEraser, bool mouseDown)
     {
         int kernel = _drawComputeShader.FindKernel("Update");
 
@@ -210,18 +258,19 @@ public class DrawManager : MonoBehaviour
         _eraserButton.GetComponent<Image>().color = _isEraser ? Color.grey : Color.white;
     }
 
-    public void SwitchGrid()
-    {
-        ClearCanvas(_canvasGrid, Color.clear);
+	public void SwitchGrid() {
+		ClearCanvas(_canvasGrid, Color.clear);
 
-        _isGridOn = !_isGridOn;
-        if (_isGridOn)
-            DrawGrid();
+		_isGridOn = !_isGridOn;
 
-        _gridButton.GetComponent<Image>().color = _isGridOn ? Color.white : Color.grey;
-    }
+		if (_isGridOn)
+			DrawGrid();
 
-    public void SetBrushColor(Color brushColor) => _brushColour = brushColor;
+		_gridButton.GetComponent<Image>().color = _isGridOn ? Color.white : Color.grey;
+	}
+
+
+	public void SetBrushColor(Color brushColor) => _brushColour = brushColor;
 
     public void UpdatePointerPosition(Vector2 mousePosition)
     {
@@ -229,70 +278,97 @@ public class DrawManager : MonoBehaviour
             _pointerBrush.position = mousePosition;
     }
 
-    private void DrawGrid()
-    {
-        float left = _paddingLeft, right = _canvasGrid.width - _paddingRight;
-        float bottom = _paddingBottom, top = _canvasGrid.height - _paddingTop;
+	private void DrawGrid() {
+		float centerX = _canvasGrid.width * 0.5f;
+		float centerY = _canvasGrid.height * 0.5f;
 
-        for (int i = 0; i <= Mathf.FloorToInt((top - bottom) / _gridSpacing); i++)
-        {
-            float y = bottom + i * _gridSpacing;
-            if (y >= bottom && y <= top)
-                DrawLine(new Vector2(left, y), new Vector2(right, y), _gridColour);
-        }
+		float usableWidth = _canvasGrid.width - _paddingLeft - _paddingRight;
+		float usableHeight = _canvasGrid.height - _paddingTop - _paddingBottom;
 
-        for (int i = 0; i <= Mathf.FloorToInt((right - left) / _gridSpacing); i++)
-        {
-            float x = left + i * _gridSpacing;
-            if (x >= left && x <= right)
-                DrawLine(new Vector2(x, bottom), new Vector2(x, top), _gridColour);
-        }
-    }
+		float left = centerX - usableWidth * 0.5f;
+		float right = centerX + usableWidth * 0.5f;
+		float bottom = centerY - usableHeight * 0.5f;
+		float top = centerY + usableHeight * 0.5f;
 
-    private void DrawCanvasOutline()
-    {
-        float gridCenterX = _canvasGrid.width * 0.5f;
-        float gridCenterY = _canvasGrid.height * 0.5f;
+		// Vertical lines
+		int vCount = Mathf.FloorToInt(usableWidth / _gridSpacing);
+		for (int i = -vCount / 2; i <= vCount / 2; i++) {
+			float x = centerX + i * _gridSpacing;
+			if (x >= left && x <= right)
+				DrawLine(new Vector2(x, bottom), new Vector2(x, top), _gridColour);
+		}
 
-        float halfWidth  = _canvasRT.width * 0.5f;
-        float halfHeight = _canvasRT.height * 0.5f;
+		// Horizontal lines
+		int hCount = Mathf.FloorToInt(usableHeight / _gridSpacing);
+		for (int i = -hCount / 2; i <= hCount / 2; i++) {
+			float y = centerY + i * _gridSpacing;
+			if (y >= bottom && y <= top)
+				DrawLine(new Vector2(left, y), new Vector2(right, y), _gridColour);
+		}
 
-        float left   = gridCenterX - halfWidth;
-        float right  = gridCenterX + halfWidth;
-        float bottom = gridCenterY - halfHeight;
-        float top    = gridCenterY + halfHeight;
+		if (_drawGridOutline)
+			DrawGridOutline(left, right, bottom, top);
+	}
 
-        for (int i = 0; i < _outlineThickness; i++)
-        {
-            float inset = i;
+	private void DrawGridOutline(float left, float right, float bottom, float top) {
+		for (int i = 0; i < _gridOutlineThickness; i++) {
+			float offset = i;
 
-            // Bottom
-            DrawLine(
-                new Vector2(left + inset, bottom + inset),
-                new Vector2(right - inset, bottom + inset),
-                _outlineColor);
+			DrawLine(new Vector2(left - offset, bottom - offset),
+					 new Vector2(right + offset, bottom - offset),
+					 _gridOutlineColor);
 
-            // Top
-            DrawLine(
-                new Vector2(left + inset, top - inset),
-                new Vector2(right - inset, top - inset),
-                _outlineColor);
+			DrawLine(new Vector2(left - offset, top + offset),
+					 new Vector2(right + offset, top + offset),
+					 _gridOutlineColor);
 
-            // Left
-            DrawLine(
-                new Vector2(left + inset, bottom + inset),
-                new Vector2(left + inset, top - inset),
-                _outlineColor);
+			DrawLine(new Vector2(left - offset, bottom - offset),
+					 new Vector2(left - offset, top + offset),
+					 _gridOutlineColor);
 
-            // Right
-            DrawLine(
-                new Vector2(right - inset, bottom + inset),
-                new Vector2(right - inset, top - inset),
-                _outlineColor);
-        }
-    }
+			DrawLine(new Vector2(right + offset, bottom - offset),
+					 new Vector2(right + offset, top + offset),
+					 _gridOutlineColor);
+		}
+	}
 
-    private void DrawLine(Vector2 from, Vector2 to, Color color)
+	private void DrawDrawingCanvasOutline() {
+		if (!_drawDrawingOutline) return;
+
+		float gridCenterX = _canvasGrid.width * 0.5f;
+		float gridCenterY = _canvasGrid.height * 0.5f;
+
+		float halfWidth = _canvasRT.width * 0.5f;
+		float halfHeight = _canvasRT.height * 0.5f;
+
+		float left = gridCenterX - halfWidth;
+		float right = gridCenterX + halfWidth;
+		float bottom = gridCenterY - halfHeight;
+		float top = gridCenterY + halfHeight;
+
+		for (int i = 0; i < _drawingOutlineThickness; i++) {
+			float inset = i;
+
+			DrawLine(new Vector2(left - inset, bottom - inset),
+					 new Vector2(right + inset, bottom - inset),
+					 _drawingOutlineColor);
+
+			DrawLine(new Vector2(left - inset, top + inset),
+					 new Vector2(right + inset, top + inset),
+					 _drawingOutlineColor);
+
+			DrawLine(new Vector2(left - inset, bottom - inset),
+					 new Vector2(left - inset, top + inset),
+					 _drawingOutlineColor);
+
+			DrawLine(new Vector2(right + inset, bottom - inset),
+					 new Vector2(right + inset, top + inset),
+					 _drawingOutlineColor);
+		}
+	}
+
+
+	private void DrawLine(Vector2 from, Vector2 to, Color color)
     {
         DispatchDraw(_canvasGrid, from, to, color, 1f, _wiggleSize, false, true);
     }
