@@ -5,6 +5,25 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
+/// <summary>
+/// This script implements a concept of pacing, a measure of the intensity and flow of the gameplay, which can be used to adapt the bot's strategy and behavior in real-time.
+/// 
+/// Structure: 
+/// - Pacing: the flow of the gameplay in a specific time segment, which includes the pacing aspects, factors, constraints and segment info. 
+/// -- PacingAspects: the high level aspects of pacing, which are threat and tempo.
+/// --- PacingFactors: the specific factors that contribute to the pacing aspects. For example, the effectiveness of our bot collision behaviour, skill availability contribute to threat, while action intensity and distance to enemy contribute to tempo.
+/// ---- PacingParameters: the parameters that define how the pacing factors are calculated and weighted, which can be set globally or locally for each segment, and can also be blended together. 
+/// ---- PacingConstraints: the expected range of the pacing factors, which can be used to normalize the factors and evaluate the pacing. These constraints can be set globally or locally for each segment, and can also be blended together. PacingConstraints are similar to PacingParameters. 
+/// 
+/// Other terms: 
+/// - PacingSegmentInfo: the raw gameplay data collected in a specific time segment, which is used to calculate the pacing factors.
+/// - PacingController: the main class that manages the pacing system, which collects gameplay data, calculates pacing factors and aspects, evaluates the pacing against the target, and provides the pacing information to other parts of the bot.
+/// - PacingPattern: the predefined patterns of pacing target over time, which can be used to create different pacing curves for different strategies and playstyles. We can also use custom curves for more specific pacing targets.
+/// - PacingHistory: the historical record of pacing information over time, which can be used for analysis and debugging, as well as for more advanced adaptive strategies that consider the pacing history.
+/// - PacingTarget: the desired pacing information at a specific time, which can be defined by the pacing pattern and constraints, and can be used to evaluate the actual pacing and guide the bot's behavior.
+/// - PacingEvaluation: the process of comparing the actual pacing with the target pacing, which can be used to determine how well the bot is performing and how it should adapt its strategy and behavior. This can involve calculating the difference between the actual and target pacing, as well as considering the pacing history and trends.
+/// </summary>
+
 namespace PacingFramework
 {
 	// [Todo] Edit later. Handle the gameplay data using Pacing.pacingSegmentInfo.
