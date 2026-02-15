@@ -3,6 +3,7 @@ using SumoCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Unity.AppUI.MVVM;
 using UnityEngine;
 
 /// <summary>
@@ -26,45 +27,77 @@ using UnityEngine;
 
 namespace PacingFramework
 {
-	// [Todo] Edit later. Handle the gameplay data using Pacing.pacingSegmentInfo.
-	public class PacingController: MonoBehaviour {
-		// [Todo] Change this with scriptableobject later. 
-		public List<Pacing> pacingsTarget = new List<Pacing>();	
-		public List<Pacing> pacingsHistory = new List<Pacing>();
-		public AnimationCurve pacingsTargetCurve;
-		public AnimationCurve pacingsHistoryCurve;
-		public AnimationCurve threatHistoryCurve;
-		public AnimationCurve tempoHistoryCurve;
+	[Serializable]
+	public struct MinMax
+	{
+		public float min;
+		public float max;
 
-		// Used to get gameplay info and original actions.
-		private SumoAPI api;     
+		public MinMax(float min, float max) {
+			this.min = min;
+			this.max = max;
+		}
+	}
+
+	public enum PacingAspectType
+	{
+		Threat,
+		Tempo
+	};
+
+	public enum CollisionType
+	{
+		Hit,
+		Struck,
+		Tie
+	};
+
+	public enum SkillState
+	{
+		Active,
+		Available,
+		Cooldown
+	};
+
+	/// <summary>
+	/// The main class that manages the pacing system, which collects gameplay data, calculates pacing factors and aspects, evaluates the pacing against the target, and provides the pacing information to other parts of the bot.
+	/// </summary>
+	public class PacingController: MonoBehaviour {
+		// Target pacing and history pacing. 
+		#region Pacing Target and History
+		public List<Pacing> PacingsTarget = new();
+		public List<Pacing> PacingsHistory = new();
+		public AnimationCurve TargetThreats = new();
+		public AnimationCurve TargetTempos = new();
+		public AnimationCurve HistoryThreats = new();
+		public AnimationCurve HistoryTempos = new();
+		#endregion
+		// Gamplay or runtime information. 
+		#region Runtime Data
+		public float SegmentDuration = 1f;
+		private float battleDuration = 60f;
+		private int currentSegmentIndex = -1; 
+		private SumoAPI api; 
 		private List<ISumoAction> originalActions = new();
 		private List<ISumoAction> pacedActions = new();
+		//private List<PacingSegmentInfo> pacingSegmentsInfo = new(); // Delete this, use currentSegmentInfo instead.
+		private PacingSegmentInfo currentSegmentInfo = new();
+		#endregion
 
-		// Store the runtime gameplay data. 
-		private List<PacingSegmentInfo> pacingSegmentsInfo = new();
-		//private PacingSegmentInfo currentSegmentInfo;
-		private Pacing currentPacing = new();
-		private int currentSegment = -1;
-		private float battleDuration;
-
-		public float segmentDuration = 0.1f;
-		
 		public void Init(SumoAPI api) { 
-			pacingsTarget.Clear();
-			pacingsHistory.Clear();
-			pacingsTargetCurve = new AnimationCurve();
-			pacingsHistoryCurve = new AnimationCurve();
-			this.api = api;
+			PacingsTarget.Clear();
+			PacingsHistory.Clear();
+			TargetThreats = new();
+			TargetTempos = new();
+			HistoryThreats = new();
+			HistoryTempos = new();
+			SegmentDuration = 1f;
+			currentSegmentIndex = -1;
 			battleDuration = api.BattleInfo.Duration;
-			currentSegment = -1;
+			this.api = api;
 			originalActions.Clear();
 			pacedActions.Clear();
 			pacingSegmentsInfo.Clear();
-			//currentSegmentInfo = new PacingSegmentInfo();
-			currentPacing = new Pacing();
-			threatHistoryCurve = new AnimationCurve();
-			tempoHistoryCurve = new AnimationCurve();
 		}
 
 		public void RegisterAction(ISumoAction action) { 
@@ -79,24 +112,24 @@ namespace PacingFramework
 
 		public Pacing Tick() {
 			// Check if pacings target is null
-			if (pacingsTarget == null || api == null) {
+			if (PacingsTarget == null || api == null) {
 				Debug.LogError("Pacing target or api is not found");
 			}
 
 			float elapsed = Mathf.Clamp(api.BattleInfo.Duration - api.BattleInfo.TimeLeft, 0f, battleDuration);
-			int segmentIndex = Mathf.FloorToInt(elapsed / segmentDuration);
+			int segmentIndex = Mathf.FloorToInt(elapsed / SegmentDuration);
 
-			if (segmentIndex != currentSegment) {
+			if (segmentIndex != currentSegmentIndex) {
 				FinalizeSegment(elapsed);
 				currentPacing.pacingSegmentInfo.Reset();
-				currentSegment = segmentIndex;
+				currentSegmentIndex = segmentIndex;
 			}
 
 			currentPacing.pacingSegmentInfo.Sample(api);
 
 			// [Todo] Get constraints and factors from target. 
 			// ResolveConstraints(segmentIndex); // Handle constraints for different bots. 
-			PacingFactors factors = ComputeFactors(currentPacing.pacingSegmentInfo, api, pacingsTarget.First().pacingConstraints);
+			PacingFactors factors = ComputeFactors(currentPacing.pacingSegmentInfo, api, PacingsTarget.First().pacingConstraints);
 
 			float threat = WeightedAverage(
 				new[] { factors.collision, factors.enemySkill, factors.deltaAngle, factors.deltaDistance },
@@ -120,23 +153,23 @@ namespace PacingFramework
 			public PacingSegmentInfo pacingSegmentInfo = new PacingSegmentInfo();
 			*/
 			PacingAspects currentPacingAspects = new PacingAspects(
-				threat, tempo, pacingsTarget.First().pacingAspects.weightThreat, pacingsTarget.First().pacingAspects.weightTempo, overallPacing);
+				threat, tempo, PacingsTarget.First().pacingAspects.weightThreat, PacingsTarget.First().pacingAspects.weightTempo, overallPacing);
 
 			// Add pacingConstraints and pacingSegmentInfo
-			currentPacing.pacingConstraints = pacingsTarget.First().pacingConstraints.Clone();
+			currentPacing.pacingConstraints = PacingsTarget.First().pacingConstraints.Clone();
 			// pacingSegmentInfo alread added. 
 			//currentPacing.pacingSegmentInfo
 
 			currentPacing = new Pacing(segmentIndex, currentPacingAspects, factors, currentPacing.pacingConstraints, currentPacing.pacingSegmentInfo);
 			
-			if (pacingsHistory.Count == 0 || pacingsHistory[^1].segmentIndex != segmentIndex) {
-				pacingsHistory.Add(currentPacing);
+			if (PacingsHistory.Count == 0 || PacingsHistory[^1].segmentIndex != segmentIndex) {
+				PacingsHistory.Add(currentPacing);
 				pacingsHistoryCurve.AddKey(elapsed, overallPacing);
 				threatHistoryCurve.AddKey(elapsed, threat);
 				tempoHistoryCurve.AddKey(elapsed, tempo);
 
 			} else {
-				pacingsHistory[^1] = currentPacing;
+				PacingsHistory[^1] = currentPacing;
 				pacingsHistoryCurve.MoveKey(pacingsHistoryCurve.length - 1, new Keyframe(elapsed, overallPacing));
 				threatHistoryCurve.MoveKey(threatHistoryCurve.length - 1, new Keyframe(elapsed, threat));
 				tempoHistoryCurve.MoveKey(tempoHistoryCurve.length - 1, new Keyframe(elapsed, tempo));
@@ -147,7 +180,7 @@ namespace PacingFramework
 
 		// [Todo] Edit later. 
 		private void FinalizeSegment(float elapsed) {
-			if (pacingsHistory.Count == 0 && currentSegment < 0) return;
+			if (PacingsHistory.Count == 0 && currentSegmentIndex < 0) return;
 		}
 
 		// [Todo]
@@ -268,23 +301,150 @@ namespace PacingFramework
 
 	}
 
+	/// <summary>
+	/// Gameplay or runtime data collected in a segment (few seconds), used to calculate pacing factors. 
+	/// Please note that the time segment range is determined by the PacingController. 
+	/// </summary>
+	public class SegmentData {
+		#region Threat related data 
+		public List<CollisionType> Collisions = new();	// Any type of collisions. 
+		public Dictionary<CollisionType, int> CollisionsCount { get { return GetCollisionsCount(); } private set { } }
+		public List<float> AgentAngles = new();			// Angles of our bot towards enemy.
+		public List<float> EnemyAngles = new();			// Angles of enemy towards our bot. 
+		public List<float> AgentEdgeDistances = new();	// Distances between our bot and edge of arena. 
+		public List<float> EnemyEdgeDistances = new();  // Distances between enemy and edge of arena.
+		#endregion
 
-	[Serializable]
-	public struct MinMax
-	{
-		public float min;
-		public float max;
+		#region Tempo related data 
+		// [Edit] Should this be iSumoAction instead?  
+		public List<ActionType> Actions = new();		// Actions performed by our bot. 
+		public Dictionary<ActionType, int> ActionsCount { get { return GetActionsCount(); } private set { } }
+		public List<float> BotDistances = new();		// Distances between our bot and enemy. 
+		public List<float> AgentVelocities = new();		// Velocities of our bot. 
+		public List<float> EnemyVelocities = new();			// Velocities of enemy. 
+		public List<SkillState> AgentSkillStates = new();   // Skill state of enemy.
+		#endregion
 
-		public MinMax(float min, float max) {
-			this.min = min;
-			this.max = max;
+		public Dictionary<CollisionType, int> GetCollisionsCount() {
+			Dictionary<CollisionType, int> collisionsCount = new();
+
+			if (Collisions == null || Collisions.Count == 0)
+				return collisionsCount;
+			
+			foreach (CollisionType type in Enum.GetValues(typeof(CollisionType))) {
+				int count = Collisions.Count(c => c == type);
+				collisionsCount[type] = count;
+			}
+
+			return collisionsCount;
 		}
-	}
 
-	public enum PacingAspectType {
-		Threat, 
-		Tempo
-	};
+		public Dictionary<ActionType, int> GetActionsCount() {
+			Dictionary<ActionType, int> actionsCount = new();
+
+			if (Actions == null || Actions.Count == 0)
+				return actionsCount;
+
+			foreach (ActionType type in Enum.GetValues(typeof(ActionType))) {
+				int count = Actions.Count(a => a == type);
+			}
+
+			return actionsCount;
+		}
+
+		public void Reset() {
+			Collisions.Clear();
+			CollisionsCount.Clear();
+			AgentAngles.Clear();
+			EnemyAngles.Clear();
+			AgentEdgeDistances.Clear();
+			EnemyEdgeDistances.Clear();
+			Actions.Clear();
+			ActionsCount.Clear();
+			BotDistances.Clear();
+			AgentVelocities.Clear();
+			EnemyVelocities.Clear();
+			AgentSkillStates.Clear();
+		}
+
+		private static float DistanceToEdge(Vector2 position, BattleInfoAPI battleInfo) {
+			float distToCenter = Vector2.Distance(position, battleInfo.ArenaPosition);
+			return Mathf.Max(0f, battleInfo.ArenaRadius - distToCenter);
+		}
+
+		// Populate the segment gameplay info by registering data from api. 
+		#region Register data methods
+		public void RegisterAction(ISumoAction action) {
+			if (action == null)
+				return;
+			Actions.Add(action.Type);
+		}
+
+		public void RegisterActions(SumoAPI api) { 
+			if (api == null) 
+				return;
+
+			foreach (ActionType action in api.MyRobot.ActiveActions.Keys.ToList()) { 
+				Actions.Add(action);
+			}
+		}
+
+		public void RegisterCollision(BounceEvent bounce, SumoAPI api) {
+			if (bounce == null || api == null)
+				return;
+
+			CollisionType collisionType;
+			if (bounce.Actor == api.MyRobot.Side) { 
+				collisionType = CollisionType.Hit;
+			} else if (bounce.Actor == api.EnemyRobot.Side) {
+				collisionType = CollisionType.Struck;
+			} else {
+				collisionType = CollisionType.Tie;
+			}
+			Collisions.Add(collisionType);
+		}
+
+		public void RegisterAngles(SumoAPI api) {
+			if (api == null)
+				return;
+
+			// [Edit] Remove Mathf.Abs later, and handle the direction in factors?
+			AgentAngles.Add(Mathf.Abs(api.Angle())); 
+			EnemyAngles.Add(Mathf.Abs(api.Angle(oriPos: api.EnemyRobot.Position, oriRot: api.EnemyRobot.Rotation, targetPos: api.MyRobot.Position)));
+		}
+		
+		public void RegisterDistances(SumoAPI api) {
+			if (api == null)
+				return;
+			
+			AgentEdgeDistances.Add(Mathf.Abs(DistanceToEdge(api.MyRobot.Position, api.BattleInfo)));
+			EnemyEdgeDistances.Add(Mathf.Abs(DistanceToEdge(api.EnemyRobot.Position, api.BattleInfo)));
+
+			BotDistances.Add(Vector2.Distance(api.MyRobot.Position, api.EnemyRobot.Position));
+		}
+
+		public void RegisterVelocities(SumoAPI api) {
+			if (api == null)
+				return;
+			AgentVelocities.Add(api.MyRobot.LinearVelocity.magnitude);
+			EnemyVelocities.Add(api.EnemyRobot.LinearVelocity.magnitude);
+		}
+
+		public void RegisterSkillStates(SumoAPI api) {
+			if (api == null)
+				return;
+			
+			SkillState state = SkillState.Available;
+			if (api.MyRobot.Skill.IsActive == true) { 
+				state = SkillState.Active;
+			} else if (api.MyRobot.Skill.IsSkillOnCooldown == true) { 
+				state = SkillState.Cooldown;
+			}
+			
+			AgentSkillStates.Add(state);
+		}
+		#endregion
+	}
 
 	// [Todo] This stucture seems unecessary. We could also implement the fields directly into the PacingController. 
 	public class Pacing {
@@ -441,89 +601,4 @@ namespace PacingFramework
 		}
 	}
 
-	public class PacingSegmentInfo {
-		#region Threat 
-		public int TotalCollisions { get; private set; }
-		public int StruckCollisions { get; private set; }
-		public float AgentAngleSum { get; private set; }
-		public float EnemyAngleSum { get; private set; }
-		public float AgentEdgeSum { get; private set; }
-		public float EnemyEdgeSum { get; private set; }
-		#endregion
-
-		#region Tempo 
-		public int ActionCount { get; private set; }
-		public HashSet<ActionType> UniqueActionTypes { get; } = new();
-		public float DistanceToEnemySum { get; private set; }
-		public float AgentVelocitySum { get; private set; }
-		public float EnemyVelocitySum { get; private set; }
-		public float EnemySkillSum { get; private set; }
-		#endregion
-
-		public int Samples { get; private set; }
-
-		public void Reset() {
-			TotalCollisions = 0;
-			StruckCollisions = 0;
-			AgentAngleSum = 0f;
-			EnemyAngleSum = 0f;
-			AgentEdgeSum = 0f;
-			EnemyEdgeSum = 0f;
-			
-			ActionCount = 0;
-			UniqueActionTypes.Clear();
-			DistanceToEnemySum = 0f;
-			AgentVelocitySum = 0f;
-			EnemyVelocitySum = 0f;
-			EnemySkillSum = 0f;
-			
-			Samples = 0;
-		}
-
-		public void RegisterAction(ISumoAction action) {
-			if (action == null)
-				return;
-
-			ActionCount++;
-			UniqueActionTypes.Add(action.Type);
-		}
-
-		public void RegisterCollision(BounceEvent bounce, SumoAPI api) {
-			if (bounce == null)
-				return;
-
-			TotalCollisions++;
-
-			if (api != null && bounce.Actor == api.MyRobot.Side) { 
-				StruckCollisions++;
-			}
-		}
-
-		// [Todo] Change sum with average. 
-		public void Sample(SumoAPI api) {
-			if (api == null)
-				return;
-
-			Samples++;
-			SumoBotAPI myRobot = api.MyRobot;
-			SumoBotAPI enemyRobot = api.EnemyRobot;
-			
-			DistanceToEnemySum += Vector2.Distance(myRobot.Position, enemyRobot.Position);
-			AgentEdgeSum += DistanceToEdge(myRobot.Position, api.BattleInfo);
-			EnemyEdgeSum += DistanceToEdge(enemyRobot.Position, api.BattleInfo);
-			AgentAngleSum += Mathf.Abs(api.Angle());
-			EnemyAngleSum += Mathf.Abs(api.Angle(
-				oriPos: enemyRobot.Position,
-				oriRot: enemyRobot.Rotation,
-				targetPos: myRobot.Position));
-			AgentVelocitySum += myRobot.LinearVelocity.magnitude;
-			EnemyVelocitySum += enemyRobot.LinearVelocity.magnitude;
-			EnemySkillSum += enemyRobot.Skill.IsActive ? 1f : enemyRobot.Skill.IsSkillOnCooldown ? 0f : 0.5f;
-		}
-
-		private static float DistanceToEdge(Vector2 position, BattleInfoAPI battleInfo) {
-			float distToCenter = Vector2.Distance(position, battleInfo.ArenaPosition);
-			return Mathf.Max(0f, battleInfo.ArenaRadius - distToCenter);
-		}
-	}
 }
