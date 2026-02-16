@@ -38,24 +38,6 @@ namespace PacingFramework
 		}
 	}
 
-	public class Constraint {
-		public float min;
-		public float max;
-
-		public Constraint(float min, float max) {
-			this.min = min;
-			this.max = max;
-		}
-
-		public float Range => max - min;
-
-		public bool IsInRange(float value) {
-			return value >= min && value <= max;
-		}
-	}
-
-	
-
 	public enum PacingAspectType
 	{
 		Threat,
@@ -98,6 +80,284 @@ namespace PacingFramework
 		public float AverageAgentVelocity;
 		public float AverageEnemyVelocity;
 		#endregion
+	}
+
+	/// <summary>
+	/// Constraint is a set of lower and upper limits for variable's normalizations. Constraint fields are implemented in PacingConstraints, 
+	/// where each bot will have specific PacingConstraints. 
+	/// </summary>
+	public class Constraint
+	{
+		public float min;
+		public float max;
+
+		public Constraint(float min, float max) {
+			this.min = min;
+			this.max = max;
+		}
+
+		public float Range => max - min;
+
+		public bool IsInRange(float value) {
+			return value >= min && value <= max;
+		}
+
+		// The normalization of PacingVariables depend on each bot's constraints. 
+		public float Normalize(float value) {
+			return Mathf.Clamp01((value - min) / Range);
+		}
+
+		// These two functions are used to calculate the penalty for potential further purposes. 
+		// For example: Score -= CollisionConstraint.NormalizedViolation(stats.CollisionCount);
+		public float DistanceFromRange(float value) {
+			if (value < min)
+				return min - value;
+			if (value > max)
+				return value - max;
+			return 0f;
+		}
+
+		public float NormalizedViolation(float value) {
+			if (IsInRange(value))
+				return 0f;
+			if (Range == 0f)
+				return 0f;
+			return DistanceFromRange(value) / Range;
+		}
+	}
+
+	/// <summary>
+	/// Gameplay or runtime data collected in a segment (few seconds), used to calculate pacing factors. 
+	/// Please note that the time segment range is determined by the PacingController. 
+	/// </summary>
+	public class SegmentData
+	{
+		#region Threat related data 
+		public List<CollisionType> Collisions = new();      // Any type of collisions. 
+		public Dictionary<CollisionType, int> CollisionsCount { get { return GetCollisionsCount(); } private set { } }
+		public List<float> AgentAngles = new();             // Angles of our bot towards enemy.
+		public List<float> EnemyAngles = new();             // Angles of enemy towards our bot. 
+		public List<float> AgentEdgeDistances = new();      // Distances between our bot and edge of arena. 
+		public List<float> EnemyEdgeDistances = new();      // Distances between enemy and edge of arena.
+		public List<SkillState> AgentSkillStates = new();   // Skill state of Agent.
+		#endregion
+
+		#region Tempo related data 
+		// [Edit] Should this be iSumoAction instead?  
+		public List<ActionType> Actions = new();        // Actions performed by our bot. 
+		public Dictionary<ActionType, int> ActionsCount { get { return GetActionsCount(); } private set { } }
+		public List<float> BotDistances = new();        // Distances between our bot and enemy. 
+		public List<float> AgentVelocities = new();     // Velocities of our bot. 
+		public List<float> EnemyVelocities = new();     // Velocities of enemy. 
+		#endregion
+
+		public Dictionary<CollisionType, int> GetCollisionsCount() {
+			Dictionary<CollisionType, int> collisionsCount = new();
+
+			if (Collisions == null || Collisions.Count == 0)
+				return collisionsCount;
+
+			foreach (CollisionType type in Enum.GetValues(typeof(CollisionType))) {
+				int count = Collisions.Count(c => c == type);
+				collisionsCount[type] = count;
+			}
+
+			return collisionsCount;
+		}
+
+		public Dictionary<ActionType, int> GetActionsCount() {
+			Dictionary<ActionType, int> actionsCount = new();
+
+			if (Actions == null || Actions.Count == 0)
+				return actionsCount;
+
+			foreach (ActionType type in Enum.GetValues(typeof(ActionType))) {
+				int count = Actions.Count(a => a == type);
+			}
+
+			return actionsCount;
+		}
+
+		public void Reset() {
+			Collisions.Clear();
+			CollisionsCount.Clear();
+			AgentAngles.Clear();
+			EnemyAngles.Clear();
+			AgentEdgeDistances.Clear();
+			EnemyEdgeDistances.Clear();
+			Actions.Clear();
+			ActionsCount.Clear();
+			BotDistances.Clear();
+			AgentVelocities.Clear();
+			EnemyVelocities.Clear();
+			AgentSkillStates.Clear();
+		}
+
+		private static float DistanceToEdge(Vector2 position, BattleInfoAPI battleInfo) {
+			float distToCenter = Vector2.Distance(position, battleInfo.ArenaPosition);
+			return Mathf.Max(0f, battleInfo.ArenaRadius - distToCenter);
+		}
+
+		// Populate the segment gameplay info by registering data from api. 
+		#region Register data methods
+		public void RegisterAction(ISumoAction action) {
+			if (action == null)
+				return;
+			Actions.Add(action.Type);
+		}
+
+		public void RegisterActions(SumoAPI api) {
+			if (api == null)
+				return;
+
+			foreach (ActionType action in api.MyRobot.ActiveActions.Keys.ToList()) {
+				Actions.Add(action);
+			}
+		}
+
+		public void RegisterCollision(BounceEvent bounce, SumoAPI api) {
+			if (bounce == null || api == null)
+				return;
+
+			CollisionType collisionType;
+			if (bounce.Actor == api.MyRobot.Side) {
+				collisionType = CollisionType.Hit;
+			} else if (bounce.Actor == api.EnemyRobot.Side) {
+				collisionType = CollisionType.Struck;
+			} else {
+				collisionType = CollisionType.Tie;
+			}
+			Collisions.Add(collisionType);
+		}
+
+		public void RegisterAngles(SumoAPI api) {
+			if (api == null)
+				return;
+
+			// [Edit] Remove Mathf.Abs later, and handle the direction in factors?
+			AgentAngles.Add(Mathf.Abs(api.Angle()));
+			EnemyAngles.Add(Mathf.Abs(api.Angle(oriPos: api.EnemyRobot.Position, oriRot: api.EnemyRobot.Rotation, targetPos: api.MyRobot.Position)));
+		}
+
+		public void RegisterDistances(SumoAPI api) {
+			if (api == null)
+				return;
+
+			AgentEdgeDistances.Add(Mathf.Abs(DistanceToEdge(api.MyRobot.Position, api.BattleInfo)));
+			EnemyEdgeDistances.Add(Mathf.Abs(DistanceToEdge(api.EnemyRobot.Position, api.BattleInfo)));
+
+			BotDistances.Add(Vector2.Distance(api.MyRobot.Position, api.EnemyRobot.Position));
+		}
+
+		public void RegisterVelocities(SumoAPI api) {
+			if (api == null)
+				return;
+			AgentVelocities.Add(api.MyRobot.LinearVelocity.magnitude);
+			EnemyVelocities.Add(api.EnemyRobot.LinearVelocity.magnitude);
+		}
+
+		public void RegisterSkillStates(SumoAPI api) {
+			if (api == null)
+				return;
+
+			SkillState state = SkillState.Available;
+			if (api.MyRobot.Skill.IsActive == true) {
+				state = SkillState.Active;
+			} else if (api.MyRobot.Skill.IsSkillOnCooldown == true) {
+				state = SkillState.Cooldown;
+			}
+
+			AgentSkillStates.Add(state);
+		}
+		#endregion
+	}
+
+	/// <summary>
+	/// PacingConstrains is a collection of constraints that define acceptable ranges for various pacing metrics. 
+	/// For each bot normalization, we can easily create instances of it. 
+	/// </summary> 
+	public class PacingConstraints
+	{
+		#region Threat
+		[Header("Threat")]
+		public Constraint CollisionsCount;
+		public Constraint HitCollisionCount;
+		public Constraint AverageAgentAngle;
+		public Constraint AverageEnemyAngle;
+		public Constraint AverageAgentEdgeDistance;
+		public Constraint AverageEnemyEdgeDistance;
+		public Constraint AverageAgentSkillState;
+		#endregion
+
+		#region Tempo
+		[Header("Tempo")]
+		public Constraint ActionCount;
+		public Constraint AverageActionVariationRatio;
+		public Constraint AverageBotDistance;
+		public Constraint AverageAgentVelocity;
+		public Constraint AverageEnemyVelocity;
+		#endregion
+
+		public PacingConstraints(
+			Constraint collisionsCount, Constraint hitCollisionCount,
+			Constraint averageAgentAngle, Constraint averageEnemyAngle,
+			Constraint averageAgentEdgeDistance, Constraint averageEnemyEdgeDistance,
+			Constraint averageAgentSkillState, Constraint actionCount,
+			Constraint averageActionVariationRatio, Constraint averageBotDistance,
+			Constraint averageAgentVelocity, Constraint averageEnemyVelocity) {
+			// Threat
+			CollisionsCount = collisionsCount;
+			HitCollisionCount = hitCollisionCount;
+			AverageAgentAngle = averageAgentAngle;
+			AverageEnemyAngle = averageEnemyAngle;
+			AverageAgentEdgeDistance = averageAgentEdgeDistance;
+			AverageEnemyEdgeDistance = averageEnemyEdgeDistance;
+			AverageAgentSkillState = averageAgentSkillState;
+			// Tempo
+			ActionCount = actionCount;
+			AverageActionVariationRatio = averageActionVariationRatio;
+			AverageBotDistance = averageBotDistance;
+			AverageAgentVelocity = averageAgentVelocity;
+			AverageEnemyVelocity = averageEnemyVelocity;
+		}
+
+		public PacingConstraints() : this(
+			// Threat
+			new Constraint(0f, 1f), new Constraint(0f, 1f),
+			new Constraint(0f, 180f), new Constraint(0f, 180f),
+			new Constraint(0f, 6f), new Constraint(0f, 6f),
+			new Constraint(0f, 1f),
+			//Tempo
+			new Constraint(0f, 250f), new Constraint(0f, 5f),
+			new Constraint(0f, 8f), new Constraint(0f, 8f),
+			new Constraint(0f, 8f)
+		) { }
+
+		public PacingConstraints(PacingConstraints other) {
+			// Threat 
+			CollisionsCount = new Constraint(other.CollisionsCount.min, other.CollisionsCount.max);
+			HitCollisionCount = new Constraint(other.HitCollisionCount.min, other.HitCollisionCount.max);
+			AverageAgentAngle = new Constraint(other.AverageAgentAngle.min, other.AverageAgentAngle.max);
+			AverageEnemyAngle = new Constraint(other.AverageEnemyAngle.min, other.AverageEnemyAngle.max);
+			AverageAgentEdgeDistance = new Constraint(other.AverageAgentEdgeDistance.min, other.AverageAgentEdgeDistance.max);
+			AverageEnemyEdgeDistance = new Constraint(other.AverageEnemyEdgeDistance.min, other.AverageEnemyEdgeDistance.max);
+			AverageAgentSkillState = new Constraint(other.AverageAgentSkillState.min, other.AverageAgentSkillState.max);
+			//Tempo 
+			ActionCount = new Constraint(other.ActionCount.min, other.ActionCount.max);
+			AverageActionVariationRatio = new Constraint(other.AverageActionVariationRatio.min, other.AverageActionVariationRatio.max);
+			AverageBotDistance = new Constraint(other.AverageBotDistance.min, other.AverageBotDistance.max);
+			AverageAgentVelocity = new Constraint(other.AverageAgentVelocity.min, other.AverageAgentVelocity.max);
+			AverageEnemyVelocity = new Constraint(other.AverageEnemyVelocity.min, other.AverageEnemyVelocity.max);
+		}
+
+		public PacingConstraints Clone() {
+			return new PacingConstraints(this);
+		}
+
+		// Implement the default for all bots. 
+		//public PacingConstraints Default() { 
+		//	return new PacingConstraints(new Constraint(0f, 1f)...)
+		//}
 	}
 
 	/// <summary>
@@ -342,240 +602,60 @@ namespace PacingFramework
 
 	}
 
-	/// <summary>
-	/// Gameplay or runtime data collected in a segment (few seconds), used to calculate pacing factors. 
-	/// Please note that the time segment range is determined by the PacingController. 
-	/// </summary>
-	public class SegmentData {
-		#region Threat related data 
-		public List<CollisionType> Collisions = new();		// Any type of collisions. 
-		public Dictionary<CollisionType, int> CollisionsCount { get { return GetCollisionsCount(); } private set { } }
-		public List<float> AgentAngles = new();				// Angles of our bot towards enemy.
-		public List<float> EnemyAngles = new();				// Angles of enemy towards our bot. 
-		public List<float> AgentEdgeDistances = new();		// Distances between our bot and edge of arena. 
-		public List<float> EnemyEdgeDistances = new();		// Distances between enemy and edge of arena.
-		public List<SkillState> AgentSkillStates = new();   // Skill state of Agent.
-		#endregion
 
-		#region Tempo related data 
-		// [Edit] Should this be iSumoAction instead?  
-		public List<ActionType> Actions = new();		// Actions performed by our bot. 
-		public Dictionary<ActionType, int> ActionsCount { get { return GetActionsCount(); } private set { } }
-		public List<float> BotDistances = new();		// Distances between our bot and enemy. 
-		public List<float> AgentVelocities = new();		// Velocities of our bot. 
-		public List<float> EnemyVelocities = new();		// Velocities of enemy. 
-		#endregion
 
-		public Dictionary<CollisionType, int> GetCollisionsCount() {
-			Dictionary<CollisionType, int> collisionsCount = new();
-
-			if (Collisions == null || Collisions.Count == 0)
-				return collisionsCount;
-			
-			foreach (CollisionType type in Enum.GetValues(typeof(CollisionType))) {
-				int count = Collisions.Count(c => c == type);
-				collisionsCount[type] = count;
-			}
-
-			return collisionsCount;
-		}
-
-		public Dictionary<ActionType, int> GetActionsCount() {
-			Dictionary<ActionType, int> actionsCount = new();
-
-			if (Actions == null || Actions.Count == 0)
-				return actionsCount;
-
-			foreach (ActionType type in Enum.GetValues(typeof(ActionType))) {
-				int count = Actions.Count(a => a == type);
-			}
-
-			return actionsCount;
-		}
-
-		public void Reset() {
-			Collisions.Clear();
-			CollisionsCount.Clear();
-			AgentAngles.Clear();
-			EnemyAngles.Clear();
-			AgentEdgeDistances.Clear();
-			EnemyEdgeDistances.Clear();
-			Actions.Clear();
-			ActionsCount.Clear();
-			BotDistances.Clear();
-			AgentVelocities.Clear();
-			EnemyVelocities.Clear();
-			AgentSkillStates.Clear();
-		}
-
-		private static float DistanceToEdge(Vector2 position, BattleInfoAPI battleInfo) {
-			float distToCenter = Vector2.Distance(position, battleInfo.ArenaPosition);
-			return Mathf.Max(0f, battleInfo.ArenaRadius - distToCenter);
-		}
-
-		// Populate the segment gameplay info by registering data from api. 
-		#region Register data methods
-		public void RegisterAction(ISumoAction action) {
-			if (action == null)
-				return;
-			Actions.Add(action.Type);
-		}
-
-		public void RegisterActions(SumoAPI api) { 
-			if (api == null) 
-				return;
-
-			foreach (ActionType action in api.MyRobot.ActiveActions.Keys.ToList()) { 
-				Actions.Add(action);
-			}
-		}
-
-		public void RegisterCollision(BounceEvent bounce, SumoAPI api) {
-			if (bounce == null || api == null)
-				return;
-
-			CollisionType collisionType;
-			if (bounce.Actor == api.MyRobot.Side) { 
-				collisionType = CollisionType.Hit;
-			} else if (bounce.Actor == api.EnemyRobot.Side) {
-				collisionType = CollisionType.Struck;
-			} else {
-				collisionType = CollisionType.Tie;
-			}
-			Collisions.Add(collisionType);
-		}
-
-		public void RegisterAngles(SumoAPI api) {
-			if (api == null)
-				return;
-
-			// [Edit] Remove Mathf.Abs later, and handle the direction in factors?
-			AgentAngles.Add(Mathf.Abs(api.Angle())); 
-			EnemyAngles.Add(Mathf.Abs(api.Angle(oriPos: api.EnemyRobot.Position, oriRot: api.EnemyRobot.Rotation, targetPos: api.MyRobot.Position)));
-		}
-		
-		public void RegisterDistances(SumoAPI api) {
-			if (api == null)
-				return;
-			
-			AgentEdgeDistances.Add(Mathf.Abs(DistanceToEdge(api.MyRobot.Position, api.BattleInfo)));
-			EnemyEdgeDistances.Add(Mathf.Abs(DistanceToEdge(api.EnemyRobot.Position, api.BattleInfo)));
-
-			BotDistances.Add(Vector2.Distance(api.MyRobot.Position, api.EnemyRobot.Position));
-		}
-
-		public void RegisterVelocities(SumoAPI api) {
-			if (api == null)
-				return;
-			AgentVelocities.Add(api.MyRobot.LinearVelocity.magnitude);
-			EnemyVelocities.Add(api.EnemyRobot.LinearVelocity.magnitude);
-		}
-
-		public void RegisterSkillStates(SumoAPI api) {
-			if (api == null)
-				return;
-			
-			SkillState state = SkillState.Available;
-			if (api.MyRobot.Skill.IsActive == true) { 
-				state = SkillState.Active;
-			} else if (api.MyRobot.Skill.IsSkillOnCooldown == true) { 
-				state = SkillState.Cooldown;
-			}
-			
-			AgentSkillStates.Add(state);
-		}
-		#endregion
-	}
+	// ===================================================================================
 
 	/// <summary>
 	/// PacingConstraints is a structure to define expected ranges for the PacingFactors normalization. 
 	/// The fields in PacingConstraints follow PacingVariables. 
 	/// </summary>
 	[Serializable]
-	public class PacingConstraints
-	{
-		#region Threat
-		[Header("Threat")]
-		public MinMax CollisionsCount;
-		public MinMax HitCollisionCount;
-		public MinMax AverageAgentAngle;
-		public MinMax AverageEnemyAngle;
-		public MinMax AverageAgentEdgeDistance;
-		public MinMax AverageEnemyEdgeDistance;
-		public MinMax AverageAgentSkillState;
-		#endregion
-		
-		#region Tempo
-		[Header("Tempo")]
-		public MinMax ActionCount;
-		public MinMax AverageActionVariationRatio;
-		public MinMax AverageBotDistance;
-		public MinMax AverageAgentVelocity;
-		public MinMax AverageEnemyVelocity;
-		#endregion
-
-		public PacingConstraints(
-			MinMax collisionsCount, MinMax hitCollisionCount, 
-			MinMax averageAgentAngle, MinMax averageEnemyAngle,
-			MinMax averageAgentEdgeDistance, MinMax averageEnemyEdgeDistance, 
-			MinMax averageAgentSkillState, MinMax actionCount, 
-			MinMax averageActionVariationRatio, MinMax averageBotDistance, 
-			MinMax averageAgentVelocity, MinMax averageEnemyVelocity) {
-				// Threat
-				CollisionsCount = collisionsCount;
-				HitCollisionCount = hitCollisionCount;
-				AverageAgentAngle = averageAgentAngle;
-				AverageEnemyAngle = averageEnemyAngle;
-				AverageAgentEdgeDistance = averageAgentEdgeDistance;
-				AverageEnemyEdgeDistance = averageEnemyEdgeDistance;
-				AverageAgentSkillState = averageAgentSkillState;
-				// Tempo
-				ActionCount = actionCount;
-				AverageActionVariationRatio = averageActionVariationRatio;
-				AverageBotDistance = averageBotDistance;
-				AverageAgentVelocity = averageAgentVelocity;
-				AverageEnemyVelocity = averageEnemyVelocity;
-		}
-
-		public PacingConstraints(): this(
-			// Threat
-			new MinMax(0f, 1f), new MinMax(0f, 1f), 
-			new MinMax(0f, 180f), new MinMax(0f, 180f), 
-			new MinMax(0f, 6f), new MinMax(0f, 6f), 
-			new MinMax(0f, 1f), 
-			//Tempo
-			new MinMax(0f, 250f), new MinMax(0f, 5f), 
-			new MinMax(0f, 8f), new MinMax(0f, 8f), 
-			new MinMax(0f, 8f)
-		) { }
-
-		public PacingConstraints(PacingConstraints other) {
-			// Threat 
-			CollisionsCount = new MinMax(other.CollisionsCount.min, other.CollisionsCount.max);
-			HitCollisionCount = new MinMax(other.HitCollisionCount.min, other.HitCollisionCount.max);
-			AverageAgentAngle = new MinMax(other.AverageAgentAngle.min, other.AverageAgentAngle.max);
-			AverageEnemyAngle = new MinMax(other.AverageEnemyAngle.min, other.AverageEnemyAngle.max);
-			AverageAgentEdgeDistance = new MinMax(other.AverageAgentEdgeDistance.min, other.AverageAgentEdgeDistance.max);
-			AverageEnemyEdgeDistance = new MinMax(other.AverageEnemyEdgeDistance.min, other.AverageEnemyEdgeDistance.max);
-			AverageAgentSkillState = new MinMax(other.AverageAgentSkillState.min, other.AverageAgentSkillState.max);
-			//Tempo 
-			ActionCount = new MinMax(other.ActionCount.min, other.ActionCount.max);
-			AverageActionVariationRatio = new MinMax(other.AverageActionVariationRatio.min, other.AverageActionVariationRatio.max);
-			AverageBotDistance = new MinMax(other.AverageBotDistance.min, other.AverageBotDistance.max);
-			AverageAgentVelocity = new MinMax(other.AverageAgentVelocity.min, other.AverageAgentVelocity.max);
-			AverageEnemyVelocity = new MinMax(other.AverageEnemyVelocity.min, other.AverageEnemyVelocity.max);
-		}
-
-		public PacingConstraints Clone() {
-			return new PacingConstraints(this);
-		}
-	}
-
+	
 	// [Todo] This stucture seems unecessary. We could also implement the fields directly into the PacingController. 
 	public class Pacing {
-		public int segmentIndex = -1;
-		public PacingAspects pacingAspects = new PacingAspects();
-		public PacingFactors pacingFactors = new PacingFactors();
+
+		public struct PacingAspectThreat {
+			public struct ThreatFactors {
+				// [Edit] May need to implement the getter for each factor. 
+				public float Collision;
+				public float SkillAvailability;
+				public float Angle;
+				public float EdgeDistance;
+				public float WeightCollision;
+				public float WeightSkillAvailability;
+				public float WeightAngle;
+				public float WeightEdgeDistance;
+			}
+
+			// [Edit] Create getter function instead. 
+			public float Value;		
+			public ThreatFactors Factors;
+		}
+
+		public struct PacingAspectTempo {
+			public struct TempoFactors {
+				// [Edit] May need to implement the getter for each factor. 
+				public float ActionIntensity;
+				public float ActionDensity;
+				public float BotDistance;
+				public float Velocity;
+				public float WeightActionIntensity;
+				public float WeightActionDensity;
+				public float WeightBotDistance;
+				public float WeightVelocity;
+			}
+
+			// [Edit] Create getter function instead. 
+			public float Value;
+			public TempoFactors Factors;
+		}
+
+		public PacingAspectThreat Threat;
+		public PacingAspectTempo Tempo;
+		public float WeightThreat;
+		public float WeightTempo; 
+
 		public PacingConstraints pacingConstraints = new PacingConstraints();
 		public PacingSegmentInfo pacingSegmentInfo = new PacingSegmentInfo();
 
@@ -596,11 +676,7 @@ namespace PacingFramework
 
 	public class PacingAspects
 	{
-		public float threat = 0f;
-		public float tempo = 0f;
-		public float weightThreat = 1f;
-		public float weightTempo = 1f;
-		public float overallPacing = 0f;
+		public PacingFactors pacingFactors = new PacingFactors();
 
 		public PacingAspects() { }
 
@@ -620,66 +696,6 @@ namespace PacingFramework
 			return max - min != 0 ? (value - min) / (max - min) : 0f;
 		}
 
-	}
-
-	public class PacingFactors {
-		#region Threat 
-		public float collision = 0f;
-		public float enemySkill = 0f;
-		//public float enemyAngle = 0f;
-		public float deltaAngle = 0f;
-		//public float distanceToEdge = 0f;
-		public float deltaDistance = 0f;
-		public float weightCollision = 1f;
-		public float weightEnemySkill = 1f;
-		public float weightEnemyAngle = 1f;
-		public float weightDistanceToEdge = 1f;
-		#endregion
-		#region Tempo 
-		public float actionIntensity = 0f;
-		public float actionDensity = 0f;
-		//public float distanceToEnemy = 0f;
-		public float avgDistanceToEnemy = 0f;
-		public float deltaVelocity = 0f;
-		public float weightActionIntensity = 1f;
-		public float weightActionDensity = 1f;
-		public float weightDistanceToEnemy = 1f;
-		public float weightDeltaVelocity = 1f;
-        
-
-        public PacingFactors(float collision, float enemySkill, float deltaAngle, float deltaDistance, float actionIntensity, float actionDensity, float avgDistanceToEnemy, float deltaVelocity) {
-            this.collision = collision;
-            this.enemySkill = enemySkill;
-            this.deltaAngle = deltaAngle;
-            this.deltaDistance = deltaDistance;
-            this.actionIntensity = actionIntensity;
-            this.actionDensity = actionDensity;
-            this.avgDistanceToEnemy = avgDistanceToEnemy;
-            this.deltaVelocity = deltaVelocity;
-        }
-
-        public PacingFactors() {
-        }
-        #endregion
-
-        public static PacingFactors Default() { 
-			return new PacingFactors();
-		}
-
-		public float GetWeights(PacingAspectType type) {
-			float sum = -1f;
-			if (type == PacingAspectType.Threat) {
-				sum = weightCollision + weightEnemySkill + weightEnemyAngle + weightDistanceToEdge;
-			} else {
-				sum = weightActionIntensity + weightActionDensity + weightDistanceToEnemy + weightDeltaVelocity;
-			}
-			
-			return sum;
-		}
-
-		public float GetTotalWeights() {
-			return GetWeights(PacingAspectType.Threat) + GetWeights(PacingAspectType.Tempo);
-		}
 	}
 
 }
