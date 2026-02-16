@@ -4,6 +4,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using static PacingFramework.Pacing.AspectThreat;
+
 
 /// <summary>
 /// This script implements a concept of pacing, a measure of the intensity and flow of the gameplay, which can be used to adapt the bot's strategy and behavior in real-time.
@@ -58,29 +60,7 @@ namespace PacingFramework
 		Cooldown
 	};
 
-	/// <summary>
-	/// PacingVariables is a structure that encapsulates various unnormalized parameters related to the pacing of agent and enemy interactions within a simulation environment. 
-	/// This structure is designed to hold data obtained from SegmentData, which later will be normalized before pacing calculation. 
-	/// </summary>
-	public struct PacingVariables
-	{
-		#region Threat 
-		public int CollisionsCount;
-		public int HitCollisionsCount;
-		public float AverageAgentAngle;
-		public float AverageEnemyAngle;
-		public float AverageAgentEdgeDistance;
-		public float AverageEnemyEdgeDistance;
-		public float AverageAgentSkillState;
-		#endregion
-		#region Tempo 
-		public int ActionCount;
-		public float AverageActionVariationRatio;
-		public float AverageBotDistance;
-		public float AverageAgentVelocity;
-		public float AverageEnemyVelocity;
-		#endregion
-	}
+	
 
 	/// <summary>
 	/// Constraint is a set of lower and upper limits for variable's normalizations. Constraint fields are implemented in PacingConstraints, 
@@ -606,17 +586,37 @@ namespace PacingFramework
 
 	// ===================================================================================
 
-	/// <summary>
-	/// PacingConstraints is a structure to define expected ranges for the PacingFactors normalization. 
-	/// The fields in PacingConstraints follow PacingVariables. 
-	/// </summary>
-	[Serializable]
-	
-	// [Todo] This stucture seems unecessary. We could also implement the fields directly into the PacingController. 
 	public class Pacing {
 
-		public struct PacingAspectThreat {
+		#region Pacing Aspects structure
+		public struct AspectThreat {
+			public enum ThreatFactorType
+			{
+				Collision,
+				SkillAvailability,
+				Angle,
+				EdgeDistance
+			}
+
 			public struct ThreatFactors {
+				/// <summary>
+				/// PacingVariables is a structure that encapsulates various unnormalized parameters related to the pacing of agent and enemy interactions within a simulation environment. 
+				/// This structure is designed to hold data obtained from SegmentData, which later will be normalized before pacing calculation. 
+				/// </summary>
+				public struct ThreatVariables
+				{
+					public int CollisionsCount;
+					public int HitCollisionsCount;
+					public float AverageAgentAngle;
+					public float AverageEnemyAngle;
+					public float AverageAgentEdgeDistance;
+					public float AverageEnemyEdgeDistance;
+					public float AverageAgentSkillState;
+				}
+				
+				public ThreatVariables Variables;
+				public PacingConstraints Constraints;
+
 				// [Edit] May need to implement the getter for each factor. 
 				public float Collision;
 				public float SkillAvailability;
@@ -626,15 +626,62 @@ namespace PacingFramework
 				public float WeightSkillAvailability;
 				public float WeightAngle;
 				public float WeightEdgeDistance;
+				public float TotalWeights { get { return WeightCollision + WeightSkillAvailability + WeightAngle + WeightEdgeDistance; } }
 			}
 
-			// [Edit] Create getter function instead. 
-			public float Value;		
+			public float Value;             // [Edit] Create getter function instead. 		
 			public ThreatFactors Factors;
+
+			public float GetWeight(ThreatFactorType type) {
+				return type switch {
+					ThreatFactorType.Collision			=> Factors.WeightCollision,
+					ThreatFactorType.SkillAvailability	=> Factors.SkillAvailability,
+					ThreatFactorType.Angle				=> Factors.Angle,
+					ThreatFactorType.EdgeDistance		=> Factors.EdgeDistance,
+					_ => throw new ArgumentOutOfRangeException(nameof(type), type, null)
+				};
+			}
+
+			//public float GetWeight(ThreatFactorType type) {
+			//	switch (type) {
+			//		case ThreatFactorType.Collision:
+			//			return Factors.WeightCollision;
+
+			//		case ThreatFactorType.SkillAvailability:
+			//			return Factors.SkillAvailability;
+
+			//		case ThreatFactorType.Angle:
+			//			return Factors.Angle;
+
+			//		case ThreatFactorType.EdgeDistance:
+			//			return Factors.EdgeDistance;
+
+			//		default:
+			//			throw new ArgumentOutOfRangeException(nameof(type), type, null);
+			//	}
+			//}
+
+
 		}
 
 		public struct PacingAspectTempo {
+			public enum TempoFactorType
+			{
+				ActionIntensity,
+				ActionDensity,
+				BotDistance,
+				Velocity
+			}
+
 			public struct TempoFactors {
+				public struct TempoVariables {
+					public int ActionCount;
+					public float AverageActionVariationRatio;
+					public float AverageBotDistance;
+					public float AverageAgentVelocity;
+					public float AverageEnemyVelocity;
+				}
+
 				// [Edit] May need to implement the getter for each factor. 
 				public float ActionIntensity;
 				public float ActionDensity;
@@ -644,18 +691,31 @@ namespace PacingFramework
 				public float WeightActionDensity;
 				public float WeightBotDistance;
 				public float WeightVelocity;
+				public float TotalWeight { get { return WeightActionIntensity + WeightActionDensity + WeightBotDistance + WeightVelocity; } }
 			}
-
-			// [Edit] Create getter function instead. 
-			public float Value;
+			
+			public float Value;				// [Edit] Create getter function instead. 
 			public TempoFactors Factors;
+
+			public float GetWeight(TempoFactorType type) {
+				return type switch {
+					TempoFactorType.ActionIntensity => Factors.ActionIntensity,
+					TempoFactorType.ActionDensity => Factors.ActionDensity,
+					TempoFactorType.BotDistance => Factors.BotDistance,
+					TempoFactorType.Velocity => Factors.Velocity,
+					_ => throw new ArgumentOutOfRangeException(nameof(type), type, null)
+				};
+			}
 		}
+		#endregion
 
-		public PacingAspectThreat Threat;
+		public AspectThreat Threat;
 		public PacingAspectTempo Tempo;
-		public float WeightThreat;
-		public float WeightTempo; 
 
+		public float WeightThreat;
+		public float WeightTempo;
+		public float TotalWeights { get { return WeightThreat + WeightTempo; } }
+ 
 		public PacingConstraints pacingConstraints = new PacingConstraints();
 		public PacingSegmentInfo pacingSegmentInfo = new PacingSegmentInfo();
 
