@@ -3,7 +3,6 @@ using SumoCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Unity.AppUI.MVVM;
 using UnityEngine;
 
 /// <summary>
@@ -13,7 +12,7 @@ using UnityEngine;
 /// - Pacing: the flow of the gameplay in a specific time segment, which includes the pacing aspects, factors, constraints and segment info. 
 /// -- PacingAspects: the high level aspects of pacing, which are threat and tempo.
 /// --- PacingFactors: the specific factors that contribute to the pacing aspects. For example, the effectiveness of our bot collision behaviour, skill availability contribute to threat, while action intensity and distance to enemy contribute to tempo.
-/// ---- PacingParameters: the parameters that define how the pacing factors are calculated and weighted, which can be set globally or locally for each segment, and can also be blended together. 
+/// ---- PacingVariables: the parameters that define how the pacing factors are calculated and weighted, which can be set globally or locally for each segment, and can also be blended together. 
 /// ---- PacingConstraints: the expected range of the pacing factors, which can be used to normalize the factors and evaluate the pacing. These constraints can be set globally or locally for each segment, and can also be blended together. PacingConstraints are similar to PacingParameters. 
 /// 
 /// Other terms: 
@@ -39,6 +38,24 @@ namespace PacingFramework
 		}
 	}
 
+	public class Constraint {
+		public float min;
+		public float max;
+
+		public Constraint(float min, float max) {
+			this.min = min;
+			this.max = max;
+		}
+
+		public float Range => max - min;
+
+		public bool IsInRange(float value) {
+			return value >= min && value <= max;
+		}
+	}
+
+	
+
 	public enum PacingAspectType
 	{
 		Threat,
@@ -58,6 +75,30 @@ namespace PacingFramework
 		Available,
 		Cooldown
 	};
+
+	/// <summary>
+	/// PacingVariables is a structure that encapsulates various unnormalized parameters related to the pacing of agent and enemy interactions within a simulation environment. 
+	/// This structure is designed to hold data obtained from SegmentData, which later will be normalized before pacing calculation. 
+	/// </summary>
+	public struct PacingVariables
+	{
+		#region Threat 
+		public int CollisionsCount;
+		public int HitCollisionsCount;
+		public float AverageAgentAngle;
+		public float AverageEnemyAngle;
+		public float AverageAgentEdgeDistance;
+		public float AverageEnemyEdgeDistance;
+		public float AverageAgentSkillState;
+		#endregion
+		#region Tempo 
+		public int ActionCount;
+		public float AverageActionVariationRatio;
+		public float AverageBotDistance;
+		public float AverageAgentVelocity;
+		public float AverageEnemyVelocity;
+		#endregion
+	}
 
 	/// <summary>
 	/// The main class that manages the pacing system, which collects gameplay data, calculates pacing factors and aspects, evaluates the pacing against the target, and provides the pacing information to other parts of the bot.
@@ -307,12 +348,13 @@ namespace PacingFramework
 	/// </summary>
 	public class SegmentData {
 		#region Threat related data 
-		public List<CollisionType> Collisions = new();	// Any type of collisions. 
+		public List<CollisionType> Collisions = new();		// Any type of collisions. 
 		public Dictionary<CollisionType, int> CollisionsCount { get { return GetCollisionsCount(); } private set { } }
-		public List<float> AgentAngles = new();			// Angles of our bot towards enemy.
-		public List<float> EnemyAngles = new();			// Angles of enemy towards our bot. 
-		public List<float> AgentEdgeDistances = new();	// Distances between our bot and edge of arena. 
-		public List<float> EnemyEdgeDistances = new();  // Distances between enemy and edge of arena.
+		public List<float> AgentAngles = new();				// Angles of our bot towards enemy.
+		public List<float> EnemyAngles = new();				// Angles of enemy towards our bot. 
+		public List<float> AgentEdgeDistances = new();		// Distances between our bot and edge of arena. 
+		public List<float> EnemyEdgeDistances = new();		// Distances between enemy and edge of arena.
+		public List<SkillState> AgentSkillStates = new();   // Skill state of Agent.
 		#endregion
 
 		#region Tempo related data 
@@ -321,8 +363,7 @@ namespace PacingFramework
 		public Dictionary<ActionType, int> ActionsCount { get { return GetActionsCount(); } private set { } }
 		public List<float> BotDistances = new();		// Distances between our bot and enemy. 
 		public List<float> AgentVelocities = new();		// Velocities of our bot. 
-		public List<float> EnemyVelocities = new();			// Velocities of enemy. 
-		public List<SkillState> AgentSkillStates = new();   // Skill state of enemy.
+		public List<float> EnemyVelocities = new();		// Velocities of enemy. 
 		#endregion
 
 		public Dictionary<CollisionType, int> GetCollisionsCount() {
@@ -446,6 +487,90 @@ namespace PacingFramework
 		#endregion
 	}
 
+	/// <summary>
+	/// PacingConstraints is a structure to define expected ranges for the PacingFactors normalization. 
+	/// The fields in PacingConstraints follow PacingVariables. 
+	/// </summary>
+	[Serializable]
+	public class PacingConstraints
+	{
+		#region Threat
+		[Header("Threat")]
+		public MinMax CollisionsCount;
+		public MinMax HitCollisionCount;
+		public MinMax AverageAgentAngle;
+		public MinMax AverageEnemyAngle;
+		public MinMax AverageAgentEdgeDistance;
+		public MinMax AverageEnemyEdgeDistance;
+		public MinMax AverageAgentSkillState;
+		#endregion
+		
+		#region Tempo
+		[Header("Tempo")]
+		public MinMax ActionCount;
+		public MinMax AverageActionVariationRatio;
+		public MinMax AverageBotDistance;
+		public MinMax AverageAgentVelocity;
+		public MinMax AverageEnemyVelocity;
+		#endregion
+
+		public PacingConstraints(
+			MinMax collisionsCount, MinMax hitCollisionCount, 
+			MinMax averageAgentAngle, MinMax averageEnemyAngle,
+			MinMax averageAgentEdgeDistance, MinMax averageEnemyEdgeDistance, 
+			MinMax averageAgentSkillState, MinMax actionCount, 
+			MinMax averageActionVariationRatio, MinMax averageBotDistance, 
+			MinMax averageAgentVelocity, MinMax averageEnemyVelocity) {
+				// Threat
+				CollisionsCount = collisionsCount;
+				HitCollisionCount = hitCollisionCount;
+				AverageAgentAngle = averageAgentAngle;
+				AverageEnemyAngle = averageEnemyAngle;
+				AverageAgentEdgeDistance = averageAgentEdgeDistance;
+				AverageEnemyEdgeDistance = averageEnemyEdgeDistance;
+				AverageAgentSkillState = averageAgentSkillState;
+				// Tempo
+				ActionCount = actionCount;
+				AverageActionVariationRatio = averageActionVariationRatio;
+				AverageBotDistance = averageBotDistance;
+				AverageAgentVelocity = averageAgentVelocity;
+				AverageEnemyVelocity = averageEnemyVelocity;
+		}
+
+		public PacingConstraints(): this(
+			// Threat
+			new MinMax(0f, 1f), new MinMax(0f, 1f), 
+			new MinMax(0f, 180f), new MinMax(0f, 180f), 
+			new MinMax(0f, 6f), new MinMax(0f, 6f), 
+			new MinMax(0f, 1f), 
+			//Tempo
+			new MinMax(0f, 250f), new MinMax(0f, 5f), 
+			new MinMax(0f, 8f), new MinMax(0f, 8f), 
+			new MinMax(0f, 8f)
+		) { }
+
+		public PacingConstraints(PacingConstraints other) {
+			// Threat 
+			CollisionsCount = new MinMax(other.CollisionsCount.min, other.CollisionsCount.max);
+			HitCollisionCount = new MinMax(other.HitCollisionCount.min, other.HitCollisionCount.max);
+			AverageAgentAngle = new MinMax(other.AverageAgentAngle.min, other.AverageAgentAngle.max);
+			AverageEnemyAngle = new MinMax(other.AverageEnemyAngle.min, other.AverageEnemyAngle.max);
+			AverageAgentEdgeDistance = new MinMax(other.AverageAgentEdgeDistance.min, other.AverageAgentEdgeDistance.max);
+			AverageEnemyEdgeDistance = new MinMax(other.AverageEnemyEdgeDistance.min, other.AverageEnemyEdgeDistance.max);
+			AverageAgentSkillState = new MinMax(other.AverageAgentSkillState.min, other.AverageAgentSkillState.max);
+			//Tempo 
+			ActionCount = new MinMax(other.ActionCount.min, other.ActionCount.max);
+			AverageActionVariationRatio = new MinMax(other.AverageActionVariationRatio.min, other.AverageActionVariationRatio.max);
+			AverageBotDistance = new MinMax(other.AverageBotDistance.min, other.AverageBotDistance.max);
+			AverageAgentVelocity = new MinMax(other.AverageAgentVelocity.min, other.AverageAgentVelocity.max);
+			AverageEnemyVelocity = new MinMax(other.AverageEnemyVelocity.min, other.AverageEnemyVelocity.max);
+		}
+
+		public PacingConstraints Clone() {
+			return new PacingConstraints(this);
+		}
+	}
+
 	// [Todo] This stucture seems unecessary. We could also implement the fields directly into the PacingController. 
 	public class Pacing {
 		public int segmentIndex = -1;
@@ -554,50 +679,6 @@ namespace PacingFramework
 
 		public float GetTotalWeights() {
 			return GetWeights(PacingAspectType.Threat) + GetWeights(PacingAspectType.Tempo);
-		}
-	}
-
-	[Serializable]
-	public class PacingConstraints {
-		#region Threat 
-		[Header("Threat")]
-		public MinMax struckCollision = new(0f, 1f);
-		public MinMax totalCollision = new(0f, 1f);
-		public MinMax enemyAngle = new(0f, 180f);
-		public MinMax agentAngle = new(0f, 180f);
-		public MinMax enemyDistanceEdge = new(0f, 6f);
-		public MinMax agentDistanceEdge = new(0f, 6f);
-		public MinMax enemySkill = new (0f, 1f);
-		#endregion
-		#region Tempo 
-		[Header("Tempo")]
-		public MinMax totalAction = new(0f, 250f);
-		public MinMax actionVariation = new(0f, 5f);
-		public MinMax avgDistanceToEnemy = new(0f, 8f);
-		public MinMax agentVelocity = new(0f, 8f);
-		public MinMax enemyVelocity = new(0f, 8f);
-		#endregion
-
-		public static PacingConstraints Default() {
-			return new PacingConstraints();
-		}
-		public PacingConstraints Clone() {
-			return new PacingConstraints {
-				struckCollision = struckCollision,
-				totalCollision = totalCollision,
-				enemyAngle = enemyAngle,
-				agentAngle = agentAngle,
-				enemyDistanceEdge = enemyDistanceEdge,
-				agentDistanceEdge = agentDistanceEdge,
-				enemySkill = enemySkill,
-
-				totalAction = totalAction,
-				actionVariation = actionVariation,
-				avgDistanceToEnemy = avgDistanceToEnemy,
-				agentVelocity = agentVelocity,
-				enemyVelocity = enemyVelocity
-			};
-
 		}
 	}
 
