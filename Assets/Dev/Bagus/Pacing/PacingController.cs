@@ -1,170 +1,254 @@
-using SumoBot;
-using SumoCore;
-using System;
-using System.Collections.Generic;
-using System.Linq;
+// Notes: 
+// - Consider to remove the use of variables, as we can directly calculate the pacing factors from the segmentdata. 
+
 using UnityEngine;
-using static PacingFramework.SegmentPacing.FactorType;
 
-namespace PacingFramework
+namespace PacingFramework 
 {
-	/// <summary>
-	/// Collection of pacing information for each segment, including: runtime gameplay data and pacing details. 
-	/// </summary>
-	public struct GamePacingHistory { 
-		public List<SegmentGameplayData> GameplayData;
-		public List<SegmentPacing> Pacing;
+	public class PacingController : MonoBehaviour
+	{
+		// Fields ==========
+		//Pacing History: GamePacing
+		//Pacing Target: GamePacingTarget
+
+		// Runtime Configs ==========
+		//SegmentDuration: float  
+		//API: SumoAPI
+		//Original Actions: <SumoAction> 
+		//Paced Actions: <SumoAction> 
+
+		// Temporary holder ==========
+		//Current Gameplay Data: SegmentGameplayData
+		//Current Segment Pacing: SegmentPacing
+
+		// Methods ==========
+		//Init(): void // Initialize all fields
+		//Register functions of GameplayData -> few Register functions to register the raw data into currentGameplayData.
+
+		//Tick(): void // Act like update for each game tick to allow register functions calling on currentGameplayData.
+		//If a segment is reached, finalize the segment by populating the variables, compute pacing factors, and compute pacing aspect using finalize segment methods.
+		//Then debug/ visualize it using debugpacing().
+		//Later on we can also evaluate the pacing and actions using evaluation methods. 
+
+		// Finalize Segment Methods ==========
+		//PopulateVariables(): void // After currentSegmentData is registered and a segment is reached, sample pacing variables it into currentSegmentPacing.Variables.
+		//ComputeFactors(): void // Compute the pacing factors in currentsegmentpacing.Factors. Here, we need constraints for normalization and some helper functions from constraints: blending between global and local, or for each bot. 
+		//ComputePacingAspect(): void // Compute the pacing aspect threat and tempo in currentsegmentpacing.Aspects and add data into pacinghistory.segmentgameplaydata and pacinghistory.pacing. 
+		//DebugPacing(): void // Debug or visualize to console the details of pacing and segmentgameplaydata. 
+
+		// Evaluation methods =========
+		//EvaluatePacing(): void // Compare the actual latest pacing in pacinghistory with the pacingtarget according to the index. 
+		//EvaluateAction(): void // Filtered out the original actions into paced actions. This requires rules on how to filter the action based on the pacing values. 
+
+	}
+
+	// ========================================== 
+	public struct GamePacing 
+	{
+		// Fields ==========
+		//List of Segment GameplayData: <SegmentGameplayData> 
+		//List of Segment Pacing: <SegmentPacing> 
+		//Curve of Pacing: PacingCurve // Custom curve for visualization 
+	}
+
+	public struct GamePacingTarget 
+	{
+		// Fields ==========
+		//Global Constraints: Constraints 
+		//List of Local Constraints: <Constraints>  
+		//List of Target Pacing: <Segment Pacing>
+		//Curve of Pacing: PacingCurve // Custom curve for visualization 
+	}
+
+	// ====================================================================================
+	// Pacing.cs
+	// ====================================================================================
+	public enum AspectType
+	{
+		Threat,
+		Tempo
+	}
+
+	public enum CollisionType
+	{
+		Hit,
+		Struck,
+		Tie
+	}
+
+	public enum ActionType
+	{
+		Accelerate,
+		TurnLeft,
+		TurnRight,
+		Dash,
+		SkillBoost,
+		SkillStone,
+		Idle
+	}
+
+	public enum FactorType
+	{
+		// Threat factors
+		HitCollision,
+		Ability,
+		Angle,
+		SafeDistance,
+
+		//Tempo factors
+		ActionIntensity,
+		ActionDensity,
+		BotsDistance,
+		Velocity
+	}
+
+	public class Constraint { 
+		// Fields ==========
+		//Min: float
+		//Max: float
+
+		// Methods =========
+		//Constructor(min, max) 
+		//IsInRange(value): bool // return if the value is in constraint range. 
+	}
+
+	public struct ConstraintsSet {
+		// Fields ==========
+		//Threat fields
+		//AvgHitCollision: constraint // factor avghitcollision: return 1 if hitcollision closer to max, return 0 if closer to min
+		//AvgAngle: constraint // factor avgangle: return 1 if closer to min, return 0 if closer to max 
+		//AvgSafeDistance: constraint // factor avgsafedistance: return 1 if closer to max, return 0 if closer to min 
+		//AvgDashSkill: constraint // factor avgdashskill: return 1 if skill count closer to max, return 0 if closer to min 
+
+		//Tempo fields
+		//AvgAction: constraint // factor acvaction: return 1 if closer to max, return 0 if closer to min 
+		//AvgBotDistance: constraint // factor avgbotdistance: return 1 if closer to min, return 0 if closer to max
+		//AvgVelocity: constraint // factor avgvelocity: return 1 if closer to max, return 0 if closer to min 
+		//AvgActionDensity: constraint // factor avgactiondensity: return 1 if closer to max, retunr 0 if closer to min; use shannon entropy
+
+		// Methods ==========
+		//NormalizedClamped(value, constraint): float // return the normalized and clamped value using this constraint. 
+		//GetConstraintsByType(aspect type): dict<string, constraints> // return dictionary of constraint based on its aspect type related. 
+	}
+
+	public class SegmentGameplayData {
+		// Fields ==========
+		//Threat fields
+		//List of collisions: <CollisionType>
+		//List of agent angles: <float>
+		//List of safe distances: <float> 
+
+		//Tempo fields
+		//List of list of actions: <<actiontype>> // This will be used in factor of action and action variation. 
+		//List of bots distances: <float>
+		//List of agent velocities: <float>
+
+		// Methods ==========
+		//Constructor()
+		//Constructor(SegmentGameplayData)
+		//Reset()
+
+		// Register methods 
+		//RegisterCollision(bounceevent or collisiontype, api): void 
+		//RegisterAngle(api): void
+		//RegisterSafeDistance(api): void 
+		//RegisterActions(<actiontype> or api): void // Register list of actions from api 
+		//RegisterBotsDistance(api): void
+
+		// Helper methods 
+		//GetCollisionsCounts(): dict<collisiontype, int>
+		//GetActionsCounts(): dict<actiontype, int>
+		//SafeDistance(pos, battleinfo): float
+	}
+
+	public class SegmentPacing 
+	{
+		// Fields ==========
+		//Threat aspect: Aspect 
+		//Tempo aspect: Aspect 
+
+		// Methods ==========
+		//GetOverallPacing(): float
+	}
+
+	public abstract class Aspect {
+		// Fields ==========
+		//Type: AspectType
+		//Weight: float 
+		//Value: float getter; call CalculatePacingAspect()
 		
-		// For visualizations.  
-		public AnimationCurve ThreatCurve;
-		public AnimationCurve TempoCurve;
+		// Private fields
+		//GameplayData: SegmentGameplayData
+
+		// Methods ==========	
+		//Constructor(SegmentGameplayData) 
+		//CalculateAspect(): float // Requires function calling from factors 
+		//Reset(): void 
+
+		// Helper methods
+		//GetWeightByType(factor type): float
 	}
 
-	/// <summary>
-	/// The pacing and constraints targets used for evaluation designed by designer. 
-	/// </summary>
-	public struct GamePacingTarget {
-		// Constraints for all segments. Local constraints are inside Pacing and are optional. 
-		public Constraints GlobalConstraints;
-		public List<SegmentPacing> Pacing;
+	public class Threat : Aspect {
+		// Additional Fields ==========
+		//ThreatFactors
 
-		// For visualizations.  
-		public AnimationCurve ThreatCurve;
-		public AnimationCurve TempoCurve;
+		// Additional Methods ==========	
+	}
+	public class Tempo : Aspect {
+		// Additional Fields ==========
+		//TempoFactors
+
+		// Additional Methods ==========
 	}
 
-	/// <summary>
-	/// The main script that manages the pacing integration, including: 
-	/// 1. Collects gameplay data and convert to pacing variables. 
-	/// 2. Calculates pacing aspects (threat and tempo) using factor formulas.
-	/// [Todo] 3. Evaluates the pacing against the target. 
-	/// [Todo] 4. Provides the pacing information for further purposes, including pacing curve visualization.
-	/// </summary>
-	public class PacingController: MonoBehaviour {
-		// Target pacing and history pacing. Gameplay data are stored in PacingHistory.GameplayData. 
-		#region Pacing Target and History
-		public GamePacingHistory PacingHistory;
-		public GamePacingTarget PacingTarget;
-		#endregion
+	// Option 1 implementation of factors
+	public struct ThreatFactors
+	{
+		// Fields ==========
+		//Collision: float getter // Call EvaluateCollision()
+		//DashSkill: float getter // Call EvaluateDashSkill()
+		//Angle: float getter // Call EvaluateAngle()
+		//SafeDistance: float getter // Call EvaluateSafeDistance()
+		
+		//Weight Collision: float 
+		//Weight DashSkill: float 
+		//Weight Angle: float 
+		//Weight SafeDistance: float
+		//TotalWeights: float getter // return sum of all weights. 
 
-		// Runtime configurations. 
-		#region Runtime Configs
-		public float SegmentDuration = 1f;
-		private float battleDuration = 60f;
-		private SumoAPI api;
-		private List<ISumoAction> originalActions = new();
-		private List<ISumoAction> pacedActions = new();
-		private int currentSegmentIndex = -1;
-		private SegmentGameplayData currentGameplayData; 
-		private SegmentPacing currentSegmentPacing;
-		#endregion
-
-		public void Init(SumoAPI api) {
-			// [Todo 1] Initialize all the variables. Also duplicate the constraints from target to currentSegmentPacing and PacingTarget for later use.
-
-			// [Delete]
-			//PacingsTarget.Clear();
-			//PacingsHistory.Clear();
-			//TargetThreats = new();
-			//TargetTempos = new();
-			//HistoryThreats = new();
-			//HistoryTempos = new();
-			//SegmentDuration = 1f;
-			//currentSegmentIndex = -1;
-			//battleDuration = api.BattleInfo.Duration;
-			//this.api = api;
-			//originalActions.Clear();
-			//pacedActions.Clear();
-			//pacingSegmentsInfo.Clear();
-		}
-
-		// [Todo 2] Implement all Register functions from currentGameplayData. 
-
-		// [Todo 3] Check this function. We need to finalize the segment when the segment changes.
-		private void FinalizeSegment(float elapsed, int segmentIndex) {
-			if (PacingHistory.Pacing.Count == 0 && currentSegmentIndex < 0)
-				return;
-
-			currentSegmentPacing.Reset();
-			currentSegmentIndex = segmentIndex;
-
-			// [Todo 5] After currentSegmentData is populated on the Tick(), sample pacing variables from gameplay data into currentSegmentPacing.
-
-			// [Todo 6] In that currentSegmentPacing, compute pacing factors and aspects from the variables; use the constraints from target for the normalization. 
-			// then add the data into PacingHistory.
-			// For further experiment, we can also resolve the specific constraints for specific bot. 
-
-			// [Todo 7] Update the pacing curves for visualization. 
-
-			// [Todo 8] Evaluate the actual pacing with the target. 
-			// EvaluateTarget(segment);
-		}
-
-		// Call this function every game tick to update gameplay data.
-		public void Tick() {
-			float elapsed = Mathf.Clamp(api.BattleInfo.Duration - api.BattleInfo.TimeLeft, 0f, battleDuration);
-			int segmentIndex = Mathf.FloorToInt(elapsed / SegmentDuration);
-
-			if (segmentIndex != currentSegmentIndex) 
-				FinalizeSegment(elapsed, segmentIndex);
-
-			// [Todo 4] Populate currentSegmentData from api using register functions.
-		}
-
-		// [Todo 9]
-		// Resolve the constraints according the segment index, then solve the blending between global and local constraints. 
-		//private SegmentPacing.Constraints ResolveConstraints(int segmentIndex) {
-		//	// [Todo] Resolve different constraints for different bots here. 
-		//	return null;
-		//}
-		//private static PacingConstraints BlendConstraints(PacingConstraints global, PacingConstraints local, float weight) {
-		//	// Handle local and global constraints blending. 
-		//	return null;
-		//}
-
-		private static MinMax Lerp(MinMax a, MinMax b, float t) {
-			return new MinMax {
-				min = Mathf.Lerp(a.min, b.min, t),
-				max = Mathf.Lerp(a.max, b.max, t)
-			};
-		}
-
-		// ================================================
-
-		private static float Normalize(float value, MinMax range) {
-			float denom = range.max - range.min;
-			if (Mathf.Approximately(denom, 0f)) return 0.5f;
-			float normalized = (value - range.min) / denom;
-			return Mathf.Clamp01(normalized);
-		}
-
-		private static float DistanceToEdge(Vector2 position, BattleInfoAPI battleInfo) {
-			float distToCenter = Vector2.Distance(position, battleInfo.ArenaPosition);
-			return Mathf.Max(0f, battleInfo.ArenaRadius - distToCenter);
-		}
-
-		private static float FacingDelta(float myAverageAngle, float enemyAverageAngle) {
-			float enemyFacingMe = Mathf.InverseLerp(180f, 0f, enemyAverageAngle);
-			float iAmBehindEnemy = 1f - Mathf.InverseLerp(180f, 0f, myAverageAngle);
-			return Mathf.Clamp01(enemyFacingMe * iAmBehindEnemy);
-		}
-
-		public float EvaluateTarget(float elapsed, float battleDuration) {
-			//	float duration = referenceDuration > 0f ? referenceDuration : Mathf.Max(1f, battleDuration);
-			//	float t = Mathf.Clamp01(elapsed / duration);
-
-			//	return pattern switch {
-			//		PacingPattern.ConstantLow => constantLow,
-			//		PacingPattern.ConstantBalanced => constantBalanced,
-			//		PacingPattern.ConstantHigh => constantHigh,
-			//		PacingPattern.LinearIncrease => t,
-			//		PacingPattern.LinearDecrease => 1f - t,
-			//		PacingPattern.ExponentialIncrease => Mathf.Pow(t, exponentialK),
-			//		PacingPattern.ExponentialDecrease => 1f - Mathf.Pow(t, exponentialK),
-			//		_ => Mathf.Clamp01(customCurve.Evaluate(t)),
-			//	};
-			return 0;
-		}
+		// Methods ==========
+		//Constructor(weights)
+		//EvaluateCollision(segmentdata, constraint): float  // Not necessary to make segmentdata and constraint as fields.
+		//EvaluateDashSkill(segmentdata, constraint): float 
+		//EvaluateAngle(segmentdata, constraint): float 
+		//EvaluateSafeDistance(segmentdata, constraint): float 
 	}
+
+	public struct TempoFactors 
+	{
+		// Fields ==========
+		//ActionIntensity: float getter
+		//ActionDensity: float getter 
+		//BotsDistance: float getter 
+		//Velocity: float getter
+
+		//Weight ActionIntensity: float 
+		//Weight ActionDensity: float 
+		//Weight BotsDistance: float 
+		//Weight Velocity: float
+
+		// Methods ==========
+		//Constructor(weights)
+		//EvaluateActionIntensity(segmentdata, constraint): float // Not necessary to make segmentdata and constraint as fields. 
+		//EvaluateActionDensity(segmentdata, constraint): float
+		//EvaluateBotDistance(segmentdata, constraint): float
+		//EvaluateVelocity(segmentdata, constraint): float
+	}
+
+	// Implement Threat, Tempo: Aspect. // [Note] Implement 4 Factors each in child class of Aspect {Threat, Tempo}. // // Implement segmentgameplaydata as a field. Implement constraints ? 
+	// Implement Collision, Skill, Angle, SafeDistance, ActionIntensity, ActionDensity, Velocity, BotsDistance: Factor. // Implement segmentgameplaydata as a field. Implement constraint ?
+
 
 }
+
