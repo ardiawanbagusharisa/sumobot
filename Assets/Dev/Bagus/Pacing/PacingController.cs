@@ -1,6 +1,3 @@
-// Notes: 
-// - Consider to remove the use of variables, as we can directly calculate the pacing factors from the segmentdata. 
-
 using UnityEngine;
 
 namespace PacingFramework 
@@ -26,12 +23,12 @@ namespace PacingFramework
 		//Register functions of GameplayData -> few Register functions to register the raw data into currentGameplayData.
 
 		//Tick(): void // Act like update for each game tick to allow register functions calling on currentGameplayData.
-		//If a segment is reached, finalize the segment by populating the variables, compute pacing factors, and compute pacing aspect using finalize segment methods.
+		//If a segment is reached, finalize the segment by populating the variables in segmentgameplaydata, compute pacing factors, and compute pacing aspect using finalize segment methods.
 		//Then debug/ visualize it using debugpacing().
 		//Later on we can also evaluate the pacing and actions using evaluation methods. 
 
 		// Finalize Segment Methods ==========
-		//PopulateVariables(): void // After currentSegmentData is registered and a segment is reached, sample pacing variables it into currentSegmentPacing.Variables.
+		//PopulateSegmentGameplayData(): void // After currentSegmentData is registered and a segment is reached, ready for factor calculations. 
 		//ComputeFactors(): void // Compute the pacing factors in currentsegmentpacing.Factors. Here, we need constraints for normalization and some helper functions from constraints: blending between global and local, or for each bot. 
 		//ComputePacingAspect(): void // Compute the pacing aspect threat and tempo in currentsegmentpacing.Aspects and add data into pacinghistory.segmentgameplaydata and pacinghistory.pacing. 
 		//DebugPacing(): void // Debug or visualize to console the details of pacing and segmentgameplaydata. 
@@ -166,6 +163,7 @@ namespace PacingFramework
 		// Fields ==========
 		//Threat aspect: Aspect 
 		//Tempo aspect: Aspect 
+		//Constraints: Constraintsset [optional]
 
 		// Methods ==========
 		//GetOverallPacing(): float
@@ -179,6 +177,7 @@ namespace PacingFramework
 		
 		// Private fields
 		//GameplayData: SegmentGameplayData
+		//Constraints: Constraintsset [optional]
 
 		// Methods ==========	
 		//Constructor(SegmentGameplayData) 
@@ -245,10 +244,5 @@ namespace PacingFramework
 		//EvaluateBotDistance(segmentdata, constraint): float
 		//EvaluateVelocity(segmentdata, constraint): float
 	}
-
-	// Implement Threat, Tempo: Aspect. // [Note] Implement 4 Factors each in child class of Aspect {Threat, Tempo}. // // Implement segmentgameplaydata as a field. Implement constraints ? 
-	// Implement Collision, Skill, Angle, SafeDistance, ActionIntensity, ActionDensity, Velocity, BotsDistance: Factor. // Implement segmentgameplaydata as a field. Implement constraint ?
-
-
 }
 
