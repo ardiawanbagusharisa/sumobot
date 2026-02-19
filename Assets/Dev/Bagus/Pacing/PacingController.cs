@@ -125,9 +125,11 @@ namespace PacingFramework
 		HitCollision, Ability, Angle, SafeDistance,				// Threat factors
 		ActionIntensity, ActionDensity, BotsDistance, Velocity  // Tempo factors
 	}
+
 	// ==========================================================
 	// DATA CONTAINERS CLASSES
 	// ==========================================================
+	
 	public class GamePacing
 	{
 		public List<SegmentGameplayData> SegmentGameplayDatas = new();
@@ -243,85 +245,247 @@ namespace PacingFramework
 
 	public class Threat : Aspect
 	{
-		public Threat(SegmentGameplayData data, ConstraintSet constraints)
-			: base(data, constraints) { }
+		public Threat(SegmentGameplayData data, ConstraintSet constraints): base(data, constraints) 
+		{
+			Factors.Add(new Factor(FactorType.HitCollision, 1f));
+			Factors.Add(new Factor(FactorType.Ability, 1f));
+			Factors.Add(new Factor(FactorType.Angle, 1f));
+			Factors.Add(new Factor(FactorType.SafeDistance, 1f));
+			Calculate();
 
-		protected override void Calculate() {
-			// [Todo] Extract the logic of each factor evaluation into separate methods for better readability and maintainability. Each factor has its own weight. 
-			float collision = constraints.Collision.Normalize(data.Collisions.Count);
-			float dash = constraints.DashSkill.Normalize(
-				data.Actions.Count(a => a == ActionType.Dash || a == ActionType.SkillBoost)
-			);
+			//factors.Add(new CollisionFactor(1f));
+			//factors.Add(new DashFactor(1f));
+			//factors.Add(new AngleFactor(1f));
+			//factors.Add(new SafeDistanceFactor(1f));
+			//Calculate();
 
-			float angle = data.Angles.Count > 0
-				? constraints.Angle.Normalize(data.Angles.Average())
-				: 0f;
-
-			float safeDistance = data.SafeDistances.Count > 0
-				? 1f - constraints.SafeDistance.Normalize(data.SafeDistances.Average())
-				: 0f;
-
-			Value = (collision + dash + angle + safeDistance) / 4f;
+			// or 
+			//factors.Add(CreateFactor(FactorType.HitCollision, 1f));
+			//factors.Add(CreateFactor(FactorType.Ability, 1f));
+			//factors.Add(CreateFactor(FactorType.Angle, 1f));
+			//factors.Add(CreateFactor(FactorType.SafeDistance, 1f));
+			//Calculate();
 		}
 	}
 
 	public class Tempo : Aspect
 	{
-		public Tempo(SegmentGameplayData data, ConstraintSet constraints)
-			: base(data, constraints) { }
+		public Tempo(SegmentGameplayData data, ConstraintSet constraints): base(data, constraints) 
+		{ 
+			Factors.Add(new Factor(FactorType.ActionIntensity, 1f));
+			Factors.Add(new Factor(FactorType.ActionDensity, 1f));
+			Factors.Add(new Factor(FactorType.BotsDistance, 1f));
+			Factors.Add(new Factor(FactorType.Velocity, 1f));
+			Calculate();
+		}
+	}
 
-		// [Todo] Extract the logic of each factor evaluation into separate methods for better readability and maintainability. Each factor has its own weight. 
-		protected override void Calculate() {
-			float actionIntensity = constraints.ActionIntensity.Normalize(data.Actions.Count);
+	// ==========================================================
+	// FACTOR CLASSES
+	// ==========================================================
 
-			float actionDensity = 0f;
-			if (data.Actions.Count > 0) {
+	public class Factor {
+		public FactorType Type { get; private set; }
+		public float Weight { get; private set; }
+		public Factor(FactorType type, float weight) {
+			Type = type;
+			Weight = weight;
+		}
+		public float Evaluate(SegmentGameplayData data, ConstraintSet constraints) {
+			float score = 0f;
+
+			if (Type == FactorType.HitCollision)
+				score = constraints.Collision.Normalize(data.Collisions.Count);
+			else if (Type == FactorType.Ability)
+				score = constraints.DashSkill.Normalize(data.Actions.Count(a => a == ActionType.Dash || a == ActionType.SkillBoost));
+			else if (Type == FactorType.Angle)
+				score = data.Angles.Count > 0 ? constraints.Angle.Normalize(data.Angles.Average()) : 0f;
+			else if (Type == FactorType.SafeDistance)
+				score = data.SafeDistances.Count > 0 ? 1f - constraints.SafeDistance.Normalize(data.SafeDistances.Average()) : 0f;
+			else if (Type == FactorType.ActionIntensity)
+				score = constraints.ActionIntensity.Normalize(data.Actions.Count);
+			else if (Type == FactorType.ActionDensity) {
+				if (data.Actions.Count == 0) return 0f;
 				var counts = data.GetActionCounts();
 				float total = data.Actions.Count;
 				float entropy = 0f;
-
 				foreach (var c in counts.Values) {
 					float p = c / total;
 					entropy -= p * Mathf.Log(p);
 				}
+				score = constraints.ActionDensity.Normalize(entropy);
+			} else if (Type == FactorType.BotsDistance)
+				score = data.BotsDistances.Count > 0 ? 1f - constraints.BotsDistance.Normalize(data.BotsDistances.Average()) : 0f;
+			else if (Type == FactorType.Velocity)
+				score = data.Velocities.Count > 0 ? constraints.Velocity.Normalize(data.Velocities.Average()) : 0f;
+			else
+				throw new ArgumentException("Invalid factor type");
 
-				actionDensity = constraints.ActionDensity.Normalize(entropy);
-			}
-
-			float botDistance = data.BotsDistances.Count > 0
-				? 1f - constraints.BotsDistance.Normalize(data.BotsDistances.Average())
-				: 0f;
-
-			float velocity = data.Velocities.Count > 0
-				? constraints.Velocity.Normalize(data.Velocities.Average())
-				: 0f;
-
-			Value = (actionIntensity + actionDensity + botDistance + velocity) / 4f;
+			return score;
 		}
+		
+		// [Todo] Define all factor evaluation functions here. 
 	}
+
+	//public class CollisionFactor : IFactor
+	//{
+	//	public FactorType Type => FactorType.HitCollision;
+	//	public float Weight { get; private set; }
+
+	//	public CollisionFactor(float weight) {
+	//		Weight = weight;
+	//	}
+
+	//	public float Evaluate(SegmentGameplayData data, ConstraintSet constraints) {
+	//		return constraints.Collision.Normalize(data.Collisions.Count);
+	//	}
+	//}
+
+	//public class DashFactor: IFactor 
+	//{
+	//	public FactorType Type => FactorType.Ability;
+	//	public float Weight { get; private set; }
+	//	public DashFactor(float weight) {
+	//		Weight = weight;
+	//	}
+	//	public float Evaluate(SegmentGameplayData data, ConstraintSet constraints) {
+	//		//return constraints.DashSkill.Normalize(data.Actions.Count(a => a == ActionType.Dash || a == ActionType.SkillBoost));
+	//	}
+	//}
+
+	//public class AngleFactor : IFactor
+	//{
+	//	public FactorType Type => FactorType.Angle;
+	//	public float Weight { get; private set; }
+	//	public AngleFactor(float weight) {
+	//		Weight = weight;
+	//	}
+	//	public float Evaluate(SegmentGameplayData data, ConstraintSet constraints) {
+	//		//return data.Angles.Count > 0 ? constraints.Angle.Normalize(data.Angles.Average()) : 0f;
+	//	}
+	//}
+
+	//public class SafeDistanceFactor : IFactor
+	//{
+	//	public FactorType Type => FactorType.SafeDistance;
+	//	public float Weight { get; private set; }
+	//	public SafeDistanceFactor(float weight) {
+	//		Weight = weight;
+	//	}
+	//	public float Evaluate(SegmentGameplayData data, ConstraintSet constraints) {
+	//		//return data.SafeDistances.Count > 0 ? 1f - constraints.SafeDistance.Normalize(data.SafeDistances.Average()) : 0f;
+	//	}
+	//}
+
+	//public class ActionIntensityFactor : IFactor
+	//{
+	//	public FactorType Type => FactorType.ActionIntensity;
+	//	public float Weight { get; private set; }
+	//	public ActionIntensityFactor(float weight) {
+	//		Weight = weight;
+	//	}
+	//	public float Evaluate(SegmentGameplayData data, ConstraintSet constraints) {
+	//		//return constraints.ActionIntensity.Normalize(data.Actions.Count);
+	//	}
+	//}
+
+	//public class ActionDensityFactor : IFactor
+	//{
+	//	public FactorType Type => FactorType.ActionDensity;
+	//	public float Weight { get; private set; }
+	//	public ActionDensityFactor(float weight) {
+	//		Weight = weight;
+	//	}
+	//	public float Evaluate(SegmentGameplayData data, ConstraintSet constraints) {
+	//		// [Todo] Implement the logic to calculate action density based on the distribution of action types. 
+	//	}
+	//}
+
+	//public class BotsDistanceFactor : IFactor
+	//{
+	//	public FactorType Type => FactorType.BotsDistance;
+	//	public float Weight { get; private set; }
+	//	public BotsDistanceFactor(float weight) {
+	//		Weight = weight;
+	//	}
+	//	public float Evaluate(SegmentGameplayData data, ConstraintSet constraints) {
+	//		//return data.BotsDistances.Count > 0 ? 1f - constraints.BotsDistance.Normalize(data.BotsDistances.Average()) : 0f;
+	//	}
+	//}
+
+	//public class VelocityFactor : IFactor
+	//{
+	//	public FactorType Type => FactorType.Velocity;
+	//	public float Weight { get; private set; }
+	//	public VelocityFactor(float weight) {
+	//		Weight = weight;
+	//	}
+	//	public float Evaluate(SegmentGameplayData data, ConstraintSet constraints) {
+	//		//return data.Velocities.Count > 0 ? constraints.Velocity.Normalize(data.Velocities.Average()) : 0f;
+	//	}
+	//}
+
+	// ==========================================================
+	// BASE CLASSES
+	// ==========================================================
 
 	public abstract class Aspect
 	{
-		protected SegmentGameplayData data;
-		protected ConstraintSet constraints;
+		protected SegmentGameplayData Data;
+		protected ConstraintSet Constraints;
+		protected List<Factor> Factors = new();
 
 		public float Value { get; protected set; }
 		// [Todo]
 		//Weight: float 
 
 		public Aspect(SegmentGameplayData data, ConstraintSet constraints) {
-			this.data = data;
-			this.constraints = constraints;
+			Data = data;
+			Constraints = constraints;
 			Calculate();
 		}
 
-		protected abstract void Calculate();
+		protected virtual void Calculate() {
+			float weightedSum = 0f;
+			float totalWeight = 0f;
+
+			foreach (var f in Factors) {
+				float v = f.Evaluate(Data, Constraints);
+				weightedSum += v * f.Weight;
+				totalWeight += f.Weight;
+			}
+
+			Value = totalWeight > 0 ? weightedSum / totalWeight : 0f;
+		}
+
+		//public static IFactor CreateFactor(FactorType type, float weight) {
+		//	return type switch {
+		//		FactorType.HitCollision => new CollisionFactor(weight),
+		//		FactorType.Ability => new DashFactor(weight),
+		//		FactorType.Angle => new AngleFactor(weight),
+		//		FactorType.SafeDistance => new SafeDistanceFactor(weight),
+		//		FactorType.ActionIntensity => new ActionIntensityFactor(weight),
+		//		FactorType.ActionDensity => new ActionDensityFactor(weight),
+		//		FactorType.BotsDistance => new BotsDistanceFactor(weight),
+		//		FactorType.Velocity => new VelocityFactor(weight),
+		//		_ => throw new ArgumentException("Invalid factor type")
+		//	};
+		//}
+
 		// [Todo] Implement factor weights and GetWeightByType(FactorType) to get the weight of each factor. 
 	}
-	
+
+	public interface IFactor 
+	{ 
+		FactorType Type { get; }
+		float Weight { get; }
+		float Evaluate(SegmentGameplayData data, ConstraintSet constraints);
+	}
+
 	// ====================================================================================
 
 	// Possible implementation of factors
+	
 	public struct ThreatFactors
 	{
 		// Fields ==========
