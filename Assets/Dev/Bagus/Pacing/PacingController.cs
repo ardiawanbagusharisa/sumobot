@@ -13,7 +13,7 @@ namespace PacingFramework
 		public float segmentDuration = 2f;
 		private float timer;
 
-		private SegmentGameplayData currentGameplayData;
+		private SegmentData currentGameplayData;
 		private SegmentPacing currentSegmentPacing;
 
 		private GamePacing pacingHistory = new GamePacing();
@@ -25,12 +25,15 @@ namespace PacingFramework
 		//Original Actions: <SumoAction> 
 		//Paced Actions: <SumoAction> 
 
+		// Test Fields
+		private int segmentIndex = 1;
+
 		// ================================
 		// Unity
 		// ================================
 		private void Start() {
 			Init();
-			TestSimulation(); // Auto test at start
+			//TestSimulation(); // Auto test at start
 		}
 
 		private void Update() {
@@ -42,11 +45,11 @@ namespace PacingFramework
 		// Core Methods
 		// ================================
 		public void Init() {
-			currentGameplayData = new SegmentGameplayData();
+			currentGameplayData = new SegmentData();
 			timer = 0f;
 		}
 
-		// [Todo] Remove deltaTime parameter.
+		// [Todo] Remove deltaTime parameter. Then call every game tick. 
 		public void Tick(float deltaTime) { 
 			timer += deltaTime;
 
@@ -60,50 +63,60 @@ namespace PacingFramework
 		private void FinalizeSegment() {
 			// [Todo] Handle segment's local constraints if needed. 
 			currentSegmentPacing = new SegmentPacing(currentGameplayData, pacingTarget.GlobalConstraints);
-			pacingHistory.SegmentGameplayDatas.Add(new SegmentGameplayData(currentGameplayData));
+			pacingHistory.SegmentGameplayDatas.Add(new SegmentData(currentGameplayData));
 			pacingHistory.SegmentPacings.Add(currentSegmentPacing);
 
+			// Test 
 			DebugPacing(currentSegmentPacing);
-		}
-
-		private void DebugPacing(SegmentPacing pacing) {
-			Debug.Log("===== SEGMENT FINALIZED =====");
-			Debug.Log("Threat: " + pacing.ThreatAspect.Value);
-			Debug.Log("Tempo: " + pacing.TempoAspect.Value);
-			Debug.Log("Overall: " + pacing.GetOverallPacing());
+			DebugSegmentData(currentGameplayData);
+			segmentIndex++;
 		}
 
 		// ================================
 		// Test Functions
 		// ================================
+
+		private void DebugPacing(SegmentPacing pacing) {
+			Debug.Log($"===== SEGMENT {segmentIndex} FINALIZED =====");
+			Debug.Log("PACING --> Threat: " + pacing.Threat.Value + ", Tempo: " + pacing.Tempo.Value + ", Overall: " + pacing.GetOverallPacing());
+		}
+
+		private void DebugSegmentData(SegmentData data) {
+			Debug.Log("SEGMENT DATA [Counts] --> " + "Collisions: " + data.Collisions.Count + "; Angles: " + data.Angles.Count + 
+				"; SafeDistances: " + data.SafeDistances.Count + "; Actions: " + data.Actions.Count + 
+				"; BotsDistances: " + data.BotsDistances.Count + "; Velocities: " + data.Velocities.Count);
+		} 
+
 		public void TestSimulation() {
 			Debug.Log("Running Pacing Test Simulation...");
 
 			for (int i = 0; i < 20; i++) {
-				currentGameplayData.RegisterCollision(CollisionType.Hit);
+				currentGameplayData.RegisterCollision((CollisionType)UnityEngine.Random.Range(0, Enum.GetValues(typeof(CollisionType)).Length));
 				currentGameplayData.RegisterAngle(UnityEngine.Random.Range(0f, 180f));
-				currentGameplayData.RegisterSafeDistance(UnityEngine.Random.Range(1f, 10f));
-				currentGameplayData.RegisterVelocity(UnityEngine.Random.Range(0f, 5f));
-				currentGameplayData.RegisterBotsDistance(UnityEngine.Random.Range(1f, 15f));
-
-				currentGameplayData.RegisterAction(
-					(ActionType)UnityEngine.Random.Range(0, Enum.GetValues(typeof(ActionType)).Length)
-				);
+				currentGameplayData.RegisterSafeDistance(UnityEngine.Random.Range(1f, 5f));
+				currentGameplayData.RegisterVelocity(UnityEngine.Random.Range(0f, 10f));
+				currentGameplayData.RegisterBotsDistance(UnityEngine.Random.Range(1f, 5f));
+				
+				int actions = UnityEngine.Random.Range(0, 50);
+				for (int j = 0; j < actions; j++) {
+					currentGameplayData.RegisterAction((ActionType)UnityEngine.Random.Range(0, Enum.GetValues(typeof(ActionType)).Length));
+				}
 			}
 
 			FinalizeSegment();
 		}
 
 		private void TestSimulationContinuous() {
-			currentGameplayData.RegisterCollision(CollisionType.Hit);
+			currentGameplayData.RegisterCollision((CollisionType)UnityEngine.Random.Range(0, Enum.GetValues(typeof(CollisionType)).Length));
 			currentGameplayData.RegisterAngle(UnityEngine.Random.Range(0f, 180f));
-			currentGameplayData.RegisterSafeDistance(UnityEngine.Random.Range(1f, 10f));
-			currentGameplayData.RegisterVelocity(UnityEngine.Random.Range(0f, 5f));
-			currentGameplayData.RegisterBotsDistance(UnityEngine.Random.Range(1f, 15f));
+			currentGameplayData.RegisterSafeDistance(UnityEngine.Random.Range(1f, 5f));
+			currentGameplayData.RegisterVelocity(UnityEngine.Random.Range(0f, 10f));
+			currentGameplayData.RegisterBotsDistance(UnityEngine.Random.Range(1f, 5f));
 
-			currentGameplayData.RegisterAction(
-				(ActionType)UnityEngine.Random.Range(0, Enum.GetValues(typeof(ActionType)).Length)
-			);
+			int actions = UnityEngine.Random.Range(0, 50);
+			for (int i = 0; i < actions; i++) {
+				currentGameplayData.RegisterAction((ActionType)UnityEngine.Random.Range(0, Enum.GetValues(typeof(ActionType)).Length));
+			}
 		}
 
 		// [Todo] 
@@ -132,7 +145,7 @@ namespace PacingFramework
 	
 	public class GamePacing
 	{
-		public List<SegmentGameplayData> SegmentGameplayDatas = new();
+		public List<SegmentData> SegmentGameplayDatas = new();
 		public List<SegmentPacing> SegmentPacings = new(); 
 	}
 
@@ -161,21 +174,33 @@ namespace PacingFramework
 		}
 	}
 
-	public class ConstraintSet
-	{
+	public class ConstraintSet {
 		// Threat constraints
-		public Constraint Collision = new(0, 10);
-		public Constraint Angle = new(0, 180);
-		public Constraint SafeDistance = new(0, 20);
-		public Constraint DashSkill = new(0, 10);
+		public Constraint CollisionRatio;       // Ratio of hit collision among all collisions.
+		public Constraint AbilityRatio;         // Ratio of ability usage among all actions.
+		public Constraint Angle;                // Average angle between the bot and its opponents when they collide or are close.
+		public Constraint SafeDistance;         // Average distance between the bot and its opponents when they collide or are close.
 		// Tempo constraints
-		public Constraint ActionIntensity = new(0, 20);
-		public Constraint ActionDensity = new(0, 3);
-		public Constraint BotsDistance = new(0, 20);
-		public Constraint Velocity = new(0, 10);
+		public Constraint ActionIntensity;      // Number of actions performed by the bot.
+		public Constraint ActionDensity;        // Entropy of the action distribution.
+		public Constraint BotsDistance;         // Average distance between the bot and its opponents.
+		public Constraint Velocity;             // Average velocity of the bot.
+
+		public ConstraintSet() {
+			// Defaults 
+			// [Todo] Need to carefully check at the simulated data from the Bot. Create a structure such as ScriptableObject to easily configure constraints for all bots. 
+			CollisionRatio = new(0, 1);
+			AbilityRatio = new(0, 0.2f);
+			Angle = new(0, 180);
+			SafeDistance = new(1, 5);
+			ActionIntensity = new(0, 50);
+			ActionDensity = new(0, 1);
+			BotsDistance = new(1, 5);
+			Velocity = new(0, 10);
+		}
 	}
 
-	public class SegmentGameplayData
+	public class SegmentData
 	{
 		// Threat fields
 		public List<CollisionType> Collisions = new();
@@ -187,9 +212,9 @@ namespace PacingFramework
 		public List<float> BotsDistances = new();
 		public List<float> Velocities = new();
 
-		public SegmentGameplayData() { }
+		public SegmentData() { }
 
-		public SegmentGameplayData(SegmentGameplayData other) {
+		public SegmentData(SegmentData other) {
 			Collisions = new(other.Collisions);
 			Angles = new(other.Angles);
 			SafeDistances = new(other.SafeDistances);
@@ -207,8 +232,8 @@ namespace PacingFramework
 			Velocities.Clear();
 		}
 
-		// [Todo] add SumoAPI as parameter or as field. 
-		// Register functions to add data to the fields. 
+		// [Todo] Add SumoAPI as parameter or as field. 
+		// Register functions to add data to the fields. Call these functions when the corresponding events happen in the game.
 		public void RegisterCollision(CollisionType type) => Collisions.Add(type);
 		public void RegisterAngle(float angle) => Angles.Add(angle);
 		public void RegisterSafeDistance(float d) => SafeDistances.Add(d);
@@ -218,59 +243,44 @@ namespace PacingFramework
 
 		// Helper functions
 		public Dictionary<ActionType, int> GetActionCounts() {
-			return Actions.GroupBy(a => a)
-						  .ToDictionary(g => g.Key, g => g.Count());
+			return Actions.GroupBy(a => a).ToDictionary(g => g.Key, g => g.Count());
 		}
 
 		public Dictionary<CollisionType, int> GetCollisionCounts() {
-			return Collisions.GroupBy(c => c)
-							 .ToDictionary(g => g.Key, g => g.Count());
+			return Collisions.GroupBy(c => c).ToDictionary(g => g.Key, g => g.Count());
 		}
 	}
 
 	public class SegmentPacing
 	{
-		public Threat ThreatAspect;
-		public Tempo TempoAspect;
+		public ThreatAspect Threat;
+		public TempoAspect Tempo;
 
-		public SegmentPacing(SegmentGameplayData data, ConstraintSet constraints) {
-			ThreatAspect = new Threat(data, constraints);
-			TempoAspect = new Tempo(data, constraints);
+		public SegmentPacing(SegmentData data, ConstraintSet constraints) {
+			Threat = new ThreatAspect(data, constraints);
+			Tempo = new TempoAspect(data, constraints);
 		}
 
 		public float GetOverallPacing() {
-			return (ThreatAspect.Value + TempoAspect.Value) / 2f;
+			return (Threat.Value * Threat.Weight + Tempo.Value * Tempo.Weight) / (Threat.Weight + Tempo.Weight);
 		}
 	}
 
-	public class Threat : Aspect
+	public class ThreatAspect : Aspect
 	{
-		public Threat(SegmentGameplayData data, ConstraintSet constraints): base(data, constraints) 
+		public ThreatAspect(SegmentData data, ConstraintSet constraints): base(data, constraints) 
 		{
 			Factors.Add(new Factor(FactorType.HitCollision, 1f));
 			Factors.Add(new Factor(FactorType.Ability, 1f));
 			Factors.Add(new Factor(FactorType.Angle, 1f));
 			Factors.Add(new Factor(FactorType.SafeDistance, 1f));
 			Calculate();
-
-			//factors.Add(new CollisionFactor(1f));
-			//factors.Add(new DashFactor(1f));
-			//factors.Add(new AngleFactor(1f));
-			//factors.Add(new SafeDistanceFactor(1f));
-			//Calculate();
-
-			// or 
-			//factors.Add(CreateFactor(FactorType.HitCollision, 1f));
-			//factors.Add(CreateFactor(FactorType.Ability, 1f));
-			//factors.Add(CreateFactor(FactorType.Angle, 1f));
-			//factors.Add(CreateFactor(FactorType.SafeDistance, 1f));
-			//Calculate();
 		}
 	}
 
-	public class Tempo : Aspect
+	public class TempoAspect : Aspect
 	{
-		public Tempo(SegmentGameplayData data, ConstraintSet constraints): base(data, constraints) 
+		public TempoAspect(SegmentData data, ConstraintSet constraints): base(data, constraints) 
 		{ 
 			Factors.Add(new Factor(FactorType.ActionIntensity, 1f));
 			Factors.Add(new Factor(FactorType.ActionDensity, 1f));
@@ -280,10 +290,6 @@ namespace PacingFramework
 		}
 	}
 
-	// ==========================================================
-	// FACTOR CLASSES
-	// ==========================================================
-
 	public class Factor {
 		public FactorType Type { get; private set; }
 		public float Weight { get; private set; }
@@ -291,155 +297,100 @@ namespace PacingFramework
 			Type = type;
 			Weight = weight;
 		}
-		public float Evaluate(SegmentGameplayData data, ConstraintSet constraints) {
+
+		public float Evaluate(SegmentData data, ConstraintSet constraints) {
 			float score = 0f;
 
 			if (Type == FactorType.HitCollision)
-				score = constraints.Collision.Normalize(data.Collisions.Count);
+				score = EvaluateHitCollision(data, constraints);
 			else if (Type == FactorType.Ability)
-				score = constraints.DashSkill.Normalize(data.Actions.Count(a => a == ActionType.Dash || a == ActionType.SkillBoost));
+				score = EvaluateAbility(data, constraints);
 			else if (Type == FactorType.Angle)
-				score = data.Angles.Count > 0 ? constraints.Angle.Normalize(data.Angles.Average()) : 0f;
+				score = EvaluateAngle(data, constraints);
 			else if (Type == FactorType.SafeDistance)
-				score = data.SafeDistances.Count > 0 ? 1f - constraints.SafeDistance.Normalize(data.SafeDistances.Average()) : 0f;
+				score = EvaluateSafeDistance(data, constraints);
 			else if (Type == FactorType.ActionIntensity)
-				score = constraints.ActionIntensity.Normalize(data.Actions.Count);
+				score = EvaluateActionIntensity(data, constraints);
 			else if (Type == FactorType.ActionDensity) {
-				if (data.Actions.Count == 0) return 0f;
-				var counts = data.GetActionCounts();
-				float total = data.Actions.Count;
-				float entropy = 0f;
-				foreach (var c in counts.Values) {
-					float p = c / total;
-					entropy -= p * Mathf.Log(p);
-				}
-				score = constraints.ActionDensity.Normalize(entropy);
+				score = EvaluateActionDensity(data, constraints);
 			} else if (Type == FactorType.BotsDistance)
-				score = data.BotsDistances.Count > 0 ? 1f - constraints.BotsDistance.Normalize(data.BotsDistances.Average()) : 0f;
+				score = EvaluateBotsDistance(data, constraints);
 			else if (Type == FactorType.Velocity)
-				score = data.Velocities.Count > 0 ? constraints.Velocity.Normalize(data.Velocities.Average()) : 0f;
+				score = EvaluateVelocity(data, constraints);
 			else
 				throw new ArgumentException("Invalid factor type");
 
 			return score;
 		}
-		
-		// [Todo] Define all factor evaluation functions here. 
+
+		// Evaluate the ratio of hit collision among all collisions.
+		private float EvaluateHitCollision(SegmentData data, ConstraintSet constraints) {
+			float hitCollisionCount = data.Collisions.Count(c => c == CollisionType.Hit);
+			float collisionCount = data.Collisions.Count;
+			float hitCollisionRatio = (collisionCount < constraints.CollisionRatio.Min) ? 0f : hitCollisionCount / collisionCount;
+			return constraints.CollisionRatio.Normalize(hitCollisionRatio);
+		}
+
+		// Evaluate the ratio of ability usage among all actions.
+		private float EvaluateAbility(SegmentData data, ConstraintSet constraints) {
+			float abilityCount = data.Actions.Count(a => a == ActionType.Dash || a == ActionType.SkillBoost || a == ActionType.SkillStone);
+			float abilityRatio = (data.Actions.Count < constraints.AbilityRatio.Min) ? 0f : abilityCount / data.Actions.Count;
+			return constraints.AbilityRatio.Normalize(abilityRatio);
+		}
+
+		// Evaluate the average angle between the bot and its opponents when they collide or are close.
+		private float EvaluateAngle(SegmentData data, ConstraintSet constraints) {
+			return data.Angles.Count > 0 ? constraints.Angle.Normalize(data.Angles.Average()) : 0f;
+		}
+
+		// Evaluate the average distance between the bot and its opponents when they collide or are close.
+		private float EvaluateSafeDistance(SegmentData data, ConstraintSet constraints) {
+			return data.SafeDistances.Count > 0 ? constraints.SafeDistance.Normalize(data.SafeDistances.Average()) : 0f;
+		}
+
+		// Evaluate the number of actions performed by the bot.
+		private float EvaluateActionIntensity(SegmentData data, ConstraintSet constraints) {
+			return constraints.ActionIntensity.Normalize(data.Actions.Count);
+		}
+
+		// Evaluate the entropy of the action distribution.
+		private float EvaluateActionDensity(SegmentData data, ConstraintSet constraints) {
+			if (data.Actions.Count == 0) return 0f;
+			var counts = data.GetActionCounts();
+			float total = data.Actions.Count;
+			float entropy = 0f;
+			foreach (var c in counts.Values) {
+				float p = c / total;
+				entropy -= p * Mathf.Log(p);
+			}
+			return constraints.ActionDensity.Normalize(entropy);
+		}
+
+		// Evaluate the average distance between the bot and its opponents.
+		private float EvaluateBotsDistance(SegmentData data, ConstraintSet constraints) {
+			return data.BotsDistances.Count > 0 ? 1f - constraints.BotsDistance.Normalize(data.BotsDistances.Average()) : 0f;
+		}
+
+		// Evaluate the average velocity of the bot.
+		private float EvaluateVelocity(SegmentData data, ConstraintSet constraints) {
+			return data.Velocities.Count > 0 ? constraints.Velocity.Normalize(data.Velocities.Average()) : 0f;
+		}
 	}
 
-	//public class CollisionFactor : IFactor
-	//{
-	//	public FactorType Type => FactorType.HitCollision;
-	//	public float Weight { get; private set; }
-
-	//	public CollisionFactor(float weight) {
-	//		Weight = weight;
-	//	}
-
-	//	public float Evaluate(SegmentGameplayData data, ConstraintSet constraints) {
-	//		return constraints.Collision.Normalize(data.Collisions.Count);
-	//	}
-	//}
-
-	//public class DashFactor: IFactor 
-	//{
-	//	public FactorType Type => FactorType.Ability;
-	//	public float Weight { get; private set; }
-	//	public DashFactor(float weight) {
-	//		Weight = weight;
-	//	}
-	//	public float Evaluate(SegmentGameplayData data, ConstraintSet constraints) {
-	//		//return constraints.DashSkill.Normalize(data.Actions.Count(a => a == ActionType.Dash || a == ActionType.SkillBoost));
-	//	}
-	//}
-
-	//public class AngleFactor : IFactor
-	//{
-	//	public FactorType Type => FactorType.Angle;
-	//	public float Weight { get; private set; }
-	//	public AngleFactor(float weight) {
-	//		Weight = weight;
-	//	}
-	//	public float Evaluate(SegmentGameplayData data, ConstraintSet constraints) {
-	//		//return data.Angles.Count > 0 ? constraints.Angle.Normalize(data.Angles.Average()) : 0f;
-	//	}
-	//}
-
-	//public class SafeDistanceFactor : IFactor
-	//{
-	//	public FactorType Type => FactorType.SafeDistance;
-	//	public float Weight { get; private set; }
-	//	public SafeDistanceFactor(float weight) {
-	//		Weight = weight;
-	//	}
-	//	public float Evaluate(SegmentGameplayData data, ConstraintSet constraints) {
-	//		//return data.SafeDistances.Count > 0 ? 1f - constraints.SafeDistance.Normalize(data.SafeDistances.Average()) : 0f;
-	//	}
-	//}
-
-	//public class ActionIntensityFactor : IFactor
-	//{
-	//	public FactorType Type => FactorType.ActionIntensity;
-	//	public float Weight { get; private set; }
-	//	public ActionIntensityFactor(float weight) {
-	//		Weight = weight;
-	//	}
-	//	public float Evaluate(SegmentGameplayData data, ConstraintSet constraints) {
-	//		//return constraints.ActionIntensity.Normalize(data.Actions.Count);
-	//	}
-	//}
-
-	//public class ActionDensityFactor : IFactor
-	//{
-	//	public FactorType Type => FactorType.ActionDensity;
-	//	public float Weight { get; private set; }
-	//	public ActionDensityFactor(float weight) {
-	//		Weight = weight;
-	//	}
-	//	public float Evaluate(SegmentGameplayData data, ConstraintSet constraints) {
-	//		// [Todo] Implement the logic to calculate action density based on the distribution of action types. 
-	//	}
-	//}
-
-	//public class BotsDistanceFactor : IFactor
-	//{
-	//	public FactorType Type => FactorType.BotsDistance;
-	//	public float Weight { get; private set; }
-	//	public BotsDistanceFactor(float weight) {
-	//		Weight = weight;
-	//	}
-	//	public float Evaluate(SegmentGameplayData data, ConstraintSet constraints) {
-	//		//return data.BotsDistances.Count > 0 ? 1f - constraints.BotsDistance.Normalize(data.BotsDistances.Average()) : 0f;
-	//	}
-	//}
-
-	//public class VelocityFactor : IFactor
-	//{
-	//	public FactorType Type => FactorType.Velocity;
-	//	public float Weight { get; private set; }
-	//	public VelocityFactor(float weight) {
-	//		Weight = weight;
-	//	}
-	//	public float Evaluate(SegmentGameplayData data, ConstraintSet constraints) {
-	//		//return data.Velocities.Count > 0 ? constraints.Velocity.Normalize(data.Velocities.Average()) : 0f;
-	//	}
-	//}
-
 	// ==========================================================
-	// BASE CLASSES
+	// BASE CLASS
 	// ==========================================================
 
 	public abstract class Aspect
 	{
-		protected SegmentGameplayData Data;
+		protected SegmentData Data;
 		protected ConstraintSet Constraints;
 		protected List<Factor> Factors = new();
 
 		public float Value { get; protected set; }
-		// [Todo]
-		//Weight: float 
+		public float Weight = 1f;
 
-		public Aspect(SegmentGameplayData data, ConstraintSet constraints) {
+		public Aspect(SegmentData data, ConstraintSet constraints) {
 			Data = data;
 			Constraints = constraints;
 			Calculate();
@@ -457,76 +408,5 @@ namespace PacingFramework
 
 			Value = totalWeight > 0 ? weightedSum / totalWeight : 0f;
 		}
-
-		//public static IFactor CreateFactor(FactorType type, float weight) {
-		//	return type switch {
-		//		FactorType.HitCollision => new CollisionFactor(weight),
-		//		FactorType.Ability => new DashFactor(weight),
-		//		FactorType.Angle => new AngleFactor(weight),
-		//		FactorType.SafeDistance => new SafeDistanceFactor(weight),
-		//		FactorType.ActionIntensity => new ActionIntensityFactor(weight),
-		//		FactorType.ActionDensity => new ActionDensityFactor(weight),
-		//		FactorType.BotsDistance => new BotsDistanceFactor(weight),
-		//		FactorType.Velocity => new VelocityFactor(weight),
-		//		_ => throw new ArgumentException("Invalid factor type")
-		//	};
-		//}
-
-		// [Todo] Implement factor weights and GetWeightByType(FactorType) to get the weight of each factor. 
-	}
-
-	public interface IFactor 
-	{ 
-		FactorType Type { get; }
-		float Weight { get; }
-		float Evaluate(SegmentGameplayData data, ConstraintSet constraints);
-	}
-
-	// ====================================================================================
-
-	// Possible implementation of factors
-	
-	public struct ThreatFactors
-	{
-		// Fields ==========
-		//Collision: float getter // Call EvaluateCollision()
-		//DashSkill: float getter // Call EvaluateDashSkill()
-		//Angle: float getter // Call EvaluateAngle()
-		//SafeDistance: float getter // Call EvaluateSafeDistance()
-
-		//Weight Collision: float 
-		//Weight DashSkill: float 
-		//Weight Angle: float 
-		//Weight SafeDistance: float
-		//TotalWeights: float getter // return sum of all weights. 
-
-		// Methods ==========
-		//Constructor(weights)
-		//EvaluateCollision(segmentdata, constraint): float  // Not necessary to make segmentdata and constraint as fields.
-		//EvaluateDashSkill(segmentdata, constraint): float 
-		//EvaluateAngle(segmentdata, constraint): float 
-		//EvaluateSafeDistance(segmentdata, constraint): float 
-	}
-
-	public struct TempoFactors
-	{
-		// Fields ==========
-		//ActionIntensity: float getter
-		//ActionDensity: float getter 
-		//BotsDistance: float getter 
-		//Velocity: float getter
-
-		//Weight ActionIntensity: float 
-		//Weight ActionDensity: float 
-		//Weight BotsDistance: float 
-		//Weight Velocity: float
-
-		// Methods ==========
-		//Constructor(weights)
-		//EvaluateActionIntensity(segmentdata, constraint): float // Not necessary to make segmentdata and constraint as fields. 
-		//EvaluateActionDensity(segmentdata, constraint): float
-		//EvaluateBotDistance(segmentdata, constraint): float
-		//EvaluateVelocity(segmentdata, constraint): float
 	}
 }
-
