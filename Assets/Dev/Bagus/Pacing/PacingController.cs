@@ -3,127 +3,15 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
+/// Structure: 
+/// - Pacing: the flow of the gameplay in a specific time segment, which includes the pacing aspects, factors, constraints and segment data. 
+/// - Pacing Aspects: the high level aspects of pacing, which are threat (danger) and tempo (action intensity).
+/// - Pacing Factors: the specific factors that contribute to the pacing aspects. For example, the effectiveness of our bot hit collision behaviour and skill usage contribute to threat, while action intensity and distance to enemy effectiveness contribute to tempo.
+/// - Constraints: the expected range of the pacing factors, which can be used to normalize the factors and evaluate the pacing. These constraints can be set globally or locally for each segment, and can also be blended together. 
+/// - Segment Data: the raw gameplay data collected in a specific time segment, which is used to calculate the pacing factors.
+/// - Pacing Controller: the main class that manages the pacing system in a bot, which collects gameplay data, calculates pacing factors and aspects, evaluates the pacing against the target, and provides the pacing information to other parts of the bot.
 namespace PacingFramework
 {
-	public class PacingController : MonoBehaviour
-	{
-		// ================================
-		// Runtime Config
-		// ================================
-		public float segmentDuration = 2f;
-		private float timer;
-
-		private SegmentData currentGameplayData;
-		private SegmentPacing currentSegmentPacing;
-
-		private GamePacing pacingHistory = new GamePacing();
-		private GamePacingTarget pacingTarget = new GamePacingTarget();
-
-		// [Todo]
-		// Runtime Configs ==========
-		//API: SumoAPI
-		//Original Actions: <SumoAction> 
-		//Paced Actions: <SumoAction> 
-
-		// Test Fields
-		private int segmentIndex = 1;
-
-		// ================================
-		// Unity
-		// ================================
-		private void Start() {
-			Init();
-			//TestSimulation(); // Auto test at start
-		}
-
-		private void Update() {
-			TestSimulationContinuous(); // Continuous test 
-			Tick(Time.deltaTime);
-		}
-
-		// ================================
-		// Core Methods
-		// ================================
-		public void Init() {
-			currentGameplayData = new SegmentData();
-			timer = 0f;
-		}
-
-		// [Todo] Remove deltaTime parameter. Then call every game tick. 
-		public void Tick(float deltaTime) { 
-			timer += deltaTime;
-
-			if (timer >= segmentDuration) {
-				FinalizeSegment();
-				timer = 0f;
-				currentGameplayData.Reset();
-			}
-		}
-
-		private void FinalizeSegment() {
-			// [Todo] Handle segment's local constraints if needed. 
-			currentSegmentPacing = new SegmentPacing(currentGameplayData, pacingTarget.GlobalConstraints);
-			pacingHistory.SegmentGameplayDatas.Add(new SegmentData(currentGameplayData));
-			pacingHistory.SegmentPacings.Add(currentSegmentPacing);
-
-			// Test 
-			DebugPacing(currentSegmentPacing);
-			DebugSegmentData(currentGameplayData);
-			segmentIndex++;
-		}
-
-		// ================================
-		// Test Functions
-		// ================================
-
-		private void DebugPacing(SegmentPacing pacing) {
-			Debug.Log($"===== SEGMENT {segmentIndex} FINALIZED =====");
-			Debug.Log("PACING --> Threat: " + pacing.Threat.Value + ", Tempo: " + pacing.Tempo.Value + ", Overall: " + pacing.GetOverallPacing());
-		}
-
-		private void DebugSegmentData(SegmentData data) {
-			Debug.Log("SEGMENT DATA [Counts] --> " + "Collisions: " + data.Collisions.Count + "; Angles: " + data.Angles.Count + 
-				"; SafeDistances: " + data.SafeDistances.Count + "; Actions: " + data.Actions.Count + 
-				"; BotsDistances: " + data.BotsDistances.Count + "; Velocities: " + data.Velocities.Count);
-		} 
-
-		public void TestSimulation() {
-			Debug.Log("Running Pacing Test Simulation...");
-
-			for (int i = 0; i < 20; i++) {
-				currentGameplayData.RegisterCollision((CollisionType)UnityEngine.Random.Range(0, Enum.GetValues(typeof(CollisionType)).Length));
-				currentGameplayData.RegisterAngle(UnityEngine.Random.Range(0f, 180f));
-				currentGameplayData.RegisterSafeDistance(UnityEngine.Random.Range(1f, 5f));
-				currentGameplayData.RegisterVelocity(UnityEngine.Random.Range(0f, 10f));
-				currentGameplayData.RegisterBotsDistance(UnityEngine.Random.Range(1f, 5f));
-				
-				int actions = UnityEngine.Random.Range(0, 50);
-				for (int j = 0; j < actions; j++) {
-					currentGameplayData.RegisterAction((ActionType)UnityEngine.Random.Range(0, Enum.GetValues(typeof(ActionType)).Length));
-				}
-			}
-
-			FinalizeSegment();
-		}
-
-		private void TestSimulationContinuous() {
-			currentGameplayData.RegisterCollision((CollisionType)UnityEngine.Random.Range(0, Enum.GetValues(typeof(CollisionType)).Length));
-			currentGameplayData.RegisterAngle(UnityEngine.Random.Range(0f, 180f));
-			currentGameplayData.RegisterSafeDistance(UnityEngine.Random.Range(1f, 5f));
-			currentGameplayData.RegisterVelocity(UnityEngine.Random.Range(0f, 10f));
-			currentGameplayData.RegisterBotsDistance(UnityEngine.Random.Range(1f, 5f));
-
-			int actions = UnityEngine.Random.Range(0, 50);
-			for (int i = 0; i < actions; i++) {
-				currentGameplayData.RegisterAction((ActionType)UnityEngine.Random.Range(0, Enum.GetValues(typeof(ActionType)).Length));
-			}
-		}
-
-		// [Todo] 
-		// Evaluation methods =========
-		//EvaluatePacing(): void // Compare the actual latest pacing in pacinghistory with the pacingtarget according to the index. 
-		//EvaluateAction(): void // Filtered out the original actions into paced actions. This requires rules on how to filter the action based on the pacing values. 
-	}
 
 	// ==========================================================
 	// ENUMS
