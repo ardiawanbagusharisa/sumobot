@@ -13,6 +13,7 @@ namespace PacingFramework
 		private ConstraintConfig constraintConfig = new ConstraintConfig();
 		private Vector2 scrollPos;
 		private string saveFileName = "PacingConfig.json";
+		private string loadedPath = "";
 
 		private const int DATA_COUNT = 25;
 		private const float padding = 50f;
@@ -250,18 +251,8 @@ namespace PacingFramework
 			GUILayout.Label("Max", GUILayout.Width(30));
 			data.Max = EditorGUILayout.FloatField(data.Max, GUILayout.Width(60));
 
-			GUILayout.Label("W", GUILayout.Width(15));
+			GUILayout.Label("Weight", GUILayout.Width(45));
 			data.Weight = EditorGUILayout.Slider(data.Weight, 0f, 1f);
-
-			EditorGUILayout.EndHorizontal();
-		}
-
-		private void DrawMinMax(string label, FloatMinMax data) {
-			EditorGUILayout.BeginHorizontal();
-			EditorGUILayout.LabelField(label, GUILayout.Width(150));
-
-			data.Min = EditorGUILayout.FloatField("Min", data.Min);
-			data.Max = EditorGUILayout.FloatField("Max", data.Max);
 
 			EditorGUILayout.EndHorizontal();
 		}
@@ -279,10 +270,13 @@ namespace PacingFramework
 		private void DrawLoadSection() {
 			EditorGUILayout.LabelField("=== LOAD CONFIG ===", EditorStyles.boldLabel);
 
-			//saveFileName = EditorGUILayout.TextField("File Name", saveFileName);
+			EditorGUI.BeginDisabledGroup(true);
+			EditorGUILayout.TextField("Loaded Config", loadedPath);
+			EditorGUI.EndDisabledGroup();
 			if (GUILayout.Button("Load Pacing Config")) {
 				LoadConfig();
 			}
+			
 		}
 
 		private void SaveConfig() {
@@ -304,6 +298,7 @@ namespace PacingFramework
 				System.IO.File.WriteAllText(path, json);
 				Debug.Log("Pacing config saved to: " + path);
 				AssetDatabase.Refresh();
+				loadedPath = path;
 			}
 		}
 
@@ -330,12 +325,13 @@ namespace PacingFramework
 				constraintConfig = config.GlobalConstraints;
 
 				Debug.Log("Pacing config loaded.");
+				loadedPath = path;
 			}
 		}
 
 		private void DrawGraphSection() {
 			EditorGUILayout.LabelField("=== TARGET PACING ===", EditorStyles.boldLabel);
-			EditorGUILayout.HelpBox("\"Threat & Tempo curves are editable via graph or fields below.", MessageType.Info);
+			EditorGUILayout.HelpBox("Edit Threat & Tempo targets via graph or fields.", MessageType.Info);
 
 			Rect rect = GUILayoutUtility.GetRect(position.width - 20, 400);
 
@@ -345,9 +341,6 @@ namespace PacingFramework
 			DrawAxes(rect);
 			DrawAndEdit(rect);
 
-			//// Update overall automatically
-			//for (int i = 0; i < threats.Count; i++)
-			//	overall[i] = (threats[i] + tempos[i]) * 0.5f;
 			UpdateOverall();
 
 			DrawLegendInsideGraph(rect);
@@ -369,10 +362,9 @@ namespace PacingFramework
 			);
 
 			// Background
-			EditorGUI.DrawRect(legendRect, new Color(0f, 0f, 0f, 0.6f));
+			EditorGUI.DrawRect(legendRect, new Color(0f, 0f, 0f, 0.3f));
 
 			float lineHeight = 20f;
-			float colorSize = 12f;
 
 			DrawLegendItemInRect(
 				new Rect(legendRect.x + 10, legendRect.y + 10, boxWidth - 20, lineHeight),
