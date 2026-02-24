@@ -9,10 +9,11 @@ namespace PacingFramework
 	{
 		private bool showConstraints = true;
 		private bool showSegmentFields = true;
+		private bool isDirty = false;
 
 		private ConstraintConfig constraintConfig = new ConstraintConfig();
 		private Vector2 scrollPos;
-		private string configPath = "PacingConfig.json";
+		private string configPath = "";
 
 		private const int DATA_COUNT = 25;
 		private const float padding = 50f;
@@ -31,6 +32,7 @@ namespace PacingFramework
 		}
 
 		private void OnEnable() {
+			isDirty = false;
 			GenerateSampleData();
 		}
 
@@ -46,17 +48,26 @@ namespace PacingFramework
 				float tempo = Mathf.Clamp01(Mathf.PerlinNoise(i * 0.2f, 0f));
 				float over = (threat + tempo) * 0.5f;
 
-				threats.Add(threat);
-				tempos.Add(tempo);
-				overall.Add(over);
+				threats.Add(Round2(threat));
+				tempos.Add(Round2(tempo));
+				overall.Add(Round2(over));
 			}
 		}
 
+		private bool hasInitialized = false;
+
 		private void OnGUI() {
+			// mark first GUI frame as initialized
+			if (!hasInitialized) {
+				hasInitialized = true;
+				isDirty = false;
+			}
+
+			// show * in title
+			titleContent.text = "Target Pacing Editor" + (isDirty ? " *" : "");
+
 			scrollPos = EditorGUILayout.BeginScrollView(scrollPos);
-
 			DrawTargetPacingSection();
-
 			EditorGUILayout.EndScrollView();
 
 			Repaint();
@@ -203,7 +214,8 @@ namespace PacingFramework
 						draggingCurve == c &&
 						draggingIndex == i) {
 						float normalized = Mathf.Clamp01((bottom - e.mousePosition.y) / height);
-						list[i] = normalized;
+						list[i] = Round2(normalized);
+						isDirty = true;
 						e.Use();
 					}
 				}
@@ -241,63 +253,138 @@ namespace PacingFramework
 			EditorGUILayout.EndVertical();
 		}
 
-		private void DrawConstraintRow(string label, FloatMinMax data) {
+		private void DrawConstraintRow(string label, ConstraintMinMax data) {
 			EditorGUILayout.BeginHorizontal();
 
 			GUILayout.Label(label, GUILayout.Width(130));
 
+			// ----- MinLimit -----
+			GUILayout.Label("MinL", GUILayout.Width(35));
+			EditorGUI.BeginChangeCheck();
+			float newMinLimit = EditorGUILayout.FloatField(
+				data.MinLimit,
+				GUILayout.Width(60));
+			bool minLimitChanged = EditorGUI.EndChangeCheck();
+
+			// ----- Min -----
 			GUILayout.Label("Min", GUILayout.Width(28));
 			EditorGUI.BeginChangeCheck();
-			float newMin = EditorGUILayout.FloatField(data.Min, GUILayout.Width(60));
+			float newMin = EditorGUILayout.DelayedFloatField(
+				data.Min,
+				GUILayout.Width(60));
 			bool minChanged = EditorGUI.EndChangeCheck();
 
+			// ----- Slider -----
 			EditorGUI.BeginChangeCheck();
-			EditorGUILayout.MinMaxSlider(ref data.Min, ref data.Max, 0f, 1f);
+			EditorGUILayout.MinMaxSlider(
+				ref data.Min,
+				ref data.Max,
+				data.MinLimit,
+				data.MaxLimit
+			);
 			bool sliderChanged = EditorGUI.EndChangeCheck();
 
+			// ----- Max -----
 			GUILayout.Label("Max", GUILayout.Width(30));
 			EditorGUI.BeginChangeCheck();
-			float newMax = EditorGUILayout.FloatField(data.Max, GUILayout.Width(60));
+			float newMax = EditorGUILayout.DelayedFloatField(
+				data.Max,
+				GUILayout.Width(60));
 			bool maxChanged = EditorGUI.EndChangeCheck();
 
-			GUILayout.Space(10);
+			// ----- MaxLimit -----
+			GUILayout.Label("MaxL", GUILayout.Width(35));
+			EditorGUI.BeginChangeCheck();
+			float newMaxLimit = EditorGUILayout.FloatField(
+				data.MaxLimit,
+				GUILayout.Width(60));
+			bool maxLimitChanged = EditorGUI.EndChangeCheck();
 
-			GUILayout.Label("Weight", GUILayout.Width(45));
-			data.Weight = EditorGUILayout.Slider(data.Weight, 0f, 1f);
+			// ----- Weight -----
+			GUILayout.Label("W", GUILayout.Width(18));
+			EditorGUI.BeginChangeCheck();
+			float newWeight = EditorGUILayout.Slider(data.Weight, 0f, 1f);
+			bool weightChanged = EditorGUI.EndChangeCheck();
 
 			EditorGUILayout.EndHorizontal();
 
-			// Clamp typed values
-			newMin = Mathf.Clamp01(newMin);
-			newMax = Mathf.Clamp01(newMax);
+			// ---------- Apply Changes ----------
+
+			if (minLimitChanged) {
+				data.MinLimit = Round2(newMinLimit);
+				isDirty = true;
+			}
+
+			if (maxLimitChanged) {
+				data.MaxLimit = Round2(newMaxLimit);
+				isDirty = true;
+			}
 
 			if (minChanged) {
-				data.Min = newMin;
-				if (data.Min > data.Max)
-					data.Max = data.Min;
+				data.Min = Round2(newMin);
+				isDirty = true;
 			}
 
 			if (maxChanged) {
-				data.Max = newMax;
-				if (data.Max < data.Min)
-					data.Min = data.Max;
+				data.Max = Round2(newMax);
+				isDirty = true;
 			}
 
 			if (sliderChanged) {
-				data.Min = Mathf.Clamp01(data.Min);
-				data.Max = Mathf.Clamp01(data.Max);
+				data.Min = Round2(data.Min);
+				data.Max = Round2(data.Max);
+
+				// Release text field focus so value refreshes
+				GUI.FocusControl(null);
+				EditorGUIUtility.editingTextField = false;
+
+				isDirty = true;
 			}
 
-			data.Min = Mathf.Round(data.Min * 1000f) / 1000f;
-			data.Max = Mathf.Round(data.Max * 1000f) / 1000f;
-			data.Weight = Mathf.Round(data.Weight * 1000f) / 1000f;
+			if (weightChanged) {
+				data.Weight = Round2(newWeight);
+				isDirty = true;
+			}
+
+			// ---------- Validation ----------
+			// --- Detect MaxLimit change ---
+			if (!Mathf.Approximately(data.PreviousMaxLimit, data.MaxLimit)) {
+				// If max was at old limit, keep it attached
+				if (Mathf.Approximately(data.Max, data.PreviousMaxLimit))
+					data.Max = data.MaxLimit;
+
+				data.PreviousMaxLimit = data.MaxLimit;
+			}
+
+			// --- Detect MinLimit change ---
+			if (!Mathf.Approximately(data.PreviousMinLimit, data.MinLimit)) {
+				if (Mathf.Approximately(data.Min, data.PreviousMinLimit))
+					data.Min = data.MinLimit;
+
+				data.PreviousMinLimit = data.MinLimit;
+			}
+
+			// --- Safety ---
+			if (data.MinLimit > data.MaxLimit)
+				data.MaxLimit = data.MinLimit;
+
+			if (data.Max > data.MaxLimit)
+				data.Max = data.MaxLimit;
+
+			if (data.Min < data.MinLimit)
+				data.Min = data.MinLimit;
+
+			if (data.Min > data.Max)
+				data.Min = data.Max;
+
 		}
 
 		private void DrawSaveLoadSection() {
 			EditorGUILayout.LabelField("Pacing Config", EditorStyles.boldLabel);
 
+			EditorGUI.BeginDisabledGroup(true);
 			configPath = EditorGUILayout.TextField("File Path", configPath);
-
+			EditorGUI.EndDisabledGroup();
 			EditorGUILayout.BeginHorizontal();
 
 			if (GUILayout.Button("Save", GUILayout.Height(30))) {
@@ -311,6 +398,19 @@ namespace PacingFramework
 			EditorGUILayout.EndHorizontal();
 		}
 
+		private string ToRelativePath(string absolutePath) {
+			if (absolutePath.StartsWith(Application.dataPath))
+				return "Assets" + absolutePath.Substring(Application.dataPath.Length);
+			return absolutePath; // outside project
+		}
+
+		// Convert relative path to absolute
+		private string ToAbsolutePath(string relativePath) {
+			if (relativePath.StartsWith("Assets"))
+				return Application.dataPath + relativePath.Substring("Assets".Length);
+			return relativePath; // outside project
+		}
+
 		private void SaveConfig(string currentPath) {
 			PacingTargetConfig config = new PacingTargetConfig {
 				ThreatTargets = new List<float>(threats),
@@ -321,41 +421,47 @@ namespace PacingFramework
 			string json = JsonUtility.ToJson(config, true);
 
 			string defaultFolder = "Assets/Dev/Bagus/Pacing";
-
-			string path = EditorUtility.SaveFilePanel(
+			string absolutePath = EditorUtility.SaveFilePanel(
 				"Save Pacing Config",
 				defaultFolder,
 				"PacingConfig",
 				"json");
 
-			if (string.IsNullOrEmpty(path))
+			if (string.IsNullOrEmpty(absolutePath))
 				return;
 
-			System.IO.File.WriteAllText(path, json);
+			System.IO.File.WriteAllText(absolutePath, json);
 			AssetDatabase.Refresh();
 
-			configPath = path;
-
-			Debug.Log("Saved to: " + path);
+			configPath = ToRelativePath(absolutePath); // store as relative
+			isDirty = false; // just saved
+			Debug.Log("Saved to: " + configPath);
 		}
 
 		private void LoadConfig(string currentPath) {
-			string defaultFolder = "Assets/Dev/Bagus/Pacing";
+			if (isDirty) {
+				if (!EditorUtility.DisplayDialog("Unsaved Changes",
+						"You have unsaved changes. Do you want to continue loading and lose changes?",
+						"Yes", "Cancel")) {
+					return;
+				}
+			}
 
-			string path = EditorUtility.OpenFilePanel(
+			string defaultFolder = "Assets/Dev/Bagus/Pacing";
+			string absolutePath = EditorUtility.OpenFilePanel(
 				"Load Pacing Config",
 				defaultFolder,
 				"json");
 
-			if (string.IsNullOrEmpty(path))
+			if (string.IsNullOrEmpty(absolutePath))
 				return;
 
-			if (!System.IO.File.Exists(path)) {
+			if (!System.IO.File.Exists(absolutePath)) {
 				Debug.LogWarning("File not found.");
 				return;
 			}
 
-			string json = System.IO.File.ReadAllText(path);
+			string json = System.IO.File.ReadAllText(absolutePath);
 			PacingTargetConfig config = JsonUtility.FromJson<PacingTargetConfig>(json);
 
 			if (config == null) {
@@ -365,15 +471,70 @@ namespace PacingFramework
 
 			threats = new List<float>(config.ThreatTargets);
 			tempos = new List<float>(config.TempoTargets);
+			for (int i = 0; i < threats.Count; i++) {
+				threats[i] = Round2(threats[i]);
+				tempos[i] = Round2(tempos[i]);
+			}
 			constraintConfig = config.GlobalConstraints;
+			NormalizeConstraints(constraintConfig);
+			ValidateConstraintLimits(constraintConfig);
 
 			UpdateOverall();
 
-			configPath = path;
+			configPath = ToRelativePath(absolutePath);
+			isDirty = false; // just loaded
 
 			Repaint();
 
-			Debug.Log("Loaded from: " + path);
+			Debug.Log("Loaded from: " + configPath);
+		}
+
+		private void NormalizeConstraints(ConstraintConfig config) {
+			void Normalize(ConstraintMinMax c) {
+				c.Min = Round2(c.Min);
+				c.Max = Round2(c.Max);
+				c.Weight = Round2(c.Weight);
+			}
+
+			Normalize(config.CollisionRatio);
+			Normalize(config.AbilityRatio);
+			Normalize(config.Angle);
+			Normalize(config.SafeDistance);
+			Normalize(config.ActionIntensity);
+			Normalize(config.ActionDensity);
+			Normalize(config.BotsDistance);
+			Normalize(config.Velocity);
+		}
+
+		private void ValidateConstraintLimits(ConstraintConfig config) {
+			void Validate(ConstraintMinMax c) {
+				// Ensure limits are valid
+				if (c.MinLimit > c.MaxLimit)
+					c.MaxLimit = c.MinLimit;
+
+				// Clamp values inside limits
+				c.Min = Mathf.Clamp(c.Min, c.MinLimit, c.MaxLimit);
+				c.Max = Mathf.Clamp(c.Max, c.MinLimit, c.MaxLimit);
+
+				if (c.Min > c.Max)
+					c.Max = c.Min;
+
+				// Force 2 decimal precision
+				c.MinLimit = Round2(c.MinLimit);
+				c.MaxLimit = Round2(c.MaxLimit);
+				c.Min = Round2(c.Min);
+				c.Max = Round2(c.Max);
+				c.Weight = Round2(c.Weight);
+			}
+
+			Validate(config.CollisionRatio);
+			Validate(config.AbilityRatio);
+			Validate(config.Angle);
+			Validate(config.SafeDistance);
+			Validate(config.ActionIntensity);
+			Validate(config.ActionDensity);
+			Validate(config.BotsDistance);
+			Validate(config.Velocity);
 		}
 
 		private void DrawGraphSection() {
@@ -447,8 +608,15 @@ namespace PacingFramework
 		}
 
 		private void DrawSegmentFields() {
-			GUIStyle boldFoldout = new GUIStyle(EditorStyles.foldout) { fontStyle = FontStyle.Bold };
-			showSegmentFields = EditorGUILayout.Foldout(showSegmentFields, "Target Segment Pacings", true, boldFoldout);
+			GUIStyle boldFoldout = new GUIStyle(EditorStyles.foldout) {
+				fontStyle = FontStyle.Bold
+			};
+
+			showSegmentFields = EditorGUILayout.Foldout(
+				showSegmentFields,
+				"Target Segment Pacings",
+				true,
+				boldFoldout);
 
 			if (!showSegmentFields)
 				return;
@@ -460,8 +628,29 @@ namespace PacingFramework
 
 				GUILayout.Label($"Segment {i}", GUILayout.Width(80));
 
-				threats[i] = Mathf.Round(EditorGUILayout.Slider(threats[i], 0f, 1f) * 1000f) / 1000f;
-				tempos[i] = Mathf.Round(EditorGUILayout.Slider(tempos[i], 0f, 1f) * 1000f) / 1000f;
+				// Threat
+				EditorGUI.BeginChangeCheck();
+				float threatValue = EditorGUILayout.Slider(threats[i], 0f, 1f);
+				if (EditorGUI.EndChangeCheck()) {
+					threatValue = Mathf.Round(threatValue * 100f) / 100f;
+
+					if (threatValue != threats[i]) {
+						threats[i] = threatValue;
+						isDirty = true;
+					}
+				}
+
+				// Tempo
+				EditorGUI.BeginChangeCheck();
+				float tempoValue = EditorGUILayout.Slider(tempos[i], 0f, 1f);
+				if (EditorGUI.EndChangeCheck()) {
+					tempoValue = Mathf.Round(tempoValue * 100f) / 100f;
+
+					if (tempoValue != tempos[i]) {
+						tempos[i] = tempoValue;
+						isDirty = true;
+					}
+				}
 
 				EditorGUILayout.EndHorizontal();
 			}
@@ -475,6 +664,10 @@ namespace PacingFramework
 
 			for (int i = 0; i < threats.Count; i++)
 				overall[i] = (threats[i] + tempos[i]) * 0.5f;
+		}
+
+		private float Round2(float value) {
+			return Mathf.Round(value * 100f) / 100f;
 		}
 	}
 
@@ -490,25 +683,51 @@ namespace PacingFramework
 	[Serializable]
 	public class ConstraintConfig
 	{
-		public FloatMinMax CollisionRatio = new();
-		public FloatMinMax AbilityRatio = new();
-		public FloatMinMax Angle = new();
-		public FloatMinMax SafeDistance = new();
+		// Default Constraints [Modify these constraints according to bot]. 
+		public ConstraintMinMax CollisionRatio = new(0, 1);
+		public ConstraintMinMax AbilityRatio = new(0, 0.2f);
+		public ConstraintMinMax Angle = new(0, 180f);
+		public ConstraintMinMax SafeDistance = new(1, 5);
 
-		public FloatMinMax ActionIntensity = new();
-		public FloatMinMax ActionDensity = new();
-		public FloatMinMax BotsDistance = new();
-		public FloatMinMax Velocity = new();
+		public ConstraintMinMax ActionIntensity = new(0, 50);
+		public ConstraintMinMax ActionDensity = new(0, 1);
+		public ConstraintMinMax BotsDistance = new(1, 5);
+		public ConstraintMinMax Velocity = new(0, 10);
 	}
 
 	[Serializable]
-	public class FloatMinMax
+	public class ConstraintMinMax
 	{
 		public float Min;
 		public float Max;
+		public float MinLimit;
+		public float MaxLimit;
 
-		[Range(0f, 1f)]
+		[Range(0f, 1f)] 
 		public float Weight = 1;
+		[NonSerialized] 
+		public float PreviousMaxLimit;
+		[NonSerialized] 
+		public float PreviousMinLimit;
+
+		public ConstraintMinMax() {
+			PreviousMinLimit = MinLimit = Min = 0f;
+			PreviousMaxLimit = MaxLimit = Max = 1f;
+		}
+
+		public ConstraintMinMax(float minLimit, float maxLimit) {
+			PreviousMinLimit = MinLimit = minLimit;
+			PreviousMaxLimit = MaxLimit = maxLimit;
+			Min = Mathf.Round(minLimit * 100f) / 100f;
+			Max = Mathf.Round(maxLimit * 100f) / 100f;
+		}
+
+		public ConstraintMinMax(float minValue, float maxValue, float minLimit, float maxLimit) {
+			PreviousMinLimit = MinLimit = minLimit;
+			PreviousMaxLimit = MaxLimit = maxLimit;
+			Min = minValue;
+			Max = maxValue;
+		}
 	}
 
 }
