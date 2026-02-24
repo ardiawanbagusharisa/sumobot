@@ -70,7 +70,8 @@ namespace PacingFramework
 			DrawTargetPacingSection();
 			EditorGUILayout.EndScrollView();
 
-			Repaint();
+			if (Event.current.type == EventType.MouseDrag)
+				Repaint();
 		}
 
 		private void DrawTargetPacingSection() {
