@@ -12,8 +12,7 @@ namespace PacingFramework
 
 		private ConstraintConfig constraintConfig = new ConstraintConfig();
 		private Vector2 scrollPos;
-		private string saveFileName = "PacingConfig.json";
-		private string loadedPath = "";
+		private string configPath = "PacingConfig.json";
 
 		private const int DATA_COUNT = 25;
 		private const float padding = 50f;
@@ -26,9 +25,9 @@ namespace PacingFramework
 		private int draggingCurve = -1;
 		private int draggingIndex = -1;
 
-		[MenuItem("Tools/Pacing Curve Editor")]
+		[MenuItem("Tools/Pacing Framework/Target Pacing Editor")]
 		public static void Open() {
-			GetWindow<PacingEditorWindow>("Pacing Curve Editor");
+			GetWindow<PacingEditorWindow>("Target Pacing Editor");
 		}
 
 		private void OnEnable() {
@@ -56,21 +55,22 @@ namespace PacingFramework
 		private void OnGUI() {
 			scrollPos = EditorGUILayout.BeginScrollView(scrollPos);
 
-			DrawGraphSection();
-			EditorGUILayout.Space(20);
-
-			DrawConstraintSection();
-			EditorGUILayout.Space(20);
-
-			DrawSaveSection();
-			EditorGUILayout.Space(20);
-			
-			DrawLoadSection();
-
+			DrawTargetPacingSection();
 
 			EditorGUILayout.EndScrollView();
 
 			Repaint();
+		}
+
+		private void DrawTargetPacingSection() {
+			DrawGraphSection();
+			EditorGUILayout.Space(10);
+
+			DrawConstraintSection();
+			EditorGUILayout.Space(10);
+
+			DrawSaveLoadSection();
+			EditorGUILayout.Space(10);
 		}
 
 		private void DrawGrid(Rect rect) {
@@ -218,7 +218,8 @@ namespace PacingFramework
 		}
 
 		private void DrawConstraintSection() {
-			showConstraints = EditorGUILayout.Foldout(showConstraints, "Global Constraints", true);
+			GUIStyle boldFoldout = new GUIStyle(EditorStyles.foldout) { fontStyle = FontStyle.Bold };
+			showConstraints = EditorGUILayout.Foldout(showConstraints, "Global Constraints", true, boldFoldout);
 
 			if (!showConstraints)
 				return;
@@ -230,7 +231,7 @@ namespace PacingFramework
 			DrawConstraintRow("Angle", constraintConfig.Angle);
 			DrawConstraintRow("Safe Distance", constraintConfig.SafeDistance);
 
-			EditorGUILayout.Space(8);
+			EditorGUILayout.Space(5);
 
 			DrawConstraintRow("Action Intensity", constraintConfig.ActionIntensity);
 			DrawConstraintRow("Action Density", constraintConfig.ActionDensity);
@@ -243,114 +244,158 @@ namespace PacingFramework
 		private void DrawConstraintRow(string label, FloatMinMax data) {
 			EditorGUILayout.BeginHorizontal();
 
-			GUILayout.Label(label, GUILayout.Width(120));
+			GUILayout.Label(label, GUILayout.Width(130));
 
-			GUILayout.Label("Min", GUILayout.Width(30));
-			data.Min = EditorGUILayout.FloatField(data.Min, GUILayout.Width(60));
+			GUILayout.Label("Min", GUILayout.Width(28));
+			EditorGUI.BeginChangeCheck();
+			float newMin = EditorGUILayout.FloatField(data.Min, GUILayout.Width(60));
+			bool minChanged = EditorGUI.EndChangeCheck();
+
+			EditorGUI.BeginChangeCheck();
+			EditorGUILayout.MinMaxSlider(ref data.Min, ref data.Max, 0f, 1f);
+			bool sliderChanged = EditorGUI.EndChangeCheck();
 
 			GUILayout.Label("Max", GUILayout.Width(30));
-			data.Max = EditorGUILayout.FloatField(data.Max, GUILayout.Width(60));
+			EditorGUI.BeginChangeCheck();
+			float newMax = EditorGUILayout.FloatField(data.Max, GUILayout.Width(60));
+			bool maxChanged = EditorGUI.EndChangeCheck();
+
+			GUILayout.Space(10);
 
 			GUILayout.Label("Weight", GUILayout.Width(45));
 			data.Weight = EditorGUILayout.Slider(data.Weight, 0f, 1f);
 
 			EditorGUILayout.EndHorizontal();
-		}
 
-		private void DrawSaveSection() {
-			EditorGUILayout.LabelField("=== SAVE CONFIG ===", EditorStyles.boldLabel);
+			// Clamp typed values
+			newMin = Mathf.Clamp01(newMin);
+			newMax = Mathf.Clamp01(newMax);
 
-			saveFileName = EditorGUILayout.TextField("File Name", saveFileName);
-
-			if (GUILayout.Button("Save Pacing Config")) {
-				SaveConfig();
+			if (minChanged) {
+				data.Min = newMin;
+				if (data.Min > data.Max)
+					data.Max = data.Min;
 			}
-		}
 
-		private void DrawLoadSection() {
-			EditorGUILayout.LabelField("=== LOAD CONFIG ===", EditorStyles.boldLabel);
-
-			EditorGUI.BeginDisabledGroup(true);
-			EditorGUILayout.TextField("Loaded Config", loadedPath);
-			EditorGUI.EndDisabledGroup();
-			if (GUILayout.Button("Load Pacing Config")) {
-				LoadConfig();
+			if (maxChanged) {
+				data.Max = newMax;
+				if (data.Max < data.Min)
+					data.Min = data.Max;
 			}
-			
+
+			if (sliderChanged) {
+				data.Min = Mathf.Clamp01(data.Min);
+				data.Max = Mathf.Clamp01(data.Max);
+			}
+
+			data.Min = Mathf.Round(data.Min * 1000f) / 1000f;
+			data.Max = Mathf.Round(data.Max * 1000f) / 1000f;
+			data.Weight = Mathf.Round(data.Weight * 1000f) / 1000f;
 		}
 
-		private void SaveConfig() {
-			PacingTargetConfig config = new PacingTargetConfig();
+		private void DrawSaveLoadSection() {
+			EditorGUILayout.LabelField("Pacing Config", EditorStyles.boldLabel);
 
-			config.ThreatTargets = new List<float>(threats);
-			config.TempoTargets = new List<float>(tempos);
-			config.GlobalConstraints = constraintConfig;
+			configPath = EditorGUILayout.TextField("File Path", configPath);
+
+			EditorGUILayout.BeginHorizontal();
+
+			if (GUILayout.Button("Save", GUILayout.Height(30))) {
+				SaveConfig(configPath);
+			}
+
+			if (GUILayout.Button("Load", GUILayout.Height(30))) {
+				LoadConfig(configPath);
+			}
+
+			EditorGUILayout.EndHorizontal();
+		}
+
+		private void SaveConfig(string currentPath) {
+			PacingTargetConfig config = new PacingTargetConfig {
+				ThreatTargets = new List<float>(threats),
+				TempoTargets = new List<float>(tempos),
+				GlobalConstraints = constraintConfig
+			};
 
 			string json = JsonUtility.ToJson(config, true);
 
+			string defaultFolder = "Assets/Dev/Bagus/Pacing";
+
 			string path = EditorUtility.SaveFilePanel(
 				"Save Pacing Config",
-				Application.dataPath,
-				saveFileName,
-				"json");
-
-			if (!string.IsNullOrEmpty(path)) {
-				System.IO.File.WriteAllText(path, json);
-				Debug.Log("Pacing config saved to: " + path);
-				AssetDatabase.Refresh();
-				loadedPath = path;
-			}
-		}
-
-		private void LoadConfig() {
-			string path = EditorUtility.OpenFilePanel(
-				"Load Pacing Config",
-				Application.dataPath,
+				defaultFolder,
+				"PacingConfig",
 				"json");
 
 			if (string.IsNullOrEmpty(path))
 				return;
 
+			System.IO.File.WriteAllText(path, json);
+			AssetDatabase.Refresh();
+
+			configPath = path;
+
+			Debug.Log("Saved to: " + path);
+		}
+
+		private void LoadConfig(string currentPath) {
+			string defaultFolder = "Assets/Dev/Bagus/Pacing";
+
+			string path = EditorUtility.OpenFilePanel(
+				"Load Pacing Config",
+				defaultFolder,
+				"json");
+
+			if (string.IsNullOrEmpty(path))
+				return;
+
+			if (!System.IO.File.Exists(path)) {
+				Debug.LogWarning("File not found.");
+				return;
+			}
+
 			string json = System.IO.File.ReadAllText(path);
 			PacingTargetConfig config = JsonUtility.FromJson<PacingTargetConfig>(json);
 
-			if (config != null) {
-				threats = new List<float>(config.ThreatTargets);
-				tempos = new List<float>(config.TempoTargets);
-
-				overall.Clear();
-				for (int i = 0; i < threats.Count; i++)
-					overall.Add((threats[i] + tempos[i]) * 0.5f);
-
-				constraintConfig = config.GlobalConstraints;
-
-				Debug.Log("Pacing config loaded.");
-				loadedPath = path;
+			if (config == null) {
+				Debug.LogWarning("Invalid config file.");
+				return;
 			}
-		}
 
-		private void DrawGraphSection() {
-			EditorGUILayout.LabelField("=== TARGET PACING ===", EditorStyles.boldLabel);
-			EditorGUILayout.HelpBox("Edit Threat & Tempo targets via graph or fields.", MessageType.Info);
-
-			Rect rect = GUILayoutUtility.GetRect(position.width - 20, 400);
-
-			EditorGUI.DrawRect(rect, new Color(0.12f, 0.12f, 0.12f));
-
-			DrawGrid(rect);
-			DrawAxes(rect);
-			DrawAndEdit(rect);
+			threats = new List<float>(config.ThreatTargets);
+			tempos = new List<float>(config.TempoTargets);
+			constraintConfig = config.GlobalConstraints;
 
 			UpdateOverall();
 
-			DrawLegendInsideGraph(rect);
-			EditorGUILayout.Space(20);
+			configPath = path;
 
-			DrawSegmentFields();
+			Repaint();
+
+			Debug.Log("Loaded from: " + path);
+		}
+
+		private void DrawGraphSection() {
+			EditorGUILayout.LabelField("Target Pacing Curve", EditorStyles.boldLabel);
+			EditorGUILayout.HelpBox("Edit segments' threat & tempo targets via graph or fields.", MessageType.Info);
+
+			Rect rectCurveCanvas = GUILayoutUtility.GetRect(position.width - 20, 400);
+			EditorGUI.DrawRect(rectCurveCanvas, new Color(0.12f, 0.12f, 0.12f));
+
+			DrawGrid(rectCurveCanvas);
+			DrawAxes(rectCurveCanvas);
+			DrawAndEdit(rectCurveCanvas);
+			DrawLegendInsideGraph(rectCurveCanvas);
+
+			UpdateOverall();
+			EditorGUILayout.Space(10);
+
+			DrawSegmentFields();			
 		}
 
 		private void DrawLegendInsideGraph(Rect rect) {
-			float boxWidth = 120f;
+			float boxWidth = 85f;
 			float boxHeight = 70f;
 			float margin = 10f;
 
@@ -367,17 +412,17 @@ namespace PacingFramework
 			float lineHeight = 20f;
 
 			DrawLegendItemInRect(
-				new Rect(legendRect.x + 10, legendRect.y + 10, boxWidth - 20, lineHeight),
+				new Rect(legendRect.x + 10, legendRect.y + 5, boxWidth - 20, lineHeight),
 				Color.red,
 				"Threat");
 
 			DrawLegendItemInRect(
-				new Rect(legendRect.x + 10, legendRect.y + 30, boxWidth - 20, lineHeight),
+				new Rect(legendRect.x + 10, legendRect.y + 25, boxWidth - 20, lineHeight),
 				Color.cyan,
 				"Tempo");
 
 			DrawLegendItemInRect(
-				new Rect(legendRect.x + 10, legendRect.y + 50, boxWidth - 20, lineHeight),
+				new Rect(legendRect.x + 10, legendRect.y + 45, boxWidth - 20, lineHeight),
 				Color.green,
 				"Overall");
 		}
@@ -402,7 +447,8 @@ namespace PacingFramework
 		}
 
 		private void DrawSegmentFields() {
-			showSegmentFields = EditorGUILayout.Foldout(showSegmentFields, "Segment Target Values", true);
+			GUIStyle boldFoldout = new GUIStyle(EditorStyles.foldout) { fontStyle = FontStyle.Bold };
+			showSegmentFields = EditorGUILayout.Foldout(showSegmentFields, "Target Segment Pacings", true, boldFoldout);
 
 			if (!showSegmentFields)
 				return;
@@ -412,10 +458,10 @@ namespace PacingFramework
 			for (int i = 0; i < DATA_COUNT; i++) {
 				EditorGUILayout.BeginHorizontal();
 
-				GUILayout.Label($"Seg {i}", GUILayout.Width(60));
+				GUILayout.Label($"Segment {i}", GUILayout.Width(80));
 
-				threats[i] = EditorGUILayout.Slider(threats[i], 0f, 1f);
-				tempos[i] = EditorGUILayout.Slider(tempos[i], 0f, 1f);
+				threats[i] = Mathf.Round(EditorGUILayout.Slider(threats[i], 0f, 1f) * 1000f) / 1000f;
+				tempos[i] = Mathf.Round(EditorGUILayout.Slider(tempos[i], 0f, 1f) * 1000f) / 1000f;
 
 				EditorGUILayout.EndHorizontal();
 			}
