@@ -7,24 +7,21 @@ namespace PacingFramework
 {
 	public class PacingEditorWindow : EditorWindow
 	{
-		private bool showConstraints = true;
-		private bool showSegmentFields = true;
-		private bool isDirty = false;
+		#region Fields
 
-		private ConstraintConfig constraintConfig = new ConstraintConfig();
+		private PacingModel model;
+		private GraphRenderer graphRenderer;
+		private ConstraintDrawer constraintDrawer;
+
 		private Vector2 scrollPos;
+		private bool showConstraints = true;
+		private bool showSegments = true;
+		private bool isDirty;
 		private string configPath = "";
 
-		private const int DATA_COUNT = 25;
-		private const float padding = 50f;
-		private const float pointSize = 10f;
+		private int segmentCount = 25;
 
-		private List<float> threats = new List<float>();
-		private List<float> tempos = new List<float>();
-		private List<float> overall = new List<float>();
-
-		private int draggingCurve = -1;
-		private int draggingIndex = -1;
+		#endregion
 
 		[MenuItem("Tools/Pacing Framework/Target Pacing Editor")]
 		public static void Open() {
@@ -32,63 +29,235 @@ namespace PacingFramework
 		}
 
 		private void OnEnable() {
-			isDirty = false;
-			GenerateSampleData();
+			model = new PacingModel(segmentCount);
+			graphRenderer = new GraphRenderer(model, () => MarkDirty());
+			constraintDrawer = new ConstraintDrawer(model, () => MarkDirty());
 		}
 
-		private void GenerateSampleData() {
-			threats.Clear();
-			tempos.Clear();
-			overall.Clear();
-
-			for (int i = 0; i < DATA_COUNT; i++) {
-				float t = i / (float)(DATA_COUNT - 1);
-
-				float threat = Mathf.Clamp01(Mathf.Sin(t * Mathf.PI) * 0.5f + 0.5f);
-				float tempo = Mathf.Clamp01(Mathf.PerlinNoise(i * 0.2f, 0f));
-				float over = (threat + tempo) * 0.5f;
-
-				threats.Add(Round2(threat));
-				tempos.Add(Round2(tempo));
-				overall.Add(Round2(over));
-			}
+		private void MarkDirty() {
+			isDirty = true;
+			Repaint();
 		}
-
-		private bool hasInitialized = false;
 
 		private void OnGUI() {
-			// mark first GUI frame as initialized
-			if (!hasInitialized) {
-				hasInitialized = true;
-				isDirty = false;
-			}
-
-			// show * in title
 			titleContent.text = "Target Pacing Editor" + (isDirty ? " *" : "");
 
 			scrollPos = EditorGUILayout.BeginScrollView(scrollPos);
-			DrawTargetPacingSection();
-			EditorGUILayout.EndScrollView();
 
-			if (Event.current.type == EventType.MouseDrag)
-				Repaint();
+			DrawSegmentCountField();
+			graphRenderer.Draw(position.width - 20);
+
+			EditorGUILayout.Space(10);
+			showSegments = EditorGUILayout.Foldout(showSegments, "Target Segment Pacings", true, EditorStyles.foldoutHeader);
+
+			if (showSegments)
+				DrawSegmentFields();
+
+			EditorGUILayout.Space(10);
+			showConstraints = EditorGUILayout.Foldout(showConstraints, "Global Constraints", true, EditorStyles.foldoutHeader);
+
+			if (showConstraints)
+				constraintDrawer.Draw();
+
+			EditorGUILayout.Space(10);
+			DrawSaveLoadSection();
+
+			EditorGUILayout.EndScrollView();
 		}
 
-		private void DrawTargetPacingSection() {
-			DrawGraphSection();
-			EditorGUILayout.Space(10);
+		private void DrawSegmentCountField() {
+			EditorGUI.BeginChangeCheck();
+			int newCount = EditorGUILayout.IntField("Segment Count", segmentCount);
 
-			DrawConstraintSection();
-			EditorGUILayout.Space(10);
+			if (EditorGUI.EndChangeCheck()) {
+				newCount = Mathf.Max(2, newCount);
+				segmentCount = newCount;
+				model.Resize(segmentCount);
+				MarkDirty();
+			}
+		}
 
-			DrawSaveLoadSection();
-			EditorGUILayout.Space(10);
+		private void DrawSegmentFields() {
+			EditorGUILayout.BeginVertical("box");
+
+			for (int i = 0; i < model.Count; i++) {
+				EditorGUILayout.BeginHorizontal();
+
+				GUILayout.Label($"Segment {i}", GUILayout.Width(80));
+
+				float newThreat = EditorGUILayout.Slider(model.Threats[i], 0f, 1f);
+				float newTempo = EditorGUILayout.Slider(model.Tempos[i], 0f, 1f);
+
+				if (newThreat != model.Threats[i] || newTempo != model.Tempos[i]) {
+					model.SetThreat(i, newThreat);
+					model.SetTempo(i, newTempo);
+					MarkDirty();
+				}
+
+				EditorGUILayout.EndHorizontal();
+			}
+
+			EditorGUILayout.EndVertical();
+		}
+
+		#region Save Load
+
+		private void DrawSaveLoadSection() {
+			EditorGUILayout.LabelField("Pacing Config", EditorStyles.boldLabel);
+
+			EditorGUI.BeginDisabledGroup(true);
+			EditorGUILayout.TextField("File Path", configPath);
+			EditorGUI.EndDisabledGroup();
+
+			EditorGUILayout.BeginHorizontal();
+
+			if (GUILayout.Button("Save", GUILayout.Height(30)))
+				SaveConfig();
+
+			if (GUILayout.Button("Load", GUILayout.Height(30)))
+				LoadConfig();
+
+			EditorGUILayout.EndHorizontal();
+		}
+
+		private void SaveConfig() {
+			string path = EditorUtility.SaveFilePanel("Save Config", "Assets", "PacingConfig", "json");
+			if (string.IsNullOrEmpty(path)) return;
+
+			var config = model.ToConfig();
+			string json = JsonUtility.ToJson(config, true);
+			System.IO.File.WriteAllText(path, json);
+
+			configPath = path;
+			isDirty = false;
+		}
+
+		private void LoadConfig() {
+			string path = EditorUtility.OpenFilePanel("Load Config", "Assets", "json");
+			if (string.IsNullOrEmpty(path)) return;
+
+			string json = System.IO.File.ReadAllText(path);
+			var config = JsonUtility.FromJson<PacingTargetConfig>(json);
+
+			model.FromConfig(config);
+			segmentCount = model.Count;
+
+			configPath = path;
+			isDirty = false;
+
+			Repaint();
+		}
+
+		#endregion
+	}
+
+	#region MODEL
+
+	[Serializable]
+	public class PacingModel
+	{
+		public List<float> Threats = new();
+		public List<float> Tempos = new();
+		public List<float> Overall = new();
+
+		public ConstraintConfig Constraints = new();
+
+		public int Count => Threats.Count;
+
+		public PacingModel(int count) {
+			Resize(count);
+		}
+
+		public void Resize(int count) {
+			Threats = ResizeList(Threats, count);
+			Tempos = ResizeList(Tempos, count);
+			Overall = ResizeList(Overall, count);
+			UpdateOverall();
+		}
+
+		private List<float> ResizeList(List<float> list, int count) {
+			var newList = new List<float>(count);
+
+			for (int i = 0; i < count; i++) {
+				if (i < list.Count)
+					newList.Add(list[i]);
+				else
+					newList.Add(0.5f);
+			}
+
+			return newList;
+		}
+
+		public void SetThreat(int i, float v) {
+			Threats[i] = Round2(v);
+			UpdateOverall();
+		}
+
+		public void SetTempo(int i, float v) {
+			Tempos[i] = Round2(v);
+			UpdateOverall();
+		}
+
+		private void UpdateOverall() {
+			for (int i = 0; i < Count; i++)
+				Overall[i] = (Threats[i] + Tempos[i]) * 0.5f;
+		}
+
+		private float Round2(float v) => Mathf.Round(v * 100f) / 100f;
+
+		public PacingTargetConfig ToConfig() {
+			return new PacingTargetConfig {
+				ThreatTargets = new List<float>(Threats),
+				TempoTargets = new List<float>(Tempos),
+				GlobalConstraints = Constraints
+			};
+		}
+
+		public void FromConfig(PacingTargetConfig config) {
+			Threats = new List<float>(config.ThreatTargets);
+			Tempos = new List<float>(config.TempoTargets);
+			Resize(Threats.Count);
+			Constraints = config.GlobalConstraints;
+		}
+	}
+
+	#endregion
+
+	#region GRAPH RENDERER
+
+	public class GraphRenderer
+	{
+		private PacingModel model;
+		private Action onChanged;
+
+		private const float padding = 50f;
+		private const float pointRadius = 5f;
+
+		private int draggingCurve = -1;
+		private int draggingIndex = -1;
+
+		public GraphRenderer(PacingModel model, Action onChanged) {
+			this.model = model;
+			this.onChanged = onChanged;
+		}
+
+		public void Draw(float width) {
+			Rect rect = GUILayoutUtility.GetRect(width, 400);
+			EditorGUI.DrawRect(rect, new Color(0.12f, 0.12f, 0.12f));
+
+			DrawGrid(rect);
+			DrawAxes(rect);
+
+			DrawCurve(rect, model.Threats, Color.red, 0);
+			DrawCurve(rect, model.Tempos, Color.cyan, 1);
+			DrawCurve(rect, model.Overall, Color.green, -1); // visual only (but with circles)
+			
+			DrawLegend(rect);
 		}
 
 		private void DrawGrid(Rect rect) {
 			Handles.BeginGUI();
-			Color gridColor = new Color(0.3f, 0.3f, 0.3f, 0.5f);
-			Handles.color = gridColor;
+			Handles.color = new Color(0.3f, 0.3f, 0.3f, 0.4f);
 
 			float left = rect.x + padding;
 			float right = rect.x + rect.width - padding;
@@ -98,32 +267,26 @@ namespace PacingFramework
 			float width = right - left;
 			float height = bottom - top;
 
-			// ---------- Horizontal grid lines ----------
-			int ySteps = 4; // 0, 0.25, 0.5, 0.75, 1
-			for (int i = 0; i <= ySteps; i++) {
-				float t = i / (float)ySteps;
-				float y = bottom - t * height;
+			int xSteps = model.Count - 1;
 
-				Handles.DrawLine(new Vector3(left, y), new Vector3(right, y));
-
-				// Y Labels
-				GUI.Label(new Rect(left - 40, y - 10, 35, 20), t.ToString("0.##"));
-			}
-
-			// ---------- Vertical grid lines ----------
-			int xSteps = DATA_COUNT - 1;
 			for (int i = 0; i <= xSteps; i++) {
 				float x = left + i / (float)xSteps * width;
 				Handles.DrawLine(new Vector3(x, top), new Vector3(x, bottom));
 
-				// X Labels (every 5 points to avoid clutter)
 				if (i % 5 == 0 || i == 0 || i == xSteps)
-					GUI.Label(new Rect(x - 5, bottom + 2, 30, 20), i.ToString());
+					GUI.Label(new Rect(x - 10, bottom + 2, 40, 20), i.ToString());
+			}
+
+			for (int i = 0; i <= 4; i++) {
+				float t = i / 4f;
+				float y = bottom - t * height;
+				Handles.DrawLine(new Vector3(left, y), new Vector3(right, y));
+
+				GUI.Label(new Rect(left - 35, y - 8, 30, 20), t.ToString("0.##"));
 			}
 
 			Handles.EndGUI();
 		}
-
 
 		private void DrawAxes(Rect rect) {
 			Handles.BeginGUI();
@@ -134,24 +297,15 @@ namespace PacingFramework
 			float top = rect.y + padding;
 			float bottom = rect.y + rect.height - padding;
 
-			// Y Axis
 			Handles.DrawLine(new Vector3(left, top), new Vector3(left, bottom));
-
-			// X Axis
 			Handles.DrawLine(new Vector3(left, bottom), new Vector3(right, bottom));
 
 			Handles.EndGUI();
-
-			// Labels - Should only turn this on when the grid is off. 
-			//GUI.Label(new Rect(left - 30, top - 10, 40, 20), "1");
-			//GUI.Label(new Rect(left - 30, bottom - 10, 40, 20), "0");
-
-			//GUI.Label(new Rect(left - 10, bottom + 5, 40, 20), "0");
-			//GUI.Label(new Rect(right - 20, bottom + 5, 40, 20), (DATA_COUNT - 1).ToString());
 		}
 
-		private void DrawAndEdit(Rect rect) {
+		private void DrawCurve(Rect rect, List<float> list, Color color, int curveIndex) {
 			Handles.BeginGUI();
+			Handles.color = color;
 
 			float left = rect.x + padding;
 			float right = rect.x + rect.width - padding;
@@ -161,64 +315,45 @@ namespace PacingFramework
 			float width = right - left;
 			float height = bottom - top;
 
-			List<List<float>> lists = new List<List<float>>
-			{
-				threats,
-				tempos,
-				overall
-			};
-
-			Color[] colors = { Color.red, Color.cyan, Color.green };
-
 			Event e = Event.current;
 
-			for (int c = 0; c < lists.Count; c++) {
-				var list = lists[c];
-				Handles.color = colors[c];
+			Vector2 GetPoint(int i) {
+				float x = left + i / (float)(list.Count - 1) * width;
+				float y = bottom - Mathf.Clamp01(list[i]) * height;
+				return new Vector2(x, y);
+			}
 
-				// ---------- Compute all screen points ----------
-				Vector2[] screenPoints = new Vector2[DATA_COUNT];
+			// Draw lines
+			for (int i = 0; i < list.Count - 1; i++)
+				Handles.DrawLine(GetPoint(i), GetPoint(i + 1));
 
-				for (int i = 0; i < DATA_COUNT; i++) {
-					float normalizedX = i / (float)(DATA_COUNT - 1);
-					float x = left + normalizedX * width;
+			// Draw circles (including overall)
+			for (int i = 0; i < list.Count; i++) {
+				Vector2 p = GetPoint(i);
+				Handles.DrawSolidDisc(p, Vector3.forward, pointRadius);
 
-					float normalizedY = Mathf.Clamp01(list[i]);
-					float y = bottom - normalizedY * height;
+				if (curveIndex < 0)
+					continue; // overall not draggable
 
-					screenPoints[i] = new Vector2(x, y);
+				if (e.type == EventType.MouseDown &&
+					Vector2.Distance(e.mousePosition, p) < pointRadius) {
+					draggingCurve = curveIndex;
+					draggingIndex = i;
+					e.Use();
 				}
 
-				// ---------- Draw lines ----------
-				for (int i = 0; i < DATA_COUNT - 1; i++) {
-					Handles.DrawLine(screenPoints[i], screenPoints[i + 1]);
-				}
+				if (e.type == EventType.MouseDrag &&
+					draggingCurve == curveIndex &&
+					draggingIndex == i) {
+					float normalized = Mathf.Clamp01((bottom - e.mousePosition.y) / height);
 
-				// ---------- Draw draggable points as circles ----------
-				float radius = pointSize / 2f; // radius in pixels
+					if (curveIndex == 0)
+						model.SetThreat(i, normalized);
+					else
+						model.SetTempo(i, normalized);
 
-				for (int i = 0; i < DATA_COUNT; i++) {
-					Vector2 p = screenPoints[i];
-
-					// Draw circle
-					Handles.color = colors[c];
-					Handles.DrawSolidDisc(p, Vector3.forward, radius);
-
-					// Handle dragging
-					if (e.type == EventType.MouseDown && Vector2.Distance(e.mousePosition, p) < radius) {
-						draggingCurve = c;
-						draggingIndex = i;
-						e.Use();
-					}
-
-					if (e.type == EventType.MouseDrag &&
-						draggingCurve == c &&
-						draggingIndex == i) {
-						float normalized = Mathf.Clamp01((bottom - e.mousePosition.y) / height);
-						list[i] = Round2(normalized);
-						isDirty = true;
-						e.Use();
-					}
+					onChanged?.Invoke();
+					e.Use();
 				}
 			}
 
@@ -230,335 +365,9 @@ namespace PacingFramework
 			Handles.EndGUI();
 		}
 
-		private void DrawConstraintSection() {
-			GUIStyle boldFoldout = new GUIStyle(EditorStyles.foldout) { fontStyle = FontStyle.Bold };
-			showConstraints = EditorGUILayout.Foldout(showConstraints, "Global Constraints", true, boldFoldout);
-
-			if (!showConstraints)
-				return;
-
-			EditorGUILayout.BeginVertical("box");
-
-			DrawConstraintRow("Collision Ratio", constraintConfig.CollisionRatio);
-			DrawConstraintRow("Ability Ratio", constraintConfig.AbilityRatio);
-			DrawConstraintRow("Angle", constraintConfig.Angle);
-			DrawConstraintRow("Safe Distance", constraintConfig.SafeDistance);
-
-			EditorGUILayout.Space(5);
-
-			DrawConstraintRow("Action Intensity", constraintConfig.ActionIntensity);
-			DrawConstraintRow("Action Density", constraintConfig.ActionDensity);
-			DrawConstraintRow("Bots Distance", constraintConfig.BotsDistance);
-			DrawConstraintRow("Velocity", constraintConfig.Velocity);
-
-			EditorGUILayout.EndVertical();
-		}
-
-		private void DrawConstraintRow(string label, ConstraintMinMax data) {
-			EditorGUILayout.BeginHorizontal();
-
-			GUILayout.Label(label, GUILayout.Width(130));
-
-			// ----- MinLimit -----
-			GUILayout.Label("MinL", GUILayout.Width(35));
-			EditorGUI.BeginChangeCheck();
-			float newMinLimit = EditorGUILayout.FloatField(
-				data.MinLimit,
-				GUILayout.Width(60));
-			bool minLimitChanged = EditorGUI.EndChangeCheck();
-
-			// ----- Min -----
-			GUILayout.Label("Min", GUILayout.Width(28));
-			EditorGUI.BeginChangeCheck();
-			float newMin = EditorGUILayout.DelayedFloatField(
-				data.Min,
-				GUILayout.Width(60));
-			bool minChanged = EditorGUI.EndChangeCheck();
-
-			// ----- Slider -----
-			EditorGUI.BeginChangeCheck();
-			EditorGUILayout.MinMaxSlider(
-				ref data.Min,
-				ref data.Max,
-				data.MinLimit,
-				data.MaxLimit
-			);
-			bool sliderChanged = EditorGUI.EndChangeCheck();
-
-			// ----- Max -----
-			GUILayout.Label("Max", GUILayout.Width(30));
-			EditorGUI.BeginChangeCheck();
-			float newMax = EditorGUILayout.DelayedFloatField(
-				data.Max,
-				GUILayout.Width(60));
-			bool maxChanged = EditorGUI.EndChangeCheck();
-
-			// ----- MaxLimit -----
-			GUILayout.Label("MaxL", GUILayout.Width(35));
-			EditorGUI.BeginChangeCheck();
-			float newMaxLimit = EditorGUILayout.FloatField(
-				data.MaxLimit,
-				GUILayout.Width(60));
-			bool maxLimitChanged = EditorGUI.EndChangeCheck();
-
-			// ----- Weight -----
-			GUILayout.Label("W", GUILayout.Width(18));
-			EditorGUI.BeginChangeCheck();
-			float newWeight = EditorGUILayout.Slider(data.Weight, 0f, 1f);
-			bool weightChanged = EditorGUI.EndChangeCheck();
-
-			EditorGUILayout.EndHorizontal();
-
-			// ---------- Apply Changes ----------
-
-			if (minLimitChanged) {
-				data.MinLimit = Round2(newMinLimit);
-				isDirty = true;
-			}
-
-			if (maxLimitChanged) {
-				data.MaxLimit = Round2(newMaxLimit);
-				isDirty = true;
-			}
-
-			if (minChanged) {
-				data.Min = Round2(newMin);
-				isDirty = true;
-			}
-
-			if (maxChanged) {
-				data.Max = Round2(newMax);
-				isDirty = true;
-			}
-
-			if (sliderChanged) {
-				data.Min = Round2(data.Min);
-				data.Max = Round2(data.Max);
-
-				// Release text field focus so value refreshes
-				GUI.FocusControl(null);
-				EditorGUIUtility.editingTextField = false;
-
-				isDirty = true;
-			}
-
-			if (weightChanged) {
-				data.Weight = Round2(newWeight);
-				isDirty = true;
-			}
-
-			// ---------- Validation ----------
-			// --- Detect MaxLimit change ---
-			if (!Mathf.Approximately(data.PreviousMaxLimit, data.MaxLimit)) {
-				// If max was at old limit, keep it attached
-				if (Mathf.Approximately(data.Max, data.PreviousMaxLimit))
-					data.Max = data.MaxLimit;
-
-				data.PreviousMaxLimit = data.MaxLimit;
-			}
-
-			// --- Detect MinLimit change ---
-			if (!Mathf.Approximately(data.PreviousMinLimit, data.MinLimit)) {
-				if (Mathf.Approximately(data.Min, data.PreviousMinLimit))
-					data.Min = data.MinLimit;
-
-				data.PreviousMinLimit = data.MinLimit;
-			}
-
-			// --- Safety ---
-			if (data.MinLimit > data.MaxLimit)
-				data.MaxLimit = data.MinLimit;
-
-			if (data.Max > data.MaxLimit)
-				data.Max = data.MaxLimit;
-
-			if (data.Min < data.MinLimit)
-				data.Min = data.MinLimit;
-
-			if (data.Min > data.Max)
-				data.Min = data.Max;
-
-		}
-
-		private void DrawSaveLoadSection() {
-			EditorGUILayout.LabelField("Pacing Config", EditorStyles.boldLabel);
-
-			EditorGUI.BeginDisabledGroup(true);
-			configPath = EditorGUILayout.TextField("File Path", configPath);
-			EditorGUI.EndDisabledGroup();
-			EditorGUILayout.BeginHorizontal();
-
-			if (GUILayout.Button("Save", GUILayout.Height(30))) {
-				SaveConfig(configPath);
-			}
-
-			if (GUILayout.Button("Load", GUILayout.Height(30))) {
-				LoadConfig(configPath);
-			}
-
-			EditorGUILayout.EndHorizontal();
-		}
-
-		private string ToRelativePath(string absolutePath) {
-			if (absolutePath.StartsWith(Application.dataPath))
-				return "Assets" + absolutePath.Substring(Application.dataPath.Length);
-			return absolutePath; // outside project
-		}
-
-		// Convert relative path to absolute
-		private string ToAbsolutePath(string relativePath) {
-			if (relativePath.StartsWith("Assets"))
-				return Application.dataPath + relativePath.Substring("Assets".Length);
-			return relativePath; // outside project
-		}
-
-		private void SaveConfig(string currentPath) {
-			PacingTargetConfig config = new PacingTargetConfig {
-				ThreatTargets = new List<float>(threats),
-				TempoTargets = new List<float>(tempos),
-				GlobalConstraints = constraintConfig
-			};
-
-			string json = JsonUtility.ToJson(config, true);
-
-			string defaultFolder = "Assets/Dev/Bagus/Pacing";
-			string absolutePath = EditorUtility.SaveFilePanel(
-				"Save Pacing Config",
-				defaultFolder,
-				"PacingConfig",
-				"json");
-
-			if (string.IsNullOrEmpty(absolutePath))
-				return;
-
-			System.IO.File.WriteAllText(absolutePath, json);
-			AssetDatabase.Refresh();
-
-			configPath = ToRelativePath(absolutePath); // store as relative
-			isDirty = false; // just saved
-			Debug.Log("Saved to: " + configPath);
-		}
-
-		private void LoadConfig(string currentPath) {
-			if (isDirty) {
-				if (!EditorUtility.DisplayDialog("Unsaved Changes",
-						"You have unsaved changes. Do you want to continue loading and lose changes?",
-						"Yes", "Cancel")) {
-					return;
-				}
-			}
-
-			string defaultFolder = "Assets/Dev/Bagus/Pacing";
-			string absolutePath = EditorUtility.OpenFilePanel(
-				"Load Pacing Config",
-				defaultFolder,
-				"json");
-
-			if (string.IsNullOrEmpty(absolutePath))
-				return;
-
-			if (!System.IO.File.Exists(absolutePath)) {
-				Debug.LogWarning("File not found.");
-				return;
-			}
-
-			string json = System.IO.File.ReadAllText(absolutePath);
-			PacingTargetConfig config = JsonUtility.FromJson<PacingTargetConfig>(json);
-
-			if (config == null) {
-				Debug.LogWarning("Invalid config file.");
-				return;
-			}
-
-			threats = new List<float>(config.ThreatTargets);
-			tempos = new List<float>(config.TempoTargets);
-			for (int i = 0; i < threats.Count; i++) {
-				threats[i] = Round2(threats[i]);
-				tempos[i] = Round2(tempos[i]);
-			}
-			constraintConfig = config.GlobalConstraints;
-			NormalizeConstraints(constraintConfig);
-			ValidateConstraintLimits(constraintConfig);
-
-			UpdateOverall();
-
-			configPath = ToRelativePath(absolutePath);
-			isDirty = false; // just loaded
-
-			Repaint();
-
-			Debug.Log("Loaded from: " + configPath);
-		}
-
-		private void NormalizeConstraints(ConstraintConfig config) {
-			void Normalize(ConstraintMinMax c) {
-				c.Min = Round2(c.Min);
-				c.Max = Round2(c.Max);
-				c.Weight = Round2(c.Weight);
-			}
-
-			Normalize(config.CollisionRatio);
-			Normalize(config.AbilityRatio);
-			Normalize(config.Angle);
-			Normalize(config.SafeDistance);
-			Normalize(config.ActionIntensity);
-			Normalize(config.ActionDensity);
-			Normalize(config.BotsDistance);
-			Normalize(config.Velocity);
-		}
-
-		private void ValidateConstraintLimits(ConstraintConfig config) {
-			void Validate(ConstraintMinMax c) {
-				// Ensure limits are valid
-				if (c.MinLimit > c.MaxLimit)
-					c.MaxLimit = c.MinLimit;
-
-				// Clamp values inside limits
-				c.Min = Mathf.Clamp(c.Min, c.MinLimit, c.MaxLimit);
-				c.Max = Mathf.Clamp(c.Max, c.MinLimit, c.MaxLimit);
-
-				if (c.Min > c.Max)
-					c.Max = c.Min;
-
-				// Force 2 decimal precision
-				c.MinLimit = Round2(c.MinLimit);
-				c.MaxLimit = Round2(c.MaxLimit);
-				c.Min = Round2(c.Min);
-				c.Max = Round2(c.Max);
-				c.Weight = Round2(c.Weight);
-			}
-
-			Validate(config.CollisionRatio);
-			Validate(config.AbilityRatio);
-			Validate(config.Angle);
-			Validate(config.SafeDistance);
-			Validate(config.ActionIntensity);
-			Validate(config.ActionDensity);
-			Validate(config.BotsDistance);
-			Validate(config.Velocity);
-		}
-
-		private void DrawGraphSection() {
-			EditorGUILayout.LabelField("Target Pacing Curve", EditorStyles.boldLabel);
-			EditorGUILayout.HelpBox("Edit segments' threat & tempo targets via graph or fields.", MessageType.Info);
-
-			Rect rectCurveCanvas = GUILayoutUtility.GetRect(position.width - 20, 400);
-			EditorGUI.DrawRect(rectCurveCanvas, new Color(0.12f, 0.12f, 0.12f));
-
-			DrawGrid(rectCurveCanvas);
-			DrawAxes(rectCurveCanvas);
-			DrawAndEdit(rectCurveCanvas);
-			DrawLegendInsideGraph(rectCurveCanvas);
-
-			UpdateOverall();
-			EditorGUILayout.Space(10);
-
-			DrawSegmentFields();			
-		}
-
-		private void DrawLegendInsideGraph(Rect rect) {
-			float boxWidth = 85f;
-			float boxHeight = 70f;
+		private void DrawLegend(Rect rect) {
+			float boxWidth = 95f;
+			float boxHeight = 75f;
 			float margin = 10f;
 
 			Rect legendRect = new Rect(
@@ -568,126 +377,135 @@ namespace PacingFramework
 				boxHeight
 			);
 
-			// Background
-			EditorGUI.DrawRect(legendRect, new Color(0f, 0f, 0f, 0.3f));
+			EditorGUI.DrawRect(legendRect, new Color(0f, 0f, 0f, 0.4f));
 
-			float lineHeight = 20f;
-
-			DrawLegendItemInRect(
-				new Rect(legendRect.x + 10, legendRect.y + 5, boxWidth - 20, lineHeight),
-				Color.red,
-				"Threat");
-
-			DrawLegendItemInRect(
-				new Rect(legendRect.x + 10, legendRect.y + 25, boxWidth - 20, lineHeight),
-				Color.cyan,
-				"Tempo");
-
-			DrawLegendItemInRect(
-				new Rect(legendRect.x + 10, legendRect.y + 45, boxWidth - 20, lineHeight),
-				Color.green,
-				"Overall");
+			DrawLegendItem(legendRect, 0, Color.red, "Threat");
+			DrawLegendItem(legendRect, 1, Color.cyan, "Tempo");
+			DrawLegendItem(legendRect, 2, Color.green, "Overall");
 		}
 
-		private void DrawLegendItemInRect(Rect rowRect, Color color, string label) {
-			float colorSize = 12f;
+		private void DrawLegendItem(Rect legendRect, int row, Color color, string label) {
+			float rowHeight = 22f;
+			float y = legendRect.y + 8 + row * rowHeight;
 
-			Rect colorRect = new Rect(
-				rowRect.x,
-				rowRect.y + 4,
-				colorSize,
-				colorSize
-			);
-
+			Rect colorRect = new Rect(legendRect.x + 8, y + 4, 12, 12);
 			EditorGUI.DrawRect(colorRect, color);
 
 			EditorGUI.LabelField(
-				new Rect(rowRect.x + colorSize + 8, rowRect.y, rowRect.width, rowRect.height),
+				new Rect(legendRect.x + 25, y, 60, 20),
 				label,
 				EditorStyles.whiteLabel
 			);
 		}
+	}
 
-		private void DrawSegmentFields() {
-			GUIStyle boldFoldout = new GUIStyle(EditorStyles.foldout) {
-				fontStyle = FontStyle.Bold
-			};
+	#endregion
 
-			showSegmentFields = EditorGUILayout.Foldout(
-				showSegmentFields,
-				"Target Segment Pacings",
-				true,
-				boldFoldout);
+	#region CONSTRAINT DRAWER
 
-			if (!showSegmentFields)
-				return;
+	public class ConstraintDrawer
+	{
+		private PacingModel model;
+		private Action onChanged;
 
+		public ConstraintDrawer(PacingModel model, Action onChanged) {
+			this.model = model;
+			this.onChanged = onChanged;
+		}
+
+		public void Draw() {
 			EditorGUILayout.BeginVertical("box");
 
-			for (int i = 0; i < DATA_COUNT; i++) {
-				EditorGUILayout.BeginHorizontal();
+			DrawConstraintRow("Collision Ratio", model.Constraints.CollisionRatio);
+			DrawConstraintRow("Ability Ratio", model.Constraints.AbilityRatio);
+			DrawConstraintRow("Angle", model.Constraints.Angle);
+			DrawConstraintRow("Safe Distance", model.Constraints.SafeDistance);
 
-				GUILayout.Label($"Segment {i}", GUILayout.Width(80));
+			EditorGUILayout.Space();
 
-				// Threat
-				EditorGUI.BeginChangeCheck();
-				float threatValue = EditorGUILayout.Slider(threats[i], 0f, 1f);
-				if (EditorGUI.EndChangeCheck()) {
-					threatValue = Mathf.Round(threatValue * 100f) / 100f;
-
-					if (threatValue != threats[i]) {
-						threats[i] = threatValue;
-						isDirty = true;
-					}
-				}
-
-				// Tempo
-				EditorGUI.BeginChangeCheck();
-				float tempoValue = EditorGUILayout.Slider(tempos[i], 0f, 1f);
-				if (EditorGUI.EndChangeCheck()) {
-					tempoValue = Mathf.Round(tempoValue * 100f) / 100f;
-
-					if (tempoValue != tempos[i]) {
-						tempos[i] = tempoValue;
-						isDirty = true;
-					}
-				}
-
-				EditorGUILayout.EndHorizontal();
-			}
+			DrawConstraintRow("Action Intensity", model.Constraints.ActionIntensity);
+			DrawConstraintRow("Action Density", model.Constraints.ActionDensity);
+			DrawConstraintRow("Bots Distance", model.Constraints.BotsDistance);
+			DrawConstraintRow("Velocity", model.Constraints.Velocity);
 
 			EditorGUILayout.EndVertical();
 		}
 
-		private void UpdateOverall() {
-			if (overall.Count != threats.Count)
-				overall = new List<float>(new float[threats.Count]);
+		private void DrawConstraintRow(string label, ConstraintMinMax data) {
+			EditorGUILayout.BeginHorizontal();
 
-			for (int i = 0; i < threats.Count; i++)
-				overall[i] = (threats[i] + tempos[i]) * 0.5f;
+			GUILayout.Label(label, GUILayout.Width(130));
+
+			GUILayout.Label("MinL", GUILayout.Width(35));
+			float newMinLimit = EditorGUILayout.FloatField(data.MinLimit, GUILayout.Width(60));
+
+			GUILayout.Label("Min", GUILayout.Width(30));
+			float newMin = EditorGUILayout.DelayedFloatField(data.Min, GUILayout.Width(60));
+
+			EditorGUILayout.MinMaxSlider(ref data.Min, ref data.Max, data.MinLimit, data.MaxLimit);
+
+			GUILayout.Label("Max", GUILayout.Width(30));
+			float newMax = EditorGUILayout.DelayedFloatField(data.Max, GUILayout.Width(60));
+
+			GUILayout.Label("MaxL", GUILayout.Width(35));
+			float newMaxLimit = EditorGUILayout.FloatField(data.MaxLimit, GUILayout.Width(60));
+
+			GUILayout.Label("W", GUILayout.Width(20));
+			float newWeight = EditorGUILayout.Slider(data.Weight, 0f, 1f);
+
+			EditorGUILayout.EndHorizontal();
+
+			bool changed =
+				newMinLimit != data.MinLimit ||
+				newMaxLimit != data.MaxLimit ||
+				newMin != data.Min ||
+				newMax != data.Max ||
+				newWeight != data.Weight;
+
+			if (changed) {
+				data.MinLimit = Round2(newMinLimit);
+				data.MaxLimit = Round2(newMaxLimit);
+				data.Min = Round2(newMin);
+				data.Max = Round2(newMax);
+				data.Weight = Round2(newWeight);
+
+				Validate(data);
+				onChanged?.Invoke();
+			}
 		}
 
-		private float Round2(float value) {
-			return Mathf.Round(value * 100f) / 100f;
+		private void Validate(ConstraintMinMax c) {
+			if (c.MinLimit > c.MaxLimit)
+				c.MaxLimit = c.MinLimit;
+
+			c.Min = Mathf.Clamp(c.Min, c.MinLimit, c.MaxLimit);
+			c.Max = Mathf.Clamp(c.Max, c.MinLimit, c.MaxLimit);
+
+			if (c.Min > c.Max)
+				c.Min = c.Max;
 		}
+
+		private float Round2(float v) => Mathf.Round(v * 100f) / 100f;
 	}
+
+	#endregion
+
+	#region DATA
 
 	[Serializable]
 	public class PacingTargetConfig
 	{
 		public List<float> ThreatTargets = new();
 		public List<float> TempoTargets = new();
-
-		public ConstraintConfig GlobalConstraints = new ConstraintConfig();
+		public ConstraintConfig GlobalConstraints = new();
 	}
 
 	[Serializable]
 	public class ConstraintConfig
 	{
-		// Default Constraints [Modify these constraints according to bot]. 
 		public ConstraintMinMax CollisionRatio = new(0, 1);
 		public ConstraintMinMax AbilityRatio = new(0, 0.2f);
-		public ConstraintMinMax Angle = new(0, 180f);
+		public ConstraintMinMax Angle = new(0, 180);
 		public ConstraintMinMax SafeDistance = new(1, 5);
 
 		public ConstraintMinMax ActionIntensity = new(0, 50);
@@ -703,32 +521,15 @@ namespace PacingFramework
 		public float Max;
 		public float MinLimit;
 		public float MaxLimit;
-
-		[Range(0f, 1f)] 
-		public float Weight = 1;
-		[NonSerialized] 
-		public float PreviousMaxLimit;
-		[NonSerialized] 
-		public float PreviousMinLimit;
-
-		public ConstraintMinMax() {
-			PreviousMinLimit = MinLimit = Min = 0f;
-			PreviousMaxLimit = MaxLimit = Max = 1f;
-		}
+		public float Weight = 1f;
 
 		public ConstraintMinMax(float minLimit, float maxLimit) {
-			PreviousMinLimit = MinLimit = minLimit;
-			PreviousMaxLimit = MaxLimit = maxLimit;
-			Min = Mathf.Round(minLimit * 100f) / 100f;
-			Max = Mathf.Round(maxLimit * 100f) / 100f;
-		}
-
-		public ConstraintMinMax(float minValue, float maxValue, float minLimit, float maxLimit) {
-			PreviousMinLimit = MinLimit = minLimit;
-			PreviousMaxLimit = MaxLimit = maxLimit;
-			Min = minValue;
-			Max = maxValue;
+			MinLimit = minLimit;
+			MaxLimit = maxLimit;
+			Min = minLimit;
+			Max = maxLimit;
 		}
 	}
 
+	#endregion
 }
