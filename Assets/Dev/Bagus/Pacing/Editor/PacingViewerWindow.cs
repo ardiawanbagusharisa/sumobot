@@ -1,3 +1,4 @@
+using SumoBot;
 using System;
 using System.Collections.Generic;
 using UnityEditor;
@@ -7,6 +8,15 @@ namespace PacingFramework
 {
 	public class PacingViewerWindow : EditorWindow
 	{
+		private bool showBots;
+		private bool showPacingDetails;
+		private bool showSegmentDetails;
+		private bool showEvaluationDetails;
+
+		private Vector2 pacingScroll;
+		private Vector2 segmentScroll;
+		private Vector2 evaluationScroll;
+
 		private PacingController controller;
 		private PacingTargetConfig targetConfig;
 		private string loadedConfigPath = "";
@@ -16,6 +26,12 @@ namespace PacingFramework
 		private const float pointRadius = 4f;
 
 		private bool overlayTarget = true;
+
+		// [Test] For testing only. 
+		private string botName = "Bot1";
+		private string botScore = "3";
+		private string botName1 = "Bot2";
+		private string botScore1 = "5";
 
 		[MenuItem("Tools/Pacing Framework/Pacing Viewer")]
 		public static void Open() {
@@ -61,6 +77,11 @@ namespace PacingFramework
 			}
 
 			DrawLegend(rect);
+
+			DrawBotsSection(controller);
+			DrawPacingDetails(history);
+			DrawSegmentDetails(history);
+			DrawSegmentEvaluation(threat, tempo);
 
 			Repaint(); // live update
 
@@ -252,7 +273,7 @@ namespace PacingFramework
 
 		private void DrawLegend(Rect rect) {
 			float boxWidth = 110f;
-			float boxHeight = 70f;
+			float boxHeight = 60f;
 			float margin = 10f;
 
 			Rect legendRect = new Rect(
@@ -282,6 +303,126 @@ namespace PacingFramework
 				label,
 				EditorStyles.whiteLabel
 			);
+		}
+
+		private void DrawBotsSection(PacingController controller) {
+			showBots = EditorGUILayout.Foldout(showBots, "Bot Details", true);
+			if (!showBots) return;
+
+			EditorGUILayout.BeginVertical("box");
+			EditorGUILayout.LabelField($"{botName}  |  Score: {botScore}");
+			EditorGUILayout.LabelField($"{botName1}  |  Score: {botScore1}");
+			
+			EditorGUILayout.EndVertical();
+		}
+
+		private void DrawPacingDetails(GamePacing history) {
+			showPacingDetails = EditorGUILayout.Foldout(showPacingDetails, "Pacing Details (Aspects / Factors)", true);
+			if (!showPacingDetails) return;
+
+			EditorGUILayout.BeginVertical("box");
+
+			bool useScroll = history.SegmentPacings.Count > 10;
+
+			if (useScroll)
+				pacingScroll = EditorGUILayout.BeginScrollView(pacingScroll, GUILayout.Height(200));
+
+			for (int i = 0; i < history.SegmentPacings.Count; i++) {
+				var p = history.SegmentPacings[i];
+
+				EditorGUILayout.LabelField($"Segment {i}", EditorStyles.boldLabel);
+
+				EditorGUILayout.LabelField($"Threat: {p.Threat.Value:F3}");
+				EditorGUILayout.LabelField($"Tempo: {p.Tempo.Value:F3}");
+				// Modify the block code below because we now have GetFactorsInfo() in threat and tempo 
+				//foreach (var factor in p.Threat. Factors) {
+				//	EditorGUILayout.LabelField(
+				//		$"   {factor.Key}: {factor.Value:F3}");
+				//}
+				foreach (var info in p.Threat.GetFactorsInfo()) {
+					// Now show the factor and its value. 
+					EditorGUILayout.LabelField(info.factor.ToString());
+					//EditorGUILayout.LabelField(
+					//	$"   {info.Name}: {info.Value:F3}");
+				}
+				foreach (var info in p.Tempo.GetFactorsInfo()) {
+					// Now show the factor and its value. 
+					EditorGUILayout.LabelField(info.factor.ToString());
+					//EditorGUILayout.LabelField(
+					//	$"   {info.Name}: {info.Value:F3}");
+				}
+
+				EditorGUILayout.Space(4);
+			}
+
+			if (useScroll)
+				EditorGUILayout.EndScrollView();
+
+			EditorGUILayout.EndVertical();
+		}
+
+		private void DrawSegmentDetails(GamePacing history) {
+			showSegmentDetails = EditorGUILayout.Foldout(showSegmentDetails, "Segment Raw Data", true);
+			if (!showSegmentDetails) return;
+
+			EditorGUILayout.BeginVertical("box");
+
+			bool useScroll = history.SegmentPacings.Count > 10;
+
+			if (useScroll)
+				segmentScroll = EditorGUILayout.BeginScrollView(segmentScroll, GUILayout.Height(200));
+
+			for (int i = 0; i < history.SegmentPacings.Count; i++) {
+				var info = history.SegmentGameplayDatas[i];
+				EditorGUILayout.LabelField($"Segment {i} Counts", EditorStyles.boldLabel);
+				EditorGUILayout.LabelField($"Collisions: {info.Collisions.Count}");
+				EditorGUILayout.LabelField($"Angles: {info.Angles.Count}");
+				EditorGUILayout.LabelField($"SafeDist: {info.SafeDistances.Count}");
+				EditorGUILayout.LabelField($"Actions: {info.Actions.Count}");
+				EditorGUILayout.LabelField($"BotDist: {info.BotsDistances.Count}");
+				EditorGUILayout.LabelField($"Velocity: {info.Velocities.Count}");
+				EditorGUILayout.Space(4);
+			}
+
+			if (useScroll)
+				EditorGUILayout.EndScrollView();
+
+			EditorGUILayout.EndVertical();
+		}
+
+		private void DrawSegmentEvaluation(
+			List<float> actualThreat,
+			List<float> actualTempo) {
+			if (targetConfig == null)
+				return;
+
+			showEvaluationDetails = EditorGUILayout.Foldout(showEvaluationDetails, "Per Segment Evaluation", true);
+			if (!showEvaluationDetails) return;
+
+			EditorGUILayout.BeginVertical("box");
+
+			var alignedThreat = ResampleCurve(targetConfig.ThreatTargets, actualThreat.Count);
+			var alignedTempo = ResampleCurve(targetConfig.TempoTargets, actualTempo.Count);
+
+			bool useScroll = actualThreat.Count > 10;
+
+			if (useScroll)
+				evaluationScroll = EditorGUILayout.BeginScrollView(evaluationScroll, GUILayout.Height(200));
+
+			for (int i = 0; i < actualThreat.Count; i++) {
+				float threatDiff = actualThreat[i] - alignedThreat[i];
+				float tempoDiff = actualTempo[i] - alignedTempo[i];
+
+				float mse = threatDiff * threatDiff + tempoDiff * tempoDiff;
+
+				EditorGUILayout.LabelField(
+					$"Segment {i}  |  ThreatΔ: {threatDiff:F3}  TempoΔ: {tempoDiff:F3}  Error: {mse:F4}");
+			}
+
+			if (useScroll)
+				EditorGUILayout.EndScrollView();
+
+			EditorGUILayout.EndVertical();
 		}
 
 		// ======================================================
@@ -314,5 +455,34 @@ namespace PacingFramework
 
 			return error / count;
 		}
+
+		private List<float> ResampleCurve(List<float> source, int targetCount) {
+			var result = new List<float>();
+			if (source == null || source.Count == 0 || targetCount <= 0)
+				return result;
+
+			for (int i = 0; i < targetCount; i++) {
+				float t = i / (float)(targetCount - 1);
+				float srcIndex = t * (source.Count - 1);
+
+				int i0 = Mathf.FloorToInt(srcIndex);
+				int i1 = Mathf.Min(i0 + 1, source.Count - 1);
+
+				float lerp = srcIndex - i0;
+				float value = Mathf.Lerp(source[i0], source[i1], lerp);
+
+				result.Add(value);
+			}
+
+			return result;
+		}
 	}
+
+	// [Todo] Add sections to show these later: 
+	// 1. Show bots details: name, scores. 
+	// 2. Show pacing details (use scroll area if data > 10): aspects and factors values. 
+	// 3. Show segment details (use scroll area if data > 10): such as collisions<>, angles<>,safedist<>, actions<>, botdist<>, velocity<>.
+	// 4. show per segment evaluation (use scroll area if data > 10). 
+
+
 }
