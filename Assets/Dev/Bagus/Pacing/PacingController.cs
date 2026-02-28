@@ -79,6 +79,14 @@ namespace PacingFramework
 			segmentIndex++;
 		}
 
+		public GamePacing GetHistory() {
+			return pacingHistory;
+		}
+
+		public ConstraintSet GetConstraints() {
+			return pacingTarget.GlobalConstraints;
+		}
+
 		// ================================
 		// Test Functions
 		// ================================
