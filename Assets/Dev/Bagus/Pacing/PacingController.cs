@@ -423,5 +423,11 @@ namespace PacingFramework
 
 			Value = totalWeight > 0 ? weightedSum / totalWeight : 0f;
 		}
+
+		// Get the list of factors including its 
+		public List<(AspectType aspect, FactorType factor, float value, float weight)> GetFactorsInfo() {
+			AspectType aspectType = (this is ThreatAspect) ? AspectType.Threat : AspectType.Tempo;
+			return Factors.Select(f => (aspectType, f.Type, f.Evaluate(Data, Constraints), f.Weight)).ToList();
+		}
 	}
 }
