@@ -1,0 +1,114 @@
+{
+    "ThreatTargets": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+    ],
+    "TempoTargets": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+    ],
+    "GlobalConstraints": {
+        "CollisionRatio": {
+            "Min": 0.0,
+            "Max": 1.0,
+            "MinLimit": 0.0,
+            "MaxLimit": 1.0,
+            "Weight": 1.0
+        },
+        "AbilityRatio": {
+            "Min": 0.0,
+            "Max": 0.20000000298023225,
+            "MinLimit": 0.0,
+            "MaxLimit": 0.20000000298023225,
+            "Weight": 1.0
+        },
+        "Angle": {
+            "Min": 0.0,
+            "Max": 180.0,
+            "MinLimit": 0.0,
+            "MaxLimit": 180.0,
+            "Weight": 1.0
+        },
+        "SafeDistance": {
+            "Min": 1.0,
+            "Max": 5.0,
+            "MinLimit": 1.0,
+            "MaxLimit": 5.0,
+            "Weight": 1.0
+        },
+        "ActionIntensity": {
+            "Min": 0.0,
+            "Max": 50.0,
+            "MinLimit": 0.0,
+            "MaxLimit": 50.0,
+            "Weight": 1.0
+        },
+        "ActionDensity": {
+            "Min": 0.0,
+            "Max": 1.0,
+            "MinLimit": 0.0,
+            "MaxLimit": 1.0,
+            "Weight": 1.0
+        },
+        "BotsDistance": {
+            "Min": 0.0,
+            "Max": 5.0,
+            "MinLimit": 1.0,
+            "MaxLimit": 5.0,
+            "Weight": 1.0
+        },
+        "Velocity": {
+            "Min": 0.0,
+            "Max": 10.0,
+            "MinLimit": 0.0,
+            "MaxLimit": 10.0,
+            "Weight": 1.0
+        }
+    }
+}
