@@ -1,12 +1,10 @@
 using System.Collections.Generic;
-using System.Drawing;
 using System.Linq;
 using SumoHelper;
 using SumoInput;
 using SumoLog;
 using SumoManager;
 using UnityEngine;
-using SumoPacing;
 
 namespace SumoCore
 {
@@ -62,7 +60,6 @@ namespace SumoCore
         [Header("General Info")]
         public PlayerSide Side;
         public InputProvider InputProvider;
-        public PacingController PacingController;
         public PlayerProfile Profile;
         #endregion
 
@@ -92,8 +89,8 @@ namespace SumoCore
         public EventRegistry Events = new();
         public const string OnBounce = "OnBounce"; // [Side]
         public const string OnOutOfArena = "OnOutOfArena"; // [Side]
-        public const string OnAction = "OnAction"; // [Side, ISumoAction, bool]
-        public const string OnSkillAssigned = "OnSkillAssigned"; // [Side, ISumoAction, bool]
+        public const string OnAction = "OnAction"; // [Side, ISumoAction, IsExecuted]
+        public const string OnSkillAssigned = "OnSkillAssigned"; // [SkillType?, Side]
         #endregion
 
 
@@ -128,9 +125,6 @@ namespace SumoCore
             reservedMoveSpeed = MoveSpeed;
             reservedDashSpeed = DashSpeed;
             reserverdBounceResistance = BounceResistance;
-
-            // Initialize PacingController
-            PacingController = new PacingController(this);
         }
 
         void Update()
@@ -482,7 +476,7 @@ namespace SumoCore
                 SFXManager.Instance.Play2D("collision_small");
                 VFXManager.Instance.PlayCollisionSpark(collision.contacts[0].point, enemyVelocity);
             }
-            else 
+            else
             {
                 SFXManager.Instance.Play2D("collision_big");
                 VFXManager.Instance.PlayCollisionSpark(collision.contacts[0].point, actorVelocity);
@@ -600,7 +594,7 @@ namespace SumoCore
                 RigidBody.linearVelocity = Vector2.Lerp(RigidBody.linearVelocity, Vector2.zero, SlowDownRate * Time.deltaTime);
                 RigidBody.angularVelocity = Mathf.Lerp(RigidBody.angularVelocity, 0, SlowDownRate * Time.deltaTime);
             }
-            
+
             if (Mathf.Abs(RigidBody.angularVelocity) <= AngularStopDelay)
             {
                 RigidBody.angularVelocity = 0;
@@ -632,20 +626,9 @@ namespace SumoCore
                     VFXManager.Instance.PlayDash(transform, facing);
                 }
 
-                // PacingController: Filter action based on target pacing
-                if (PacingController != null && PacingController.ShouldEnqueueAction(this, action))
-                {
-                    Actions.Enqueue(action);
-                    PacingController.RecordAction(this, action);
-                }
-                else if (PacingController == null)
-                {
-                    // Fallback: if no PacingController, enqueue normally
-                    Actions.Enqueue(action);
-                }
-                // If PacingController rejects action, it's simply not enqueued
+                Actions.Enqueue(action);
+                Events[OnAction]?.Invoke(new(sideParam: Side, actionParam: action, boolParam: false));
             }
-
         }
 
         public void ClearInput()
@@ -666,7 +649,7 @@ namespace SumoCore
                 ISumoAction action = Actions.Dequeue();
 
                 action.Execute(this);
-                Events[OnAction]?.Invoke(new(sideParam: Side, actionParam: action));
+                Events[OnAction]?.Invoke(new(sideParam: Side, actionParam: action, boolParam: true));
             }
         }
         #endregion
