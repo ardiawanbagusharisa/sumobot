@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using PacingFramework;
 using SumoCore;
 using SumoInput;
 using SumoManager;
@@ -24,14 +25,14 @@ namespace SumoBot
 
         public bool BotEnabled => LeftEnabled || RightEnabled;
 
-        private BotHandler leftConfig;
-        private BotHandler rightConfig;
-
+        private BotHandler leftHandler;
+        private BotHandler rightHandler;
 
         private void OnEnable()
         {
             BattleManager.Instance.Events[BattleManager.OnBattleChanged].Subscribe(OnBattleStateChanged);
         }
+
         void Start()
         {
             if (!enabled)
@@ -53,7 +54,7 @@ namespace SumoBot
 
             if (LeftEnabled && Left != null)
             {
-                leftConfig.IsOnUpdate = true;
+                leftHandler.IsOnUpdate = true;
 
                 try
                 {
@@ -61,14 +62,15 @@ namespace SumoBot
                 }
                 finally
                 {
-                    leftConfig.IsOnUpdate = false;
+                    leftHandler.IsOnUpdate = false;
+                    leftHandler.PacingController.Tick();
                 }
 
             }
 
             if (RightEnabled && Right != null)
             {
-                rightConfig.IsOnUpdate = true;
+                rightHandler.IsOnUpdate = true;
 
                 try
                 {
@@ -76,10 +78,12 @@ namespace SumoBot
                 }
                 finally
                 {
-                    rightConfig.IsOnUpdate = false;
+                    rightHandler.IsOnUpdate = false;
+                    rightHandler.PacingController.Tick();
                 }
-
             }
+
+
         }
 
         public void OnBattleStateChanged(EventParameter param)
@@ -132,30 +136,32 @@ namespace SumoBot
 
             if (LeftEnabled && Left != null && controller.Side == PlayerSide.Left)
             {
-                leftConfig = new()
+                leftHandler = new()
                 {
                     InputProvider = controller.InputProvider,
                     Actions = new(),
-                    SkillType = skillType ?? Left.DefaultSkillType
+                    SkillType = skillType ?? Left.DefaultSkillType,
+                    PacingController = controller.GetComponent<PacingController>()
                 };
-                controller.AssignSkill(leftConfig.SkillType);
+                controller.AssignSkill(leftHandler.SkillType);
                 controller.Events[SumoController.OnBounce].Subscribe(OnLeftBounce);
-                Left.Init(leftConfig);
-                Left.OnBotInit(leftConfig.InputProvider.API);
+                Left.Init(leftHandler);
+                Left.OnBotInit(leftHandler.InputProvider.API);
             }
 
             if (RightEnabled && Right != null && controller.Side == PlayerSide.Right)
             {
-                rightConfig = new()
+                rightHandler = new()
                 {
                     InputProvider = controller.InputProvider,
                     Actions = new(),
-                    SkillType = skillType ?? Left.DefaultSkillType
+                    SkillType = skillType ?? Left.DefaultSkillType,
+                    PacingController = controller.GetComponent<PacingController>()
                 };
-                controller.AssignSkill(rightConfig.SkillType);
+                controller.AssignSkill(rightHandler.SkillType);
                 controller.Events[SumoController.OnBounce].Subscribe(OnRightBounce);
-                Right.Init(rightConfig);
-                Right.OnBotInit(rightConfig.InputProvider.API);
+                Right.Init(rightHandler);
+                Right.OnBotInit(rightHandler.InputProvider.API);
             }
         }
 
@@ -226,6 +232,7 @@ namespace SumoBot
         public Queue<ISumoAction> Actions;
         public bool IsOnUpdate = false;
         public SkillType SkillType;
+        public PacingController PacingController;
 
         public void Submit()
         {

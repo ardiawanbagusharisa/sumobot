@@ -118,9 +118,12 @@ namespace SumoInput
         void OnPlayerAction(EventParameter param)
         {
             ISumoAction action = param.Action;
-            actionLastUsedMap[action.Type] = Time.time;
-            actionInputTypeMap[action.Type] = action.InputUsed;
-           
+
+            if (param.Bool) // isExecuted
+            {
+                actionLastUsedMap[action.Type] = Time.time;
+                actionInputTypeMap[action.Type] = action.InputUsed;
+            }
         }
 
         void UpdateButtonState(ActionType actionType, bool active)
