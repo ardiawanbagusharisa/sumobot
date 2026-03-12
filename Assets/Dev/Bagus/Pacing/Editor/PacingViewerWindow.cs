@@ -76,9 +76,10 @@ namespace PacingFramework
 			DrawCurve(rect, tempo, Color.cyan);
 			DrawCurve(rect, overall, Color.green);
 
-			if (overlayTarget && targetConfig != null)
+			if (overlayTarget && (targetConfig != null || controller.PacingTarget != null))
 			{
-				DrawTargetOverlay(rect, targetConfig, threat.Count);
+				var target = targetConfig ?? controller.PacingTarget;
+				DrawTargetOverlay(rect, target, threat.Count);
 				DrawEvaluation(threat, tempo);
 			}
 
