@@ -143,6 +143,7 @@ namespace SumoBot
                     SkillType = skillType ?? Left.DefaultSkillType,
                     PacingController = controller.GetComponent<PacingController>()
                 };
+                leftHandler.PacingController.Init();
                 controller.AssignSkill(leftHandler.SkillType);
                 controller.Events[SumoController.OnBounce].Subscribe(OnLeftBounce);
                 Left.Init(leftHandler);
@@ -158,6 +159,7 @@ namespace SumoBot
                     SkillType = skillType ?? Left.DefaultSkillType,
                     PacingController = controller.GetComponent<PacingController>()
                 };
+                rightHandler.PacingController.Init();
                 controller.AssignSkill(rightHandler.SkillType);
                 controller.Events[SumoController.OnBounce].Subscribe(OnRightBounce);
                 Right.Init(rightHandler);

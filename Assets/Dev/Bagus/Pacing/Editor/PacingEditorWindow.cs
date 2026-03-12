@@ -703,51 +703,5 @@ namespace PacingFramework
 			return Mathf.Abs(a - b) < EPS;
 		}
 	}
-
-	#endregion
-
-	#region DATA
-
-	[Serializable]
-	public class PacingTargetConfig
-	{
-		public List<float> ThreatTargets = new();
-		public List<float> TempoTargets = new();
-		public ConstraintConfig GlobalConstraints = new();
-	}
-
-	[Serializable]
-	public class ConstraintConfig
-	{
-		// Defaults 
-		// [Todo] Consider to make scriptable object for each bot's constraints.
-		public ConstraintMinMax CollisionRatio = new(0, 1);
-		public ConstraintMinMax AbilityRatio = new(0, 0.2f);
-		public ConstraintMinMax Angle = new(0, 180);
-		public ConstraintMinMax SafeDistance = new(1, 5);
-
-		public ConstraintMinMax ActionIntensity = new(0, 50);
-		public ConstraintMinMax ActionDensity = new(0, 1);
-		public ConstraintMinMax BotsDistance = new(1, 5);
-		public ConstraintMinMax Velocity = new(0, 10);
-	}
-
-	[Serializable]
-	public class ConstraintMinMax
-	{
-		public float Min;
-		public float Max;
-		public float MinLimit;
-		public float MaxLimit;
-		public float Weight = 1f;
-
-		public ConstraintMinMax(float minLimit, float maxLimit) {
-			MinLimit = minLimit;
-			MaxLimit = maxLimit;
-			Min = minLimit;
-			Max = maxLimit;
-		}
-	}
-
 	#endregion
 }

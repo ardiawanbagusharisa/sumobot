@@ -1,6 +1,7 @@
 using SumoBot;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
@@ -34,16 +35,19 @@ namespace PacingFramework
 		private string botScore1 = "5";
 
 		[MenuItem("Tools/Pacing Framework/Pacing Viewer")]
-		public static void Open() {
+		public static void Open()
+		{
 			GetWindow<PacingViewerWindow>("Pacing Viewer");
 		}
 
-		private void OnGUI() {
+		private void OnGUI()
+		{
 			scroll = EditorGUILayout.BeginScrollView(scroll);
 
 			DrawSelectionSection();
 
-			if (controller == null) {
+			if (controller == null)
+			{
 				EditorGUILayout.HelpBox("Assign a PacingController.", MessageType.Info);
 				EditorGUILayout.EndScrollView();
 				return;
@@ -51,7 +55,8 @@ namespace PacingFramework
 
 			GamePacing history = controller.GetHistory();
 
-			if (history.SegmentPacings.Count == 0) {
+			if (history.SegmentPacings.Count == 0)
+			{
 				EditorGUILayout.HelpBox("No pacing data yet.", MessageType.Info);
 				EditorGUILayout.EndScrollView();
 				return;
@@ -71,8 +76,9 @@ namespace PacingFramework
 			DrawCurve(rect, tempo, Color.cyan);
 			DrawCurve(rect, overall, Color.green);
 
-			if (overlayTarget && targetConfig != null) {
-				DrawTargetOverlay(rect, targetConfig);
+			if (overlayTarget && targetConfig != null)
+			{
+				DrawTargetOverlay(rect, targetConfig, threat.Count);
 				DrawEvaluation(threat, tempo);
 			}
 
@@ -92,7 +98,8 @@ namespace PacingFramework
 		// UI
 		// ======================================================
 
-		private void DrawSelectionSection() {
+		private void DrawSelectionSection()
+		{
 			EditorGUILayout.BeginVertical("box");
 
 			controller = (PacingController)EditorGUILayout.ObjectField(
@@ -105,19 +112,21 @@ namespace PacingFramework
 
 			EditorGUILayout.BeginHorizontal();
 
-			EditorGUILayout.LabelField("Target Config (Optional)", GUILayout.Width(160));
+			EditorGUILayout.LabelField("Target Config (Override)", GUILayout.Width(160));
 
 			EditorGUI.BeginDisabledGroup(true);
 			EditorGUILayout.TextField("Loaded Path", loadedConfigPath);
 			EditorGUI.EndDisabledGroup();
 
-			if (GUILayout.Button("Load JSON", GUILayout.Width(100))) {
+			if (GUILayout.Button("Load JSON", GUILayout.Width(100)))
+			{
 				string path = EditorUtility.OpenFilePanel(
 					"Load Target Config",
 					"",
 					"json");
 
-				if (!string.IsNullOrEmpty(path)) {
+				if (!string.IsNullOrEmpty(path))
+				{
 					string json = System.IO.File.ReadAllText(path);
 					targetConfig = JsonUtility.FromJson<PacingTargetConfig>(json);
 					loadedConfigPath = path;
@@ -136,21 +145,24 @@ namespace PacingFramework
 		// DATA EXTRACTION
 		// ======================================================
 
-		private List<float> ExtractThreat(GamePacing history) {
+		private List<float> ExtractThreat(GamePacing history)
+		{
 			var list = new List<float>();
 			foreach (var p in history.SegmentPacings)
 				list.Add(p.Threat.Value);
 			return list;
 		}
 
-		private List<float> ExtractTempo(GamePacing history) {
+		private List<float> ExtractTempo(GamePacing history)
+		{
 			var list = new List<float>();
 			foreach (var p in history.SegmentPacings)
 				list.Add(p.Tempo.Value);
 			return list;
 		}
 
-		private List<float> ExtractOverall(GamePacing history) {
+		private List<float> ExtractOverall(GamePacing history)
+		{
 			var list = new List<float>();
 			foreach (var p in history.SegmentPacings)
 				list.Add(p.GetOverallPacing());
@@ -161,7 +173,8 @@ namespace PacingFramework
 		// DRAWING
 		// ======================================================
 
-		private void DrawGrid(Rect rect, int count) {
+		private void DrawGrid(Rect rect, int count)
+		{
 			Handles.BeginGUI();
 			Handles.color = new Color(0.3f, 0.3f, 0.3f, 0.4f);
 
@@ -175,7 +188,8 @@ namespace PacingFramework
 
 			int xSteps = Mathf.Max(1, count - 1);
 
-			for (int i = 0; i <= xSteps; i++) {
+			for (int i = 0; i <= xSteps; i++)
+			{
 				float x = left + i / (float)xSteps * width;
 				Handles.DrawLine(new Vector3(x, top), new Vector3(x, bottom));
 
@@ -183,7 +197,8 @@ namespace PacingFramework
 					GUI.Label(new Rect(x - 10, bottom + 2, 40, 20), i.ToString());
 			}
 
-			for (int i = 0; i <= 4; i++) {
+			for (int i = 0; i <= 4; i++)
+			{
 				float t = i / 4f;
 				float y = bottom - t * height;
 				Handles.DrawLine(new Vector3(left, y), new Vector3(right, y));
@@ -194,7 +209,8 @@ namespace PacingFramework
 			Handles.EndGUI();
 		}
 
-		private void DrawAxes(Rect rect) {
+		private void DrawAxes(Rect rect)
+		{
 			Handles.BeginGUI();
 			Handles.color = Color.gray;
 
@@ -209,7 +225,8 @@ namespace PacingFramework
 			Handles.EndGUI();
 		}
 
-		private void DrawCurve(Rect rect, List<float> list, Color color) {
+		private void DrawCurve(Rect rect, List<float> list, Color color)
+		{
 			if (list.Count < 2)
 				return;
 
@@ -224,7 +241,8 @@ namespace PacingFramework
 			float width = right - left;
 			float height = bottom - top;
 
-			Vector2 GetPoint(int i) {
+			Vector2 GetPoint(int i)
+			{
 				float x = left + i / (float)(list.Count - 1) * width;
 				float y = bottom - Mathf.Clamp01(list[i]) * height;
 				return new Vector2(x, y);
@@ -239,12 +257,19 @@ namespace PacingFramework
 			Handles.EndGUI();
 		}
 
-		private void DrawTargetOverlay(Rect rect, PacingTargetConfig target) {
-			DrawDashed(rect, target.ThreatTargets, Color.red);
-			DrawDashed(rect, target.TempoTargets, Color.cyan);
+		private void DrawTargetOverlay(Rect rect, PacingTargetConfig target, int actualDataCount)
+		{
+			// The target config has a fixed number of segments (e.g., 25)
+			// We need to resample it to match the actual data count for proper alignment
+			var resampledThreat = ResampleCurve(target.ThreatTargets, actualDataCount);
+			var resampledTempo = ResampleCurve(target.TempoTargets, actualDataCount);
+
+			DrawDashed(rect, resampledThreat, Color.red);
+			DrawDashed(rect, resampledTempo, Color.cyan);
 		}
 
-		private void DrawDashed(Rect rect, List<float> list, Color color) {
+		private void DrawDashed(Rect rect, List<float> list, Color color)
+		{
 			if (list == null || list.Count < 2)
 				return;
 
@@ -259,19 +284,26 @@ namespace PacingFramework
 			float width = right - left;
 			float height = bottom - top;
 
-			Vector2 GetPoint(int i) {
+			Vector2 GetPoint(int i)
+			{
 				float x = left + i / (float)(list.Count - 1) * width;
 				float y = bottom - Mathf.Clamp01(list[i]) * height;
 				return new Vector2(x, y);
 			}
 
+			// Draw dotted lines between consecutive points
 			for (int i = 0; i < list.Count - 1; i++)
 				Handles.DrawDottedLine(GetPoint(i), GetPoint(i + 1), 4f);
+
+			// Draw small circles at each point for better visibility
+			for (int i = 0; i < list.Count; i++)
+				Handles.DrawSolidDisc(GetPoint(i), Vector3.forward, pointRadius * 0.6f);
 
 			Handles.EndGUI();
 		}
 
-		private void DrawLegend(Rect rect) {
+		private void DrawLegend(Rect rect)
+		{
 			float boxWidth = 110f;
 			float boxHeight = 60f;
 			float margin = 10f;
@@ -291,7 +323,8 @@ namespace PacingFramework
 			//DrawLegendItem(legendRect, 3, Color.white, "Dashed = Target");
 		}
 
-		private void DrawLegendItem(Rect legendRect, int row, Color color, string label) {
+		private void DrawLegendItem(Rect legendRect, int row, Color color, string label)
+		{
 			float rowHeight = 18f;
 			float y = legendRect.y + 6 + row * rowHeight;
 
@@ -305,18 +338,20 @@ namespace PacingFramework
 			);
 		}
 
-		private void DrawBotsSection(PacingController controller) {
+		private void DrawBotsSection(PacingController controller)
+		{
 			showBots = EditorGUILayout.Foldout(showBots, "Bot Details", true);
 			if (!showBots) return;
 
 			EditorGUILayout.BeginVertical("box");
 			EditorGUILayout.LabelField($"{botName}  |  Score: {botScore}");
 			EditorGUILayout.LabelField($"{botName1}  |  Score: {botScore1}");
-			
+
 			EditorGUILayout.EndVertical();
 		}
 
-		private void DrawPacingDetails(GamePacing history) {
+		private void DrawPacingDetails(GamePacing history)
+		{
 			showPacingDetails = EditorGUILayout.Foldout(showPacingDetails, "Pacing Details (Aspects / Factors)", true);
 			if (!showPacingDetails) return;
 
@@ -327,7 +362,8 @@ namespace PacingFramework
 			if (useScroll)
 				pacingScroll = EditorGUILayout.BeginScrollView(pacingScroll, GUILayout.Height(200));
 
-			for (int i = 0; i < history.SegmentPacings.Count; i++) {
+			for (int i = 0; i < history.SegmentPacings.Count; i++)
+			{
 				var p = history.SegmentPacings[i];
 
 				EditorGUILayout.LabelField($"Segment {i}", EditorStyles.boldLabel);
@@ -339,15 +375,17 @@ namespace PacingFramework
 				//	EditorGUILayout.LabelField(
 				//		$"   {factor.Key}: {factor.Value:F3}");
 				//}
-				foreach (var info in p.Threat.GetFactorsInfo()) {
+				foreach (var info in p.Threat.GetFactorsInfo())
+				{
 					// Now show the factor and its value. 
-					EditorGUILayout.LabelField(info.factor.ToString());
+					EditorGUILayout.LabelField($"{info.factor}: {info.value:F3}");
 					//EditorGUILayout.LabelField(
 					//	$"   {info.Name}: {info.Value:F3}");
 				}
-				foreach (var info in p.Tempo.GetFactorsInfo()) {
+				foreach (var info in p.Tempo.GetFactorsInfo())
+				{
 					// Now show the factor and its value. 
-					EditorGUILayout.LabelField(info.factor.ToString());
+					EditorGUILayout.LabelField($"{info.factor}: {info.value:F3}");
 					//EditorGUILayout.LabelField(
 					//	$"   {info.Name}: {info.Value:F3}");
 				}
@@ -361,7 +399,8 @@ namespace PacingFramework
 			EditorGUILayout.EndVertical();
 		}
 
-		private void DrawSegmentDetails(GamePacing history) {
+		private void DrawSegmentDetails(GamePacing history)
+		{
 			showSegmentDetails = EditorGUILayout.Foldout(showSegmentDetails, "Segment Raw Data", true);
 			if (!showSegmentDetails) return;
 
@@ -372,7 +411,8 @@ namespace PacingFramework
 			if (useScroll)
 				segmentScroll = EditorGUILayout.BeginScrollView(segmentScroll, GUILayout.Height(200));
 
-			for (int i = 0; i < history.SegmentPacings.Count; i++) {
+			for (int i = 0; i < history.SegmentPacings.Count; i++)
+			{
 				var info = history.SegmentGameplayDatas[i];
 				EditorGUILayout.LabelField($"Segment {i} Counts", EditorStyles.boldLabel);
 				EditorGUILayout.LabelField($"Collisions: {info.Collisions.Count}");
@@ -392,7 +432,8 @@ namespace PacingFramework
 
 		private void DrawSegmentEvaluation(
 			List<float> actualThreat,
-			List<float> actualTempo) {
+			List<float> actualTempo)
+		{
 			if (targetConfig == null)
 				return;
 
@@ -409,7 +450,8 @@ namespace PacingFramework
 			if (useScroll)
 				evaluationScroll = EditorGUILayout.BeginScrollView(evaluationScroll, GUILayout.Height(200));
 
-			for (int i = 0; i < actualThreat.Count; i++) {
+			for (int i = 0; i < actualThreat.Count; i++)
+			{
 				float threatDiff = actualThreat[i] - alignedThreat[i];
 				float tempoDiff = actualTempo[i] - alignedTempo[i];
 
@@ -429,26 +471,35 @@ namespace PacingFramework
 		// EVALUATION
 		// ======================================================
 
-		private void DrawEvaluation(List<float> threat, List<float> tempo) {
+		private void DrawEvaluation(List<float> threat, List<float> tempo)
+		{
 			if (targetConfig == null) return;
 
 			float threatError = CalculateMSE(threat, targetConfig.ThreatTargets);
 			float tempoError = CalculateMSE(tempo, targetConfig.TempoTargets);
+			float threatAvg = threat.Sum() / threat.Count;
+			float tempoAvg = tempo.Sum() / tempo.Count;
+			float overall = (threatAvg + tempoAvg) / 2;
 
 			EditorGUILayout.Space();
 			EditorGUILayout.LabelField(
-				$"Threat MSE: {threatError:F4}    Tempo MSE: {tempoError:F4}",
+				$"Threat AVG: {threatAvg:F2}, MSE: {threatError:F4}    Tempo AVG: {tempoAvg:F2}, MSE: {tempoError:F4}",
 				EditorStyles.boldLabel);
+			EditorGUILayout.LabelField(
+			$"Overall Pacing: {overall:F2}",
+			EditorStyles.boldLabel);
 		}
 
-		private float CalculateMSE(List<float> a, List<float> b) {
+		private float CalculateMSE(List<float> a, List<float> b)
+		{
 			if (a == null || b == null) return 0f;
 
 			int count = Mathf.Min(a.Count, b.Count);
 			if (count == 0) return 0f;
 
 			float error = 0f;
-			for (int i = 0; i < count; i++) {
+			for (int i = 0; i < count; i++)
+			{
 				float d = a[i] - b[i];
 				error += d * d;
 			}
@@ -456,12 +507,14 @@ namespace PacingFramework
 			return error / count;
 		}
 
-		private List<float> ResampleCurve(List<float> source, int targetCount) {
+		private List<float> ResampleCurve(List<float> source, int targetCount)
+		{
 			var result = new List<float>();
 			if (source == null || source.Count == 0 || targetCount <= 0)
 				return result;
 
-			for (int i = 0; i < targetCount; i++) {
+			for (int i = 0; i < targetCount; i++)
+			{
 				float t = i / (float)(targetCount - 1);
 				float srcIndex = t * (source.Count - 1);
 

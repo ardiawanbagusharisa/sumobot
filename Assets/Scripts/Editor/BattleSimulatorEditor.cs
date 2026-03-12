@@ -38,6 +38,7 @@ public class BattleSimulatorEditor : Editor
                 simulator.SimpleTimeScale = EditorGUILayout.FloatField("Time Scale", simulator.SimpleTimeScale);
                 simulator.SwapAIInterval = EditorGUILayout.IntField("Swap AI Interval", simulator.SwapAIInterval);
                 simulator.SimulationOnStart = EditorGUILayout.Toggle("Simulation On Start", simulator.SimulationOnStart);
+                simulator.QuitAfterDone = EditorGUILayout.Toggle("Quit After Done", simulator.QuitAfterDone);
 
                 EditorGUI.indentLevel--;
             }
