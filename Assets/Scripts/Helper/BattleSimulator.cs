@@ -27,6 +27,7 @@ namespace SumoHelper
         public int TotalSimulations = 5;
         public float SimpleTimeScale = 1f;
         public int SwapAIInterval = 0;
+        public bool QuitAfterDone = true;
 
         [Header("Advanced Mode Settings")]
         public float DefaultTimeScale = 2f;
@@ -82,7 +83,8 @@ namespace SumoHelper
 
             Logger.Info("[Simple Simulation] Complete.", true);
 #if UNITY_EDITOR
-            UnityEditor.EditorApplication.isPlaying = false;
+            if (QuitAfterDone)
+                UnityEditor.EditorApplication.isPlaying = false;
 #else
             Application.Quit();
 #endif
@@ -288,6 +290,7 @@ namespace SumoHelper
             }
 
             Logger.Info("[Simulation] All simulations complete.", true);
+
 #if UNITY_EDITOR
             UnityEditor.EditorApplication.isPlaying = false;
 #else

@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using SumoBot;
 using SumoCore;
+using SumoManager;
+using Unity.VisualScripting;
 using UnityEngine;
 
 /// Structure: 
@@ -19,14 +21,17 @@ namespace PacingFramework
 		// ================================
 		// Runtime Config
 		// ================================
-		public float segmentDuration = 2f;
-		private float timer;
-
 		public SegmentData currentGameplayData;
+		public float segmentDuration = 2f;
+		public string PacingFileName = "";
+
+		private PacingTargetConfig pacingTarget = new PacingTargetConfig();
+
+		private int tickCount;
+
 		private SegmentPacing currentSegmentPacing;
 
 		private GamePacing pacingHistory = new GamePacing();
-		private GamePacingTarget pacingTarget = new GamePacingTarget();
 
 		private SumoController controller;
 
@@ -37,11 +42,32 @@ namespace PacingFramework
 		//Paced Actions: <SumoAction> 
 
 		// Test Fields
-		private int segmentIndex = 1;
+		private int segmentIndex = 0;
 
 		// ================================
 		// Unity
 		// ================================
+
+		void Start()
+		{
+			if (PacingFileName.Count() == 0)
+			{
+				Logger.Warning($"[{controller.Side}] PacingFileName not set. Default constraints is used");
+				pacingTarget = new PacingTargetConfig();
+				return;
+			}
+
+			string pacingConfigPath = $"Pacing/Constraints/{PacingFileName}";
+			TextAsset pacingConfigAsset = Resources.Load<TextAsset>(pacingConfigPath);
+			if (pacingConfigAsset == null)
+			{
+				Logger.Error($"pacingConfigPath {PacingFileName} JSON not found in Resources!");
+				return;
+			}
+
+			pacingTarget = JsonUtility.FromJson<PacingTargetConfig>(pacingConfigAsset.text);
+			Logger.Info($"[{controller.Side}] PacingConfig loaded");
+		}
 
 		void OnEnable()
 		{
@@ -56,64 +82,25 @@ namespace PacingFramework
 			controller.Events[SumoController.OnAction].Unsubscribe(OnAction);
 		}
 
-		private void Start()
-		{
-			Init();
-			//TestSimulation(); // Auto test at start
-		}
-
-		private void Update()
-		{
-			// TestSimulationContinuous(); // Continuous test 
-			// Tick();
-		}
-
-		private void OnBounce(EventParameter parameter)
-		{
-			if (parameter.BounceEvent.MyInfo.IsTieBreaker)
-				currentGameplayData.RegisterCollision(CollisionType.Tie);
-			else if (parameter.BounceEvent.MyInfo.IsActor)
-				currentGameplayData.RegisterCollision(CollisionType.Hit);
-			else
-				currentGameplayData.RegisterCollision(CollisionType.Struck);
-		}
-
-		private void OnAction(EventParameter parameter)
-		{
-			if (!parameter.Bool) // !isExecuted 
-			{
-				SumoAPI api = controller.InputProvider.API;
-				float arenaRadius = api.BattleInfo.ArenaRadius;
-				var safeDist = Mathf.Abs((arenaRadius - api.DistanceNormalized(targetPos: api.BattleInfo.ArenaPosition)) / arenaRadius);
-				
-				currentGameplayData.RegisterAction(parameter.Action.Type);
-				currentGameplayData.RegisterAngle(controller.transform.rotation.y);
-				currentGameplayData.RegisterBotsDistance(api.DistanceNormalized());
-				currentGameplayData.RegisterSafeDistance(safeDist);
-				currentGameplayData.RegisterVelocity(controller.RigidBody.linearVelocity.magnitude);
-			}
-		}
-
 		// ================================
 		// Core Methods
 		// ================================
 		public void Init()
 		{
 			currentGameplayData = new SegmentData();
-			timer = 0f;
+			tickCount = 0;
+			segmentIndex = 0;
 		}
 
 		// [Todo] Remove deltaTime parameter. Then call every game tick. 
 		public void Tick()
 		{
-			// timer += deltaTime;
-
-			// if (timer >= segmentDuration)
-			// {
-			// }
+			tickCount += 1;
+			if ((tickCount / 10) < segmentDuration)
+				return;
 
 			FinalizeSegment();
-			timer = 0f;
+			tickCount = 0;
 			currentGameplayData.Reset();
 		}
 
@@ -123,6 +110,8 @@ namespace PacingFramework
 			currentSegmentPacing = new SegmentPacing(currentGameplayData, pacingTarget.GlobalConstraints);
 			pacingHistory.SegmentGameplayDatas.Add(new SegmentData(currentGameplayData));
 			pacingHistory.SegmentPacings.Add(currentSegmentPacing);
+
+			LogManager.LogPacing(currentGameplayData, currentSegmentPacing, segmentIndex, controller.Side);
 
 			// Test 
 			DebugPacing(currentSegmentPacing);
@@ -135,7 +124,7 @@ namespace PacingFramework
 			return pacingHistory;
 		}
 
-		public ConstraintSet GetConstraints()
+		public ConstraintConfig GetConstraints()
 		{
 			return pacingTarget.GlobalConstraints;
 		}
@@ -194,6 +183,40 @@ namespace PacingFramework
 			}
 		}
 
+		private void OnBounce(EventParameter parameter)
+		{
+
+			CollisionType type;
+			float angle = Mathf.Abs(controller.InputProvider.API.Angle());
+			angle = Mathf.Min(angle, 360 - angle);
+
+			if (parameter.BounceEvent.MyInfo.IsTieBreaker)
+				type = CollisionType.Tie;
+			else if (parameter.BounceEvent.MyInfo.IsActor)
+				type = CollisionType.Hit;
+			else
+				type = CollisionType.Struck;
+
+			currentGameplayData.RegisterAngle(angle);
+			currentGameplayData.RegisterCollision(type);
+			Logger.Info($"PacingController.OnBounce Type: {type}, Rotation: {angle}");
+		}
+
+		private void OnAction(EventParameter parameter)
+		{
+			if (!parameter.Bool) // !isExecuted 
+			{
+				SumoAPI api = controller.InputProvider.API;
+				float arenaRadius = api.BattleInfo.ArenaRadius;
+				var safeDist = Mathf.Abs((arenaRadius - api.DistanceNormalized(targetPos: api.BattleInfo.ArenaPosition)) / arenaRadius);
+
+				currentGameplayData.RegisterAction(parameter.Action.Type);
+				currentGameplayData.RegisterBotsDistance(api.DistanceNormalized());
+				currentGameplayData.RegisterSafeDistance(safeDist);
+				currentGameplayData.RegisterVelocity(controller.RigidBody.linearVelocity.magnitude);
+			}
+		}
+
 		// [Todo] 
 		// Evaluation methods =========
 		//EvaluatePacing(): void // Compare the actual latest pacing in pacinghistory with the pacingtarget according to the index. 
@@ -224,61 +247,57 @@ namespace PacingFramework
 		public List<SegmentPacing> SegmentPacings = new();
 	}
 
-	public class GamePacingTarget
+	[Serializable]
+	public class PacingTargetConfig
 	{
-		public ConstraintSet GlobalConstraints = new ConstraintSet();
-		// [Todo]
-		// Fields ==========
-		//List of Local Constraints: <Constraints>  
-		//List of Target Pacing: <Segment Pacing>
+		public List<float> ThreatTargets = new();
+		public List<float> TempoTargets = new();
+		public ConstraintConfig GlobalConstraints = new();
 	}
 
-	public class Constraint
+	[Serializable]
+	public class ConstraintConfig
+	{
+		// Defaults 
+		// [Todo] Consider to make scriptable object for each bot's constraints.
+		public ConstraintMinMax CollisionRatio = new(0, 1);
+		public ConstraintMinMax AbilityRatio = new(0, 0.2f);
+		public ConstraintMinMax Angle = new(0, 180);
+		public ConstraintMinMax SafeDistance = new(1, 5);
+
+		public ConstraintMinMax ActionIntensity = new(0, 50);
+		public ConstraintMinMax ActionDensity = new(0, 1);
+		public ConstraintMinMax BotsDistance = new(1, 5);
+		public ConstraintMinMax Velocity = new(0, 10);
+	}
+
+	[Serializable]
+	public class ConstraintMinMax
 	{
 		public float Min;
 		public float Max;
+		public float MinLimit;
+		public float MaxLimit;
+		public float Weight = 1f;
 
-		public Constraint(float min, float max)
+		public ConstraintMinMax(float minLimit, float maxLimit)
 		{
-			Min = min;
-			Max = max;
+			MinLimit = minLimit;
+			MaxLimit = maxLimit;
+			Min = minLimit;
+			Max = maxLimit;
 		}
 
 		public float Normalize(float value)
 		{
-			if (Mathf.Approximately(Max, Min)) return 0f;
-			return Mathf.Clamp01((value - Min) / (Max - Min));
+			var min = Mathf.Min(Min, MinLimit);
+			var max = Mathf.Max(Max, MaxLimit);
+			if (Mathf.Approximately(max, min)) return 0f;
+			return Mathf.Clamp01((value - min) / (max - min));
 		}
 	}
 
-	public class ConstraintSet
-	{
-		// Threat constraints
-		public Constraint CollisionRatio;       // Ratio of hit collision among all collisions.
-		public Constraint AbilityRatio;         // Ratio of ability usage among all actions.
-		public Constraint Angle;                // Average angle between the bot and its opponents when they collide or are close.
-		public Constraint SafeDistance;         // Average distance between the bot and its opponents when they collide or are close.
-												// Tempo constraints
-		public Constraint ActionIntensity;      // Number of actions performed by the bot.
-		public Constraint ActionDensity;        // Entropy of the action distribution.
-		public Constraint BotsDistance;         // Average distance between the bot and its opponents.
-		public Constraint Velocity;             // Average velocity of the bot.
-
-		public ConstraintSet()
-		{
-			// Defaults 
-			// [Todo] Need to carefully check at the simulated data from the Bot. Create a structure such as ScriptableObject to easily configure constraints for all bots. 
-			CollisionRatio = new(0, 1);
-			AbilityRatio = new(0, 0.2f);
-			Angle = new(0, 180);
-			SafeDistance = new(1, 5);
-			ActionIntensity = new(0, 50);
-			ActionDensity = new(0, 1);
-			BotsDistance = new(1, 5);
-			Velocity = new(0, 10);
-		}
-	}
-
+	[Serializable]
 	public class SegmentData
 	{
 		// Threat fields
@@ -339,7 +358,7 @@ namespace PacingFramework
 		public ThreatAspect Threat;
 		public TempoAspect Tempo;
 
-		public SegmentPacing(SegmentData data, ConstraintSet constraints)
+		public SegmentPacing(SegmentData data, ConstraintConfig constraints)
 		{
 			Threat = new ThreatAspect(data, constraints);
 			Tempo = new TempoAspect(data, constraints);
@@ -353,7 +372,7 @@ namespace PacingFramework
 
 	public class ThreatAspect : Aspect
 	{
-		public ThreatAspect(SegmentData data, ConstraintSet constraints) : base(data, constraints)
+		public ThreatAspect(SegmentData data, ConstraintConfig constraints) : base(data, constraints)
 		{
 			Factors.Add(new Factor(FactorType.HitCollision, 1f));
 			Factors.Add(new Factor(FactorType.Ability, 1f));
@@ -365,7 +384,7 @@ namespace PacingFramework
 
 	public class TempoAspect : Aspect
 	{
-		public TempoAspect(SegmentData data, ConstraintSet constraints) : base(data, constraints)
+		public TempoAspect(SegmentData data, ConstraintConfig constraints) : base(data, constraints)
 		{
 			Factors.Add(new Factor(FactorType.ActionIntensity, 1f));
 			Factors.Add(new Factor(FactorType.ActionDensity, 1f));
@@ -385,10 +404,9 @@ namespace PacingFramework
 			Weight = weight;
 		}
 
-		public float Evaluate(SegmentData data, ConstraintSet constraints)
+		public float Evaluate(SegmentData data, ConstraintConfig constraints)
 		{
-			float score = 0f;
-
+			float score;
 			if (Type == FactorType.HitCollision)
 				score = EvaluateHitCollision(data, constraints);
 			else if (Type == FactorType.Ability)
@@ -414,7 +432,7 @@ namespace PacingFramework
 		}
 
 		// Evaluate the ratio of hit collision among all collisions.
-		private float EvaluateHitCollision(SegmentData data, ConstraintSet constraints)
+		private float EvaluateHitCollision(SegmentData data, ConstraintConfig constraints)
 		{
 			float hitCollisionCount = data.Collisions.Count(c => c == CollisionType.Hit);
 			float collisionCount = data.Collisions.Count;
@@ -423,7 +441,7 @@ namespace PacingFramework
 		}
 
 		// Evaluate the ratio of ability usage among all actions.
-		private float EvaluateAbility(SegmentData data, ConstraintSet constraints)
+		private float EvaluateAbility(SegmentData data, ConstraintConfig constraints)
 		{
 			float abilityCount = data.Actions.Count(a => a == ActionType.Dash || a == ActionType.SkillBoost || a == ActionType.SkillStone);
 			float abilityRatio = (data.Actions.Count < constraints.AbilityRatio.Min) ? 0f : abilityCount / data.Actions.Count;
@@ -431,25 +449,25 @@ namespace PacingFramework
 		}
 
 		// Evaluate the average angle between the bot and its opponents when they collide or are close.
-		private float EvaluateAngle(SegmentData data, ConstraintSet constraints)
+		private float EvaluateAngle(SegmentData data, ConstraintConfig constraints)
 		{
 			return data.Angles.Count > 0 ? constraints.Angle.Normalize(data.Angles.Average()) : 0f;
 		}
 
 		// Evaluate the average distance between the bot and its opponents when they collide or are close.
-		private float EvaluateSafeDistance(SegmentData data, ConstraintSet constraints)
+		private float EvaluateSafeDistance(SegmentData data, ConstraintConfig constraints)
 		{
 			return data.SafeDistances.Count > 0 ? constraints.SafeDistance.Normalize(data.SafeDistances.Average()) : 0f;
 		}
 
 		// Evaluate the number of actions performed by the bot.
-		private float EvaluateActionIntensity(SegmentData data, ConstraintSet constraints)
+		private float EvaluateActionIntensity(SegmentData data, ConstraintConfig constraints)
 		{
 			return constraints.ActionIntensity.Normalize(data.Actions.Count);
 		}
 
 		// Evaluate the entropy of the action distribution.
-		private float EvaluateActionDensity(SegmentData data, ConstraintSet constraints)
+		private float EvaluateActionDensity(SegmentData data, ConstraintConfig constraints)
 		{
 			if (data.Actions.Count == 0) return 0f;
 			var counts = data.GetActionCounts();
@@ -458,19 +476,19 @@ namespace PacingFramework
 			foreach (var c in counts.Values)
 			{
 				float p = c / total;
-				entropy -= p * Mathf.Log(p);
+				entropy -= p * Mathf.Log(p, 2); // Log with base 2
 			}
 			return constraints.ActionDensity.Normalize(entropy);
 		}
 
 		// Evaluate the average distance between the bot and its opponents.
-		private float EvaluateBotsDistance(SegmentData data, ConstraintSet constraints)
+		private float EvaluateBotsDistance(SegmentData data, ConstraintConfig constraints)
 		{
 			return data.BotsDistances.Count > 0 ? 1f - constraints.BotsDistance.Normalize(data.BotsDistances.Average()) : 0f;
 		}
 
 		// Evaluate the average velocity of the bot.
-		private float EvaluateVelocity(SegmentData data, ConstraintSet constraints)
+		private float EvaluateVelocity(SegmentData data, ConstraintConfig constraints)
 		{
 			return data.Velocities.Count > 0 ? constraints.Velocity.Normalize(data.Velocities.Average()) : 0f;
 		}
@@ -483,13 +501,13 @@ namespace PacingFramework
 	public abstract class Aspect
 	{
 		protected SegmentData Data;
-		protected ConstraintSet Constraints;
+		protected ConstraintConfig Constraints;
 		protected List<Factor> Factors = new();
 
 		public float Value { get; protected set; }
 		public float Weight = 1f;
 
-		public Aspect(SegmentData data, ConstraintSet constraints)
+		public Aspect(SegmentData data, ConstraintConfig constraints)
 		{
 			Data = data;
 			Constraints = constraints;
