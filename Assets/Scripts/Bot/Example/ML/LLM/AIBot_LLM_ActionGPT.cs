@@ -17,7 +17,6 @@ namespace ML.LanguageModels
 
         public override string ID => "Bot_LLM";
         public override SkillType DefaultSkillType => SkillType.Stone;
-        public override bool UseAsync => true;
 
         public string APIEndpoint = "http://localhost:9999/query";
 

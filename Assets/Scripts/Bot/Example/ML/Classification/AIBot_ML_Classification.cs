@@ -13,7 +13,6 @@ class AIBot_ML_Classification : Bot
 {
     public override string ID => "Bot_MLP";
     public override SkillType DefaultSkillType => SkillType.Boost;
-    public override bool UseAsync => true;
 
     public Model runtimeModel;
     public Worker engine;
