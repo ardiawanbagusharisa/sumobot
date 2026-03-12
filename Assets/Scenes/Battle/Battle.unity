@@ -7858,6 +7858,59 @@ MonoBehaviour:
     BotsDistances: []
     Velocities: []
   segmentDuration: 5
+  PacingFileName: NN
+  PacingTarget:
+    ThreatTargets: []
+    TempoTargets: []
+    GlobalConstraints:
+      CollisionRatio:
+        Min: 0
+        Max: 1
+        MinLimit: 0
+        MaxLimit: 1
+        Weight: 1
+      AbilityRatio:
+        Min: 0
+        Max: 0.2
+        MinLimit: 0
+        MaxLimit: 0.2
+        Weight: 1
+      Angle:
+        Min: 0
+        Max: 180
+        MinLimit: 0
+        MaxLimit: 180
+        Weight: 1
+      SafeDistance:
+        Min: 1
+        Max: 5
+        MinLimit: 1
+        MaxLimit: 5
+        Weight: 1
+      ActionIntensity:
+        Min: 0
+        Max: 50
+        MinLimit: 0
+        MaxLimit: 50
+        Weight: 1
+      ActionDensity:
+        Min: 0
+        Max: 1
+        MinLimit: 0
+        MaxLimit: 1
+        Weight: 1
+      BotsDistance:
+        Min: 1
+        Max: 5
+        MinLimit: 1
+        MaxLimit: 5
+        Weight: 1
+      Velocity:
+        Min: 0
+        Max: 10
+        MinLimit: 0
+        MaxLimit: 10
+        Weight: 1
 --- !u!1 &728913078
 GameObject:
   m_ObjectHideFlags: 0
@@ -16930,6 +16983,43 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1520274147}
   m_CullTransparentMesh: 1
+--- !u!84 &1529273544
+RenderTexture:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: 
+  m_ImageContentsHash:
+    serializedVersion: 2
+    Hash: 00000000000000000000000000000000
+  m_IsAlphaChannelOptional: 0
+  serializedVersion: 6
+  m_Width: 1920
+  m_Height: 1080
+  m_AntiAliasing: 1
+  m_MipCount: -1
+  m_DepthStencilFormat: 0
+  m_ColorFormat: 4
+  m_MipMap: 0
+  m_GenerateMips: 0
+  m_SRGB: 1
+  m_UseDynamicScale: 0
+  m_UseDynamicScaleExplicit: 0
+  m_BindMS: 0
+  m_EnableCompatibleFormat: 1
+  m_EnableRandomWrite: 1
+  m_TextureSettings:
+    serializedVersion: 2
+    m_FilterMode: 0
+    m_Aniso: 1
+    m_MipBias: 0
+    m_WrapU: 1
+    m_WrapV: 1
+    m_WrapW: 1
+  m_Dimension: 2
+  m_VolumeDepth: 1
+  m_ShadowSamplingMode: 2
 --- !u!1 &1531094729
 GameObject:
   m_ObjectHideFlags: 0
@@ -20421,6 +20511,59 @@ MonoBehaviour:
     BotsDistances: []
     Velocities: []
   segmentDuration: 2
+  PacingFileName: 
+  PacingTarget:
+    ThreatTargets: []
+    TempoTargets: []
+    GlobalConstraints:
+      CollisionRatio:
+        Min: 0
+        Max: 1
+        MinLimit: 0
+        MaxLimit: 1
+        Weight: 1
+      AbilityRatio:
+        Min: 0
+        Max: 0.2
+        MinLimit: 0
+        MaxLimit: 0.2
+        Weight: 1
+      Angle:
+        Min: 0
+        Max: 180
+        MinLimit: 0
+        MaxLimit: 180
+        Weight: 1
+      SafeDistance:
+        Min: 1
+        Max: 5
+        MinLimit: 1
+        MaxLimit: 5
+        Weight: 1
+      ActionIntensity:
+        Min: 0
+        Max: 50
+        MinLimit: 0
+        MaxLimit: 50
+        Weight: 1
+      ActionDensity:
+        Min: 0
+        Max: 1
+        MinLimit: 0
+        MaxLimit: 1
+        Weight: 1
+      BotsDistance:
+        Min: 1
+        Max: 5
+        MinLimit: 1
+        MaxLimit: 5
+        Weight: 1
+      Velocity:
+        Min: 0
+        Max: 10
+        MinLimit: 0
+        MaxLimit: 10
+        Weight: 1
 --- !u!1 &1757629780
 GameObject:
   m_ObjectHideFlags: 0
@@ -23068,7 +23211,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Texture: {fileID: 1939780497}
+  m_Texture: {fileID: 1529273544}
   m_UVRect:
     serializedVersion: 2
     x: 0
@@ -23170,43 +23313,6 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   m_IsOn: 1
---- !u!84 &1939780497
-RenderTexture:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_Name: 
-  m_ImageContentsHash:
-    serializedVersion: 2
-    Hash: 00000000000000000000000000000000
-  m_IsAlphaChannelOptional: 0
-  serializedVersion: 6
-  m_Width: 1920
-  m_Height: 1080
-  m_AntiAliasing: 1
-  m_MipCount: -1
-  m_DepthStencilFormat: 0
-  m_ColorFormat: 4
-  m_MipMap: 0
-  m_GenerateMips: 0
-  m_SRGB: 1
-  m_UseDynamicScale: 0
-  m_UseDynamicScaleExplicit: 0
-  m_BindMS: 0
-  m_EnableCompatibleFormat: 1
-  m_EnableRandomWrite: 1
-  m_TextureSettings:
-    serializedVersion: 2
-    m_FilterMode: 0
-    m_Aniso: 1
-    m_MipBias: 0
-    m_WrapU: 1
-    m_WrapV: 1
-    m_WrapW: 1
-  m_Dimension: 2
-  m_VolumeDepth: 1
-  m_ShadowSamplingMode: 2
 --- !u!1 &1946512299
 GameObject:
   m_ObjectHideFlags: 0
