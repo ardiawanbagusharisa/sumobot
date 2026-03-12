@@ -37,11 +37,9 @@ namespace PacingFramework
 
 		// [Todo]
 		// Runtime Configs ==========
-		//API: SumoAPI
 		//Original Actions: <SumoAction> 
 		//Paced Actions: <SumoAction> 
 
-		// Test Fields
 		private int segmentIndex = 0;
 
 		// ================================
@@ -92,7 +90,6 @@ namespace PacingFramework
 			segmentIndex = 0;
 		}
 
-		// [Todo] Remove deltaTime parameter. Then call every game tick. 
 		public void Tick()
 		{
 			tickCount += 1;
@@ -330,8 +327,6 @@ namespace PacingFramework
 			Velocities.Clear();
 		}
 
-		// [Todo] Add SumoAPI as parameter or as field. 
-		// Register functions to add data to the fields. Call these functions when the corresponding events happen in the game.
 		public void RegisterCollision(CollisionType type) => Collisions.Add(type);
 		public void RegisterAngle(float angle) => Angles.Add(angle);
 		public void RegisterSafeDistance(float d) => SafeDistances.Add(d);
