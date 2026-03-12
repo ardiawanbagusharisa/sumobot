@@ -20,7 +20,6 @@ namespace ML.LanguageModels
     {
         public override string ID => "Bot_SLM";
         public override SkillType DefaultSkillType => SkillType;
-        public override bool UseAsync => true;
 
         public SkillType SkillType = SkillType.Stone;
 
