@@ -24,8 +24,8 @@ namespace PacingFramework
 		public SegmentData currentGameplayData;
 		public float segmentDuration = 2f;
 		public string PacingFileName = "";
+		public PacingTargetConfig PacingTarget;
 
-		private PacingTargetConfig pacingTarget = new PacingTargetConfig();
 
 		private int tickCount;
 
@@ -53,7 +53,7 @@ namespace PacingFramework
 			if (PacingFileName.Count() == 0)
 			{
 				Logger.Warning($"[{controller.Side}] PacingFileName not set. Default constraints is used");
-				pacingTarget = new PacingTargetConfig();
+				PacingTarget = new PacingTargetConfig();
 				return;
 			}
 
@@ -65,7 +65,7 @@ namespace PacingFramework
 				return;
 			}
 
-			pacingTarget = JsonUtility.FromJson<PacingTargetConfig>(pacingConfigAsset.text);
+			PacingTarget = JsonUtility.FromJson<PacingTargetConfig>(pacingConfigAsset.text);
 			Logger.Info($"[{controller.Side}] PacingConfig loaded");
 		}
 
@@ -107,7 +107,7 @@ namespace PacingFramework
 		private void FinalizeSegment()
 		{
 			// [Todo] Handle segment's local constraints if needed. 
-			currentSegmentPacing = new SegmentPacing(currentGameplayData, pacingTarget.GlobalConstraints);
+			currentSegmentPacing = new SegmentPacing(currentGameplayData, PacingTarget.GlobalConstraints);
 			pacingHistory.SegmentGameplayDatas.Add(new SegmentData(currentGameplayData));
 			pacingHistory.SegmentPacings.Add(currentSegmentPacing);
 
@@ -126,7 +126,7 @@ namespace PacingFramework
 
 		public ConstraintConfig GetConstraints()
 		{
-			return pacingTarget.GlobalConstraints;
+			return PacingTarget.GlobalConstraints;
 		}
 
 		// ================================
@@ -185,7 +185,6 @@ namespace PacingFramework
 
 		private void OnBounce(EventParameter parameter)
 		{
-
 			CollisionType type;
 			float angle = Mathf.Abs(controller.InputProvider.API.Angle());
 			angle = Mathf.Min(angle, 360 - angle);
@@ -199,7 +198,6 @@ namespace PacingFramework
 
 			currentGameplayData.RegisterAngle(angle);
 			currentGameplayData.RegisterCollision(type);
-			Logger.Info($"PacingController.OnBounce Type: {type}, Rotation: {angle}");
 		}
 
 		private void OnAction(EventParameter parameter)
