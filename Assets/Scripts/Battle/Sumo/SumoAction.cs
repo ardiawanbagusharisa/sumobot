@@ -1,14 +1,22 @@
+using System;
 using SumoInput;
 using UnityEngine;
+using Newtonsoft.Json;
 
 namespace SumoCore
 {
     #region Action abstract class and Enums 
+
+    [Serializable]
     public abstract class ISumoAction
     {
+        [JsonIgnore]
         public const float MinDuration = 0.1f;
 
+        [JsonIgnore]
         public InputType InputUsed;
+
+        [JsonIgnore]
         public string Reason;
 
         // Duration will be replaced for Dash and Skill
@@ -17,6 +25,7 @@ namespace SumoCore
 
         public abstract void Execute(SumoController controller);
 
+        [JsonIgnore]
         public string Name
         {
             get
@@ -25,6 +34,7 @@ namespace SumoCore
             }
         }
 
+        [JsonIgnore]
         public string FullName
         {
             get
