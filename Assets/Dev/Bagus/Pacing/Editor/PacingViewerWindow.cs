@@ -1,4 +1,6 @@
+
 using SumoBot;
+using SumoManager;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -28,11 +30,17 @@ namespace PacingFramework
 
 		private bool overlayTarget = true;
 
-		// [Test] For testing only. 
-		private string botName = "Bot1";
-		private string botScore = "3";
-		private string botName1 = "Bot2";
-		private string botScore1 = "5";
+		// Tab selection
+		private int selectedGameTab = 0;
+		private int selectedRoundTab = 0;
+		private GamePacingItem cachedPacingItem = null;
+		private bool autoFollow = true;
+
+		// [Test] For testing only.
+		private string leftBotName = "Left";
+		private string leftBotScore = "3";
+		private string rightBotName = "Right";
+		private string rightBotScore = "5";
 
 		[MenuItem("Tools/Pacing Framework/Pacing Viewer")]
 		public static void Open()
@@ -42,6 +50,8 @@ namespace PacingFramework
 
 		private void OnGUI()
 		{
+			if (!Application.isPlaying) return;
+
 			scroll = EditorGUILayout.BeginScrollView(scroll);
 
 			DrawSelectionSection();
@@ -53,18 +63,48 @@ namespace PacingFramework
 				return;
 			}
 
-			GamePacing history = controller.GetHistory();
-
-			if (history.SegmentPacings.Count == 0)
+			if (BattleManager.Instance.CurrentState < BattleState.Battle_Countdown)
 			{
-				EditorGUILayout.HelpBox("No pacing data yet.", MessageType.Info);
+				EditorGUILayout.HelpBox("Waiting for battle to start...", MessageType.Info);
 				EditorGUILayout.EndScrollView();
 				return;
 			}
 
-			List<float> threat = ExtractThreat(history);
-			List<float> tempo = ExtractTempo(history);
-			List<float> overall = ExtractOverall(history);
+			leftBotScore = BattleManager.Instance.Battle.LeftWinCount.ToString();
+			rightBotScore = BattleManager.Instance.Battle.RightWinCount.ToString();
+
+			GamePacing history = controller.GetHistory();
+
+			// Draw game and round tabs
+			DrawGameRoundTabs(history);
+
+			// Get the selected game pacing item
+			GamePacingItem selectedPacingItem = GetSelectedPacingItem(history);
+
+			// Update cache if we have valid data
+			if (selectedPacingItem != null && selectedPacingItem.SegmentPacings.Count > 0)
+			{
+				cachedPacingItem = selectedPacingItem;
+			}
+
+			// Use cached item if current selection is invalid (prevents UI glitch during transitions)
+			if (selectedPacingItem == null || selectedPacingItem.SegmentPacings.Count == 0)
+			{
+				if (cachedPacingItem != null && cachedPacingItem.SegmentPacings.Count > 0)
+				{
+					selectedPacingItem = cachedPacingItem;
+				}
+				else
+				{
+					EditorGUILayout.HelpBox("No pacing data for selected game/round.", MessageType.Info);
+					EditorGUILayout.EndScrollView();
+					return;
+				}
+			}
+
+			List<float> threat = ExtractThreat(selectedPacingItem);
+			List<float> tempo = ExtractTempo(selectedPacingItem);
+			List<float> overall = ExtractOverall(selectedPacingItem);
 
 			Rect rect = GUILayoutUtility.GetRect(position.width - 20, 400);
 			EditorGUI.DrawRect(rect, new Color(0.12f, 0.12f, 0.12f));
@@ -79,15 +119,32 @@ namespace PacingFramework
 			if (overlayTarget && (targetConfig != null || controller.PacingTarget != null))
 			{
 				var target = targetConfig ?? controller.PacingTarget;
+
+				// Resample targets to match actual data count
+				var resampledThreat = ResampleCurve(target.ThreatTargets, threat.Count);
+				var resampledTempo = ResampleCurve(target.TempoTargets, tempo.Count);
+
+				// Draw target overlay (dashed lines)
 				DrawTargetOverlay(rect, target, threat.Count);
+
+				// Draw delta bars showing deviation from target
+				DrawDeltaBars(rect, threat, resampledThreat, Color.red);
+				DrawDeltaBars(rect, tempo, resampledTempo, Color.cyan);
+
+				// Draw enhanced legend with stats
+				DrawEnhancedLegend(rect, threat, tempo, overall, target);
+
 				DrawEvaluation(threat, tempo);
 			}
-
-			DrawLegend(rect);
+			else
+			{
+				// Draw simple legend when no target is available
+				DrawLegend(rect);
+			}
 
 			DrawBotsSection(controller);
-			DrawPacingDetails(history);
-			DrawSegmentDetails(history);
+			DrawPacingDetails(selectedPacingItem);
+			DrawSegmentDetails(selectedPacingItem);
 			DrawSegmentEvaluation(threat, tempo);
 
 			Repaint(); // live update
@@ -98,6 +155,109 @@ namespace PacingFramework
 		// ======================================================
 		// UI
 		// ======================================================
+
+		private void DrawGameRoundTabs(GamePacing history)
+		{
+			if (history.PacingHistories.Count == 0) return;
+
+			EditorGUILayout.BeginVertical("box");
+
+			// Auto-follow checkbox
+			EditorGUILayout.BeginHorizontal();
+			autoFollow = EditorGUILayout.Toggle("Auto-Follow Latest", autoFollow);
+			EditorGUILayout.EndHorizontal();
+
+			EditorGUILayout.Space(5);
+
+			// Game tabs
+			var gameIndices = history.PacingHistories.Keys.OrderBy(k => k).ToList();
+
+			// Auto-follow: select latest game
+			if (autoFollow && gameIndices.Count > 0)
+			{
+				selectedGameTab = gameIndices.Count - 1;
+			}
+
+			EditorGUILayout.LabelField("Game Selection", EditorStyles.boldLabel);
+			EditorGUILayout.BeginHorizontal();
+
+			for (int i = 0; i < gameIndices.Count; i++)
+			{
+				int gameIdx = gameIndices[i];
+				bool isSelected = (selectedGameTab == i);
+
+				if (GUILayout.Toggle(isSelected, $"Game {gameIdx + 1}", "Button", GUILayout.Width(80)))
+				{
+					if (selectedGameTab != i)
+					{
+						selectedGameTab = i;
+						selectedRoundTab = 0; // Reset round selection when game changes
+						autoFollow = false; // Disable auto-follow on manual selection
+					}
+				}
+			}
+
+			EditorGUILayout.EndHorizontal();
+
+			// Round tabs for selected game
+			if (selectedGameTab < gameIndices.Count)
+			{
+				int currentGameIdx = gameIndices[selectedGameTab];
+				var roundIndices = history.PacingHistories[currentGameIdx].Keys.OrderBy(k => k).ToList();
+
+				// Auto-follow: select latest round
+				if (autoFollow && roundIndices.Count > 0)
+				{
+					selectedRoundTab = roundIndices.Count - 1;
+				}
+				// Clamp selectedRoundTab to valid range to prevent glitches
+				else if (roundIndices.Count > 0 && selectedRoundTab >= roundIndices.Count)
+				{
+					selectedRoundTab = roundIndices.Count - 1;
+				}
+
+				EditorGUILayout.LabelField("Round Selection", EditorStyles.boldLabel);
+				EditorGUILayout.BeginHorizontal();
+
+				for (int i = 0; i < roundIndices.Count; i++)
+				{
+					int roundIdx = roundIndices[i];
+					bool isSelected = (selectedRoundTab == i);
+
+					if (GUILayout.Toggle(isSelected, $"Round {roundIdx}", "Button", GUILayout.Width(80)))
+					{
+						if (selectedRoundTab != i)
+						{
+							selectedRoundTab = i;
+							autoFollow = false; // Disable auto-follow on manual selection
+						}
+					}
+				}
+
+				EditorGUILayout.EndHorizontal();
+			}
+
+			EditorGUILayout.EndVertical();
+		}
+
+		private GamePacingItem GetSelectedPacingItem(GamePacing history)
+		{
+			if (history.PacingHistories.Count == 0) return null;
+
+			var gameIndices = history.PacingHistories.Keys.OrderBy(k => k).ToList();
+			if (gameIndices.Count == 0 || selectedGameTab >= gameIndices.Count) return null;
+
+			int currentGameIdx = gameIndices[selectedGameTab];
+			if (!history.PacingHistories.ContainsKey(currentGameIdx)) return null;
+
+			var roundIndices = history.PacingHistories[currentGameIdx].Keys.OrderBy(k => k).ToList();
+			if (roundIndices.Count == 0 || selectedRoundTab >= roundIndices.Count) return null;
+
+			int currentRoundIdx = roundIndices[selectedRoundTab];
+			if (!history.PacingHistories[currentGameIdx].ContainsKey(currentRoundIdx)) return null;
+
+			return history.PacingHistories[currentGameIdx][currentRoundIdx];
+		}
 
 		private void DrawSelectionSection()
 		{
@@ -115,9 +275,9 @@ namespace PacingFramework
 
 			EditorGUILayout.LabelField("Target Config (Override)", GUILayout.Width(160));
 
-			EditorGUI.BeginDisabledGroup(true);
+			// EditorGUI.BeginDisabledGroup(true);
 			EditorGUILayout.TextField("Loaded Path", loadedConfigPath);
-			EditorGUI.EndDisabledGroup();
+			// EditorGUI.EndDisabledGroup();
 
 			if (GUILayout.Button("Load JSON", GUILayout.Width(100)))
 			{
@@ -146,26 +306,26 @@ namespace PacingFramework
 		// DATA EXTRACTION
 		// ======================================================
 
-		private List<float> ExtractThreat(GamePacing history)
+		private List<float> ExtractThreat(GamePacingItem pacingItem)
 		{
 			var list = new List<float>();
-			foreach (var p in history.SegmentPacings)
+			foreach (var p in pacingItem.SegmentPacings)
 				list.Add(p.Threat.Value);
 			return list;
 		}
 
-		private List<float> ExtractTempo(GamePacing history)
+		private List<float> ExtractTempo(GamePacingItem pacingItem)
 		{
 			var list = new List<float>();
-			foreach (var p in history.SegmentPacings)
+			foreach (var p in pacingItem.SegmentPacings)
 				list.Add(p.Tempo.Value);
 			return list;
 		}
 
-		private List<float> ExtractOverall(GamePacing history)
+		private List<float> ExtractOverall(GamePacingItem pacingItem)
 		{
 			var list = new List<float>();
-			foreach (var p in history.SegmentPacings)
+			foreach (var p in pacingItem.SegmentPacings)
 				list.Add(p.GetOverallPacing());
 			return list;
 		}
@@ -303,7 +463,50 @@ namespace PacingFramework
 			Handles.EndGUI();
 		}
 
-		private void DrawLegend(Rect rect)
+		private void DrawDeltaBars(Rect rect, List<float> actual, List<float> target, Color baseColor)
+	{
+		if (actual == null || target == null || actual.Count == 0 || target.Count == 0)
+			return;
+
+		Handles.BeginGUI();
+
+		float left = rect.x + padding;
+		float right = rect.x + rect.width - padding;
+		float top = rect.y + padding;
+		float bottom = rect.y + rect.height - padding;
+
+		float width = right - left;
+		float height = bottom - top;
+
+		int count = Mathf.Min(actual.Count, target.Count);
+
+		for (int i = 0; i < count; i++)
+		{
+			float x = left + i / (float)(actual.Count - 1) * width;
+			float actualY = bottom - Mathf.Clamp01(actual[i]) * height;
+			float targetY = bottom - Mathf.Clamp01(target[i]) * height;
+
+			// Calculate delta magnitude for color coding
+			float delta = Mathf.Abs(actual[i] - target[i]);
+			Color barColor;
+
+			// Color coding based on delta magnitude
+			if (delta < 0.1f)
+				barColor = new Color(0f, 1f, 0f, 0.3f); // Green - close to target
+			else if (delta < 0.2f)
+				barColor = new Color(1f, 1f, 0f, 0.3f); // Yellow - moderate deviation
+			else
+				barColor = new Color(1f, 0f, 0f, 0.3f); // Red - large deviation
+
+			// Draw vertical bar from actual to target
+			Handles.color = barColor;
+			Handles.DrawLine(new Vector3(x, actualY, 0), new Vector3(x, targetY, 0));
+		}
+
+		Handles.EndGUI();
+	}
+
+	private void DrawLegend(Rect rect)
 		{
 			float boxWidth = 110f;
 			float boxHeight = 60f;
@@ -323,6 +526,86 @@ namespace PacingFramework
 			DrawLegendItem(legendRect, 2, Color.green, "Overall");
 			//DrawLegendItem(legendRect, 3, Color.white, "Dashed = Target");
 		}
+
+	private void DrawEnhancedLegend(Rect rect, List<float> threat, List<float> tempo, List<float> overall, PacingTargetConfig targetConfig)
+	{
+		if (threat == null || tempo == null || overall == null) return;
+
+		float boxWidth = 280f;
+		float boxHeight = 90f;
+		float margin = 10f;
+
+		Rect legendRect = new Rect(
+			rect.xMax - boxWidth - margin,
+			rect.y + margin,
+			boxWidth,
+			boxHeight
+		);
+
+		EditorGUI.DrawRect(legendRect, new Color(0f, 0f, 0f, 0.6f));
+
+		// Calculate averages
+		float threatAvg = threat.Count > 0 ? threat.Average() : 0f;
+		float tempoAvg = tempo.Count > 0 ? tempo.Average() : 0f;
+		float overallAvg = overall.Count > 0 ? overall.Average() : 0f;
+
+		// Get target averages if available
+		float threatTarget = 0f;
+		float tempoTarget = 0f;
+		if (targetConfig != null)
+		{
+			var resampledThreat = ResampleCurve(targetConfig.ThreatTargets, threat.Count);
+			var resampledTempo = ResampleCurve(targetConfig.TempoTargets, tempo.Count);
+			threatTarget = resampledThreat.Count > 0 ? resampledThreat.Average() : 0f;
+			tempoTarget = resampledTempo.Count > 0 ? resampledTempo.Average() : 0f;
+		}
+
+		// Calculate deltas
+		float threatDelta = threatAvg - threatTarget;
+		float tempoDelta = tempoAvg - tempoTarget;
+
+		// Draw legend items with stats
+		DrawEnhancedLegendItem(legendRect, 0, Color.red, "Threat", threatAvg, threatTarget, threatDelta);
+		DrawEnhancedLegendItem(legendRect, 1, Color.cyan, "Tempo", tempoAvg, tempoTarget, tempoDelta);
+		DrawEnhancedLegendItem(legendRect, 2, Color.green, "Overall", overallAvg, 0f, 0f);
+	}
+
+	private void DrawEnhancedLegendItem(Rect legendRect, int row, Color color, string label, float avg, float target, float delta)
+	{
+		float rowHeight = 28f;
+		float y = legendRect.y + 6 + row * rowHeight;
+
+		// Color box
+		Rect colorRect = new Rect(legendRect.x + 6, y + 6, 10, 10);
+		EditorGUI.DrawRect(colorRect, color);
+
+		// Label
+		EditorGUI.LabelField(
+			new Rect(legendRect.x + 20, y, 50, 18),
+			label,
+			EditorStyles.whiteBoldLabel
+		);
+
+		// Stats text
+		string statsText;
+		if (target > 0f)
+		{
+			string deltaStr = delta >= 0 ? $"+{delta:F2}" : $"{delta:F2}";
+			statsText = $"Avg:{avg:F2} Tgt:{target:F2}\nΔ:{deltaStr}";
+		}
+		else
+		{
+			statsText = $"Avg: {avg:F2}";
+		}
+
+		GUIStyle smallStyle = new GUIStyle(EditorStyles.whiteLabel);
+		smallStyle.fontSize = 9;
+		EditorGUI.LabelField(
+			new Rect(legendRect.x + 70, y, 200, rowHeight),
+			statsText,
+			smallStyle
+		);
+	}
 
 		private void DrawLegendItem(Rect legendRect, int row, Color color, string label)
 		{
@@ -345,27 +628,27 @@ namespace PacingFramework
 			if (!showBots) return;
 
 			EditorGUILayout.BeginVertical("box");
-			EditorGUILayout.LabelField($"{botName}  |  Score: {botScore}");
-			EditorGUILayout.LabelField($"{botName1}  |  Score: {botScore1}");
+			EditorGUILayout.LabelField($"{leftBotName}  |  Score: {leftBotScore}");
+			EditorGUILayout.LabelField($"{rightBotName}  |  Score: {rightBotScore}");
 
 			EditorGUILayout.EndVertical();
 		}
 
-		private void DrawPacingDetails(GamePacing history)
+		private void DrawPacingDetails(GamePacingItem pacingItem)
 		{
 			showPacingDetails = EditorGUILayout.Foldout(showPacingDetails, "Pacing Details (Aspects / Factors)", true);
 			if (!showPacingDetails) return;
 
 			EditorGUILayout.BeginVertical("box");
 
-			bool useScroll = history.SegmentPacings.Count > 10;
+			bool useScroll = pacingItem.SegmentPacings.Count > 10;
 
 			if (useScroll)
 				pacingScroll = EditorGUILayout.BeginScrollView(pacingScroll, GUILayout.Height(200));
 
-			for (int i = 0; i < history.SegmentPacings.Count; i++)
+			for (int i = 0; i < pacingItem.SegmentPacings.Count; i++)
 			{
-				var p = history.SegmentPacings[i];
+				var p = pacingItem.SegmentPacings[i];
 
 				EditorGUILayout.LabelField($"Segment {i}", EditorStyles.boldLabel);
 
@@ -400,21 +683,21 @@ namespace PacingFramework
 			EditorGUILayout.EndVertical();
 		}
 
-		private void DrawSegmentDetails(GamePacing history)
+		private void DrawSegmentDetails(GamePacingItem pacingItem)
 		{
 			showSegmentDetails = EditorGUILayout.Foldout(showSegmentDetails, "Segment Raw Data", true);
 			if (!showSegmentDetails) return;
 
 			EditorGUILayout.BeginVertical("box");
 
-			bool useScroll = history.SegmentPacings.Count > 10;
+			bool useScroll = pacingItem.SegmentPacings.Count > 10;
 
 			if (useScroll)
 				segmentScroll = EditorGUILayout.BeginScrollView(segmentScroll, GUILayout.Height(200));
 
-			for (int i = 0; i < history.SegmentPacings.Count; i++)
+			for (int i = 0; i < pacingItem.SegmentPacings.Count; i++)
 			{
-				var info = history.SegmentGameplayDatas[i];
+				var info = pacingItem.SegmentGameplayDatas[i];
 				EditorGUILayout.LabelField($"Segment {i} Counts", EditorStyles.boldLabel);
 				EditorGUILayout.LabelField($"Collisions: {info.Collisions.Count}");
 				EditorGUILayout.LabelField($"Angles: {info.Angles.Count}");
