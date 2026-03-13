@@ -16,7 +16,7 @@ namespace PacingFramework
 		private Vector2 scrollPos;
 		private Vector2 segmentScrollPos;
 		private float globalTolerance = 0.1f;
-		
+
 		private bool showConstraints = true;
 		private bool showSegments = true;
 		private bool isDirty;
@@ -28,26 +28,30 @@ namespace PacingFramework
 		private int selectedSegmentTimeIndex = 0;
 		private readonly int[] segmentTimeOptions = new int[] { 1, 5, 10 };
 		private readonly string[] segmentTimeLabels = new string[] { "1 Second", "5 Seconds", "10 Seconds" };
-		
+
 		#endregion
 
 		[MenuItem("Tools/Pacing Framework/Target Pacing")]
-		public static void Open() {
+		public static void Open()
+		{
 			GetWindow<PacingEditorWindow>("Target Pacing");
 		}
 
-		private void OnEnable() {
+		private void OnEnable()
+		{
 			model = new PacingModel(segmentCount);
 			graphRenderer = new GraphRenderer(model, () => MarkDirty());
 			constraintDrawer = new ConstraintDrawer(model, () => MarkDirty());
 		}
 
-		private void MarkDirty() {
+		private void MarkDirty()
+		{
 			isDirty = true;
 			Repaint();
 		}
 
-		private void OnGUI() {
+		private void OnGUI()
+		{
 			titleContent.text = "Target Pacing Editor" + (isDirty ? " *" : "");
 
 			scrollPos = EditorGUILayout.BeginScrollView(scrollPos);
@@ -86,7 +90,8 @@ namespace PacingFramework
 		//	}
 		//}
 
-		private void DrawSegmentSettings() {
+		private void DrawSegmentSettings()
+		{
 			EditorGUI.BeginChangeCheck();
 
 			EditorGUILayout.BeginHorizontal();
@@ -111,10 +116,12 @@ namespace PacingFramework
 
 			EditorGUILayout.EndHorizontal();
 
-			if (EditorGUI.EndChangeCheck()) {
+			if (EditorGUI.EndChangeCheck())
+			{
 				segmentCount = calculatedSegmentCount;
 
-				if (model != null) {
+				if (model != null)
+				{
 					model.Resize(segmentCount);
 				}
 
@@ -122,7 +129,8 @@ namespace PacingFramework
 			}
 		}
 
-		private void DrawSegmentFields() {
+		private void DrawSegmentFields()
+		{
 			EditorGUILayout.BeginVertical("box");
 
 			EditorGUI.BeginChangeCheck();
@@ -132,7 +140,8 @@ namespace PacingFramework
 				0f,
 				1f
 			);
-			if (EditorGUI.EndChangeCheck()) {
+			if (EditorGUI.EndChangeCheck())
+			{
 				globalTolerance = Mathf.Max(0f, globalTolerance);
 				MarkDirty();
 			}
@@ -148,7 +157,8 @@ namespace PacingFramework
 				GUILayout.Height(scrollHeight)
 			);
 
-			for (int i = 0; i < model.Count; i++) {
+			for (int i = 0; i < model.Count; i++)
+			{
 				DrawSegmentRow(i);
 			}
 
@@ -156,7 +166,8 @@ namespace PacingFramework
 			EditorGUILayout.EndVertical();
 		}
 
-		private void DrawSegmentRow(int i) {
+		private void DrawSegmentRow(int i)
+		{
 			const float labelWidth = 60f;
 			const float floatWidth = 50f;
 
@@ -187,11 +198,13 @@ namespace PacingFramework
 			EditorGUILayout.EndHorizontal();
 		}
 
-		private float Round2(float v) {
+		private float Round2(float v)
+		{
 			return Mathf.Round(v * 100f) / 100f;
 		}
 
-		private void DrawMetricHorizontal(string label, List<float> values, System.Action<int, float> setter, int index, float labelWidth, float floatWidth) {
+		private void DrawMetricHorizontal(string label, List<float> values, System.Action<int, float> setter, int index, float labelWidth, float floatWidth)
+		{
 			float half = Round2(globalTolerance * 0.5f);
 			float target = Round2(values[index]);
 
@@ -221,15 +234,20 @@ namespace PacingFramework
 			bool maxChanged = EditorGUI.EndChangeCheck();
 
 			// APPLY CHANGES
-			if (sliderChanged) {
+			if (sliderChanged)
+			{
 				float newTarget = Round2((sliderMin + sliderMax) * 0.5f);
 				setter(index, Mathf.Clamp01(newTarget));
 				MarkDirty();
-			} else if (minChanged) {
+			}
+			else if (minChanged)
+			{
 				float newTarget = Round2(newMin + half);
 				setter(index, Mathf.Clamp01(newTarget));
 				MarkDirty();
-			} else if (maxChanged) {
+			}
+			else if (maxChanged)
+			{
 				float newTarget = Round2(newMax - half);
 				setter(index, Mathf.Clamp01(newTarget));
 				MarkDirty();
@@ -238,7 +256,8 @@ namespace PacingFramework
 
 		#region Save Load
 
-		private void DrawSaveLoadSection() {
+		private void DrawSaveLoadSection()
+		{
 			EditorGUILayout.LabelField("Pacing Config", EditorStyles.boldLabel);
 
 			EditorGUI.BeginDisabledGroup(true);
@@ -256,8 +275,14 @@ namespace PacingFramework
 			EditorGUILayout.EndHorizontal();
 		}
 
-		private void SaveConfig() {
-			string path = EditorUtility.SaveFilePanel("Save Config", "Assets", "PacingConfig", "json");
+		private void SaveConfig()
+		{
+            string path;
+            if (string.IsNullOrEmpty(configPath))
+				path = EditorUtility.SaveFilePanel("Save Config", "Assets", "PacingConfig", "json");
+			else
+				path = configPath;
+
 			if (string.IsNullOrEmpty(path)) return;
 
 			var config = model.ToConfig();
@@ -268,7 +293,8 @@ namespace PacingFramework
 			isDirty = false;
 		}
 
-		private void LoadConfig() {
+		private void LoadConfig()
+		{
 			string path = EditorUtility.OpenFilePanel("Load Config", "Assets", "json");
 			if (string.IsNullOrEmpty(path)) return;
 
@@ -300,21 +326,25 @@ namespace PacingFramework
 
 		public int Count => Threats.Count;
 
-		public PacingModel(int count) {
+		public PacingModel(int count)
+		{
 			Resize(count);
 		}
 
-		public void Resize(int count) {
+		public void Resize(int count)
+		{
 			Threats = ResizeList(Threats, count);
 			Tempos = ResizeList(Tempos, count);
 			Overall = ResizeList(Overall, count);
 			UpdateOverall();
 		}
 
-		private List<float> ResizeList(List<float> list, int count) {
+		private List<float> ResizeList(List<float> list, int count)
+		{
 			var newList = new List<float>(count);
 
-			for (int i = 0; i < count; i++) {
+			for (int i = 0; i < count; i++)
+			{
 				if (i < list.Count)
 					newList.Add(list[i]);
 				else
@@ -324,32 +354,38 @@ namespace PacingFramework
 			return newList;
 		}
 
-		public void SetThreat(int i, float v) {
+		public void SetThreat(int i, float v)
+		{
 			Threats[i] = Round2(v);
 			UpdateOverall();
 		}
 
-		public void SetTempo(int i, float v) {
+		public void SetTempo(int i, float v)
+		{
 			Tempos[i] = Round2(v);
 			UpdateOverall();
 		}
 
-		private void UpdateOverall() {
+		private void UpdateOverall()
+		{
 			for (int i = 0; i < Count; i++)
 				Overall[i] = (Threats[i] + Tempos[i]) * 0.5f;
 		}
 
 		private float Round2(float v) => Mathf.Round(v * 100f) / 100f;
 
-		public PacingTargetConfig ToConfig() {
-			return new PacingTargetConfig {
+		public PacingTargetConfig ToConfig()
+		{
+			return new PacingTargetConfig
+			{
 				ThreatTargets = new List<float>(Threats),
 				TempoTargets = new List<float>(Tempos),
 				GlobalConstraints = Constraints
 			};
 		}
 
-		public void FromConfig(PacingTargetConfig config) {
+		public void FromConfig(PacingTargetConfig config)
+		{
 			Threats = new List<float>(config.ThreatTargets);
 			Tempos = new List<float>(config.TempoTargets);
 			Resize(Threats.Count);
@@ -372,12 +408,14 @@ namespace PacingFramework
 		private int draggingCurve = -1;
 		private int draggingIndex = -1;
 
-		public GraphRenderer(PacingModel model, Action onChanged) {
+		public GraphRenderer(PacingModel model, Action onChanged)
+		{
 			this.model = model;
 			this.onChanged = onChanged;
 		}
 
-		public void Draw(float width) {
+		public void Draw(float width)
+		{
 			Rect rect = GUILayoutUtility.GetRect(width, 400);
 			EditorGUI.DrawRect(rect, new Color(0.12f, 0.12f, 0.12f));
 
@@ -387,11 +425,12 @@ namespace PacingFramework
 			DrawCurve(rect, model.Threats, Color.red, 0);
 			DrawCurve(rect, model.Tempos, Color.cyan, 1);
 			DrawCurve(rect, model.Overall, Color.green, -1); // visual only (but with circles)
-			
+
 			DrawLegend(rect);
 		}
 
-		private void DrawGrid(Rect rect) {
+		private void DrawGrid(Rect rect)
+		{
 			Handles.BeginGUI();
 			Handles.color = new Color(0.3f, 0.3f, 0.3f, 0.4f);
 
@@ -405,7 +444,8 @@ namespace PacingFramework
 
 			int xSteps = model.Count - 1;
 
-			for (int i = 0; i <= xSteps; i++) {
+			for (int i = 0; i <= xSteps; i++)
+			{
 				float x = left + i / (float)xSteps * width;
 				Handles.DrawLine(new Vector3(x, top), new Vector3(x, bottom));
 
@@ -413,7 +453,8 @@ namespace PacingFramework
 					GUI.Label(new Rect(x - 10, bottom + 2, 40, 20), i.ToString());
 			}
 
-			for (int i = 0; i <= 4; i++) {
+			for (int i = 0; i <= 4; i++)
+			{
 				float t = i / 4f;
 				float y = bottom - t * height;
 				Handles.DrawLine(new Vector3(left, y), new Vector3(right, y));
@@ -424,7 +465,8 @@ namespace PacingFramework
 			Handles.EndGUI();
 		}
 
-		private void DrawAxes(Rect rect) {
+		private void DrawAxes(Rect rect)
+		{
 			Handles.BeginGUI();
 			Handles.color = Color.gray;
 
@@ -439,7 +481,8 @@ namespace PacingFramework
 			Handles.EndGUI();
 		}
 
-		private void DrawCurve(Rect rect, List<float> list, Color color, int curveIndex) {
+		private void DrawCurve(Rect rect, List<float> list, Color color, int curveIndex)
+		{
 			Handles.BeginGUI();
 			Handles.color = color;
 
@@ -453,7 +496,8 @@ namespace PacingFramework
 
 			Event e = Event.current;
 
-			Vector2 GetPoint(int i) {
+			Vector2 GetPoint(int i)
+			{
 				float x = left + i / (float)(list.Count - 1) * width;
 				float y = bottom - Mathf.Clamp01(list[i]) * height;
 				return new Vector2(x, y);
@@ -464,7 +508,8 @@ namespace PacingFramework
 				Handles.DrawLine(GetPoint(i), GetPoint(i + 1));
 
 			// Draw circles (including overall)
-			for (int i = 0; i < list.Count; i++) {
+			for (int i = 0; i < list.Count; i++)
+			{
 				Vector2 p = GetPoint(i);
 				Handles.DrawSolidDisc(p, Vector3.forward, pointRadius);
 
@@ -472,7 +517,8 @@ namespace PacingFramework
 					continue; // overall not draggable
 
 				if (e.type == EventType.MouseDown &&
-					Vector2.Distance(e.mousePosition, p) < pointRadius) {
+					Vector2.Distance(e.mousePosition, p) < pointRadius)
+				{
 					draggingCurve = curveIndex;
 					draggingIndex = i;
 					e.Use();
@@ -480,7 +526,8 @@ namespace PacingFramework
 
 				if (e.type == EventType.MouseDrag &&
 					draggingCurve == curveIndex &&
-					draggingIndex == i) {
+					draggingIndex == i)
+				{
 					float normalized = Mathf.Clamp01((bottom - e.mousePosition.y) / height);
 
 					if (curveIndex == 0)
@@ -493,7 +540,8 @@ namespace PacingFramework
 				}
 			}
 
-			if (e.type == EventType.MouseUp) {
+			if (e.type == EventType.MouseUp)
+			{
 				draggingCurve = -1;
 				draggingIndex = -1;
 			}
@@ -501,7 +549,8 @@ namespace PacingFramework
 			Handles.EndGUI();
 		}
 
-		private void DrawLegend(Rect rect) {
+		private void DrawLegend(Rect rect)
+		{
 			float boxWidth = 95f;
 			float boxHeight = 75f;
 			float margin = 10f;
@@ -520,7 +569,8 @@ namespace PacingFramework
 			DrawLegendItem(legendRect, 2, Color.green, "Overall");
 		}
 
-		private void DrawLegendItem(Rect legendRect, int row, Color color, string label) {
+		private void DrawLegendItem(Rect legendRect, int row, Color color, string label)
+		{
 			float rowHeight = 22f;
 			float y = legendRect.y + 8 + row * rowHeight;
 
@@ -544,12 +594,14 @@ namespace PacingFramework
 		private PacingModel model;
 		private Action onChanged;
 
-		public ConstraintDrawer(PacingModel model, Action onChanged) {
+		public ConstraintDrawer(PacingModel model, Action onChanged)
+		{
 			this.model = model;
 			this.onChanged = onChanged;
 		}
 
-		public void Draw() {
+		public void Draw()
+		{
 			EditorGUILayout.BeginVertical("box");
 
 			DrawConstraintRow("Collision Ratio", model.Constraints.CollisionRatio);
@@ -567,7 +619,8 @@ namespace PacingFramework
 			EditorGUILayout.EndVertical();
 		}
 
-		private void DrawConstraintRow(string label, ConstraintMinMax data) {
+		private void DrawConstraintRow(string label, ConstraintMinMax data)
+		{
 			EditorGUILayout.BeginHorizontal();
 
 			GUILayout.Label(label, GUILayout.Width(130));
@@ -616,34 +669,41 @@ namespace PacingFramework
 
 			// ----- Apply only the control that changed -----
 			// ----- MinLimit -----
-			if (minLimitChanged) {
+			if (minLimitChanged)
+			{
 				float r = Round2(newMinLimit);
-				if (!NearlyEqual(r, data.MinLimit)) {
+				if (!NearlyEqual(r, data.MinLimit))
+				{
 					data.MinLimit = r;
 					changed = true;
 				}
 			}
 
 			// ----- MaxLimit -----
-			if (maxLimitChanged) {
+			if (maxLimitChanged)
+			{
 				float r = Round2(newMaxLimit);
-				if (!NearlyEqual(r, data.MaxLimit)) {
+				if (!NearlyEqual(r, data.MaxLimit))
+				{
 					data.MaxLimit = r;
 					changed = true;
 				}
 			}
 
 			// ----- Slider -----
-			if (sliderChanged) {
+			if (sliderChanged)
+			{
 				float rMin = Round2(sliderMin);
 				float rMax = Round2(sliderMax);
 
-				if (!NearlyEqual(rMin, data.Min)) {
+				if (!NearlyEqual(rMin, data.Min))
+				{
 					data.Min = rMin;
 					changed = true;
 				}
 
-				if (!NearlyEqual(rMax, data.Max)) {
+				if (!NearlyEqual(rMax, data.Max))
+				{
 					data.Max = rMax;
 					changed = true;
 				}
@@ -653,39 +713,47 @@ namespace PacingFramework
 			}
 
 			// ----- Min Field -----
-			if (minFieldChanged) {
+			if (minFieldChanged)
+			{
 				float r = Round2(newMin);
-				if (!NearlyEqual(r, data.Min)) {
+				if (!NearlyEqual(r, data.Min))
+				{
 					data.Min = r;
 					changed = true;
 				}
 			}
 
 			// ----- Max Field -----
-			if (maxFieldChanged) {
+			if (maxFieldChanged)
+			{
 				float r = Round2(newMax);
-				if (!NearlyEqual(r, data.Max)) {
+				if (!NearlyEqual(r, data.Max))
+				{
 					data.Max = r;
 					changed = true;
 				}
 			}
 
 			// ----- Weight -----
-			if (weightChanged) {
+			if (weightChanged)
+			{
 				float r = Round2(newWeight);
-				if (!NearlyEqual(r, data.Weight)) {
+				if (!NearlyEqual(r, data.Weight))
+				{
 					data.Weight = r;
 					changed = true;
 				}
 			}
 
-			if (changed) {
+			if (changed)
+			{
 				Validate(data);
 				onChanged?.Invoke();
 			}
 		}
 
-		private void Validate(ConstraintMinMax c) {
+		private void Validate(ConstraintMinMax c)
+		{
 			if (c.MinLimit > c.MaxLimit)
 				c.MaxLimit = c.MinLimit;
 
@@ -698,7 +766,8 @@ namespace PacingFramework
 
 		private float Round2(float v) => Mathf.Round(v * 100f) / 100f;
 
-		private bool NearlyEqual(float a, float b) {
+		private bool NearlyEqual(float a, float b)
+		{
 			float EPS = 0.0001f;
 			return Mathf.Abs(a - b) < EPS;
 		}

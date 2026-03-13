@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using SumoBot;
 using SumoCore;
+using SumoHelper;
 using SumoManager;
 using Unity.VisualScripting;
 using UnityEngine;
@@ -24,6 +25,8 @@ namespace PacingFramework
 		public SegmentData currentGameplayData;
 		public float segmentDuration = 2f;
 		public string PacingFileName = "";
+
+		[HideInInspector]
 		public PacingTargetConfig PacingTarget;
 
 
@@ -64,7 +67,7 @@ namespace PacingFramework
 			}
 
 			PacingTarget = JsonUtility.FromJson<PacingTargetConfig>(pacingConfigAsset.text);
-			Logger.Info($"[{controller.Side}] PacingConfig loaded");
+			Logger.Info($"[{controller.Side}] PacingConfig {PacingFileName} loaded");
 		}
 
 		void OnEnable()
@@ -88,6 +91,7 @@ namespace PacingFramework
 			currentGameplayData = new SegmentData();
 			tickCount = 0;
 			segmentIndex = 0;
+			pacingHistory.InitBattle();
 		}
 
 		public void Tick()
@@ -103,10 +107,13 @@ namespace PacingFramework
 
 		private void FinalizeSegment()
 		{
+			PacingEvaluation eval = EvaluatePacing();
+			Logger.Info($"[{controller.Side}] EVAL PACING {eval}");
+
 			// [Todo] Handle segment's local constraints if needed. 
 			currentSegmentPacing = new SegmentPacing(currentGameplayData, PacingTarget.GlobalConstraints);
-			pacingHistory.SegmentGameplayDatas.Add(new SegmentData(currentGameplayData));
-			pacingHistory.SegmentPacings.Add(currentSegmentPacing);
+			pacingHistory.CurrentHistory().SegmentGameplayDatas.Add(new SegmentData(currentGameplayData));
+			pacingHistory.CurrentHistory().SegmentPacings.Add(currentSegmentPacing);
 
 			LogManager.LogPacing(currentGameplayData, currentSegmentPacing, segmentIndex, controller.Side);
 
@@ -212,10 +219,65 @@ namespace PacingFramework
 			}
 		}
 
-		// [Todo] 
-		// Evaluation methods =========
-		//EvaluatePacing(): void // Compare the actual latest pacing in pacinghistory with the pacingtarget according to the index. 
-		//EvaluateAction(): void // Filtered out the original actions into paced actions. This requires rules on how to filter the action based on the pacing values. 
+		// ================================
+		// Evaluation methods
+		// ================================
+
+		/// <summary>
+		/// Compare the actual latest pacing in pacingHistory with the pacingTarget according to the index.
+		/// Returns the pacing evaluation results for both Threat and Tempo aspects.
+		/// </summary>
+		public PacingEvaluation EvaluatePacing()
+		{
+			if (pacingHistory.CurrentHistory().SegmentPacings.Count == 0)
+			{
+				Logger.Warning($"[{controller.Side}] No pacing history available for evaluation");
+				return null;
+			}
+
+			int segmentIndex = pacingHistory.CurrentHistory().SegmentPacings.Count - 1;
+			SegmentPacing latestPacing = pacingHistory.CurrentHistory().SegmentPacings[segmentIndex];
+
+			// Get target values for current segment index (with bounds checking)
+			float threatTarget = GetTargetValue(PacingTarget.ThreatTargets, segmentIndex);
+			float tempoTarget = GetTargetValue(PacingTarget.TempoTargets, segmentIndex);
+
+			// Calculate deltas
+			float threatDelta = latestPacing.Threat.Value - threatTarget;
+			float tempoDelta = latestPacing.Tempo.Value - tempoTarget;
+
+			PacingEvaluation evaluation = new PacingEvaluation
+			{
+				SegmentIndex = segmentIndex,
+				ActualThreat = latestPacing.Threat.Value,
+				TargetThreat = threatTarget,
+				ThreatDelta = threatDelta,
+				ActualTempo = latestPacing.Tempo.Value,
+				TargetTempo = tempoTarget,
+				TempoDelta = tempoDelta
+			};
+
+			return evaluation;
+		}
+
+		/// <summary>
+		/// Helper method to get target value from list with bounds checking.
+		/// If index exceeds list size, returns the last available value.
+		/// If list is empty, returns 0.5 as default target (middle of normalized range).
+		/// </summary>
+		private float GetTargetValue(List<float> targetList, int index)
+		{
+			if (targetList.Count == 0)
+				return 0.5f; // Default to middle of normalized range
+
+			if (index >= targetList.Count)
+				return targetList[^1]; // Use last available target
+
+			return targetList[index];
+		}
+
+		// [Todo]
+		//EvaluateAction(): void // Filtered out the original actions into paced actions. This requires rules on how to filter the action based on the pacing values.
 	}
 
 	// ==========================================================
@@ -238,8 +300,74 @@ namespace PacingFramework
 
 	public class GamePacing
 	{
+		public Dictionary<int, Dictionary<int, GamePacingItem>> PacingHistories = new() { };
+
+		public void InitBattle()
+		{
+			var currGameIdx = LogManager.CurrentGameIndex;
+			var roundIdx = LogManager.GetCurrentRound().Index;
+
+			if (PacingHistories.TryGetValue(currGameIdx, out var _))
+			{
+				if (!PacingHistories[currGameIdx].TryGetValue(roundIdx, out var _))
+					PacingHistories[currGameIdx].Add(roundIdx, new GamePacingItem());
+			}
+			else
+				PacingHistories.Add(currGameIdx, new() { [roundIdx] = new GamePacingItem() });
+		}
+
+		public GamePacingItem CurrentHistory()
+		{
+			var currGameIdx = LogManager.CurrentGameIndex;
+			var roundIdx = LogManager.GetCurrentRound().Index;
+			if (PacingHistories.TryGetValue(currGameIdx, out Dictionary<int, GamePacingItem> round))
+			{
+				if (round.TryGetValue(roundIdx, out var item))
+				{
+					return round[roundIdx];
+				}
+				else
+				{
+					var newInst = new GamePacingItem();
+					PacingHistories[currGameIdx].Add(roundIdx, newInst);
+					return newInst;
+				}
+
+			}
+			else
+			{
+				var newInst = new GamePacingItem();
+				PacingHistories[currGameIdx].Add(roundIdx, newInst);
+				return newInst;
+			}
+		}
+	}
+
+	public class GamePacingItem
+	{
 		public List<SegmentData> SegmentGameplayDatas = new();
 		public List<SegmentPacing> SegmentPacings = new();
+	}
+
+	[Serializable]
+	public class PacingEvaluation
+	{
+		public int SegmentIndex;
+		public float ActualThreat;
+		public float TargetThreat;
+		public float ThreatDelta;
+		public float ActualTempo;
+		public float TargetTempo;
+		public float TempoDelta;
+
+		public bool IsThreatAboveTarget => ThreatDelta > 0;
+		public bool IsTempoAboveTarget => TempoDelta > 0;
+
+		public override string ToString()
+		{
+			return $"Segment {SegmentIndex}: Threat={ActualThreat:F3} (Target={TargetThreat:F3}, Delta={ThreatDelta:F3}), " +
+				   $"Tempo={ActualTempo:F3} (Target={TargetTempo:F3}, Delta={TempoDelta:F3})";
+		}
 	}
 
 	[Serializable]
