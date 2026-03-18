@@ -78,7 +78,7 @@ namespace SumoBot.EA.MCTS
 
         public override void OnBotCollision(BounceEvent bounceEvent)
         {
-            if (side == bounceEvent.Actor)
+            if (bounceEvent.MyInfo.IsActor)
                 lastActionsFromEnemy = null;
             else
                 lastActionsToEnemy = null;

@@ -45,6 +45,11 @@ namespace SumoCore
                     return Name;
             }
         }
+
+        public override string ToString()
+        {
+            return Name;
+        }
     }
 
     public enum ActionType

@@ -13,11 +13,9 @@ namespace PacingFramework
 	{
 		private bool showBots;
 		private bool showPacingDetails;
-		private bool showSegmentDetails;
 		private bool showEvaluationDetails;
 
 		private Vector2 pacingScroll;
-		private Vector2 segmentScroll;
 		private Vector2 evaluationScroll;
 
 		private PacingController controller;
@@ -144,7 +142,6 @@ namespace PacingFramework
 
 			DrawBotsSection(controller);
 			DrawPacingDetails(selectedPacingItem);
-			DrawSegmentDetails(selectedPacingItem);
 			DrawSegmentEvaluation(threat, tempo);
 
 			Repaint(); // live update
@@ -464,49 +461,49 @@ namespace PacingFramework
 		}
 
 		private void DrawDeltaBars(Rect rect, List<float> actual, List<float> target, Color baseColor)
-	{
-		if (actual == null || target == null || actual.Count == 0 || target.Count == 0)
-			return;
-
-		Handles.BeginGUI();
-
-		float left = rect.x + padding;
-		float right = rect.x + rect.width - padding;
-		float top = rect.y + padding;
-		float bottom = rect.y + rect.height - padding;
-
-		float width = right - left;
-		float height = bottom - top;
-
-		int count = Mathf.Min(actual.Count, target.Count);
-
-		for (int i = 0; i < count; i++)
 		{
-			float x = left + i / (float)(actual.Count - 1) * width;
-			float actualY = bottom - Mathf.Clamp01(actual[i]) * height;
-			float targetY = bottom - Mathf.Clamp01(target[i]) * height;
+			if (actual == null || target == null || actual.Count == 0 || target.Count == 0)
+				return;
 
-			// Calculate delta magnitude for color coding
-			float delta = Mathf.Abs(actual[i] - target[i]);
-			Color barColor;
+			Handles.BeginGUI();
 
-			// Color coding based on delta magnitude
-			if (delta < 0.1f)
-				barColor = new Color(0f, 1f, 0f, 0.3f); // Green - close to target
-			else if (delta < 0.2f)
-				barColor = new Color(1f, 1f, 0f, 0.3f); // Yellow - moderate deviation
-			else
-				barColor = new Color(1f, 0f, 0f, 0.3f); // Red - large deviation
+			float left = rect.x + padding;
+			float right = rect.x + rect.width - padding;
+			float top = rect.y + padding;
+			float bottom = rect.y + rect.height - padding;
 
-			// Draw vertical bar from actual to target
-			Handles.color = barColor;
-			Handles.DrawLine(new Vector3(x, actualY, 0), new Vector3(x, targetY, 0));
+			float width = right - left;
+			float height = bottom - top;
+
+			int count = Mathf.Min(actual.Count, target.Count);
+
+			for (int i = 0; i < count; i++)
+			{
+				float x = left + i / (float)(actual.Count - 1) * width;
+				float actualY = bottom - Mathf.Clamp01(actual[i]) * height;
+				float targetY = bottom - Mathf.Clamp01(target[i]) * height;
+
+				// Calculate delta magnitude for color coding
+				float delta = Mathf.Abs(actual[i] - target[i]);
+				Color barColor;
+
+				// Color coding based on delta magnitude
+				if (delta < 0.1f)
+					barColor = new Color(0f, 1f, 0f, 0.3f); // Green - close to target
+				else if (delta < 0.2f)
+					barColor = new Color(1f, 1f, 0f, 0.3f); // Yellow - moderate deviation
+				else
+					barColor = new Color(1f, 0f, 0f, 0.3f); // Red - large deviation
+
+				// Draw vertical bar from actual to target
+				Handles.color = barColor;
+				Handles.DrawLine(new Vector3(x, actualY, 0), new Vector3(x, targetY, 0));
+			}
+
+			Handles.EndGUI();
 		}
 
-		Handles.EndGUI();
-	}
-
-	private void DrawLegend(Rect rect)
+		private void DrawLegend(Rect rect)
 		{
 			float boxWidth = 110f;
 			float boxHeight = 60f;
@@ -527,85 +524,85 @@ namespace PacingFramework
 			//DrawLegendItem(legendRect, 3, Color.white, "Dashed = Target");
 		}
 
-	private void DrawEnhancedLegend(Rect rect, List<float> threat, List<float> tempo, List<float> overall, PacingTargetConfig targetConfig)
-	{
-		if (threat == null || tempo == null || overall == null) return;
-
-		float boxWidth = 280f;
-		float boxHeight = 90f;
-		float margin = 10f;
-
-		Rect legendRect = new Rect(
-			rect.xMax - boxWidth - margin,
-			rect.y + margin,
-			boxWidth,
-			boxHeight
-		);
-
-		EditorGUI.DrawRect(legendRect, new Color(0f, 0f, 0f, 0.6f));
-
-		// Calculate averages
-		float threatAvg = threat.Count > 0 ? threat.Average() : 0f;
-		float tempoAvg = tempo.Count > 0 ? tempo.Average() : 0f;
-		float overallAvg = overall.Count > 0 ? overall.Average() : 0f;
-
-		// Get target averages if available
-		float threatTarget = 0f;
-		float tempoTarget = 0f;
-		if (targetConfig != null)
+		private void DrawEnhancedLegend(Rect rect, List<float> threat, List<float> tempo, List<float> overall, PacingTargetConfig targetConfig)
 		{
-			var resampledThreat = ResampleCurve(targetConfig.ThreatTargets, threat.Count);
-			var resampledTempo = ResampleCurve(targetConfig.TempoTargets, tempo.Count);
-			threatTarget = resampledThreat.Count > 0 ? resampledThreat.Average() : 0f;
-			tempoTarget = resampledTempo.Count > 0 ? resampledTempo.Average() : 0f;
+			if (threat == null || tempo == null || overall == null) return;
+
+			float boxWidth = 280f;
+			float boxHeight = 90f;
+			float margin = 10f;
+
+			Rect legendRect = new Rect(
+				rect.xMax - boxWidth - margin,
+				rect.y + margin,
+				boxWidth,
+				boxHeight
+			);
+
+			EditorGUI.DrawRect(legendRect, new Color(0f, 0f, 0f, 0.6f));
+
+			// Calculate averages
+			float threatAvg = threat.Count > 0 ? threat.Average() : 0f;
+			float tempoAvg = tempo.Count > 0 ? tempo.Average() : 0f;
+			float overallAvg = overall.Count > 0 ? overall.Average() : 0f;
+
+			// Get target averages if available
+			float threatTarget = 0f;
+			float tempoTarget = 0f;
+			if (targetConfig != null)
+			{
+				var resampledThreat = ResampleCurve(targetConfig.ThreatTargets, threat.Count);
+				var resampledTempo = ResampleCurve(targetConfig.TempoTargets, tempo.Count);
+				threatTarget = resampledThreat.Count > 0 ? resampledThreat.Average() : 0f;
+				tempoTarget = resampledTempo.Count > 0 ? resampledTempo.Average() : 0f;
+			}
+
+			// Calculate deltas
+			float threatDelta = threatAvg - threatTarget;
+			float tempoDelta = tempoAvg - tempoTarget;
+
+			// Draw legend items with stats
+			DrawEnhancedLegendItem(legendRect, 0, Color.red, "Threat", threatAvg, threatTarget, threatDelta);
+			DrawEnhancedLegendItem(legendRect, 1, Color.cyan, "Tempo", tempoAvg, tempoTarget, tempoDelta);
+			DrawEnhancedLegendItem(legendRect, 2, Color.green, "Overall", overallAvg, 0f, 0f);
 		}
 
-		// Calculate deltas
-		float threatDelta = threatAvg - threatTarget;
-		float tempoDelta = tempoAvg - tempoTarget;
-
-		// Draw legend items with stats
-		DrawEnhancedLegendItem(legendRect, 0, Color.red, "Threat", threatAvg, threatTarget, threatDelta);
-		DrawEnhancedLegendItem(legendRect, 1, Color.cyan, "Tempo", tempoAvg, tempoTarget, tempoDelta);
-		DrawEnhancedLegendItem(legendRect, 2, Color.green, "Overall", overallAvg, 0f, 0f);
-	}
-
-	private void DrawEnhancedLegendItem(Rect legendRect, int row, Color color, string label, float avg, float target, float delta)
-	{
-		float rowHeight = 28f;
-		float y = legendRect.y + 6 + row * rowHeight;
-
-		// Color box
-		Rect colorRect = new Rect(legendRect.x + 6, y + 6, 10, 10);
-		EditorGUI.DrawRect(colorRect, color);
-
-		// Label
-		EditorGUI.LabelField(
-			new Rect(legendRect.x + 20, y, 50, 18),
-			label,
-			EditorStyles.whiteBoldLabel
-		);
-
-		// Stats text
-		string statsText;
-		if (target > 0f)
+		private void DrawEnhancedLegendItem(Rect legendRect, int row, Color color, string label, float avg, float target, float delta)
 		{
-			string deltaStr = delta >= 0 ? $"+{delta:F2}" : $"{delta:F2}";
-			statsText = $"Avg:{avg:F2} Tgt:{target:F2}\nΔ:{deltaStr}";
-		}
-		else
-		{
-			statsText = $"Avg: {avg:F2}";
-		}
+			float rowHeight = 28f;
+			float y = legendRect.y + 6 + row * rowHeight;
 
-		GUIStyle smallStyle = new GUIStyle(EditorStyles.whiteLabel);
-		smallStyle.fontSize = 9;
-		EditorGUI.LabelField(
-			new Rect(legendRect.x + 70, y, 200, rowHeight),
-			statsText,
-			smallStyle
-		);
-	}
+			// Color box
+			Rect colorRect = new Rect(legendRect.x + 6, y + 6, 10, 10);
+			EditorGUI.DrawRect(colorRect, color);
+
+			// Label
+			EditorGUI.LabelField(
+				new Rect(legendRect.x + 20, y, 50, 18),
+				label,
+				EditorStyles.whiteBoldLabel
+			);
+
+			// Stats text
+			string statsText;
+			if (target > 0f)
+			{
+				string deltaStr = delta >= 0 ? $"+{delta:F2}" : $"{delta:F2}";
+				statsText = $"Avg:{avg:F2} Tgt:{target:F2}\nΔ:{deltaStr}";
+			}
+			else
+			{
+				statsText = $"Avg: {avg:F2}";
+			}
+
+			GUIStyle smallStyle = new GUIStyle(EditorStyles.whiteLabel);
+			smallStyle.fontSize = 9;
+			EditorGUI.LabelField(
+				new Rect(legendRect.x + 70, y, 200, rowHeight),
+				statsText,
+				smallStyle
+			);
+		}
 
 		private void DrawLegendItem(Rect legendRect, int row, Color color, string label)
 		{
@@ -636,45 +633,20 @@ namespace PacingFramework
 
 		private void DrawPacingDetails(GamePacingItem pacingItem)
 		{
-			showPacingDetails = EditorGUILayout.Foldout(showPacingDetails, "Pacing Details (Aspects / Factors)", true);
+			showPacingDetails = EditorGUILayout.Foldout(showPacingDetails, "Per-Segment Details (Factors & Raw Data)", true);
 			if (!showPacingDetails) return;
 
 			EditorGUILayout.BeginVertical("box");
 
-			bool useScroll = pacingItem.SegmentPacings.Count > 10;
-
+			bool useScroll = pacingItem.SegmentPacings.Count > 5;
 			if (useScroll)
-				pacingScroll = EditorGUILayout.BeginScrollView(pacingScroll, GUILayout.Height(200));
+				pacingScroll = EditorGUILayout.BeginScrollView(pacingScroll, GUILayout.Height(400));
 
+			// Draw merged table for each segment
 			for (int i = 0; i < pacingItem.SegmentPacings.Count; i++)
 			{
-				var p = pacingItem.SegmentPacings[i];
-
-				EditorGUILayout.LabelField($"Segment {i}", EditorStyles.boldLabel);
-
-				EditorGUILayout.LabelField($"Threat: {p.Threat.Value:F3}");
-				EditorGUILayout.LabelField($"Tempo: {p.Tempo.Value:F3}");
-				// Modify the block code below because we now have GetFactorsInfo() in threat and tempo 
-				//foreach (var factor in p.Threat. Factors) {
-				//	EditorGUILayout.LabelField(
-				//		$"   {factor.Key}: {factor.Value:F3}");
-				//}
-				foreach (var info in p.Threat.GetFactorsInfo())
-				{
-					// Now show the factor and its value. 
-					EditorGUILayout.LabelField($"{info.factor}: {info.value:F3}");
-					//EditorGUILayout.LabelField(
-					//	$"   {info.Name}: {info.Value:F3}");
-				}
-				foreach (var info in p.Tempo.GetFactorsInfo())
-				{
-					// Now show the factor and its value. 
-					EditorGUILayout.LabelField($"{info.factor}: {info.value:F3}");
-					//EditorGUILayout.LabelField(
-					//	$"   {info.Name}: {info.Value:F3}");
-				}
-
-				EditorGUILayout.Space(4);
+				DrawMergedSegmentDetails(pacingItem, i);
+				EditorGUILayout.Space(8);
 			}
 
 			if (useScroll)
@@ -683,36 +655,110 @@ namespace PacingFramework
 			EditorGUILayout.EndVertical();
 		}
 
-		private void DrawSegmentDetails(GamePacingItem pacingItem)
+		private void DrawMergedSegmentDetails(GamePacingItem pacingItem, int segmentIndex)
 		{
-			showSegmentDetails = EditorGUILayout.Foldout(showSegmentDetails, "Segment Raw Data", true);
-			if (!showSegmentDetails) return;
+			var pacing = pacingItem.SegmentPacings[segmentIndex];
+			var rawData = pacingItem.SegmentGameplayDatas[segmentIndex];
+
+			// Color bgColor = segmentIndex % 2 == 0 ? new Color(0.15f, 0.15f, 0.2f, 0.8f) : new Color(0.2f, 0.2f, 0.25f, 0.8f);
 
 			EditorGUILayout.BeginVertical("box");
+			// Rect boxRect = GUILayoutUtility.GetLastRect();
 
-			bool useScroll = pacingItem.SegmentPacings.Count > 10;
+			// Header
+			EditorGUILayout.BeginHorizontal();
+			EditorGUILayout.LabelField($"SEGMENT {segmentIndex}", EditorStyles.whiteLargeLabel, GUILayout.Width(120));
+			EditorGUILayout.LabelField($"Overall: {pacing.GetOverallPacing():F3}", EditorStyles.boldLabel);
+			EditorGUILayout.EndHorizontal();
 
-			if (useScroll)
-				segmentScroll = EditorGUILayout.BeginScrollView(segmentScroll, GUILayout.Height(200));
+			EditorGUILayout.Space(5);
 
-			for (int i = 0; i < pacingItem.SegmentPacings.Count; i++)
+			// --- THREAT FACTORS SECTION ---
+			EditorGUILayout.LabelField("THREAT FACTORS", EditorStyles.boldLabel);
+			EditorGUILayout.BeginVertical("box");
+
+			EditorGUILayout.BeginHorizontal();
+			EditorGUILayout.LabelField("Threat Value:", GUILayout.Width(120));
+			EditorGUILayout.LabelField($"{pacing.Threat.Value:F3}", EditorStyles.boldLabel);
+			EditorGUILayout.EndHorizontal();
+
+			var threatFactors = pacing.Threat.GetFactorsInfo();
+			foreach (var factorInfo in threatFactors)
 			{
-				var info = pacingItem.SegmentGameplayDatas[i];
-				EditorGUILayout.LabelField($"Segment {i} Counts", EditorStyles.boldLabel);
-				EditorGUILayout.LabelField($"Collisions: {info.Collisions.Count}");
-				EditorGUILayout.LabelField($"Angles: {info.Angles.Count}");
-				EditorGUILayout.LabelField($"SafeDist: {info.SafeDistances.Count}");
-				EditorGUILayout.LabelField($"Actions: {info.Actions.Count}");
-				EditorGUILayout.LabelField($"BotDist: {info.BotsDistances.Count}");
-				EditorGUILayout.LabelField($"Velocity: {info.Velocities.Count}");
-				EditorGUILayout.Space(4);
+				EditorGUILayout.BeginHorizontal();
+				EditorGUILayout.LabelField($"  {factorInfo.factor}", GUILayout.Width(120));
+				EditorGUILayout.LabelField($"{factorInfo.value:F3}");
+				EditorGUILayout.EndHorizontal();
 			}
 
-			if (useScroll)
-				EditorGUILayout.EndScrollView();
+			EditorGUILayout.EndVertical();
+			EditorGUILayout.Space(3);
+
+			// --- TEMPO FACTORS SECTION ---
+			EditorGUILayout.LabelField("TEMPO FACTORS", EditorStyles.boldLabel);
+			EditorGUILayout.BeginVertical("box");
+
+			EditorGUILayout.BeginHorizontal();
+			EditorGUILayout.LabelField("Tempo Value:", GUILayout.Width(120));
+			EditorGUILayout.LabelField($"{pacing.Tempo.Value:F3}", EditorStyles.boldLabel);
+			EditorGUILayout.EndHorizontal();
+
+			var tempoFactors = pacing.Tempo.GetFactorsInfo();
+			foreach (var factorInfo in tempoFactors)
+			{
+				EditorGUILayout.BeginHorizontal();
+				EditorGUILayout.LabelField($"  {factorInfo.factor}", GUILayout.Width(120));
+				EditorGUILayout.LabelField($"{factorInfo.value:F3}");
+				EditorGUILayout.EndHorizontal();
+			}
+
+			EditorGUILayout.EndVertical();
+			EditorGUILayout.Space(3);
+
+			// --- RAW DATA SECTION ---
+			EditorGUILayout.LabelField("RAW DATA", EditorStyles.boldLabel);
+			EditorGUILayout.BeginVertical("box");
+
+			DrawRawDataRow("Collisions", rawData.Collisions);
+			DrawRawDataRow("Angles", rawData.Angles);
+			DrawRawDataRow("SafeDistances", rawData.SafeDistances);
+			DrawRawDataRow("Actions", rawData.Actions);
+			DrawRawDataRow("BotsDistances", rawData.BotsDistances);
+			DrawRawDataRow("Velocities", rawData.Velocities);
+
+			EditorGUILayout.EndVertical();
 
 			EditorGUILayout.EndVertical();
 		}
+
+		private void DrawRawDataRow<T>(string label, List<T> content)
+		{
+			EditorGUILayout.BeginHorizontal();
+			EditorGUILayout.LabelField($"  {label}", GUILayout.Width(120));
+			EditorGUILayout.LabelField($"Count: {content.Count}", GUILayout.Width(80));
+
+			if (content.Count > 0)
+			{
+				string contentStr = string.Join(", ", content.Select(x =>
+				{
+					if (x is float f) return f.ToString("F2");
+					return x.ToString();
+				}));
+
+				// Truncate if too long
+				// if (contentStr.Length > 80)
+				// 	contentStr = contentStr.Substring(0, 77) + "...";
+
+				EditorGUILayout.LabelField($"[{contentStr}]");
+			}
+			else
+			{
+				EditorGUILayout.LabelField("[]", new GUIStyle(EditorStyles.label) { fontStyle = FontStyle.Italic });
+			}
+
+			EditorGUILayout.EndHorizontal();
+		}
+
 
 		private void DrawSegmentEvaluation(
 			List<float> actualThreat,
