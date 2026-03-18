@@ -7854,11 +7854,10 @@ MonoBehaviour:
     Collisions: 
     Angles: []
     SafeDistances: []
-    Actions: 
     BotsDistances: []
     Velocities: []
-  segmentDuration: 1
-  PacingFileName: NN_1s
+  segmentDuration: 5
+  PacingFileName: NN_5s
   PacingTarget:
     ThreatTargets: []
     TempoTargets: []
@@ -18347,43 +18346,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1617173319}
   m_CullTransparentMesh: 1
---- !u!84 &1625288894
-RenderTexture:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_Name: 
-  m_ImageContentsHash:
-    serializedVersion: 2
-    Hash: 00000000000000000000000000000000
-  m_IsAlphaChannelOptional: 0
-  serializedVersion: 6
-  m_Width: 1920
-  m_Height: 1080
-  m_AntiAliasing: 1
-  m_MipCount: -1
-  m_DepthStencilFormat: 0
-  m_ColorFormat: 4
-  m_MipMap: 0
-  m_GenerateMips: 0
-  m_SRGB: 1
-  m_UseDynamicScale: 0
-  m_UseDynamicScaleExplicit: 0
-  m_BindMS: 0
-  m_EnableCompatibleFormat: 1
-  m_EnableRandomWrite: 1
-  m_TextureSettings:
-    serializedVersion: 2
-    m_FilterMode: 0
-    m_Aniso: 1
-    m_MipBias: 0
-    m_WrapU: 1
-    m_WrapV: 1
-    m_WrapW: 1
-  m_Dimension: 2
-  m_VolumeDepth: 1
-  m_ShadowSamplingMode: 2
 --- !u!1 &1630068158
 GameObject:
   m_ObjectHideFlags: 0
@@ -20507,10 +20469,9 @@ MonoBehaviour:
     Collisions: 
     Angles: []
     SafeDistances: []
-    Actions: 
     BotsDistances: []
     Velocities: []
-  segmentDuration: 2
+  segmentDuration: 1
   PacingFileName: 
   PacingTarget:
     ThreatTargets: []
@@ -23211,7 +23172,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Texture: {fileID: 1625288894}
+  m_Texture: {fileID: 2041230990}
   m_UVRect:
     serializedVersion: 2
     x: 0
@@ -25001,6 +24962,43 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   m_IsOn: 1
+--- !u!84 &2041230990
+RenderTexture:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: 
+  m_ImageContentsHash:
+    serializedVersion: 2
+    Hash: 00000000000000000000000000000000
+  m_IsAlphaChannelOptional: 0
+  serializedVersion: 6
+  m_Width: 1920
+  m_Height: 1080
+  m_AntiAliasing: 1
+  m_MipCount: -1
+  m_DepthStencilFormat: 0
+  m_ColorFormat: 4
+  m_MipMap: 0
+  m_GenerateMips: 0
+  m_SRGB: 1
+  m_UseDynamicScale: 0
+  m_UseDynamicScaleExplicit: 0
+  m_BindMS: 0
+  m_EnableCompatibleFormat: 1
+  m_EnableRandomWrite: 1
+  m_TextureSettings:
+    serializedVersion: 2
+    m_FilterMode: 0
+    m_Aniso: 1
+    m_MipBias: 0
+    m_WrapU: 1
+    m_WrapV: 1
+    m_WrapW: 1
+  m_Dimension: 2
+  m_VolumeDepth: 1
+  m_ShadowSamplingMode: 2
 --- !u!1 &2044528548
 GameObject:
   m_ObjectHideFlags: 0
@@ -26654,7 +26652,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   Mode: 0
   TotalSimulations: 20
-  SimpleTimeScale: 5
+  SimpleTimeScale: 2
   SwapAIInterval: 0
   QuitAfterDone: 0
   DefaultTimeScale: 15
@@ -26687,7 +26685,7 @@ MonoBehaviour:
   RightEnabled: 1
   Right: {fileID: 1709403126}
   leftBotIndex: 6
-  rightBotIndex: 8
+  rightBotIndex: 5
 --- !u!1 &2132169806
 GameObject:
   m_ObjectHideFlags: 0

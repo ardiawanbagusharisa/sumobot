@@ -17,11 +17,6 @@ namespace SumoBot.RuleBased.Primitive
         private BattleState currState;
 
 
-        void OnPlayerBounce(PlayerSide side)
-        {
-            ClearCommands();
-        }
-
         public override void OnBotInit(SumoAPI botAPI)
         {
             api = botAPI;
@@ -67,7 +62,7 @@ namespace SumoBot.RuleBased.Primitive
 
         public override void OnBotCollision(BounceEvent bounceEvent)
         {
-            OnPlayerBounce(bounceEvent.Actor);
+            ClearCommands();
         }
 
         public override void OnBattleStateChanged(BattleState state, BattleWinner? winner)

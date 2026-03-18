@@ -246,6 +246,7 @@ namespace PacingFramework
 
 		private void OnBounce(EventParameter parameter)
 		{
+			Logger.Info($"[{controller.Side}][{BattleManager.Instance.TimeLeft}] OnBounce -> {parameter.BounceEvent.Actor}");
 			CollisionType type;
 			float angle = Mathf.Abs(controller.InputProvider.API.Angle());
 			angle = Mathf.Min(angle, 360 - angle);
@@ -270,10 +271,12 @@ namespace PacingFramework
 				float arenaRadius = api.BattleInfo.ArenaRadius;
 				var safeDist = Mathf.Abs((arenaRadius - api.DistanceNormalized(targetPos: api.BattleInfo.ArenaPosition)) / arenaRadius);
 
-				currentGameplayData.RegisterAction(parameter.Action);
 				currentGameplayData.RegisterBotsDistance(api.DistanceNormalized());
 				currentGameplayData.RegisterSafeDistance(safeDist);
 				currentGameplayData.RegisterVelocity(controller.RigidBody.linearVelocity.magnitude);
+
+				foreach (var action in parameter.ActionList)
+					currentGameplayData.RegisterAction(action);
 			}
 		}
 
@@ -873,7 +876,19 @@ namespace PacingFramework
 
 		public float GetOverallPacing()
 		{
-			return (Threat.Value * Threat.Weight + Tempo.Value * Tempo.Weight) / (Threat.Weight + Tempo.Weight);
+			float threatValue = float.IsNaN(Threat.Value) ? 0f : Threat.Value;
+			float tempoValue = float.IsNaN(Tempo.Value) ? 0f : Tempo.Value;
+
+			float numerator = threatValue * Threat.Weight + tempoValue * Tempo.Weight;
+			float denominator = Threat.Weight + Tempo.Weight;
+
+			if (denominator == 0f)
+				return 0f;
+
+			float result = numerator / denominator;
+
+			// Ensure result is never NaN
+			return float.IsNaN(result) ? 0f : result;
 		}
 	}
 
@@ -941,17 +956,23 @@ namespace PacingFramework
 		// Evaluate the ratio of hit collision among all collisions.
 		private float EvaluateHitCollision(SegmentData data, ConstraintConfig constraints)
 		{
+			if (data.Collisions.Count == 0) return 0f;
+
 			float hitCollisionCount = data.Collisions.Count(c => c == CollisionType.Hit);
 			float collisionCount = data.Collisions.Count;
-			float hitCollisionRatio = (collisionCount < constraints.CollisionRatio.Min) ? 0f : hitCollisionCount / collisionCount;
+			float hitCollisionRatio = hitCollisionCount / collisionCount;
+
 			return constraints.CollisionRatio.Normalize(hitCollisionRatio);
 		}
 
 		// Evaluate the ratio of ability usage among all actions.
 		private float EvaluateAbility(SegmentData data, ConstraintConfig constraints)
 		{
+			if (data.Actions.Count == 0) return 0f;
+
 			float abilityCount = data.Actions.Count(a => a.Type == ActionType.Dash || a.Type == ActionType.SkillBoost || a.Type == ActionType.SkillStone);
-			float abilityRatio = (data.Actions.Count < constraints.AbilityRatio.Min) ? 0f : abilityCount / data.Actions.Count;
+			float abilityRatio = abilityCount / data.Actions.Count;
+
 			return constraints.AbilityRatio.Normalize(abilityRatio);
 		}
 
@@ -1029,11 +1050,20 @@ namespace PacingFramework
 			foreach (var f in Factors)
 			{
 				float v = f.Evaluate(Data, Constraints);
+
+				// Skip NaN values to prevent contamination
+				if (float.IsNaN(v))
+					continue;
+
 				weightedSum += v * f.Weight;
 				totalWeight += f.Weight;
 			}
 
 			Value = totalWeight > 0 ? weightedSum / totalWeight : 0f;
+
+			// Ensure Value is never NaN
+			if (float.IsNaN(Value))
+				Value = 0f;
 		}
 
 		// Get the list of factors including its 

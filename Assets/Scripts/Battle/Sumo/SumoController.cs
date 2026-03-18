@@ -77,6 +77,12 @@ namespace SumoCore
         private EventLogger collisionLogger;
         private float time => BattleManager.Instance.ElapsedTime;
 
+        // Cache physics data at the start of physics frame for consistent logging & collision detection
+        public Vector2 CachedVelocity { get; private set; }
+        public float CachedAngularVelocity { get; private set; }
+        public Vector2 CachedPosition { get; private set; }
+        public float CachedRotation { get; private set; }
+
         // Derived 
         public bool IsDashActive => LastDashTime != 0f && (LastDashTime + DashDuration) >= time;
         public float DashCooldownTimer => LastDashTime + DashCooldown - time;
@@ -87,7 +93,7 @@ namespace SumoCore
 
         // Events 
         public EventRegistry Events = new();
-        public const string OnBounce = "OnBounce"; // [Side]
+        public const string OnBounce = "OnBounce"; // [BounceEvent]
         public const string OnOutOfArena = "OnOutOfArena"; // [Side]
         public const string OnAction = "OnAction"; // [Side, ISumoAction, IsExecuted]
         public const string OnSkillAssigned = "OnSkillAssigned"; // [SkillType?, Side]
@@ -150,6 +156,10 @@ namespace SumoCore
 
         void FixedUpdate()
         {
+            CachedVelocity = RigidBody.linearVelocity;
+            CachedPosition = transform.position;
+            CachedRotation = transform.eulerAngles.z;
+
             foreach (var (key, _) in ActiveActions.ToList())
             {
                 ActiveActions[key] -= Time.fixedDeltaTime;
@@ -457,15 +467,15 @@ namespace SumoCore
             if (!collision.gameObject.TryGetComponent<SumoController>(out var enemyRobot))
                 return;
 
-            float actorVelocity = RigidBody.linearVelocity.magnitude + float.Epsilon;
-            float enemyVelocity = enemyRobot.RigidBody.linearVelocity.magnitude + float.Epsilon;
+            float actorVelocity = CachedVelocity.magnitude + float.Epsilon;
+            float enemyVelocity = enemyRobot.CachedVelocity.magnitude + float.Epsilon;
 
             Vector2 collisionNormal = collision.contacts[0].normal;
 
             const float compareThreshold = 0.001f;
             bool isTieBreaker = Mathf.Abs(actorVelocity - enemyVelocity) < compareThreshold;
 
-            // Decide who is handling the bounce logic, if the velocity reaching equal, use the instance id
+            // Decide who is handling the bounce logic based on velocity, or InstanceID for ties
             bool isActor = actorVelocity > enemyVelocity || (isTieBreaker && GetInstanceID() > enemyRobot.GetInstanceID());
 
             StopOngoingAction();
@@ -608,6 +618,7 @@ namespace SumoCore
         public void FlushInput()
         {
             if (InputProvider == null || isInputDisabled) return;
+            List<ISumoAction> tempActions = new();
 
             foreach (var action in InputProvider.Flush())
             {
@@ -627,8 +638,10 @@ namespace SumoCore
                 }
 
                 Actions.Enqueue(action);
-                Events[OnAction]?.Invoke(new(sideParam: Side, actionParam: action, boolParam: false));
+                tempActions.Add(action);
             }
+
+            Events[OnAction]?.Invoke(new(sideParam: Side, actionListParam: tempActions, boolParam: false));
         }
 
         public void ClearInput()
@@ -644,13 +657,17 @@ namespace SumoCore
             if (InputProvider == null) return;
             if (isInputDisabled) return;
 
+            List<ISumoAction> tempActions = new();
+
             while (Actions.Count > 0)
             {
                 ISumoAction action = Actions.Dequeue();
 
                 action.Execute(this);
-                Events[OnAction]?.Invoke(new(sideParam: Side, actionParam: action, boolParam: true));
+                tempActions.Add(action);
             }
+
+            Events[OnAction]?.Invoke(new(sideParam: Side, actionListParam: tempActions, boolParam: true));
         }
         #endregion
     }

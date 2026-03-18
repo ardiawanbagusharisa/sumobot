@@ -95,7 +95,7 @@ namespace SumoBot
 
         public override void OnBotCollision(BounceEvent param)
         {
-            if (param.Actor != mySide)
+            if (!param.MyInfo.IsActor)
             {
                 ClearCommands();
                 BotState newState = currentState == BotState.Attacking ? BotState.Attacking : BotState.Dodging;

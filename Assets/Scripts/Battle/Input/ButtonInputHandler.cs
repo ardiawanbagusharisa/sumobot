@@ -117,12 +117,15 @@ namespace SumoInput
 
         void OnPlayerAction(EventParameter param)
         {
-            ISumoAction action = param.Action;
+            List<ISumoAction> actions = param.ActionList;
 
             if (param.Bool) // isExecuted
             {
-                actionLastUsedMap[action.Type] = Time.time;
-                actionInputTypeMap[action.Type] = action.InputUsed;
+                foreach (var action in actions)
+                {
+                    actionLastUsedMap[action.Type] = Time.time;
+                    actionInputTypeMap[action.Type] = action.InputUsed;
+                }
             }
         }
 

@@ -24,9 +24,7 @@ namespace SumoBot
         // When your AI is got a collision (bounce)
         public override void OnBotCollision(BounceEvent bounceEvent)
         {
-            PlayerSide hitter = bounceEvent.Actor;
-
-            if (hitter == api.MyRobot.Side)
+            if (bounceEvent.MyInfo.IsActor)
                 Logger.Info($"My AI sent hit to enemy!");
             else
                 Logger.Info($"My AI got hit!");
