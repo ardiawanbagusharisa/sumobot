@@ -46,6 +46,27 @@ namespace PacingFramework
 			GetWindow<PacingViewerWindow>("Pacing Viewer");
 		}
 
+		private void OnEnable()
+		{
+			// Subscribe to editor update to continuously repaint during play mode
+			EditorApplication.update += OnEditorUpdate;
+		}
+
+		private void OnDisable()
+		{
+			// Unsubscribe to avoid memory leaks
+			EditorApplication.update -= OnEditorUpdate;
+		}
+
+		private void OnEditorUpdate()
+		{
+			// Continuously repaint during play mode for live updates
+			if (Application.isPlaying)
+			{
+				Repaint();
+			}
+		}
+
 		private void OnGUI()
 		{
 			if (!Application.isPlaying) return;
@@ -143,8 +164,6 @@ namespace PacingFramework
 			DrawBotsSection(controller);
 			DrawPacingDetails(selectedPacingItem);
 			DrawSegmentEvaluation(threat, tempo);
-
-			Repaint(); // live update
 
 			EditorGUILayout.EndScrollView();
 		}
