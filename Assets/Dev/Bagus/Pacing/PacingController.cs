@@ -59,6 +59,12 @@ namespace PacingFramework
 			{
 				Logger.Warning($"[{controller.Side}] PacingFileName not set. Default constraints is used");
 				PacingTarget = new PacingTargetConfig();
+				// Create default target values (0.5 for 25 segments as baseline)
+				for (int i = 0; i < 25; i++)
+				{
+					PacingTarget.ThreatTargets.Add(0.5f);
+					PacingTarget.TempoTargets.Add(0.5f);
+				}
 				return;
 			}
 
@@ -71,7 +77,7 @@ namespace PacingFramework
 			}
 
 			PacingTarget = JsonUtility.FromJson<PacingTargetConfig>(pacingConfigAsset.text);
-			Logger.Info($"[{controller.Side}] PacingConfig {PacingFileName} loaded");
+			Debug.Log($"[{controller.Side}] PacingConfig {PacingFileName} loaded: ThreatTargets={PacingTarget.ThreatTargets.Count}, Angle Min={PacingTarget.GlobalConstraints.Angle.Min}, Max={PacingTarget.GlobalConstraints.Angle.Max}");
 		}
 
 		void OnEnable()
@@ -275,7 +281,11 @@ namespace PacingFramework
 
 				currentGameplayData.RegisterBotsDistance(api.DistanceNormalized());
 				currentGameplayData.RegisterSafeDistance(safeDist);
-				currentGameplayData.RegisterAngle(api.Angle());
+
+				float angle = Mathf.Abs(api.Angle());
+				angle = Mathf.Min(angle, 360 - angle);
+				
+				currentGameplayData.RegisterAngle(angle);
 				currentGameplayData.RegisterVelocity(controller.CachedVelocity.magnitude);
 
 				foreach (var action in parameter.ActionList)
@@ -295,7 +305,6 @@ namespace PacingFramework
 		{
 			if (pacingHistory.CurrentHistory().SegmentPacings.Count == 0)
 			{
-				Logger.Warning($"[{controller.Side}] No pacing history available for evaluation");
 				return null;
 			}
 
@@ -765,9 +774,16 @@ namespace PacingFramework
 	[Serializable]
 	public class PacingTargetConfig
 	{
-		public List<float> ThreatTargets = new();
-		public List<float> TempoTargets = new();
-		public ConstraintConfig GlobalConstraints = new();
+		public List<float> ThreatTargets;
+		public List<float> TempoTargets;
+		public ConstraintConfig GlobalConstraints;
+
+		public PacingTargetConfig()
+		{
+			ThreatTargets = new List<float>();
+			TempoTargets = new List<float>();
+			GlobalConstraints = new ConstraintConfig();
+		}
 	}
 
 	[Serializable]
@@ -805,16 +821,12 @@ namespace PacingFramework
 
 		public float Normalize(float value, bool absolute = false)
 		{
-			var min = Mathf.Min(Min, MinLimit);
-			var max = Mathf.Max(Max, MaxLimit);
+			var min = Mathf.Max(Min, MinLimit);
+			var max = Mathf.Min(Max, MaxLimit);
 			if (Mathf.Approximately(max, min))
-			{
-				Debug.Log($"[Normalize] max≈min, returning 0. Min={Min}, Max={Max}, MinLimit={MinLimit}, MaxLimit={MaxLimit}");
 				return 0f;
-			}
 			var val = (value - min) / (max - min);
 			var result = absolute ? Mathf.Clamp01(Mathf.Abs(val)) : Mathf.Clamp01(val);
-			Debug.Log($"[Normalize] value={value}, min={min}, max={max}, val={val}, absolute={absolute}, result={result}");
 			return result;
 
 		}
@@ -969,7 +981,6 @@ namespace PacingFramework
 		{
 			if (data.Collisions.Count == 0)
 			{
-				Debug.Log($"[EvaluateHitCollision] No collisions found, returning 0");
 				return 0f;
 			}
 
@@ -977,11 +988,7 @@ namespace PacingFramework
 			float collisionCount = data.Collisions.Count;
 			float hitCollisionRatio = hitCollisionCount / collisionCount;
 
-			Debug.Log($"[EvaluateHitCollision] TotalCollisions={collisionCount}, Hits={hitCollisionCount}, Ratio={hitCollisionRatio}, Min={constraints.CollisionRatio.Min}, Max={constraints.CollisionRatio.Max}");
-
 			float normalized = constraints.CollisionRatio.Normalize(hitCollisionRatio);
-			Debug.Log($"[EvaluateHitCollision] Normalized result={normalized}");
-
 			return normalized;
 		}
 
@@ -1057,7 +1064,7 @@ namespace PacingFramework
 
 		public Aspect(SegmentData data, ConstraintConfig constraints)
 		{
-			Data = data;
+			Data = new SegmentData(data);
 			Constraints = constraints;
 			Calculate();
 		}
@@ -1090,7 +1097,6 @@ namespace PacingFramework
 		public List<(AspectType aspect, FactorType factor, float value, float weight)> GetFactorsInfo()
 		{
 			AspectType aspectType = (this is ThreatAspect) ? AspectType.Threat : AspectType.Tempo;
-			Debug.Log($"[GetFactorsInfo] {aspectType} - Data.Collisions.Count={Data.Collisions.Count}");
 			return Factors.Select(f => (aspectType, f.Type, f.Evaluate(Data, Constraints), f.Weight)).ToList();
 		}
 	}
