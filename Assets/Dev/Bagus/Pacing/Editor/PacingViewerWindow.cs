@@ -19,7 +19,7 @@ namespace PacingFramework
 		private Vector2 evaluationScroll;
 
 		private PacingController controller;
-		private PacingTargetConfig targetConfig;
+		private PacingTargetConfig targetConfig = null;
 		private string loadedConfigPath = "";
 
 		private Vector2 scroll;
@@ -137,7 +137,10 @@ namespace PacingFramework
 
 			if (overlayTarget && (targetConfig != null || controller.PacingTarget != null))
 			{
-				var target = targetConfig ?? controller.PacingTarget;
+				// Use targetConfig if it has valid data, otherwise use controller's PacingTarget
+				var target = (targetConfig != null && targetConfig.ThreatTargets != null && targetConfig.ThreatTargets.Count > 0)
+					? targetConfig
+					: controller.PacingTarget;
 
 				// Resample targets to match actual data count
 				var resampledThreat = ResampleCurve(target.ThreatTargets, threat.Count);
@@ -754,7 +757,15 @@ namespace PacingFramework
 		{
 			EditorGUILayout.BeginHorizontal();
 			EditorGUILayout.LabelField($"  {label}", GUILayout.Width(120));
-			EditorGUILayout.LabelField($"Count: {content.Count}", GUILayout.Width(80));
+
+			// Calculate and display average for numeric types
+			string countLabel = $"Count: {content.Count}";
+			if (content.Count > 0 && content[0] is float)
+			{
+				float avg = content.Cast<float>().Average();
+				countLabel += $", Avg: {avg:F2}";
+			}
+			EditorGUILayout.LabelField(countLabel, GUILayout.Width(160));
 
 			if (content.Count > 0)
 			{
