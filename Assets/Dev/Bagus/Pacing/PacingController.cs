@@ -276,15 +276,14 @@ namespace PacingFramework
 			{
 				SumoAPI api = controller.InputProvider.API;
 
-				float arenaRadius = api.BattleInfo.ArenaRadius;
-				var safeDist = Mathf.Abs((arenaRadius - api.DistanceNormalized(targetPos: api.BattleInfo.ArenaPosition)) / arenaRadius);
+				var safeDist = (api.BattleInfo.ArenaPosition - api.MyRobot.Position).magnitude / api.BattleInfo.ArenaRadius;
 
 				currentGameplayData.RegisterBotsDistance(api.DistanceNormalized());
 				currentGameplayData.RegisterSafeDistance(safeDist);
 
 				float angle = Mathf.Abs(api.Angle());
 				angle = Mathf.Min(angle, 360 - angle);
-				
+
 				currentGameplayData.RegisterAngle(angle);
 				currentGameplayData.RegisterVelocity(controller.CachedVelocity.magnitude);
 
