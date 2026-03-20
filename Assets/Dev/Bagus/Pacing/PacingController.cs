@@ -246,10 +246,7 @@ namespace PacingFramework
 
 		private void OnBounce(EventParameter parameter)
 		{
-			Logger.Info($"[{controller.Side}][{BattleManager.Instance.TimeLeft}] OnBounce -> {parameter.BounceEvent.Actor}");
 			CollisionType type;
-			float angle = Mathf.Abs(controller.InputProvider.API.Angle());
-			angle = Mathf.Min(angle, 360 - angle);
 
 			if (parameter.BounceEvent.MyInfo.IsTieBreaker)
 				type = CollisionType.Tie;
@@ -258,8 +255,13 @@ namespace PacingFramework
 			else
 				type = CollisionType.Struck;
 
-			currentGameplayData.RegisterAngle(angle);
+			SumoAPI api = controller.InputProvider.API;
+
+			float angle = Mathf.Abs(api.Angle());
+			angle = Mathf.Min(angle, 360 - angle);
+
 			currentGameplayData.RegisterCollision(type);
+			currentGameplayData.RegisterAngle(angle);
 		}
 
 		private void OnAction(EventParameter parameter)
@@ -273,7 +275,8 @@ namespace PacingFramework
 
 				currentGameplayData.RegisterBotsDistance(api.DistanceNormalized());
 				currentGameplayData.RegisterSafeDistance(safeDist);
-				currentGameplayData.RegisterVelocity(controller.RigidBody.linearVelocity.magnitude);
+				currentGameplayData.RegisterAngle(api.Angle());
+				currentGameplayData.RegisterVelocity(controller.CachedVelocity.magnitude);
 
 				foreach (var action in parameter.ActionList)
 					currentGameplayData.RegisterAction(action);
@@ -800,12 +803,20 @@ namespace PacingFramework
 			Max = maxLimit;
 		}
 
-		public float Normalize(float value)
+		public float Normalize(float value, bool absolute = false)
 		{
 			var min = Mathf.Min(Min, MinLimit);
 			var max = Mathf.Max(Max, MaxLimit);
-			if (Mathf.Approximately(max, min)) return 0f;
-			return Mathf.Clamp01((value - min) / (max - min));
+			if (Mathf.Approximately(max, min))
+			{
+				Debug.Log($"[Normalize] max≈min, returning 0. Min={Min}, Max={Max}, MinLimit={MinLimit}, MaxLimit={MaxLimit}");
+				return 0f;
+			}
+			var val = (value - min) / (max - min);
+			var result = absolute ? Mathf.Clamp01(Mathf.Abs(val)) : Mathf.Clamp01(val);
+			Debug.Log($"[Normalize] value={value}, min={min}, max={max}, val={val}, absolute={absolute}, result={result}");
+			return result;
+
 		}
 	}
 
@@ -956,13 +967,22 @@ namespace PacingFramework
 		// Evaluate the ratio of hit collision among all collisions.
 		private float EvaluateHitCollision(SegmentData data, ConstraintConfig constraints)
 		{
-			if (data.Collisions.Count == 0) return 0f;
+			if (data.Collisions.Count == 0)
+			{
+				Debug.Log($"[EvaluateHitCollision] No collisions found, returning 0");
+				return 0f;
+			}
 
 			float hitCollisionCount = data.Collisions.Count(c => c == CollisionType.Hit);
 			float collisionCount = data.Collisions.Count;
 			float hitCollisionRatio = hitCollisionCount / collisionCount;
 
-			return constraints.CollisionRatio.Normalize(hitCollisionRatio);
+			Debug.Log($"[EvaluateHitCollision] TotalCollisions={collisionCount}, Hits={hitCollisionCount}, Ratio={hitCollisionRatio}, Min={constraints.CollisionRatio.Min}, Max={constraints.CollisionRatio.Max}");
+
+			float normalized = constraints.CollisionRatio.Normalize(hitCollisionRatio);
+			Debug.Log($"[EvaluateHitCollision] Normalized result={normalized}");
+
+			return normalized;
 		}
 
 		// Evaluate the ratio of ability usage among all actions.
@@ -979,7 +999,7 @@ namespace PacingFramework
 		// Evaluate the average angle between the bot and its opponents when they collide or are close.
 		private float EvaluateAngle(SegmentData data, ConstraintConfig constraints)
 		{
-			return data.Angles.Count > 0 ? constraints.Angle.Normalize(data.Angles.Average()) : 0f;
+			return data.Angles.Count > 0 ? constraints.Angle.Normalize(data.Angles.Average(), absolute: true) : 0f;
 		}
 
 		// Evaluate the average distance between the bot and its opponents when they collide or are close.
@@ -1066,10 +1086,11 @@ namespace PacingFramework
 				Value = 0f;
 		}
 
-		// Get the list of factors including its 
+		// Get the list of factors including its
 		public List<(AspectType aspect, FactorType factor, float value, float weight)> GetFactorsInfo()
 		{
 			AspectType aspectType = (this is ThreatAspect) ? AspectType.Threat : AspectType.Tempo;
+			Debug.Log($"[GetFactorsInfo] {aspectType} - Data.Collisions.Count={Data.Collisions.Count}");
 			return Factors.Select(f => (aspectType, f.Type, f.Evaluate(Data, Constraints), f.Weight)).ToList();
 		}
 	}
