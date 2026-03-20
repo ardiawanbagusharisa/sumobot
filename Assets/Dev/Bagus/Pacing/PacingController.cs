@@ -263,8 +263,7 @@ namespace PacingFramework
 
 			SumoAPI api = controller.InputProvider.API;
 
-			float angle = Mathf.Abs(api.Angle());
-			angle = Mathf.Min(angle, 360 - angle);
+			float angle = 1f - Mathf.Clamp01(api.Angle(normalized: true));
 
 			currentGameplayData.RegisterCollision(type);
 			currentGameplayData.RegisterAngle(angle);
@@ -281,8 +280,7 @@ namespace PacingFramework
 				currentGameplayData.RegisterBotsDistance(api.DistanceNormalized());
 				currentGameplayData.RegisterSafeDistance(safeDist);
 
-				float angle = Mathf.Abs(api.Angle());
-				angle = Mathf.Min(angle, 360 - angle);
+				float angle = 1f - Mathf.Clamp01(api.Angle(normalized: true));
 
 				currentGameplayData.RegisterAngle(angle);
 				currentGameplayData.RegisterVelocity(controller.CachedVelocity.magnitude);
@@ -1005,7 +1003,7 @@ namespace PacingFramework
 		// Evaluate the average angle between the bot and its opponents when they collide or are close.
 		private float EvaluateAngle(SegmentData data, ConstraintConfig constraints)
 		{
-			return data.Angles.Count > 0 ? constraints.Angle.Normalize(data.Angles.Average(), absolute: true) : 0f;
+			return data.Angles.Count > 0 ? constraints.Angle.Normalize(data.Angles.Average()) : 0f;
 		}
 
 		// Evaluate the average distance between the bot and its opponents when they collide or are close.

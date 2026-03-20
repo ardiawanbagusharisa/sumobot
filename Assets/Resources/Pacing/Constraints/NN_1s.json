@@ -69,10 +69,10 @@
             "Weight": 1.0
         },
         "Angle": {
-            "Min": 91,
-            "Max": 177.97,
-            "MinLimit": 91,
-            "MaxLimit": 177.97,
+            "Min": 0.1,
+            "Max": 0.98,
+            "MinLimit": 0.1,
+            "MaxLimit": 0.98,
             "Weight": 1.0
         },
         "SafeDistance": {
