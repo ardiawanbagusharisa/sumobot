@@ -14,6 +14,7 @@ namespace PacingFramework
 		private bool showBots;
 		private bool showPacingDetails;
 		private bool showEvaluationDetails;
+		private bool showGlobalConstraints;
 
 		private Vector2 pacingScroll;
 		private Vector2 evaluationScroll;
@@ -164,6 +165,7 @@ namespace PacingFramework
 				DrawLegend(rect);
 			}
 
+			DrawGlobalConstraintsSection();
 			DrawBotsSection(controller);
 			DrawPacingDetails(selectedPacingItem);
 			DrawSegmentEvaluation(threat, tempo);
@@ -639,6 +641,39 @@ namespace PacingFramework
 				label,
 				EditorStyles.whiteLabel
 			);
+		}
+
+		private void DrawGlobalConstraintsSection()
+		{
+			if (controller == null || controller.PacingTarget == null || controller.PacingTarget.GlobalConstraints == null)
+				return;
+
+			showGlobalConstraints = EditorGUILayout.Foldout(showGlobalConstraints, "Global Constraints", true);
+			if (!showGlobalConstraints) return;
+
+			var constraints = controller.PacingTarget.GlobalConstraints;
+
+			EditorGUILayout.BeginVertical("box");
+
+			// Display each constraint in a compact format
+			DrawConstraintRow("Collision Ratio", constraints.CollisionRatio);
+			DrawConstraintRow("Ability Ratio", constraints.AbilityRatio);
+			DrawConstraintRow("Angle", constraints.Angle);
+			DrawConstraintRow("Safe Distance", constraints.SafeDistance);
+			DrawConstraintRow("Action Intensity", constraints.ActionIntensity);
+			DrawConstraintRow("Action Density", constraints.ActionDensity);
+			DrawConstraintRow("Bots Distance", constraints.BotsDistance);
+			DrawConstraintRow("Velocity", constraints.Velocity);
+
+			EditorGUILayout.EndVertical();
+		}
+
+		private void DrawConstraintRow(string label, ConstraintMinMax constraint)
+		{
+			EditorGUILayout.BeginHorizontal();
+			EditorGUILayout.LabelField(label, GUILayout.Width(120));
+			EditorGUILayout.LabelField($"Min: {constraint.Min:F2} | Max: {constraint.Max:F2} | Limits: [{constraint.MinLimit:F2}, {constraint.MaxLimit:F2}] | Weight: {constraint.Weight:F2}");
+			EditorGUILayout.EndHorizontal();
 		}
 
 		private void DrawBotsSection(PacingController controller)
