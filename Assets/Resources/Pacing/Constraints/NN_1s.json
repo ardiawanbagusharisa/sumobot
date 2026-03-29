@@ -56,9 +56,9 @@
     "GlobalConstraints": {
         "CollisionRatio": {
             "Min": 0.23,
-            "Max": 0.98,
+            "Max": 0.5,
             "MinLimit": 0.23,
-            "MaxLimit": 0.98,
+            "MaxLimit": 0.5,
             "Weight": 1.0
         },
         "AbilityRatio": {
@@ -70,16 +70,16 @@
         },
         "Angle": {
             "Min": 0.1,
-            "Max": 0.98,
+            "Max": 0.5,
             "MinLimit": 0.1,
-            "MaxLimit": 0.98,
+            "MaxLimit": 0.5,
             "Weight": 1.0
         },
         "SafeDistance": {
             "Min": 0.10,
-            "Max": 0.87,
+            "Max": 0.4,
             "MinLimit": 0.10,
-            "MaxLimit": 0.87,
+            "MaxLimit": 0.4,
             "Weight": 1.0
         },
         "ActionIntensity": {
