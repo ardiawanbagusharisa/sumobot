@@ -716,6 +716,7 @@ namespace PacingFramework
 		{
 			var pacing = pacingItem.SegmentPacings[segmentIndex];
 			var rawData = pacingItem.SegmentGameplayDatas[segmentIndex];
+			var history = pacingItem.SegmentGameplayDatas.Take(segmentIndex + 1).ToList();
 
 			// Color bgColor = segmentIndex % 2 == 0 ? new Color(0.15f, 0.15f, 0.2f, 0.8f) : new Color(0.2f, 0.2f, 0.25f, 0.8f);
 
