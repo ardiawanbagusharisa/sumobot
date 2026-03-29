@@ -28,7 +28,7 @@ namespace PacingFramework
 		public float segmentDuration = 2f;
 		public string PacingFileName = "";
 
-		public int collisionWindowSize = 3;
+		public int collisionWindowSize = 2;
 
 		[HideInInspector]
 		public PacingTargetConfig PacingTarget;
@@ -278,7 +278,9 @@ namespace PacingFramework
 			{
 				SumoAPI api = controller.InputProvider.API;
 
-				var safeDist = (api.BattleInfo.ArenaPosition - api.MyRobot.Position).magnitude / api.BattleInfo.ArenaRadius;
+				var safeDist = 1 - (api.BattleInfo.ArenaPosition - api.MyRobot.Position).magnitude / api.BattleInfo.ArenaRadius;
+
+				Debug.Log($"SafeDistance {safeDist}");
 
 				currentGameplayData.RegisterBotsDistance(api.DistanceNormalized());
 				currentGameplayData.RegisterSafeDistance(safeDist);
@@ -995,7 +997,7 @@ namespace PacingFramework
 			}
 			else if (windowSize < 0)
 			{
-				// All history (original behavior)
+				// All history
 				totalHitCollisions = data.Collisions.Count(c => c == CollisionType.Hit);
 				totalStruckCollisions = data.Collisions.Count(c => c == CollisionType.Struck);
 				foreach (var segment in history)
@@ -1017,10 +1019,13 @@ namespace PacingFramework
 			}
 
 			if (totalHitCollisions + totalStruckCollisions == 0f)
-				return 0.5f; // Return neutral value when no collisions
+			{
+				// No collisions in window
+				return constraints.CollisionRatio.Normalize(0f);
+			}
 
 			float hitCollisionRatio = totalHitCollisions / (totalHitCollisions + totalStruckCollisions);
-			Debug.Log($"Hit Collision Ratio (window={windowSize}): {hitCollisionRatio:F3} (Hits: {totalHitCollisions}, Struck: {totalStruckCollisions})");
+			Debug.Log($"Collision Ratio {hitCollisionRatio} - Min: {constraints.CollisionRatio.Min}, Max: {constraints.CollisionRatio.Max}, MinLimit: {constraints.CollisionRatio.MinLimit}, MaxLimit: {constraints.CollisionRatio.MaxLimit}");
 			return constraints.CollisionRatio.Normalize(hitCollisionRatio);
 		}
 
