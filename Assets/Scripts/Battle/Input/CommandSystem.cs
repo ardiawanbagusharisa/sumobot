@@ -362,19 +362,19 @@ namespace SumoInput
 
         #region Inner Class CommandMessage 
         public class CommandMessage
-        {
-            public static string Default = "> Enter command, type \"help\" to show all commands, and press \"tab\" for autocomplete.";
+		{
+			public static string Default = "> \"help\" to show all commands, and `tab` for autocomplete.";
             public static string Help = "> Available Commands:\n" +
                                             "   * accelerate(d)" +
-                                                " -> Accelerate the robot forward within duration \"d\" (second).\n" +
+                                                " -> Accelerate forward within duration \"d\" (second).\n" +
                                             "   * turnleft(a)" +
-                                                " -> Turn the robot left with given angle \"a\" (0-180 degree).\n" +
+                                                " -> Turn left with given angle \"a\" (0-180 degree).\n" +
                                             "   * turnright(a)" +
-                                                " -> Turn the robot right with given angle \"a\" (0-180 degree).\n" +
+                                                " -> Turn right with given angle \"a\" (0-180 degree).\n" +
                                             "   * dash()" +
-                                                " -> Dash the robot forward with x power.\n" +
+                                                " -> Dash forward with x power.\n" +
                                             "   * skill()" +
-                                                " -> Activate the robot's special skill.\n" +
+                                                " -> Activate special skill.\n" +
                                             "   * clear()" +
                                                 " -> ClearTerminal the command terminal.\n" +
                                             "   * open" +
