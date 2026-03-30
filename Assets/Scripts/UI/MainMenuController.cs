@@ -48,5 +48,9 @@ public class MainMenuController : MonoBehaviour
 	public void ShowMultiplayerLocal() => SwitchMenu(MenuState.MultiplayerLocal);
 	public void ShowLeaderboards() => SwitchMenu(MenuState.Leaderboards);
 	public void ShowSettings() => SwitchMenu(MenuState.Settings);
+	public void QuitGame() => Application.Quit();
+	
+	// Load Battle scene 
+	public void GoToBattle() => UnityEngine.SceneManagement.SceneManager.LoadScene("Battle");
 
 }
