@@ -11,6 +11,8 @@ using System.Collections;
 using UnityEngine.UI;
 using SumoCore;
 using SumoManager;
+using System.Text;
+using System.Threading.Tasks;
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -103,6 +105,11 @@ public class ReplayManager : MonoBehaviour
     private Dictionary<string, bool> chartVisibilityMap = new();
     private (float, float) originalBotRotation = new();
     private (Vector2, Vector2) originalBotPosition = new();
+    private bool logMapDirty = false;
+    private StringBuilder logBuilder = new();
+    private int lastLogMapCount = 0;
+    private float lastChartUpdateTime = 0f;
+    private const float CHART_UPDATE_INTERVAL = 0.2f; // Update charts every 2 seconds to minimize frame drops
     #endregion
 
     #region Unity methods
@@ -233,7 +240,65 @@ public class ReplayManager : MonoBehaviour
         InterpolateBot(leftRigidBody, leftEvents, ref leftEventIndex);
         InterpolateBot(rightRigidBody, rightEvents, ref rightEventIndex);
 
-        ShowCharts();
+        CollectEventLogs();
+
+        if (ChartContainer != null && ChartContainer.activeSelf && isPlaying &&
+            Time.time - lastChartUpdateTime >= CHART_UPDATE_INTERVAL)
+        {
+            ShowCharts();
+            lastChartUpdateTime = Time.time;
+        }
+    }
+
+    void CollectEventLogs()
+    {
+        // Collect logs for left bot
+        if (leftEventIndex < leftEvents.Count)
+        {
+            EventLog currentEvent = leftEvents[leftEventIndex];
+            CollectEventLog(currentEvent);
+        }
+
+        // Collect logs for right bot
+        if (rightEventIndex < rightEvents.Count)
+        {
+            EventLog currentEvent = rightEvents[rightEventIndex];
+            CollectEventLog(currentEvent);
+        }
+    }
+
+    void CollectEventLog(EventLog currentEvent)
+    {
+        var key = currentEvent.GetKey();
+
+        if (currentEvent.Category == "Action")
+        {
+            if (currentEvent.Actor == "Left")
+            {
+                if (!leftActionMap.ContainsKey(key))
+                {
+                    leftActionMap.Add(key, currentEvent);
+                }
+            }
+            else if (currentEvent.Actor == "Right")
+            {
+                if (!rightActionMap.ContainsKey(key))
+                {
+                    rightActionMap.Add(key, currentEvent);
+                }
+            }
+        }
+
+        key = currentEvent.GetKey(withUpdate: false);
+        if (!logMap.ContainsKey(key))
+        {
+            var log = currentEvent.GetLogText();
+            if (log != null)
+            {
+                logMap.Add(key, log);
+                logMapDirty = true;
+            }
+        }
     }
 
     private void ShowCharts()
@@ -242,6 +307,9 @@ public class ReplayManager : MonoBehaviour
             return;
         if (!ChartContainer.activeSelf)
             return;
+
+        // With object pooling, charts render much faster
+        // No need to spread across frames anymore
         ShowEventChart("Action");
         ShowEventChart("Collision");
         ShowMostActionChart();
@@ -347,44 +415,23 @@ public class ReplayManager : MonoBehaviour
             nextEvent = events[index + 1];
         }
 
-        if (currentTime > nextEvent.UpdatedAt)
+        // Advance to the correct event pair for current time
+        while (currentTime > nextEvent.UpdatedAt && index < events.Count - 1)
         {
             index++;
-            if (index >= events.Count)
-                return;
-
             currentEvent = events[index];
-        }
 
-        var key = currentEvent.GetKey();
-
-        if (currentEvent.Category == "Action")
-        {
-
-            if (currentEvent.Actor == "Left")
+            // Recalculate nextEvent after index increment
+            if (index == events.Count - 1)
             {
-                if (!leftActionMap.ContainsKey(key))
-                {
-                    leftActionMap.Add(key, currentEvent);
-                }
+                currentEvent = events[index - 1];
+                nextEvent = events[index];
+                break;
             }
-            else if (currentEvent.Actor == "Right")
+            else
             {
-                if (!rightActionMap.ContainsKey(key))
-                {
-                    rightActionMap.Add(key, currentEvent);
-
-                }
+                nextEvent = events[index + 1];
             }
-        }
-
-        key = currentEvent.GetKey(withUpdate: false);
-        if (!logMap.ContainsKey(key))
-        {
-            var log = currentEvent.GetLogText();
-            if (log != null)
-                logMap.Add(key, log);
-
         }
 
         float t = Mathf.InverseLerp(
@@ -392,6 +439,9 @@ public class ReplayManager : MonoBehaviour
             nextEvent.UpdatedAt,
             currentTime
         );
+
+        // Clamp interpolation factor to prevent overshooting
+        t = Mathf.Clamp01(t);
 
         BaseLog start = BaseLog.FromMap(currentEvent.Data); ;
         BaseLog end = BaseLog.FromMap(nextEvent.Data); ;
@@ -464,36 +514,60 @@ public class ReplayManager : MonoBehaviour
 
     void DisplayCurrentEventInfo()
     {
-        var current = currentRoundEvents.LastOrDefault(e => e.UpdatedAt <= currentTime);
-        if (current != null)
+        // Only check for events if we have any
+        if (currentRoundEvents.Count == 0)
+            return;
+
+        GameUI.SetText($"Game: {currentGameIndex + 1}");
+        RoundUI.SetText($"Round: {currentRoundIndex + 1}");
+        GameDurationUI?.SetText($"Duration: {metadata.BattleTime}");
+        GameBestOf.SetText($"Modes: PvP, Best-of-{metadata.RoundType}");
+
+        metadata.LeftPlayerStats.ActionTaken = leftActionMap.Count;
+        metadata.RightPlayerStats.ActionTaken = rightActionMap.Count;
+
+        LeftBotName?.SetText(metadata.LeftPlayerStats.Bot);
+        LeftSkillType?.SetText(metadata.LeftPlayerStats.SkillType);
+        LeftWinCount?.SetText(metadata.LeftPlayerStats.WinPerGame.ToString());
+        LeftActionTaken?.SetText(metadata.LeftPlayerStats.ActionTaken.ToString());
+
+        RightBotName?.SetText(metadata.RightPlayerStats.Bot);
+        RightSkillType?.SetText(metadata.RightPlayerStats.SkillType);
+        RightWinCount?.SetText(metadata.RightPlayerStats.WinPerGame.ToString());
+        RightActionTaken?.SetText(metadata.RightPlayerStats.ActionTaken.ToString());
+
+        // Only update log text if logMap has changed
+        if (logMapDirty || logMap.Count != lastLogMapCount)
         {
-            GameUI.SetText($"Game: {currentGameIndex + 1}");
-            RoundUI.SetText($"Round: {currentRoundIndex + 1}");
-            GameDurationUI?.SetText($"Duration: {metadata.BattleTime}");
-            GameBestOf.SetText($"Modes: PvP, Best-of-{metadata.RoundType}");
-
-            metadata.LeftPlayerStats.ActionTaken = leftActionMap.Count;
-            metadata.RightPlayerStats.ActionTaken = rightActionMap.Count;
-
-            LeftBotName?.SetText(metadata.LeftPlayerStats.Bot);
-            LeftSkillType?.SetText(metadata.LeftPlayerStats.SkillType);
-            LeftWinCount?.SetText(metadata.LeftPlayerStats.WinPerGame.ToString());
-            LeftActionTaken?.SetText(metadata.LeftPlayerStats.ActionTaken.ToString());
-
-            RightBotName?.SetText(metadata.RightPlayerStats.Bot);
-            RightSkillType?.SetText(metadata.RightPlayerStats.SkillType);
-            RightWinCount?.SetText(metadata.RightPlayerStats.WinPerGame.ToString());
-            RightActionTaken?.SetText(metadata.RightPlayerStats.ActionTaken.ToString());
-
-            LogUI.text = string.Join("\n", logMap.Values.ToList());
-
-            if (autoScrollLog)
-            {
-                LogScrollRect.verticalNormalizedPosition = 0f;
-                Canvas.ForceUpdateCanvases();
-
-            }
+            UpdateLogUI();
+            lastLogMapCount = logMap.Count;
+            logMapDirty = false;
         }
+
+        if (autoScrollLog)
+        {
+            LogScrollRect.verticalNormalizedPosition = 0f;
+            Canvas.ForceUpdateCanvases();
+        }
+    }
+
+    void UpdateLogUI()
+    {
+        if (LogUI == null || logMap.Count == 0)
+            return;
+
+        logBuilder.Clear();
+        bool first = true;
+
+        foreach (var log in logMap.Values)
+        {
+            if (!first)
+                logBuilder.Append('\n');
+            logBuilder.Append(log);
+            first = false;
+        }
+
+        LogUI.text = logBuilder.ToString();
     }
     #endregion
 
@@ -567,10 +641,12 @@ public class ReplayManager : MonoBehaviour
         leftActionMap.Clear();
         rightActionMap.Clear();
         logMap.Clear();
+        lastChartUpdateTime = 0f;
 
         if (Chart != null)
         {
-            Chart.ClearSidePanels();
+            // Only clear chart series, NOT side panels
+            // Side panels destroy the label pool, causing labels to disappear
             Chart.ClearChartSeries();
         }
 
