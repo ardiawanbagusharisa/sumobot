@@ -8,7 +8,7 @@ public class CostumeManager : MonoBehaviour
 
     void Start()
     {
-        PlayerTxt.text = $"Preview {GameManager.Instance.GetProfileById().Name}'s";
+        PlayerTxt.text = $"{GameManager.Instance.GetProfileById().Name}'s Bot Preview ";
     }
 
     public void SaveAndBack()
