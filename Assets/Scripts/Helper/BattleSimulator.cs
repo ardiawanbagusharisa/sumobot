@@ -205,12 +205,12 @@ namespace SumoHelper
 
         private void SelectAgents()
         {
-            var botTypes = BotUtility.GetAllBotTypes();
-            var loadedAgents = botTypes.ConvertAll(t => t.Name).ToList();
+            var botTypes = BotUtility.GetAllBotInstances();
+            var loadedAgents = botTypes.ConvertAll(t => t.ID).ToList();
 
-            foreach (var item in botTypes)
+            foreach (var botInstance in botTypes)
             {
-                var botInstance = ScriptableObject.CreateInstance(item) as Bot;
+                // var botInstance = ScriptableObject.CreateInstance(item) as Bot;
                 if (botInstance != null)
                 {
                     if (Setting.SelectedAgents.Length > 0)
