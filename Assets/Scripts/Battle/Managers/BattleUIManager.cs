@@ -465,12 +465,21 @@ Skill			C			M
         private void EnableBotSelector(PlayerSide side, TMP_Dropdown dropdown, bool isActive)
         {
             var botManager = BattleManager.Instance.BotManager;
-            var botTypes = BotUtility.GetAllBotTypes();
-            var botNames = botTypes.ConvertAll(t => t.Name).ToArray();
+            var botInstances = BotUtility.GetAllBotInstances();
+
+            // Safety check: ensure we have bot instances
+            if (botInstances == null || botInstances.Count == 0)
+            {
+                Debug.LogError("No Bot ScriptableObject instances found! Make sure Bot assets exist in the project.");
+                return;
+            }
+
+            var botIDs = botInstances.ConvertAll(bot => bot.ID).ToArray();
 
             if (isActive)
             {
-                dropdown.AddOptions(botNames.ToList());
+                dropdown.ClearOptions();
+                dropdown.AddOptions(botIDs.ToList());
                 dropdown.value = 0;
             }
 
@@ -478,20 +487,20 @@ Skill			C			M
             {
                 LeftSkill.interactable = !isActive;
                 botManager.LeftEnabled = isActive;
-                if (isActive)
+                if (isActive && botInstances.Count > 0)
                 {
                     botManager.leftBotIndex = 0;
-                    botManager.Left = ScriptableObject.CreateInstance(botTypes[0]) as Bot;
+                    botManager.Left = botInstances[0];
                 }
             }
             else
             {
                 RightSkill.interactable = !isActive;
                 botManager.RightEnabled = isActive;
-                if (isActive)
+                if (isActive && botInstances.Count > 0)
                 {
                     botManager.rightBotIndex = 0;
-                    botManager.Right = ScriptableObject.CreateInstance(botTypes[0]) as Bot;
+                    botManager.Right = botInstances[0];
                 }
             }
             dropdown.gameObject.SetActive(isActive);
@@ -501,8 +510,16 @@ Skill			C			M
         {
             SFXManager.Instance.Play2D("ui_accept");
             var botManager = BattleManager.Instance.BotManager;
-            var botTypes = BotUtility.GetAllBotTypes();
-            var bot = ScriptableObject.CreateInstance(botTypes[index]) as Bot;
+            var botInstances = BotUtility.GetAllBotInstances();
+
+            // Safety check
+            if (botInstances == null || index >= botInstances.Count)
+            {
+                Debug.LogError($"Invalid bot index {index}. Available bots: {botInstances?.Count ?? 0}");
+                return;
+            }
+
+            var bot = botInstances[index];
             if (side == PlayerSide.Left)
             {
                 botManager.leftBotIndex = index;

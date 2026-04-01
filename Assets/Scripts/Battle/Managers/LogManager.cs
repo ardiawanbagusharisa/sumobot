@@ -277,8 +277,11 @@ namespace SumoManager
 
         public static void SetPlayerBots(Bot left, Bot right)
         {
-            Log.LeftPlayerStats.Bot = left.ID;
-            Log.RightPlayerStats.Bot = right.ID;
+            if (left != null)
+                Log.LeftPlayerStats.Bot = left.ID;
+
+            if (right != null)
+                Log.RightPlayerStats.Bot = right.ID;
         }
 
         public static void UpdateMetadata(bool logTakenAction = true)
