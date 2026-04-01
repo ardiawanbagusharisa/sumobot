@@ -886,12 +886,14 @@ public class ReplayManager : MonoBehaviour
     }
 
     public void BackToBattle() {
-        GameManager.Instance.Replay_BackToBattle();
+		SFXManager.Instance.Play2D("ui_accept");
+		GameManager.Instance.Replay_BackToBattle();
     }
 
     public void ToggleDetails() {
         if (DetailsPanel != null) { 
-            bool isActive = DetailsPanel.activeSelf;
+            SFXManager.Instance.Play2D("ui_accept");
+			bool isActive = DetailsPanel.activeSelf;
 		    DetailsPanel.SetActive(!isActive);
             FoldDetails.gameObject.SetActive(!isActive);
 		    UnfoldDetails.gameObject.SetActive(isActive);
@@ -900,6 +902,7 @@ public class ReplayManager : MonoBehaviour
 
 	public void ToggleCharts() {
         if (ChartsPanel != null) {
+			SFXManager.Instance.Play2D("ui_accept");
 			bool isActive = ChartsPanel.activeSelf;
 			ChartsPanel.SetActive(!isActive);
 			FoldCharts.gameObject.SetActive(!isActive);
@@ -909,7 +912,8 @@ public class ReplayManager : MonoBehaviour
 
     public void ToggleLogs() {
         if (LogsPanel != null) {
-            bool isActive = LogsPanel.activeSelf;
+			SFXManager.Instance.Play2D("ui_accept");
+			bool isActive = LogsPanel.activeSelf;
             LogsPanel.SetActive(!isActive);
             FoldLogs.gameObject.SetActive(!isActive);
             UnfoldLogs.gameObject.SetActive(isActive);
