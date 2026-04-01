@@ -3,8 +3,7 @@ using System.Collections.Generic;
 
 public class MainMenuController : MonoBehaviour
 {
-	public enum MenuState
-	{
+	public enum MenuState {
 		MainMenu,
 		GameModes,
 		Campaign,
@@ -18,8 +17,7 @@ public class MainMenuController : MonoBehaviour
 
 	// Map each menu state to its GameObject
 	[System.Serializable]
-	public struct MenuMapping
-	{
+	public struct MenuMapping {
 		public MenuState state;
 		public GameObject menuObject;
 	}
@@ -27,7 +25,7 @@ public class MainMenuController : MonoBehaviour
 	public MenuMapping[] menus;
 
 	public void Start() {
-		SwitchMenu(MenuState.MainMenu);
+		//SwitchMenu(MenuState.MainMenu);
 	}
 
 	// Call this to switch the menu
@@ -39,6 +37,8 @@ public class MainMenuController : MonoBehaviour
 			if (menu.menuObject != null)
 				menu.menuObject.SetActive(menu.state == currentState);
 		}
+
+		SFXManager.Instance.Play2D("ui_accept");
 	}
 
 	public void ShowMainMenu() => SwitchMenu(MenuState.MainMenu);
@@ -49,8 +49,11 @@ public class MainMenuController : MonoBehaviour
 	public void ShowLeaderboards() => SwitchMenu(MenuState.Leaderboards);
 	public void ShowSettings() => SwitchMenu(MenuState.Settings);
 	public void QuitGame() => Application.Quit();
-	
+
 	// Load Battle scene 
-	public void GoToBattle() => UnityEngine.SceneManagement.SceneManager.LoadScene("Battle");
+	public void GoToBattle(){
+		SFXManager.Instance.Play2D("ui_accept"); 
+		UnityEngine.SceneManagement.SceneManager.LoadScene("Battle");
+	}
 
 }
