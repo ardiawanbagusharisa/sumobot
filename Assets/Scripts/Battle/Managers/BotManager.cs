@@ -38,13 +38,13 @@ namespace SumoBot
             if (!enabled)
                 return;
 
-            var allTypes = BotUtility.GetAllBotTypes();
+            var allBotInstances = BotUtility.GetAllBotInstances();
 
-            if (LeftEnabled && leftBotIndex >= 0 && leftBotIndex < allTypes.Count)
-                Left = ScriptableObject.CreateInstance(allTypes[leftBotIndex]) as Bot;
+            if (LeftEnabled && leftBotIndex >= 0 && leftBotIndex < allBotInstances.Count)
+                Left = allBotInstances[leftBotIndex];
 
-            if (RightEnabled && rightBotIndex >= 0 && rightBotIndex < allTypes.Count)
-                Right = ScriptableObject.CreateInstance(allTypes[rightBotIndex]) as Bot;
+            if (RightEnabled && rightBotIndex >= 0 && rightBotIndex < allBotInstances.Count)
+                Right = allBotInstances[rightBotIndex];
         }
 
         public void OnUpdate()
