@@ -7,6 +7,9 @@ public class BoardManager : MonoBehaviour
 	public GameObject connectionPrefab;
 	public Transform connectionLayer;
 
+	public GameObject unfoldInventory;
+	public GameObject panelInventory;
+
 	private PortUI pendingPort;
 	private Connection tempConnection;
 
@@ -58,7 +61,7 @@ public class BoardManager : MonoBehaviour
 		if (pendingPort == null) return;
 
 		// Prevent duplicate connections with the same from and to
-		foreach (Connection conn in FindObjectsOfType<Connection>()) {
+		foreach (Connection conn in FindObjectsByType<Connection>(FindObjectsSortMode.None)) {
 			if (conn != tempConnection && conn.from == pendingPort && conn.to == to) {
 				Destroy(tempConnection.gameObject);
 				pendingPort = null;
@@ -75,4 +78,19 @@ public class BoardManager : MonoBehaviour
 		pendingPort = null;
 		tempConnection = null;
 	}
+
+	public void ToggleInventory() {
+		if (panelInventory != null) {
+			SFXManager.Instance.Play2D("ui_accept");
+			bool isActive = panelInventory.activeSelf;
+			unfoldInventory.SetActive(isActive);
+			panelInventory.SetActive(!isActive);
+		}
+	}
+
+	public void BackToBotCreator() {
+		SFXManager.Instance.Play2D("ui_accept");
+		UnityEngine.SceneManagement.SceneManager.LoadScene("BotCreator");
+	}
+
 }

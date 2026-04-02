@@ -39,6 +39,10 @@ public class ModuleUI : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDrag
 		}
 
 		UpdatePortConnections();
+
+		foreach (var conn in FindObjectsByType<Connection>(FindObjectsSortMode.None)) {
+			conn.CheckLineCollision();
+		}
 	}
 
 	public void OnEndDrag(PointerEventData eventData) {
@@ -47,6 +51,10 @@ public class ModuleUI : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDrag
 			module.CheckCollision();
 		}
 		UpdatePortConnections();
+
+		foreach (var conn in FindObjectsByType<Connection>(FindObjectsSortMode.None)) {
+			conn.CheckLineCollision();
+		}
 	}
 
 	void UpdatePortConnections() {
@@ -81,6 +89,10 @@ public class ModuleUI : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDrag
 		Rect rectA = GetWorldRect(a);
 		Rect rectB = GetWorldRect(b);
 		return rectA.Overlaps(rectB);
+	}
+
+	public Rect GetWorldRect() {
+		return GetWorldRect(rect);
 	}
 
 	Rect GetWorldRect(RectTransform rt) {
