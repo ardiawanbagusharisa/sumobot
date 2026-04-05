@@ -13,11 +13,27 @@ public class PartSwitcher : MonoBehaviour
 
     void Start()
     {
-        if (sprites.Length > 0 && targetImage != null)
+        if (sprites.Length == 0 || targetImage == null)
+            return;
+
+        // Load saved sprite from PlayerProfile if available
+        var profile = GameManager.Instance.GetProfileById();
+        if (profile != null && profile.Parts.ContainsKey(part) && profile.Parts[part] != null)
         {
-            targetImage.sprite = sprites[currentIndex];
-            targetPreviewImage.sprite = sprites[currentIndex];
+            // Find the index of the saved sprite
+            Sprite savedSprite = profile.Parts[part];
+            for (int i = 0; i < sprites.Length; i++)
+            {
+                if (sprites[i] == savedSprite)
+                {
+                    currentIndex = i;
+                    break;
+                }
+            }
         }
+
+        targetImage.sprite = sprites[currentIndex];
+        targetPreviewImage.sprite = sprites[currentIndex];
     }
 
     public void UpdateSprite(int direction)
@@ -33,7 +49,7 @@ public class PartSwitcher : MonoBehaviour
         targetImage.sprite = sprites[currentIndex];
         targetPreviewImage.sprite = sprites[currentIndex];
 
-        var costume = GameManager.Instance.GetProfileById();
-        costume.Parts[part] = sprites[currentIndex];
+        var profile = GameManager.Instance.GetProfileById();
+        profile.Parts[part] = sprites[currentIndex];
     }
 }
