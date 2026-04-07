@@ -10,7 +10,7 @@ using System.IO;
 public class AIBot_PPO : Bot
 {
     #region Bot Template Properties
-    public override string ID => "Bot_PPO";
+    public override string ID => "PPO";
     public override SkillType DefaultSkillType => SkillType.Boost;
     private SumoAPI api;
     #endregion
