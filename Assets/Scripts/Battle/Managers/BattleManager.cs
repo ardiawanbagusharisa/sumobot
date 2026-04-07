@@ -256,8 +256,9 @@ namespace SumoManager
 
         private IEnumerator ResetBattle()
         {
-            yield return new WaitForSeconds(3f);
+            yield return new WaitForSeconds(2.5f);
             LogManager.LogLastPosition();
+            yield return new WaitForSeconds(0.5f);
 
             Battle.LeftPlayer.Reset();
             Battle.RightPlayer.Reset();
