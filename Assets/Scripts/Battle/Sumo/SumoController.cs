@@ -365,7 +365,11 @@ namespace SumoCore
                     accelerateSource.src.Play();
                 }
 
-                RigidBody.linearVelocity = movementVelocity;
+                // Only override velocity if new speed is higher, otherwise let natural deceleration continue
+                if (movementVelocity.magnitude >= RigidBody.linearVelocity.magnitude)
+                {
+                    RigidBody.linearVelocity = movementVelocity;
+                }
                 accelerateTimeRemaining -= Time.fixedDeltaTime;
             }
             else
