@@ -277,6 +277,7 @@ namespace SumoCore
         public void Log(ISumoAction action)
         {
             bool isActive = IsActionActive(action.Type);
+            Logger.Info($"[SumoController][Log][{Side}] {action.Name} isActive:{isActive}");
             if (isActive)
             {
                 LogManager.FlushActionLog(Side, action, isActive);
@@ -366,7 +367,6 @@ namespace SumoCore
 
                 RigidBody.linearVelocity = movementVelocity;
                 accelerateTimeRemaining -= Time.fixedDeltaTime;
-                Log(lastAccelerateAction);
             }
             else
             {
@@ -396,8 +396,6 @@ namespace SumoCore
 
             remainingAngle -= Mathf.Abs(step);
 
-
-            Log(lastTurnAction);
 
             if (remainingAngle <= 0.001f)
             {
