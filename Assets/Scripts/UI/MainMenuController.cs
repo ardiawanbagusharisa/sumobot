@@ -1,5 +1,4 @@
 using UnityEngine;
-using System.Collections.Generic;
 
 public class MainMenuController : MonoBehaviour
 {
@@ -11,6 +10,7 @@ public class MainMenuController : MonoBehaviour
 		MultiplayerLocal,
 		Leaderboards,
 		Settings,
+		Market
 	}
 
 	private MenuState currentState = MenuState.MainMenu;
@@ -48,6 +48,7 @@ public class MainMenuController : MonoBehaviour
 	public void ShowMultiplayerLocal() => SwitchMenu(MenuState.MultiplayerLocal);
 	public void ShowLeaderboards() => SwitchMenu(MenuState.Leaderboards);
 	public void ShowSettings() => SwitchMenu(MenuState.Settings);
+	public void ShowMarket() => SwitchMenu(MenuState.Market);
 	public void QuitGame() => Application.Quit();
 
 	// Load Battle scene 
