@@ -238,7 +238,7 @@ public class ReplayManager : MonoBehaviour
 
                 var games = gameLogs.Take(currentGameIndex).ToList();
                 metadata.LeftPlayerStats.WinPerGame = games.Select((i) => i.Winner == "Left").Count();
-                metadata.LeftPlayerStats.WinPerGame = games.Select((i) => i.Winner == "Right").Count();
+                metadata.RightPlayerStats.WinPerGame = games.Select((i) => i.Winner == "Right").Count();
 
                 currentRoundIndex = 0;
             }
@@ -430,8 +430,6 @@ public class ReplayManager : MonoBehaviour
 
         EventLog currentEvent = events[index];
         EventLog nextEvent;
-
-        Logger.Info($"[ReplayManager][InterpolateBot] currentEvent {currentEvent.Category}");
 
         if (index == events.Count - 1)
         {
@@ -674,9 +672,9 @@ public class ReplayManager : MonoBehaviour
 
         if (Chart != null)
         {
-            // Only clear chart series, NOT side panels
-            // Side panels destroy the label pool, causing labels to disappear
+            // Clear both chart series and side panels to prevent duplication
             Chart.ClearChartSeries();
+            Chart.ClearSidePanels();
         }
 
         if (includePlayer)

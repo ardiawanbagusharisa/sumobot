@@ -85,6 +85,8 @@ namespace SumoHelper
 #if UNITY_EDITOR
             if (QuitAfterDone)
                 UnityEditor.EditorApplication.isPlaying = false;
+            else
+                Time.timeScale = 1;
 #else
             Application.Quit();
 #endif

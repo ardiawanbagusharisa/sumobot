@@ -9,13 +9,13 @@ using SumoCore;
 [CustomEditor(typeof(BotManager))]
 public class BotSelector : Editor
 {
-    private List<Type> botTypes;
+    private List<Bot> botTypes;
     private string[] botNames;
 
     private void OnEnable()
     {
-        botTypes = BotUtility.GetAllBotTypes();
-        botNames = botTypes.ConvertAll(t => t.Name).ToArray();
+        botTypes = BotUtility.GetAllBotInstances();
+        botNames = botTypes.ConvertAll(t => t.ID).ToArray();
     }
 
     public override void OnInspectorGUI()
@@ -46,8 +46,8 @@ public class BotSelector : Editor
         if (Application.isPlaying)
             if (GUILayout.Button("Assign"))
             {
-                Bot left = CreateInstance(botTypes[selector.leftBotIndex]) as Bot;
-                Bot right = CreateInstance(botTypes[selector.rightBotIndex]) as Bot;
+                Bot left = botTypes[selector.leftBotIndex];
+                Bot right = botTypes[selector.rightBotIndex];
                 selector.Assign(left, PlayerSide.Left);
                 selector.Assign(right, PlayerSide.Right);
                 Logger.Info($"Assigned {botNames[selector.leftBotIndex]} (Left), {botNames[selector.rightBotIndex]} (Right)");
