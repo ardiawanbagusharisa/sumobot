@@ -1,13 +1,14 @@
 using System;
 using SumoInput;
-using UnityEngine;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace SumoCore
 {
-    #region Action abstract class and Enums 
+    #region Action abstract class and Enums
 
     [Serializable]
+    [JsonConverter(typeof(SumoActionConverter))]
     public abstract class ISumoAction
     {
         [JsonIgnore]
@@ -54,12 +55,12 @@ namespace SumoCore
 
     public enum ActionType
     {
-        Accelerate,
-        Dash,
-        TurnLeft,
-        TurnRight,
-        SkillBoost,
-        SkillStone,
+        Accelerate, // AccelerateAction
+        Dash, // DashAction
+        TurnLeft, // TurnAction
+        TurnRight, // TurnAction
+        SkillBoost, // SkillAction
+        SkillStone, // SkillAction
     }
     #endregion
 
@@ -128,6 +129,47 @@ namespace SumoCore
         public override void Execute(SumoController controller)
         {
             controller.Skill.Activate(this);
+        }
+    }
+    #endregion
+
+    #region JSON Converter
+    public class SumoActionConverter : JsonConverter<ISumoAction>
+    {
+        public override ISumoAction ReadJson(JsonReader reader, Type objectType, ISumoAction existingValue, bool hasExistingValue, JsonSerializer serializer)
+        {
+            JObject jsonObject = JObject.Load(reader);
+
+            // Read the Type field to determine which concrete class to instantiate
+            ActionType actionType = jsonObject["Type"].ToObject<ActionType>();
+            float duration = jsonObject["Duration"].ToObject<float>();
+
+            ISumoAction action = actionType switch
+            {
+                ActionType.Accelerate => new AccelerateAction(InputType.Script, duration),
+                ActionType.TurnLeft => new TurnAction(InputType.Script, ActionType.TurnLeft, duration),
+                ActionType.TurnRight => new TurnAction(InputType.Script, ActionType.TurnRight, duration),
+                ActionType.Dash => new DashAction(InputType.Script),
+                ActionType.SkillBoost => new SkillAction(InputType.Script, ActionType.SkillBoost),
+                ActionType.SkillStone => new SkillAction(InputType.Script, ActionType.SkillStone),
+                _ => throw new JsonSerializationException($"Unknown action type: {actionType}")
+            };
+
+            // Populate the Duration and other properties from JSON
+            serializer.Populate(jsonObject.CreateReader(), action);
+
+            return action;
+        }
+
+        public override void WriteJson(JsonWriter writer, ISumoAction value, JsonSerializer serializer)
+        {
+            // Manually write the JSON to avoid circular reference
+            writer.WriteStartObject();
+            writer.WritePropertyName("Duration");
+            writer.WriteValue(value.Duration);
+            writer.WritePropertyName("Type");
+            writer.WriteValue(value.Type.ToString());
+            writer.WriteEndObject();
         }
     }
     #endregion
