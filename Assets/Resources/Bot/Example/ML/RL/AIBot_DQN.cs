@@ -11,7 +11,7 @@ using UnityEngine;
 public class AIBot_DQN : Bot
 {
     #region Bot Template Properties
-    public override string ID => "Bot_DQN";
+    public override string ID => "DQN";
     public override SkillType DefaultSkillType => SkillType.Boost;
     private SumoAPI api;
     #endregion

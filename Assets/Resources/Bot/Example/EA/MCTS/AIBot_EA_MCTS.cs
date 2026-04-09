@@ -16,7 +16,7 @@ namespace SumoBot.EA.MCTS
         public float Iterations = 100;
         public float UCBConstant = 1.41f;
         public float ScoreLimit = -300;
-        public string Name = "Bot_MCTS";
+        public string Name = "MCTS";
         public SkillType DefaultSkillType = SkillType.Boost;
     }
 
