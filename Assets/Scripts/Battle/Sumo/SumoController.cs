@@ -277,6 +277,7 @@ namespace SumoCore
         public void Log(ISumoAction action)
         {
             bool isActive = IsActionActive(action.Type);
+            Logger.Info($"[SumoController][Log][{Side}] {action.Name} isActive:{isActive}");
             if (isActive)
             {
                 LogManager.FlushActionLog(Side, action, isActive);
@@ -364,9 +365,12 @@ namespace SumoCore
                     accelerateSource.src.Play();
                 }
 
-                RigidBody.linearVelocity = movementVelocity;
+                // Only override velocity if new speed is higher, otherwise let natural deceleration continue
+                if (movementVelocity.magnitude >= RigidBody.linearVelocity.magnitude)
+                {
+                    RigidBody.linearVelocity = movementVelocity;
+                }
                 accelerateTimeRemaining -= Time.fixedDeltaTime;
-                Log(lastAccelerateAction);
             }
             else
             {
@@ -396,8 +400,6 @@ namespace SumoCore
 
             remainingAngle -= Mathf.Abs(step);
 
-
-            Log(lastTurnAction);
 
             if (remainingAngle <= 0.001f)
             {

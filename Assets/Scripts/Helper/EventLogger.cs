@@ -158,12 +158,9 @@ namespace SumoHelper
 
         public void Save(string customCategory, float time)
         {
-            BaseLog log = new()
-            {
-                Rotation = Normalize360(controller.CachedRotation),
-                LinearVelocity = controller.CachedVelocity.magnitude,
-                AngularVelocity = controller.CachedAngularVelocity
-            };
+            RobotLog log = new();
+
+            SetState(log);
 
             LogManager.LogPlayerEvents(
                 actor: controller.Side,
@@ -173,14 +170,15 @@ namespace SumoHelper
                 category: customCategory,
                 dataMap: new()
                 {
-                    {"Robot", log.ToMap()}
+                    { "Robot", log.Robot.ToMap()},
+                    { "EnemyRobot", log.EnemyRobot.ToMap()},
                 }
             );
         }
 
-        public void SetState()
+        public void SetState(RobotLog existingLog = null)
         {
-            RobotLog log = Collision != null ? Collision : action;
+            RobotLog log = existingLog ?? (Collision != null ? Collision : action);
 
             log.Robot.Position = controller.CachedPosition;
             log.Robot.Rotation = Normalize360(controller.CachedRotation);

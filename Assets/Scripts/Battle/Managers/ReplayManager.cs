@@ -91,12 +91,12 @@ public class ReplayManager : MonoBehaviour
     public GameObject ChartContainer;
     public ChartManager Chart;
     public float EventTimeInterval = 2f;
-	private static readonly string colorHexLeft = "#A5FF87C0";
-	private static readonly string colorHexRight = "#FF6164C0";
-	#endregion
+    private static readonly string colorHexLeft = "#A5FF87C0";
+    private static readonly string colorHexRight = "#FF6164C0";
+    #endregion
 
-	#region Runtime (readonly) properties 
-	private readonly List<GameLog> gameLogs = new();
+    #region Runtime (readonly) properties 
+    private readonly List<GameLog> gameLogs = new();
     private int currentGameIndex = 0;
     private int currentRoundIndex = 0;
     private float currentTime = 0f;
@@ -128,19 +128,23 @@ public class ReplayManager : MonoBehaviour
     #endregion
 
     #region Unity methods
-    private void Awake() {
-        if (Instance != null && Instance != this) {
+    private void Awake()
+    {
+        if (Instance != null && Instance != this)
+        {
             Destroy(gameObject);
             return;
         }
         Instance = this;
     }
 
-    void Start() {
+    void Start()
+    {
         if (!IsEnable)
             return;
 
-        if (GameManager.Instance.ShowReplay) {
+        if (GameManager.Instance.ShowReplay)
+        {
             LoadGameFromBattle(Log);
             return;
         }
@@ -150,14 +154,18 @@ public class ReplayManager : MonoBehaviour
 #endif
     }
 
-    void OnEnable() {
+    void OnEnable()
+    {
         if (ScrollEvent != null)
             ScrollEvent.Events[CustomHandlerListener.OnScrolling].Subscribe(OnDrag);
 
-        if (LogScrollbar != null) {
-            LogScrollbar.onValueChanged.AddListener((val) => {
+        if (LogScrollbar != null)
+        {
+            LogScrollbar.onValueChanged.AddListener((val) =>
+            {
                 Logger.Info($"LogScrollBar.onValueChanged {val}");
-                if (val < 0.01f) {
+                if (val < 0.01f)
+                {
                     autoScrollLog = true;
                 }
             });
@@ -166,14 +174,16 @@ public class ReplayManager : MonoBehaviour
         if (TimeSliderUI != null)
             TimeSliderUI.onValueChanged.AddListener(OnTimeSliderChanged);
 
-        if (TimerSlider != null) {
+        if (TimerSlider != null)
+        {
             TimerSlider.Events[CustomHandlerListener.OnPressDown].Subscribe(OnTimeSliderPointerDown);
             TimerSlider.Events[CustomHandlerListener.OnPressUp].Subscribe(OnTimeSliderPointerUp);
         }
     }
 
 
-    void OnDisable() {
+    void OnDisable()
+    {
         if (TimeSliderUI != null)
             TimeSliderUI.onValueChanged.RemoveListener(OnTimeSliderChanged);
 
@@ -183,15 +193,18 @@ public class ReplayManager : MonoBehaviour
         if (ScrollEvent != null)
             ScrollEvent.Events[CustomHandlerListener.OnScrolling].Unsubscribe(OnDrag);
 
-        if (TimerSlider != null) {
+        if (TimerSlider != null)
+        {
             TimerSlider.Events[CustomHandlerListener.OnPressDown].Unsubscribe(OnTimeSliderPointerDown);
             TimerSlider.Events[CustomHandlerListener.OnPressUp].Unsubscribe(OnTimeSliderPointerUp);
         }
     }
 
 
-    void Update() {
-        if (Input.GetKeyUp(KeyCode.Space)) {
+    void Update()
+    {
+        if (Input.GetKeyUp(KeyCode.Space))
+        {
             TogglePause();
         }
 
@@ -207,11 +220,14 @@ public class ReplayManager : MonoBehaviour
 
         DisplayCurrentEventInfo();
 
-        if (currentTime > currentRoundDuration) {
+        if (currentTime > currentRoundDuration)
+        {
             currentRoundIndex++;
 
-            if (currentRoundIndex >= gameLogs[currentGameIndex].Rounds.Count) {
-                if (currentGameIndex == gameLogs.Count - 1) {
+            if (currentRoundIndex >= gameLogs[currentGameIndex].Rounds.Count)
+            {
+                if (currentGameIndex == gameLogs.Count - 1)
+                {
                     DisplayCurrentEventInfo();
                     isPlaying = false;
                     Logger.Info("Replay finished.");
@@ -222,7 +238,7 @@ public class ReplayManager : MonoBehaviour
 
                 var games = gameLogs.Take(currentGameIndex).ToList();
                 metadata.LeftPlayerStats.WinPerGame = games.Select((i) => i.Winner == "Left").Count();
-                metadata.LeftPlayerStats.WinPerGame = games.Select((i) => i.Winner == "Right").Count();
+                metadata.RightPlayerStats.WinPerGame = games.Select((i) => i.Winner == "Right").Count();
 
                 currentRoundIndex = 0;
             }
@@ -231,7 +247,8 @@ public class ReplayManager : MonoBehaviour
         }
     }
 
-    void FixedUpdate() {
+    void FixedUpdate()
+    {
         if (!isPlaying || !IsEnable || isBuffer)
             return;
 
@@ -241,52 +258,63 @@ public class ReplayManager : MonoBehaviour
         CollectEventLogs();
 
         if (ChartContainer != null && ChartContainer.activeSelf && isPlaying &&
-            Time.time - lastChartUpdateTime >= CHART_UPDATE_INTERVAL) {
+            Time.time - lastChartUpdateTime >= CHART_UPDATE_INTERVAL)
+        {
             ShowCharts();
             lastChartUpdateTime = Time.time;
         }
     }
 
-    void CollectEventLogs() {
+    void CollectEventLogs()
+    {
         // Collect logs for left bot
-        if (leftEventIndex < leftEvents.Count) {
+        if (leftEventIndex < leftEvents.Count)
+        {
             EventLog currentEvent = leftEvents[leftEventIndex];
             CollectEventLog(currentEvent);
         }
 
         // Collect logs for right bot
-        if (rightEventIndex < rightEvents.Count) {
+        if (rightEventIndex < rightEvents.Count)
+        {
             EventLog currentEvent = rightEvents[rightEventIndex];
             CollectEventLog(currentEvent);
         }
     }
 
-    void CollectEventLog(EventLog currentEvent) {
+    void CollectEventLog(EventLog currentEvent)
+    {
         var key = currentEvent.GetKey();
 
-        if (currentEvent.Category == "Action") {
-            if (currentEvent.Actor == "Left") {
-                if (!leftActionMap.ContainsKey(key)) {
+        if (currentEvent.Category == "Action")
+        {
+            if (currentEvent.Actor == "Left")
+            {
+                if (!leftActionMap.ContainsKey(key))
                     leftActionMap.Add(key, currentEvent);
-                }
-            } else if (currentEvent.Actor == "Right") {
-                if (!rightActionMap.ContainsKey(key)) {
-                    rightActionMap.Add(key, currentEvent);
-                }
             }
+            else if (currentEvent.Actor == "Right")
+            {
+                if (!rightActionMap.ContainsKey(key))
+                    rightActionMap.Add(key, currentEvent);
+            }
+
         }
 
         key = currentEvent.GetKey(withUpdate: false);
-        if (!logMap.ContainsKey(key)) {
+        if (!logMap.ContainsKey(key))
+        {
             var log = currentEvent.GetLogText();
-            if (log != null) {
+            if (log != null)
+            {
                 logMap.Add(key, log);
                 logMapDirty = true;
             }
         }
     }
 
-    private void ShowCharts() {
+    private void ShowCharts()
+    {
         if (ChartContainer == null || Chart == null)
             return;
         if (!ChartContainer.activeSelf)
@@ -300,7 +328,8 @@ public class ReplayManager : MonoBehaviour
     }
     #endregion
 
-    void Init() {
+    void Init()
+    {
         leftRigidBody = leftPlayer.gameObject.GetComponent<Rigidbody2D>();
         rightRigidBody = rightPlayer.gameObject.GetComponent<Rigidbody2D>();
         originalBotRotation = (leftRigidBody.rotation, rightRigidBody.rotation);
@@ -312,7 +341,8 @@ public class ReplayManager : MonoBehaviour
 
         LoadRound(currentGameIndex, currentRoundIndex);
 
-        if (autoStart) {
+        if (autoStart)
+        {
             isPlaying = true;
         }
 
@@ -334,14 +364,27 @@ public class ReplayManager : MonoBehaviour
             PlaybackSpeedLabel.text = $"Speed: {playbackSpeed:0.#}x";
     }
 
-    void OnPlayBackSpeedChanged(float value) {
+    void OnPlayBackSpeedChanged(float value)
+    {
         playbackSpeed = value;
         if (PlaybackSpeedLabel != null)
             PlaybackSpeedLabel.text = $"Speed: {value:0.#}x";
     }
 
     #region Core Logics
-    void LoadRound(int gameIdx, int roundIdx) {
+    void AdjustLastPositionTimestamp(List<EventLog> events)
+    {
+        foreach (var evt in events)
+        {
+            if (evt.Category == "LastPosition")
+            {
+                evt.UpdatedAt += 0.5f;
+            }
+        }
+    }
+
+    void LoadRound(int gameIdx, int roundIdx)
+    {
         isBuffer = true;
 
         leftRigidBody.MovePosition(originalBotPosition.Item1);
@@ -358,9 +401,13 @@ public class ReplayManager : MonoBehaviour
         leftEvents = currentRoundEvents.Where(x => x.Actor == "Left").ToList();
         rightEvents = currentRoundEvents.Where(x => x.Actor == "Right").ToList();
 
+        AdjustLastPositionTimestamp(leftEvents);
+        AdjustLastPositionTimestamp(rightEvents);
+
         currentRoundDuration = currentRoundEvents.Max(e => e.UpdatedAt);
 
-        if (TimeSliderUI != null) {
+        if (TimeSliderUI != null)
+        {
             TimeSliderUI.minValue = 0f;
             TimeSliderUI.maxValue = Mathf.Ceil(currentRoundDuration);
             TimeSliderUI.value = 0f;
@@ -373,7 +420,8 @@ public class ReplayManager : MonoBehaviour
 
     }
 
-    void InterpolateBot(Rigidbody2D rigidBody, List<EventLog> events, ref int index) {
+    void InterpolateBot(Rigidbody2D rigidBody, List<EventLog> events, ref int index)
+    {
         if (!isPlaying) return;
         if (events.Count <= 1)
             return;
@@ -383,24 +431,31 @@ public class ReplayManager : MonoBehaviour
         EventLog currentEvent = events[index];
         EventLog nextEvent;
 
-        if (index == events.Count - 1) {
+        if (index == events.Count - 1)
+        {
             currentEvent = events[index - 1];
             nextEvent = events[index];
-        } else {
+        }
+        else
+        {
             nextEvent = events[index + 1];
         }
 
         // Advance to the correct event pair for current time
-        while (currentTime > nextEvent.UpdatedAt && index < events.Count - 1) {
+        while (currentTime > nextEvent.UpdatedAt && index < events.Count - 1)
+        {
             index++;
             currentEvent = events[index];
 
             // Recalculate nextEvent after index increment
-            if (index == events.Count - 1) {
+            if (index == events.Count - 1)
+            {
                 currentEvent = events[index - 1];
                 nextEvent = events[index];
                 break;
-            } else {
+            }
+            else
+            {
                 nextEvent = events[index + 1];
             }
         }
@@ -426,19 +481,22 @@ public class ReplayManager : MonoBehaviour
     }
 
 #if UNITY_EDITOR
-    public void LoadGameFromPath() {
+    public void LoadGameFromPath()
+    {
         string basePath = Path.Combine(Application.persistentDataPath, "Logs");
         string folder = EditorUtility.OpenFolderPanel("Select Replay Folder", basePath, "");
 
         if (string.IsNullOrEmpty(folder)) return;
 
         string[] files = Directory.GetFiles(folder, "game_*.json");
-        if (files.Count() == 0) {
+        if (files.Count() == 0)
+        {
             Logger.Error("Folder doesn't contain games");
             return;
         }
 
-        foreach (var file in files) {
+        foreach (var file in files)
+        {
             string json = File.ReadAllText(file);
             var log = JsonConvert.DeserializeObject<GameLog>(json);
             gameLogs.Add(log);
@@ -457,13 +515,16 @@ public class ReplayManager : MonoBehaviour
     }
 #endif
 
-    public void LoadGameFromBattle(BattleLog battleLog) {
-        if (battleLog.Games.Count() == 0) {
+    public void LoadGameFromBattle(BattleLog battleLog)
+    {
+        if (battleLog.Games.Count() == 0)
+        {
             Logger.Error("BattleLog doesn't contain games");
             return;
         }
 
-        foreach (var game in battleLog.Games) {
+        foreach (var game in battleLog.Games)
+        {
             gameLogs.Add(game);
         }
 
@@ -477,7 +538,8 @@ public class ReplayManager : MonoBehaviour
         Init();
     }
 
-    void DisplayCurrentEventInfo() {
+    void DisplayCurrentEventInfo()
+    {
         // Only check for events if we have any
         if (currentRoundEvents.Count == 0)
             return;
@@ -502,26 +564,30 @@ public class ReplayManager : MonoBehaviour
         RightActionTaken?.SetText(metadata.RightPlayerStats.ActionTaken.ToString());
 
         // Only update log text if logMap has changed 
-        if (logMapDirty || logMap.Count != lastLogMapCount) {
+        if (logMapDirty || logMap.Count != lastLogMapCount)
+        {
             UpdateLogUI();
             lastLogMapCount = logMap.Count;
             logMapDirty = false;
         }
 
-        if (autoScrollLog) {
+        if (autoScrollLog)
+        {
             LogScrollRect.verticalNormalizedPosition = 0f;
             Canvas.ForceUpdateCanvases();
         }
     }
 
-    void UpdateLogUI() {
+    void UpdateLogUI()
+    {
         if (LogUI == null || logMap.Count == 0)
             return;
 
         logBuilder.Clear();
         bool first = true;
 
-        foreach (var log in logMap.Values) {
+        foreach (var log in logMap.Values)
+        {
             if (!first)
                 logBuilder.Append('\n');
             logBuilder.Append(log);
@@ -534,8 +600,10 @@ public class ReplayManager : MonoBehaviour
 
     #region Control Logic
 
-    void GoToPreviousGame() {
-        if (currentGameIndex > 0) {
+    void GoToPreviousGame()
+    {
+        if (currentGameIndex > 0)
+        {
             currentGameIndex--;
             currentRoundIndex = 0;
         }
@@ -544,8 +612,10 @@ public class ReplayManager : MonoBehaviour
         isPlaying = true;
     }
 
-    void GoToNextGame() {
-        if (currentGameIndex < gameLogs.Count - 1) {
+    void GoToNextGame()
+    {
+        if (currentGameIndex < gameLogs.Count - 1)
+        {
             currentGameIndex++;
             currentRoundIndex = 0;
         }
@@ -554,7 +624,8 @@ public class ReplayManager : MonoBehaviour
         isPlaying = true;
     }
 
-    void GoToPreviousRound() {
+    void GoToPreviousRound()
+    {
         if (currentRoundIndex > 0)
             currentRoundIndex--;
 
@@ -562,7 +633,8 @@ public class ReplayManager : MonoBehaviour
         isPlaying = true;
     }
 
-    void GoToNextRound() {
+    void GoToNextRound()
+    {
         if (currentRoundIndex < gameLogs[currentGameIndex].Rounds.Count - 1)
             currentRoundIndex++;
         else
@@ -572,14 +644,18 @@ public class ReplayManager : MonoBehaviour
         isPlaying = true;
     }
 
-    void OnTimeSliderChanged(float value) {
-        if (isDraggingSlider) {
+    void OnTimeSliderChanged(float value)
+    {
+        if (isDraggingSlider)
+        {
             currentTime = value;
             ResetReplay(includeEvents: false);
         }
     }
-    void ResetReplay(bool includePlayer = true, bool includeEvents = true) {
-        if (includeEvents) {
+    void ResetReplay(bool includePlayer = true, bool includeEvents = true)
+    {
+        if (includeEvents)
+        {
             currentRoundEvents.Clear();
             leftEvents.Clear();
             rightEvents.Clear();
@@ -594,23 +670,27 @@ public class ReplayManager : MonoBehaviour
         logMap.Clear();
         lastChartUpdateTime = 0f;
 
-        if (Chart != null) {
-            // Only clear chart series, NOT side panels
-            // Side panels destroy the label pool, causing labels to disappear
+        if (Chart != null)
+        {
+            // Clear both chart series and side panels to prevent duplication
             Chart.ClearChartSeries();
+            Chart.ClearSidePanels();
         }
 
-        if (includePlayer) {
+        if (includePlayer)
+        {
             metadata.LeftPlayerStats.ActionTaken = 0;
             metadata.RightPlayerStats.ActionTaken = 0;
         }
     }
 
-    public void OnTimeSliderPointerDown(EventParameter _) {
+    public void OnTimeSliderPointerDown(EventParameter _)
+    {
         isDraggingSlider = true;
     }
 
-    public void OnTimeSliderPointerUp(EventParameter _) {
+    public void OnTimeSliderPointerUp(EventParameter _)
+    {
         isDraggingSlider = false;
         isBuffer = true;
 
@@ -621,7 +701,8 @@ public class ReplayManager : MonoBehaviour
         IEnumerable<EventLog> lastLeft = leftEvents.TakeWhile((x) => x.UpdatedAt < currentTime);
         IEnumerable<EventLog> lastRight = rightEvents.TakeWhile((x) => x.UpdatedAt < currentTime);
 
-        if (lastLeft.Count() > 0 || lastRight.Count() > 0) {
+        if (lastLeft.Count() > 0 || lastRight.Count() > 0)
+        {
             leftEventIndex = leftEvents.IndexOf(lastLeft.LastOrDefault());
             rightEventIndex = rightEvents.IndexOf(lastRight.LastOrDefault());
 
@@ -634,8 +715,10 @@ public class ReplayManager : MonoBehaviour
             rightActionMap.Clear();
             logMap.Clear();
 
-            foreach (var eventLog in lastLeft) {
-                if (eventLog.State != PeriodicState.End) {
+            foreach (var eventLog in lastLeft)
+            {
+                if (eventLog.State != PeriodicState.End)
+                {
                     var key = eventLog.GetKey();
 
                     if (eventLog.Category == "Action")
@@ -647,8 +730,10 @@ public class ReplayManager : MonoBehaviour
                 }
             }
 
-            foreach (var eventLog in lastRight) {
-                if (eventLog.State != PeriodicState.End) {
+            foreach (var eventLog in lastRight)
+            {
+                if (eventLog.State != PeriodicState.End)
+                {
                     var key = eventLog.GetKey();
 
                     if (eventLog.Category == "Action")
@@ -667,14 +752,16 @@ public class ReplayManager : MonoBehaviour
         StartCoroutine(ResumeAfterLoadRound());
     }
 
-    private IEnumerator ResumeAfterLoadRound() {
+    private IEnumerator ResumeAfterLoadRound()
+    {
         yield return null;
 
         isBuffer = false;
         isPlaying = true;
     }
 
-    public void TogglePause() {
+    public void TogglePause()
+    {
         isPlaying = !isPlaying;
 
         PauseTxtUI.text = isPlaying ? "Pause" : "Continue";
@@ -683,13 +770,15 @@ public class ReplayManager : MonoBehaviour
     #endregion
 
     #region Chart
-    string FormatTime(float time) {
+    string FormatTime(float time)
+    {
         int minutes = Mathf.FloorToInt(time / 60f);
         int seconds = Mathf.CeilToInt(time % 60f);
         return $"{minutes:00}:{seconds:00}";
     }
 
-    private void ShowEventChart(string category) {
+    private void ShowEventChart(string category)
+    {
         ChartSeries chartLeft = ChartSeries.Create(
             $"{category}/sec (Left)",
             ChartSeries.ChartType.Line, Color.green);
@@ -708,23 +797,28 @@ public class ReplayManager : MonoBehaviour
         else
             chartVisibilityMap.Add(chartRight.Name, chartRight.IsVisible);
 
-        if (chartLeft.IsVisible || chartRight.IsVisible) {
+        if (chartLeft.IsVisible || chartRight.IsVisible)
+        {
             int timeFrame = 1;
 
             Dictionary<int, (float, float)> eventsMap = new();
 
-            for (float i = 0; i < currentTime; i += EventTimeInterval) {
+            for (float i = 0; i < currentTime; i += EventTimeInterval)
+            {
                 int leftEventAmount = 0;
                 int rightEventAmount = 0;
 
-                if (chartLeft.IsVisible) {
+                if (chartLeft.IsVisible)
+                {
                     Dictionary<string, EventLog> leftEventsMap = new();
-                    foreach (var x in leftEvents) {
+                    foreach (var x in leftEvents)
+                    {
                         if (category == "Collision")
                             if (x.Target.Count() == 0)
                                 continue;
 
-                        if (x.Category == category && x.UpdatedAt >= i && x.UpdatedAt < (i + EventTimeInterval)) {
+                        if (x.Category == category && x.UpdatedAt >= i && x.UpdatedAt < (i + EventTimeInterval))
+                        {
                             leftEventsMap.TryAdd(x.GetKey(withUpdate: false), x);
                         }
                     }
@@ -732,14 +826,17 @@ public class ReplayManager : MonoBehaviour
                 }
 
 
-                if (chartRight.IsVisible) {
+                if (chartRight.IsVisible)
+                {
                     Dictionary<string, EventLog> rightEventsMap = new();
-                    foreach (var x in rightEvents) {
+                    foreach (var x in rightEvents)
+                    {
                         if (category == "Collision")
                             if (x.Target.Count() == 0)
                                 continue;
 
-                        if (x.Category == category && x.UpdatedAt >= i && x.UpdatedAt < (i + EventTimeInterval)) {
+                        if (x.Category == category && x.UpdatedAt >= i && x.UpdatedAt < (i + EventTimeInterval))
+                        {
                             rightEventsMap.TryAdd(x.GetKey(withUpdate: false), x);
                         }
                     }
@@ -758,32 +855,39 @@ public class ReplayManager : MonoBehaviour
                 chartRight.Data = eventsMap.Select((x) => x.Value.Item2).ToArray();
         }
 
-        chartLeft.OnVisible = (isOn) => {
+        chartLeft.OnVisible = (isOn) =>
+        {
             chartVisibilityMap[chartLeft.Name] = isOn;
             return null;
         };
-        chartRight.OnVisible = (isOn) => {
+        chartRight.OnVisible = (isOn) =>
+        {
             chartVisibilityMap[chartRight.Name] = isOn;
             return null;
         };
 
-        chartLeft.OnDrawVerticalLabel = (index) => {
-            if (EventTimeInterval > 1.0f) {
+        chartLeft.OnDrawVerticalLabel = (index) =>
+        {
+            if (EventTimeInterval > 1.0f)
+            {
                 float xlabel = index * EventTimeInterval;
                 return Mathf.Floor(xlabel).ToString("0.#");
             }
             return index.ToString();
         };
 
-        chartRight.OnDrawVerticalLabel = (index) => {
-            if (EventTimeInterval > 1.0f) {
+        chartRight.OnDrawVerticalLabel = (index) =>
+        {
+            if (EventTimeInterval > 1.0f)
+            {
                 float xlabel = index * EventTimeInterval;
                 return Mathf.Floor(xlabel).ToString("0.#");
             }
             return index.ToString();
         };
 
-        if (chartLeft.IsVisible && chartRight.IsVisible) {
+        if (chartLeft.IsVisible && chartRight.IsVisible)
+        {
             Chart.XGridSpacing = Mathf.FloorToInt(EventTimeInterval);
         }
 
@@ -792,21 +896,24 @@ public class ReplayManager : MonoBehaviour
         Chart.DrawChart();
     }
 
-    private void ShowMostActionChart() {
+    private void ShowMostActionChart()
+    {
         var topActions = 3;
 
         List<string> groupLabels = new() { };
         List<Color> categoryColors = new() { };
 
-        if (leftActionMap.Count > 0) {
+        if (leftActionMap.Count > 0)
+        {
             groupLabels.Add("Left");
-			ColorUtility.TryParseHtmlString(colorHexLeft, out var colorGreen);
-			categoryColors.Add(colorGreen);
-		}
-        if (rightActionMap.Count > 0) {
+            ColorUtility.TryParseHtmlString(colorHexLeft, out var colorGreen);
+            categoryColors.Add(colorGreen);
+        }
+        if (rightActionMap.Count > 0)
+        {
             groupLabels.Add("Right");
             ColorUtility.TryParseHtmlString(colorHexRight, out var colorRed);
-			categoryColors.Add(colorRed);
+            categoryColors.Add(colorRed);
         }
 
         var chart = ChartSeries.CreateGroup(
@@ -820,18 +927,21 @@ public class ReplayManager : MonoBehaviour
         else
             chartVisibilityMap.Add(chart.Name, chart.IsVisible);
 
-        if (chart.IsVisible) {
+        if (chart.IsVisible)
+        {
             var leftMostActs = GetChartMostAction(PlayerSide.Left, topActions);
             var rightMostActs = GetChartMostAction(PlayerSide.Right, topActions);
 
             List<float> data = new();
             List<string> categories = new();
 
-            for (int i = 0; i < leftMostActs.Count(); i++) {
+            for (int i = 0; i < leftMostActs.Count(); i++)
+            {
                 data.Add(leftMostActs[i].Value);
                 categories.Add(leftMostActs[i].Key);
             }
-            for (int i = 0; i < rightMostActs.Count(); i++) {
+            for (int i = 0; i < rightMostActs.Count(); i++)
+            {
                 data.Add(rightMostActs[i].Value);
                 categories.Add(rightMostActs[i].Key);
             }
@@ -840,7 +950,8 @@ public class ReplayManager : MonoBehaviour
             chart.CategoryNames = categories.ToArray();
         }
 
-        chart.OnVisible = (isOn) => {
+        chart.OnVisible = (isOn) =>
+        {
             chartVisibilityMap[chart.Name] = isOn;
             return null;
         };
@@ -850,15 +961,20 @@ public class ReplayManager : MonoBehaviour
 
     }
 
-    private List<KeyValuePair<string, float>> GetChartMostAction(PlayerSide side, int topActions) {
+    private List<KeyValuePair<string, float>> GetChartMostAction(PlayerSide side, int topActions)
+    {
         Dictionary<string, float> mostActions = new();
 
-        foreach (var action in side == PlayerSide.Left ? leftActionMap : rightActionMap) {
+        foreach (var action in side == PlayerSide.Left ? leftActionMap : rightActionMap)
+        {
             string key = (string)action.Value.Data["Name"];
 
-            if (mostActions.ContainsKey(key)) {
+            if (mostActions.ContainsKey(key))
+            {
                 mostActions[key] += 1;
-            } else {
+            }
+            else
+            {
                 mostActions.Add(key, 0);
             }
         }
@@ -869,51 +985,62 @@ public class ReplayManager : MonoBehaviour
         return mostActionList;
     }
 
-    public void ShowChart() {
+    public void ShowChart()
+    {
         if (ChartContainer == null) return;
         ChartContainer.SetActive(true);
-        if (!isPlaying) {
+        if (!isPlaying)
+        {
             ShowCharts();
         }
     }
-    public void HideChart() {
+    public void HideChart()
+    {
         ChartContainer.SetActive(false);
     }
     #endregion
 
-    public void OnDrag(EventParameter param) {
+    public void OnDrag(EventParameter param)
+    {
         autoScrollLog = false;
     }
 
-    public void BackToBattle() {
-		SFXManager.Instance.Play2D("ui_accept");
-		GameManager.Instance.Replay_BackToBattle();
+    public void BackToBattle()
+    {
+        SFXManager.Instance.Play2D("ui_accept");
+        GameManager.Instance.Replay_BackToBattle();
     }
 
-    public void ToggleDetails() {
-        if (DetailsPanel != null) { 
+    public void ToggleDetails()
+    {
+        if (DetailsPanel != null)
+        {
             SFXManager.Instance.Play2D("ui_accept");
-			bool isActive = DetailsPanel.activeSelf;
-		    DetailsPanel.SetActive(!isActive);
+            bool isActive = DetailsPanel.activeSelf;
+            DetailsPanel.SetActive(!isActive);
             FoldDetails.gameObject.SetActive(!isActive);
-		    UnfoldDetails.gameObject.SetActive(isActive);
-		}
-	}
+            UnfoldDetails.gameObject.SetActive(isActive);
+        }
+    }
 
-	public void ToggleCharts() {
-        if (ChartsPanel != null) {
-			SFXManager.Instance.Play2D("ui_accept");
-			bool isActive = ChartsPanel.activeSelf;
-			ChartsPanel.SetActive(!isActive);
-			FoldCharts.gameObject.SetActive(!isActive);
-			UnfoldCharts.gameObject.SetActive(isActive);
-		}
-	}
+    public void ToggleCharts()
+    {
+        if (ChartsPanel != null)
+        {
+            SFXManager.Instance.Play2D("ui_accept");
+            bool isActive = ChartsPanel.activeSelf;
+            ChartsPanel.SetActive(!isActive);
+            FoldCharts.gameObject.SetActive(!isActive);
+            UnfoldCharts.gameObject.SetActive(isActive);
+        }
+    }
 
-    public void ToggleLogs() {
-        if (LogsPanel != null) {
-			SFXManager.Instance.Play2D("ui_accept");
-			bool isActive = LogsPanel.activeSelf;
+    public void ToggleLogs()
+    {
+        if (LogsPanel != null)
+        {
+            SFXManager.Instance.Play2D("ui_accept");
+            bool isActive = LogsPanel.activeSelf;
             LogsPanel.SetActive(!isActive);
             FoldLogs.gameObject.SetActive(!isActive);
             UnfoldLogs.gameObject.SetActive(isActive);
@@ -923,27 +1050,36 @@ public class ReplayManager : MonoBehaviour
 
 public static class ExtReplayManager
 {
-	private static readonly string colorHexLeft = "#A5FF87C0";
-	private static readonly string colorHexRight = "#FF6164C0";
+    private static readonly string colorHexLeft = "#A5FF87C0";
+    private static readonly string colorHexRight = "#FF6164C0";
 
-	public static string GetKey(this EventLog log, bool withUpdate = true) {
-        if (log.Category == "Action") {
+    public static string GetKey(this EventLog log, bool withUpdate = true)
+    {
+        if (log.Category == "Action")
+        {
             string result = $"{log.Actor}_Action_{log.Data["Name"]}_{log.Data["Duration"] ?? null}_{log.StartedAt}";
-            if (withUpdate) {
+            if (withUpdate)
+            {
                 result += $"_{log.UpdatedAt}";
             }
             return result;
-        } else {
+        }
+        else
+        {
             return $"{log.Actor}_{log.Category}_{log.StartedAt}";
         }
     }
 
-    public static string GetLogText(this EventLog log) {
+    public static string GetLogText(this EventLog log)
+    {
         var color = log.Actor == "Left" ? colorHexLeft : colorHexRight;
 
-		if (log.Category == "Action") {
+        if (log.Category == "Action")
+        {
             return $"<color={color}>[{log.StartedAt:F2}] {log.Actor} | Action | {log.Data["Name"]} | {log.Data["Duration"]:F2}</color>";
-        } else if (log.Category == "Collision") {
+        }
+        else if (log.Category == "Collision")
+        {
             return $"[{log.StartedAt:F2}] {log.Actor} | Collision | Impact={log.Data["Impact"]:F2} Dur={log.Data["Duration"]:F2} Lock={log.Data["LockDuration"]:F2}";
         }
         return null;
