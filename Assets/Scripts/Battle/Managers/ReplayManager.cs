@@ -125,6 +125,9 @@ public class ReplayManager : MonoBehaviour
     private int lastLogMapCount = 0;
     private float lastChartUpdateTime = 0f;
     private const float CHART_UPDATE_INTERVAL = 0.2f; // Update charts every 2 seconds to minimize frame drops
+    private bool isWaitingForRoundTransition = false;
+    private float roundTransitionTimer = 0f;
+    private const float ROUND_TRANSITION_DELAY = 1f; // 1 second delay before changing rounds
     #endregion
 
     #region Unity methods
@@ -210,6 +213,38 @@ public class ReplayManager : MonoBehaviour
 
         if (!isPlaying || !IsEnable || isBuffer) return;
 
+        // Handle round transition delay
+        if (isWaitingForRoundTransition)
+        {
+            roundTransitionTimer += Time.deltaTime;
+            if (roundTransitionTimer >= ROUND_TRANSITION_DELAY)
+            {
+                isWaitingForRoundTransition = false;
+                roundTransitionTimer = 0f;
+
+                // Perform the actual round/game transition
+                if (currentRoundIndex >= gameLogs[currentGameIndex].Rounds.Count - 1)
+                {
+                    if (currentGameIndex == gameLogs.Count - 1)
+                    {
+                        DisplayCurrentEventInfo(true);
+                        isPlaying = false;
+                        Logger.Info("Replay finished.");
+                        return;
+                    }
+
+                    // Move to next game
+                    currentGameIndex++;
+                    currentRoundIndex = 0;
+                }
+                else
+                    currentRoundIndex++;
+
+                LoadRound(currentGameIndex, currentRoundIndex);
+            }
+            return;
+        }
+
         currentTime += Time.deltaTime * playbackSpeed;
 
         if (TimeSliderUI != null && !isDraggingSlider)
@@ -222,28 +257,9 @@ public class ReplayManager : MonoBehaviour
 
         if (currentTime > currentRoundDuration)
         {
-            currentRoundIndex++;
-
-            if (currentRoundIndex >= gameLogs[currentGameIndex].Rounds.Count)
-            {
-                if (currentGameIndex == gameLogs.Count - 1)
-                {
-                    DisplayCurrentEventInfo();
-                    isPlaying = false;
-                    Logger.Info("Replay finished.");
-                    return;
-                }
-
-                currentGameIndex++;
-
-                var games = gameLogs.Take(currentGameIndex).ToList();
-                metadata.LeftPlayerStats.WinPerGame = games.Select((i) => i.Winner == "Left").Count();
-                metadata.RightPlayerStats.WinPerGame = games.Select((i) => i.Winner == "Right").Count();
-
-                currentRoundIndex = 0;
-            }
-
-            LoadRound(currentGameIndex, currentRoundIndex);
+            // Start the transition delay
+            isWaitingForRoundTransition = true;
+            roundTransitionTimer = 0f;
         }
     }
 
@@ -538,11 +554,15 @@ public class ReplayManager : MonoBehaviour
         Init();
     }
 
-    void DisplayCurrentEventInfo()
+    void DisplayCurrentEventInfo(bool isEnd = false)
     {
         // Only check for events if we have any
         if (currentRoundEvents.Count == 0)
             return;
+
+        List<GameLog> games = gameLogs.Take(currentGameIndex + (isEnd ? 1 : 0)).ToList();
+        metadata.LeftPlayerStats.WinPerGame = games.Count((i) => i.Winner == "Left");
+        metadata.RightPlayerStats.WinPerGame = games.Count((i) => i.Winner == "Right");
 
         GameUI.SetText($"Game - {currentGameIndex + 1}");
         RoundUI.SetText($"Round - {currentRoundIndex + 1}");
@@ -608,6 +628,10 @@ public class ReplayManager : MonoBehaviour
             currentRoundIndex = 0;
         }
 
+        // Reset transition delay when manually navigating
+        isWaitingForRoundTransition = false;
+        roundTransitionTimer = 0f;
+
         LoadRound(currentGameIndex, currentRoundIndex);
         isPlaying = true;
     }
@@ -620,6 +644,10 @@ public class ReplayManager : MonoBehaviour
             currentRoundIndex = 0;
         }
 
+        // Reset transition delay when manually navigating
+        isWaitingForRoundTransition = false;
+        roundTransitionTimer = 0f;
+
         LoadRound(currentGameIndex, currentRoundIndex);
         isPlaying = true;
     }
@@ -628,6 +656,10 @@ public class ReplayManager : MonoBehaviour
     {
         if (currentRoundIndex > 0)
             currentRoundIndex--;
+
+        // Reset transition delay when manually navigating
+        isWaitingForRoundTransition = false;
+        roundTransitionTimer = 0f;
 
         LoadRound(currentGameIndex, currentRoundIndex);
         isPlaying = true;
@@ -639,6 +671,10 @@ public class ReplayManager : MonoBehaviour
             currentRoundIndex++;
         else
             currentRoundIndex = gameLogs[currentGameIndex].Rounds.Count - 1;
+
+        // Reset transition delay when manually navigating
+        isWaitingForRoundTransition = false;
+        roundTransitionTimer = 0f;
 
         LoadRound(currentGameIndex, currentRoundIndex);
         isPlaying = true;
