@@ -1,4 +1,5 @@
 using System;
+using PacingFramework;
 using SumoBot;
 using SumoCore;
 using SumoInput;
@@ -18,8 +19,9 @@ namespace SumoManager
         public GameObject RightLiveCommand;
         #endregion
 
-        #region Runtimep properties
+        #region Runtime properties
         private BotManager botManager;
+        private PacingManager pacingManager;
         #endregion
 
         #region Unity methods
@@ -36,13 +38,13 @@ namespace SumoManager
         void OnEnable()
         {
             botManager = GetComponent<BotManager>();
+            pacingManager = GetComponent<PacingManager>();
         }
         #endregion
 
         #region Input methods
         public void InitializeInput(SumoController controller, InputType type)
         {
-
             GameObject liveCommandObject = controller.Side == PlayerSide.Left ? LeftLiveCommand : RightLiveCommand;
             GameObject UIButtonsObject = controller.Side == PlayerSide.Left ? LeftButton : RightButton;
 
@@ -75,6 +77,9 @@ namespace SumoManager
             InputProvider inputProvider = GetInputProvider(controller, selectedInputObject, type);
             inputProvider.API = api;
             controller.InputProvider = inputProvider;
+
+            // Initialize pacing through PacingManager
+            InitializePacing(controller, type);
 
             // Additional initialization
             switch (type)
@@ -130,14 +135,32 @@ namespace SumoManager
             SumoAPI api;
 
             if (side == PlayerSide.Left)
-            {
                 api = new(leftPlayer, rightPlayer);
-            }
             else
-            {
                 api = new(rightPlayer, leftPlayer);
-            }
+
             return api;
+        }
+
+        private void InitializePacing(SumoController controller, InputType type)
+        {
+            if (pacingManager == null)
+            {
+                Logger.Warning($"[{controller.Side}] PacingManager not found, skipping pacing initialization");
+                return;
+            }
+
+            // Get bot pacing filename if using Script input
+            string botPacingFileName = null;
+            if (botManager?.BotEnabled ?? false)
+            {
+                Bot bot = controller.Side == PlayerSide.Left ? botManager.Left : botManager.Right;
+                botPacingFileName = bot?.PacingFileName;
+            }
+
+            Logger.Info($"[InputManager][InitializePacing][{controller.Side}] {botPacingFileName}");
+
+            pacingManager.Initialize(controller.Side, controller, botPacingFileName);
         }
         #endregion
     }

@@ -64,6 +64,7 @@ namespace SumoManager
 
         public Battle Battle;
         public BotManager BotManager;
+        public PacingManager PacingManager;
         private BattleSimulator simulator;
         #endregion
 
@@ -96,6 +97,7 @@ namespace SumoManager
 
             simulator = GetComponent<BattleSimulator>();
             BotManager = GetComponent<BotManager>();
+            PacingManager = GetComponent<PacingManager>();
 
             if (simulator.enabled)
             {
@@ -149,6 +151,9 @@ namespace SumoManager
 
                     left.OnUpdate();
                     right.OnUpdate();
+
+                    // Tick pacing handlers
+                    PacingManager?.Tick();
                 }
             }
         }
