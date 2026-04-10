@@ -193,7 +193,6 @@ namespace SumoCore
         #region Robot State Methods
         public void Initialize(PlayerSide side, Transform startPosition, PlayerProfile profile)
         {
-            GetComponent<PacingController>().Init();
             Side = side;
             StartPosition = startPosition.position;
             StartRotation = startPosition.rotation;

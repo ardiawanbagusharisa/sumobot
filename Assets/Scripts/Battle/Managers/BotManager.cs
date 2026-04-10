@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using PacingFramework;
 using SumoCore;
 using SumoInput;
 using SumoManager;
@@ -63,7 +62,6 @@ namespace SumoBot
                 finally
                 {
                     leftHandler.IsOnUpdate = false;
-                    leftHandler.PacingController.Tick();
                 }
 
             }
@@ -79,7 +77,6 @@ namespace SumoBot
                 finally
                 {
                     rightHandler.IsOnUpdate = false;
-                    rightHandler.PacingController.Tick();
                 }
             }
 
@@ -140,10 +137,8 @@ namespace SumoBot
                 {
                     InputProvider = controller.InputProvider,
                     Actions = new(),
-                    SkillType = skillType ?? Left.DefaultSkillType,
-                    PacingController = controller.GetComponent<PacingController>()
+                    SkillType = skillType ?? Left.DefaultSkillType
                 };
-                // leftHandler.PacingController.Init();
                 controller.AssignSkill(leftHandler.SkillType);
                 controller.Events[SumoController.OnBounce].Subscribe(OnLeftBounce);
                 Left.Init(leftHandler);
@@ -156,10 +151,8 @@ namespace SumoBot
                 {
                     InputProvider = controller.InputProvider,
                     Actions = new(),
-                    SkillType = skillType ?? Left.DefaultSkillType,
-                    PacingController = controller.GetComponent<PacingController>()
+                    SkillType = skillType ?? Left.DefaultSkillType
                 };
-                // rightHandler.PacingController.Init();
                 controller.AssignSkill(rightHandler.SkillType);
                 controller.Events[SumoController.OnBounce].Subscribe(OnRightBounce);
                 Right.Init(rightHandler);
@@ -234,7 +227,6 @@ namespace SumoBot
         public Queue<ISumoAction> Actions;
         public bool IsOnUpdate = false;
         public SkillType SkillType;
-        public PacingController PacingController;
 
         public void Submit()
         {

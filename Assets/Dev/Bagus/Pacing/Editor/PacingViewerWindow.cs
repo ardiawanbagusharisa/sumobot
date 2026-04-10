@@ -1,5 +1,6 @@
 
 using SumoBot;
+using SumoCore;
 using SumoManager;
 using System;
 using System.Collections.Generic;
@@ -19,7 +20,8 @@ namespace PacingFramework
 		private Vector2 pacingScroll;
 		private Vector2 evaluationScroll;
 
-		private PacingController controller;
+		private PacingHandler handler;
+		private PlayerSide selectedSide = PlayerSide.Left;
 		private PacingTargetConfig targetConfig = null;
 		private string loadedConfigPath = "";
 
@@ -76,9 +78,9 @@ namespace PacingFramework
 
 			DrawSelectionSection();
 
-			if (controller == null)
+			if (handler == null)
 			{
-				EditorGUILayout.HelpBox("Assign a PacingController.", MessageType.Info);
+				EditorGUILayout.HelpBox("Select a side to view pacing data. Make sure battle has started.", MessageType.Info);
 				EditorGUILayout.EndScrollView();
 				return;
 			}
@@ -93,7 +95,7 @@ namespace PacingFramework
 			leftBotScore = BattleManager.Instance.Battle.LeftWinCount.ToString();
 			rightBotScore = BattleManager.Instance.Battle.RightWinCount.ToString();
 
-			GamePacing history = controller.GetHistory();
+			GamePacing history = handler.GetHistory();
 
 			// Draw game and round tabs
 			DrawGameRoundTabs(history);
@@ -136,12 +138,12 @@ namespace PacingFramework
 			DrawCurve(rect, tempo, Color.cyan);
 			DrawCurve(rect, overall, Color.green);
 
-			if (overlayTarget && (targetConfig != null || controller.PacingTarget != null))
+			if (overlayTarget && (targetConfig != null || handler.PacingTarget != null))
 			{
-				// Use targetConfig if it has valid data, otherwise use controller's PacingTarget
+				// Use targetConfig if it has valid data, otherwise use handler's PacingTarget
 				var target = (targetConfig != null && targetConfig.ThreatTargets != null && targetConfig.ThreatTargets.Count > 0)
 					? targetConfig
-					: controller.PacingTarget;
+					: handler.PacingTarget;
 
 				// Resample targets to match actual data count
 				var resampledThreat = ResampleCurve(target.ThreatTargets, threat.Count);
@@ -166,7 +168,7 @@ namespace PacingFramework
 			}
 
 			DrawGlobalConstraintsSection();
-			DrawBotsSection(controller);
+			DrawBotsSection(handler);
 			DrawPacingDetails(selectedPacingItem);
 			DrawSegmentEvaluation(threat, tempo);
 
@@ -284,11 +286,27 @@ namespace PacingFramework
 		{
 			EditorGUILayout.BeginVertical("box");
 
-			controller = (PacingController)EditorGUILayout.ObjectField(
-				"Pacing Controller",
-				controller,
-				typeof(PacingController),
-				true);
+			// Select which side to view
+			EditorGUILayout.BeginHorizontal();
+			EditorGUILayout.LabelField("View Side:", GUILayout.Width(80));
+			selectedSide = (PlayerSide)EditorGUILayout.EnumPopup(selectedSide, GUILayout.Width(100));
+			EditorGUILayout.EndHorizontal();
+
+			// Get handler from PacingManager based on selected side
+			if (Application.isPlaying && PacingManager.Instance != null)
+			{
+				handler = selectedSide == PlayerSide.Left
+					? PacingManager.Instance.LeftPacingHandler
+					: PacingManager.Instance.RightPacingHandler;
+
+				string status = handler != null ? "✓ Active" : "✗ Not initialized";
+				EditorGUILayout.LabelField($"Handler Status: {status}");
+			}
+			else
+			{
+				handler = null;
+				EditorGUILayout.HelpBox("PacingManager not found. Make sure it's attached to BattleManager GameObject.", MessageType.Warning);
+			}
 
 			EditorGUILayout.BeginVertical("box");
 
@@ -645,13 +663,13 @@ namespace PacingFramework
 
 		private void DrawGlobalConstraintsSection()
 		{
-			if (controller == null || controller.PacingTarget == null || controller.PacingTarget.GlobalConstraints == null)
+			if (handler == null || handler.PacingTarget == null || handler.PacingTarget.GlobalConstraints == null)
 				return;
 
 			showGlobalConstraints = EditorGUILayout.Foldout(showGlobalConstraints, "Global Constraints", true);
 			if (!showGlobalConstraints) return;
 
-			var constraints = controller.PacingTarget.GlobalConstraints;
+			var constraints = handler.PacingTarget.GlobalConstraints;
 
 			EditorGUILayout.BeginVertical("box");
 
@@ -676,12 +694,13 @@ namespace PacingFramework
 			EditorGUILayout.EndHorizontal();
 		}
 
-		private void DrawBotsSection(PacingController controller)
+		private void DrawBotsSection(PacingHandler handler)
 		{
 			showBots = EditorGUILayout.Foldout(showBots, "Bot Details", true);
 			if (!showBots) return;
 
 			EditorGUILayout.BeginVertical("box");
+			EditorGUILayout.LabelField($"Viewing: {selectedSide} Side");
 			EditorGUILayout.LabelField($"{leftBotName}  |  Score: {leftBotScore}");
 			EditorGUILayout.LabelField($"{rightBotName}  |  Score: {rightBotScore}");
 
