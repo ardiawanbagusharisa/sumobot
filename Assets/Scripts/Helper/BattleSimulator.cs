@@ -172,6 +172,12 @@ namespace SumoHelper
 
             _configs = GenerateConfigs(Agents);
 
+            // Generate config index mapping for easier re-simulation
+            if (Mode == SimulatorMode.Advanced)
+            {
+                GenerateConfigIndexMapping(_configs, Agents);
+            }
+
             if (Batched)
             {
                 Logger.Info($"[Simulation] Applied Config: StartAt {ConfigStart}, EndAt {ConfigEnd}", true);
@@ -314,11 +320,12 @@ namespace SumoHelper
             LogManager.InitLog(true, folder);
             LogManager.InitBattle(cfg);
 
-            var newBattle = new Battle(Guid.NewGuid().ToString(), cfg.RoundSystem);
-
-            // Apply previous players to new battle
-            newBattle.LeftPlayer = BattleManager.Instance.Battle.LeftPlayer;
-            newBattle.RightPlayer = BattleManager.Instance.Battle.RightPlayer;
+            var newBattle = new Battle(Guid.NewGuid().ToString(), cfg.RoundSystem)
+            {
+                // Apply previous players to new battle
+                LeftPlayer = BattleManager.Instance.Battle.LeftPlayer,
+                RightPlayer = BattleManager.Instance.Battle.RightPlayer
+            };
             BattleManager.Instance.Battle = newBattle;
         }
 
@@ -388,6 +395,92 @@ namespace SumoHelper
             Logger.Info($"Generated configs: {configs.Count}", true);
             Logger.Info($"Game will run {configs.Aggregate(0, (sum, cfg) => sum + cfg.Iteration)} matches in total.", true);
             return configs;
+        }
+
+        private void GenerateConfigIndexMapping(List<BattleConfig> configs, List<Bot> agents)
+        {
+            try
+            {
+                // Create mapping file path inside the checkpoint's batch folder
+                string logsPath = Path.Combine(Application.persistentDataPath, "Logs", "Batch", checkpoint.ID);
+                if (!Directory.Exists(logsPath))
+                {
+                    Directory.CreateDirectory(logsPath);
+                }
+
+                string mappingFilePath = Path.Combine(logsPath, "config_index_mapping.txt");
+
+                using (StreamWriter writer = new StreamWriter(mappingFilePath))
+                {
+                    writer.WriteLine("=============================================================");
+                    writer.WriteLine($"Config Index Mapping - Simulation ID: {checkpoint.ID}");
+                    writer.WriteLine($"Generated: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+                    writer.WriteLine($"Total Configs: {configs.Count}");
+                    writer.WriteLine($"Total Agents: {agents.Count}");
+                    writer.WriteLine("=============================================================");
+                    writer.WriteLine();
+
+                    // Group configs by bot (AgentLeft)
+                    var botGroups = new Dictionary<string, List<(int index, BattleConfig config)>>();
+
+                    for (int i = 0; i < configs.Count; i++)
+                    {
+                        var cfg = configs[i];
+                        string botId = cfg.AgentLeft.ID;
+
+                        if (!botGroups.ContainsKey(botId))
+                        {
+                            botGroups[botId] = new List<(int, BattleConfig)>();
+                        }
+
+                        botGroups[botId].Add((i, cfg));
+                    }
+
+                    // Write bot sections
+                    foreach (var bot in agents)
+                    {
+                        if (!botGroups.ContainsKey(bot.ID))
+                            continue;
+
+                        var botConfigs = botGroups[bot.ID];
+                        int startIndex = botConfigs[0].index;
+                        int endIndex = botConfigs[botConfigs.Count - 1].index;
+
+                        writer.WriteLine($"{bot.ID} (StartIndex: {startIndex}, EndIndex: {endIndex}, Total: {botConfigs.Count})");
+                        writer.WriteLine(new string('-', 80));
+
+                        foreach (var (index, config) in botConfigs)
+                        {
+                            string configName = $"Timer_{config.Timer}__ActInterval_{config.ActionInterval}__Round_{config.RoundSystem}__SkillLeft_{config.SkillSetLeft}__SkillRight_{config.SkillSetRight}";
+                            writer.WriteLine($"  [{index:D5}] {config.AgentLeft.ID}_vs_{config.AgentRight.ID} | {configName}");
+                        }
+
+                        writer.WriteLine();
+                    }
+
+                    writer.WriteLine("=============================================================");
+                    writer.WriteLine("SUMMARY BY BOT");
+                    writer.WriteLine("=============================================================");
+
+                    foreach (var bot in agents)
+                    {
+                        if (!botGroups.ContainsKey(bot.ID))
+                            continue;
+
+                        var botConfigs = botGroups[bot.ID];
+                        int startIndex = botConfigs[0].index;
+                        int endIndex = botConfigs[botConfigs.Count - 1].index;
+
+                        writer.WriteLine($"{bot.ID,-30} StartIndex: {startIndex,5} | EndIndex: {endIndex,5} | Total: {botConfigs.Count,5}");
+                    }
+                }
+
+                Logger.Info($"[Simulation] Config index mapping saved to: {mappingFilePath}", true);
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"[Simulation] Failed to generate config index mapping: {ex.Message}");
+            }
         }
 
 

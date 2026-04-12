@@ -53,9 +53,9 @@ namespace PacingFramework
 		public PacingHandler(SumoController controller, string pacingFileName, float segmentDuration, int collisionWindowSize)
 		{
 			this.controller = controller;
-			this.PacingFileName = pacingFileName;
 			this.segmentDuration = segmentDuration;
 			this.collisionWindowSize = collisionWindowSize;
+			PacingFileName = pacingFileName;
 
 			// Subscribe to events
 			controller.Events[SumoController.OnBounce].Subscribe(OnBounce);
