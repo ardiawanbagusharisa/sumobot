@@ -28,12 +28,6 @@ namespace SumoBot
         /// </summary>
         public abstract string ID { get; }
 
-        // /// <summary>
-        // /// (Experimental) Load PacingConfig to allow pacing evaluation. 
-        // /// Located on Assets/Resources/Pacing/Constraints/{PacingFileName}.json 
-        // /// </summary>
-        public virtual string PacingFileName { get; }
-
         /// <summary>
         /// Type of skill the bot uses (e.g., Boost, Stone).
         /// </summary>
