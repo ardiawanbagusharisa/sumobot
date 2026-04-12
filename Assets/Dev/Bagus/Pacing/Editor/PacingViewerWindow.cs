@@ -141,25 +141,26 @@ namespace PacingFramework
 			if (overlayTarget && (targetConfig != null || handler.PacingTarget != null))
 			{
 				// Use targetConfig if it has valid data, otherwise use handler's PacingTarget
-				var target = (targetConfig != null && targetConfig.ThreatTargets != null && targetConfig.ThreatTargets.Count > 0)
+				targetConfig = (targetConfig != null && targetConfig.ThreatTargets != null && targetConfig.ThreatTargets.Count > 0)
 					? targetConfig
 					: handler.PacingTarget;
 
 				// Resample targets to match actual data count
-				var resampledThreat = ResampleCurve(target.ThreatTargets, threat.Count);
-				var resampledTempo = ResampleCurve(target.TempoTargets, tempo.Count);
+				var resampledThreat = ResampleCurve(targetConfig.ThreatTargets, threat.Count);
+				var resampledTempo = ResampleCurve(targetConfig.TempoTargets, tempo.Count);
 
 				// Draw target overlay (dashed lines)
-				DrawTargetOverlay(rect, target, threat.Count);
+				DrawTargetOverlay(rect, targetConfig, threat.Count);
 
 				// Draw delta bars showing deviation from target
 				DrawDeltaBars(rect, threat, resampledThreat, Color.red);
 				DrawDeltaBars(rect, tempo, resampledTempo, Color.cyan);
 
 				// Draw enhanced legend with stats
-				DrawEnhancedLegend(rect, threat, tempo, overall, target);
+				DrawEnhancedLegend(rect, threat, tempo, overall, targetConfig);
 
 				DrawEvaluation(threat, tempo);
+				DrawSegmentEvaluation(threat, tempo);
 			}
 			else
 			{
@@ -170,8 +171,7 @@ namespace PacingFramework
 			DrawGlobalConstraintsSection();
 			DrawBotsSection(handler);
 			DrawPacingDetails(selectedPacingItem);
-			DrawSegmentEvaluation(threat, tempo);
-
+			
 			EditorGUILayout.EndScrollView();
 		}
 
@@ -330,6 +330,10 @@ namespace PacingFramework
 					string json = System.IO.File.ReadAllText(path);
 					targetConfig = JsonUtility.FromJson<PacingTargetConfig>(json);
 					loadedConfigPath = path;
+
+					Debug.Log($"[PacingViewer] Loaded config from {path}");
+					Debug.Log($"[PacingViewer] ThreatTargets count: {targetConfig?.ThreatTargets?.Count ?? -1}");
+					Debug.Log($"[PacingViewer] TempoTargets count: {targetConfig?.TempoTargets?.Count ?? -1}");
 				}
 			}
 
@@ -860,6 +864,14 @@ namespace PacingFramework
 			var alignedThreat = ResampleCurve(targetConfig.ThreatTargets, actualThreat.Count);
 			var alignedTempo = ResampleCurve(targetConfig.TempoTargets, actualTempo.Count);
 
+			// Safety check: ensure resampled lists match actual lists
+			if (alignedThreat.Count != actualThreat.Count || alignedTempo.Count != actualTempo.Count)
+			{
+				EditorGUILayout.LabelField($"Error: Mismatched segment counts (Threat: {alignedThreat.Count} vs {actualThreat.Count}, Tempo: {alignedTempo.Count} vs {actualTempo.Count})");
+				EditorGUILayout.EndVertical();
+				return;
+			}
+
 			bool useScroll = actualThreat.Count > 10;
 
 			if (useScroll)
@@ -927,6 +939,13 @@ namespace PacingFramework
 			var result = new List<float>();
 			if (source == null || source.Count == 0 || targetCount <= 0)
 				return result;
+
+			// Handle single target count case
+			if (targetCount == 1)
+			{
+				result.Add(source[0]);
+				return result;
+			}
 
 			for (int i = 0; i < targetCount; i++)
 			{
