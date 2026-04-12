@@ -68,6 +68,8 @@ namespace SumoManager
 		/// <param name="botPacingFileName">Optional: Bot's pacing filename (from Bot.PacingFileName). If provided and not empty, overrides PacingFileName.</param>
 		public void Initialize(PlayerSide side, SumoController controller)
 		{
+			if (!enabled) return;
+			
 			if (side == PlayerSide.Left)
 			{
 				// Cleanup existing handler
@@ -155,6 +157,7 @@ namespace SumoManager
 		/// </summary>
 		public void Tick()
 		{
+			if (!enabled) return;
 			LeftPacingHandler?.Tick();
 			RightPacingHandler?.Tick();
 		}
