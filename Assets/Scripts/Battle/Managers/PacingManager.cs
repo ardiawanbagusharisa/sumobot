@@ -66,15 +66,20 @@ namespace SumoManager
 		/// <param name="side">The PlayerSide for the left/right player</param>
 		/// <param name="controller">The SumoController for the player</param>
 		/// <param name="botPacingFileName">Optional: Bot's pacing filename (from Bot.PacingFileName). If provided and not empty, overrides PacingFileName.</param>
-		public void Initialize(PlayerSide side, SumoController controller, string botPacingFileName = null)
+		public void Initialize(PlayerSide side, SumoController controller)
 		{
 			if (side == PlayerSide.Left)
 			{
 				// Cleanup existing handler
 				LeftPacingHandler?.Dispose();
 
-				// Determine which pacing filename to use
-				string finalPacingFileName = ResolvePacingFileName(LeftPacingFileName, botPacingFileName);
+				string finalPacingFileName = LeftPacingFileName;
+
+				if (string.IsNullOrEmpty(finalPacingFileName))
+				{
+					Logger.Warning($"[PacingManager][Initialize][{controller.Side}] LeftPacingFileName is empty, using Default.json");
+					finalPacingFileName = "Default";
+				}
 
 				// Create new handler
 				LeftPacingHandler = new PacingHandler(
@@ -93,8 +98,12 @@ namespace SumoManager
 			{
 				RightPacingHandler?.Dispose();
 
-				// Determine which pacing filename to use
-				string finalPacingFileName = ResolvePacingFileName(RightPacingFileName, botPacingFileName);
+				string finalPacingFileName = RightPacingFileName;
+				if (string.IsNullOrEmpty(finalPacingFileName))
+				{
+					Logger.Warning($"[PacingManager][Initialize][{controller.Side}] LeftPacingFileName is empty, using Default.json");
+					finalPacingFileName = "Default";
+				}
 
 				// Create new handler
 				RightPacingHandler = new PacingHandler(

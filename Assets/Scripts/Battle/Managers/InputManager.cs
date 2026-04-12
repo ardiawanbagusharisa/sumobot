@@ -79,7 +79,7 @@ namespace SumoManager
             controller.InputProvider = inputProvider;
 
             // Initialize pacing through PacingManager
-            InitializePacing(controller, type);
+            InitializePacing(controller);
 
             // Additional initialization
             switch (type)
@@ -142,7 +142,7 @@ namespace SumoManager
             return api;
         }
 
-        private void InitializePacing(SumoController controller, InputType type)
+        private void InitializePacing(SumoController controller)
         {
             if (pacingManager == null)
             {
@@ -150,17 +150,7 @@ namespace SumoManager
                 return;
             }
 
-            // Get bot pacing filename if using Script input
-            string botPacingFileName = null;
-            if (botManager?.BotEnabled ?? false)
-            {
-                Bot bot = controller.Side == PlayerSide.Left ? botManager.Left : botManager.Right;
-                botPacingFileName = bot?.PacingFileName;
-            }
-
-            Logger.Info($"[InputManager][InitializePacing][{controller.Side}] {botPacingFileName}");
-
-            pacingManager.Initialize(controller.Side, controller, botPacingFileName);
+            pacingManager.Initialize(controller.Side, controller);
         }
         #endregion
     }

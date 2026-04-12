@@ -10,7 +10,6 @@ public class AIBot_NN : Bot
 {
     #region Bot Template Properties
     public override string ID => "NN";
-    public override string PacingFileName => "NN_1s";
     public override SkillType DefaultSkillType => SkillType.Boost;
     private SumoAPI api;
     #endregion
