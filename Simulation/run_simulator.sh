@@ -88,7 +88,8 @@ if [[ -z "$3" ]]; then
     # Single config mode
     SINGLE_MODE=true
     CONFIG_INDEX="$2"
-    TIME_SCALE="$4"
+    # Time scale is 5th parameter in single mode
+    TIME_SCALE="$5"
 else
     # Range mode
     if [[ $# -lt 4 ]]; then

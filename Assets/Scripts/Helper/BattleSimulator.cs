@@ -187,7 +187,7 @@ namespace SumoHelper
                 throw new Exception("Timers can't be empty");
             if (Setting.RoundSystem.Length == 0)
                 throw new Exception("RoundSystem can't be empty");
-            if (Setting.SelectedAgents.Length == 1)
+            if (Setting.SelectedAgents.Length <= 1)
                 throw new Exception("SelectedAgents must > 1");
 
             SelectAgents();
@@ -220,6 +220,19 @@ namespace SumoHelper
 
             checkpoint.TotalConfigs = _configs.Count();
 
+            // Validate config index is within bounds
+            if (_configs.Count == 0)
+            {
+                Logger.Error("[Simulation] No configurations generated. Check SimulationSetting and SelectedAgents.");
+                return;
+            }
+
+            if (currentConfigIndex >= _configs.Count)
+            {
+                Logger.Error($"[Simulation] ConfigIndex {currentConfigIndex} is out of range. Total configs: {_configs.Count} (0-{_configs.Count - 1})");
+                return;
+            }
+
             ApplyConfig(_configs[currentConfigIndex]);
 
             BattleManager.Instance.Events[BattleManager.OnBattleChanged].Subscribe(OnBattleStateChanged);
@@ -241,23 +254,35 @@ namespace SumoHelper
         private void SelectAgents()
         {
             var botTypes = BotUtility.GetAllBotInstances();
+            Logger.Info($"[SelectAgents] BotUtility returned {botTypes.Count} bot instances", true);
+
             var loadedAgents = botTypes.ConvertAll(t => t.ID).ToList();
+            Logger.Info($"[SelectAgents] Bot IDs: {string.Join(", ", loadedAgents)}", true);
+            Logger.Info($"[SelectAgents] Setting.SelectedAgents.Length: {Setting.SelectedAgents.Length}", true);
 
             foreach (var botInstance in botTypes)
             {
-                // var botInstance = ScriptableObject.CreateInstance(item) as Bot;
+                Logger.Info($"[SelectAgents] Processing bot: {botInstance?.name ?? "null"}, ID: {botInstance?.ID ?? "null"}", true);
+
                 if (botInstance != null)
                 {
                     if (Setting.SelectedAgents.Length > 0)
                     {
-                        if (Setting.SelectedAgents.Contains(botInstance.ID))
+                        bool contains = Setting.SelectedAgents.Contains(botInstance.ID);
+                        Logger.Info($"[SelectAgents] SelectedAgents contains '{botInstance.ID}': {contains}", true);
+                        if (contains)
                             Agents.Add(botInstance);
                     }
                     else
                     {
                         // If no agents selected, add all agents
+                        Logger.Info($"[SelectAgents] No agents filter, adding {botInstance.ID}", true);
                         Agents.Add(botInstance);
                     }
+                }
+                else
+                {
+                    Logger.Warning($"[SelectAgents] Bot instance is null!");
                 }
             }
             Logger.Info($"[Simulation] Loaded {Agents.Count} agents", true);
