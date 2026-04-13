@@ -3,15 +3,15 @@ REM Sumobot Simulator Runner for Windows
 REM
 REM Usage: run_simulator.bat "C:\path\to\Sumobot.exe" 0 100 20 [timeScale]
 REM   %1 = exe path
-REM   %2 = configStart OR configIndex (if %3 is empty)
-REM   %3 = configEnd (optional, if empty then %2 is treated as configIndex)
-REM   %4 = batch size (required when using range mode)
+REM   %2 = configStart OR configIndex (if %3 is "single")
+REM   %3 = configEnd OR "single" for single mode
+REM   %4 = batch size OR "single" for single mode
 REM   %5 = timeScale (optional)
 
-if "%~2"=="" (
+if "%~1"=="" (
     echo Usage:
     echo   Range Mode:  run_simulator.bat ^<exe_path^> ^<config_start^> ^<config_end^> ^<batch_size^> [time_scale]
-    echo   Single Mode: run_simulator.bat ^<exe_path^> ^<config_index^> "" "" [time_scale]
+    echo   Single Mode: run_simulator.bat ^<exe_path^> ^<config_index^> single single [time_scale]
     echo.
     echo Examples:
     echo   REM Range mode - Process configs 0-99 with batch size 20
@@ -21,17 +21,17 @@ if "%~2"=="" (
     echo   run_simulator.bat "C:\path\to\Sumobot.exe" 0 100 20 5.0
     echo.
     echo   REM Single mode - Run only config 933
-    echo   run_simulator.bat "C:\path\to\Sumobot.exe" 933 "" ""
+    echo   run_simulator.bat "C:\path\to\Sumobot.exe" 933 single single
     echo.
     echo   REM Single mode with 10x time scale
-    echo   run_simulator.bat "C:\path\to\Sumobot.exe" 933 "" "" 10.0
+    echo   run_simulator.bat "C:\path\to\Sumobot.exe" 933 single single 10.0
     echo.
     echo Arguments:
     echo   exe_path      : Path to Sumobot executable
     echo   config_start  : Starting configuration index (range mode)
     echo   config_index  : Single configuration index (single mode)
-    echo   config_end    : Ending configuration index (range mode, empty for single mode)
-    echo   batch_size    : Number of configs to run per instance (range mode only)
+    echo   config_end    : Ending configuration index (range mode) or "single" for single mode
+    echo   batch_size    : Number of configs to run per instance (range mode) or "single" for single mode
     echo   time_scale    : Optional time scale multiplier (e.g., 5.0 for 5x speed)
     exit /b 1
 )
@@ -45,8 +45,8 @@ if not exist "%UNITY_PATH%" (
     exit /b 1
 )
 
-REM Detect mode: if %3 is empty, treat as single config mode
-if "%~3"=="" (
+REM Detect mode: if %3 is "single", treat as single config mode
+if /I "%~3"=="single" (
     REM Single config mode
     set "SINGLE_MODE=true"
     set "CONFIG_INDEX=%~2"
@@ -54,6 +54,14 @@ if "%~3"=="" (
     set "TIME_SCALE=%~5"
 ) else (
     REM Range mode
+    if "%~2"=="" (
+        echo Error: config_start is required
+        exit /b 1
+    )
+    if "%~3"=="" (
+        echo Error: config_end is required for range mode
+        exit /b 1
+    )
     if "%~4"=="" (
         echo Error: batch_size is required for range mode
         exit /b 1
