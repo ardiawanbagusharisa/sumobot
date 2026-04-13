@@ -37,7 +37,6 @@ if "%~2"=="" (
 )
 
 set "UNITY_PATH=%~1"
-set "TIME_SCALE=%~5"
 set "SINGLE_MODE=false"
 
 REM Validate executable exists
@@ -51,7 +50,8 @@ if "%~3"=="" (
     REM Single config mode
     set "SINGLE_MODE=true"
     set "CONFIG_INDEX=%~2"
-    set "TIME_SCALE=%~4"
+    REM Time scale is 5th parameter in single mode
+    set "TIME_SCALE=%~5"
 ) else (
     REM Range mode
     if "%~4"=="" (
@@ -61,6 +61,7 @@ if "%~3"=="" (
     set "CONFIG_START=%~2"
     set "CONFIG_END=%~3"
     set "BATCH=%~4"
+    set "TIME_SCALE=%~5"
 )
 
 REM Validate numeric arguments based on mode

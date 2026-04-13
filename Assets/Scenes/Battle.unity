@@ -2288,43 +2288,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 132205709}
   m_CullTransparentMesh: 1
---- !u!84 &135011049
-RenderTexture:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_Name: 
-  m_ImageContentsHash:
-    serializedVersion: 2
-    Hash: 00000000000000000000000000000000
-  m_IsAlphaChannelOptional: 0
-  serializedVersion: 6
-  m_Width: 1920
-  m_Height: 1080
-  m_AntiAliasing: 1
-  m_MipCount: -1
-  m_DepthStencilFormat: 0
-  m_ColorFormat: 4
-  m_MipMap: 0
-  m_GenerateMips: 0
-  m_SRGB: 1
-  m_UseDynamicScale: 0
-  m_UseDynamicScaleExplicit: 0
-  m_BindMS: 0
-  m_EnableCompatibleFormat: 1
-  m_EnableRandomWrite: 1
-  m_TextureSettings:
-    serializedVersion: 2
-    m_FilterMode: 0
-    m_Aniso: 1
-    m_MipBias: 0
-    m_WrapU: 1
-    m_WrapV: 1
-    m_WrapW: 1
-  m_Dimension: 2
-  m_VolumeDepth: 1
-  m_ShadowSamplingMode: 2
 --- !u!1 &154664836
 GameObject:
   m_ObjectHideFlags: 0
@@ -21404,6 +21367,43 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1819020957}
   m_CullTransparentMesh: 1
+--- !u!84 &1820027066
+RenderTexture:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: 
+  m_ImageContentsHash:
+    serializedVersion: 2
+    Hash: 00000000000000000000000000000000
+  m_IsAlphaChannelOptional: 0
+  serializedVersion: 6
+  m_Width: 1920
+  m_Height: 1080
+  m_AntiAliasing: 1
+  m_MipCount: -1
+  m_DepthStencilFormat: 0
+  m_ColorFormat: 4
+  m_MipMap: 0
+  m_GenerateMips: 0
+  m_SRGB: 1
+  m_UseDynamicScale: 0
+  m_UseDynamicScaleExplicit: 0
+  m_BindMS: 0
+  m_EnableCompatibleFormat: 1
+  m_EnableRandomWrite: 1
+  m_TextureSettings:
+    serializedVersion: 2
+    m_FilterMode: 0
+    m_Aniso: 1
+    m_MipBias: 0
+    m_WrapU: 1
+    m_WrapV: 1
+    m_WrapW: 1
+  m_Dimension: 2
+  m_VolumeDepth: 1
+  m_ShadowSamplingMode: 2
 --- !u!1 &1826193650
 GameObject:
   m_ObjectHideFlags: 0
@@ -22984,7 +22984,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Texture: {fileID: 135011049}
+  m_Texture: {fileID: 1820027066}
   m_UVRect:
     serializedVersion: 2
     x: 0
@@ -26427,19 +26427,20 @@ MonoBehaviour:
     RoundSystem: 010000000300000005000000
     Skills: 0000000001000000
     SelectedAgents:
-    - BT
-    - DQN
-    - GA
-    - MCTS
-    - LLM
-    - MLP
-    - NN
-    - PPO
-    - Primitive
-    - FuzzyLogic
-    - Utility
-    - SLM
-    - FSM
+    - Bot_BT
+    - Bot_DQN
+    - Bot_GA
+    - Bot_MCTS
+    - Bot_LLM_ActionGPT
+    - Bot_ML_Classification
+    - Bot_NN
+    - Bot_PPO
+    - Bot_Primitive
+    - Bot_FuzzyLogic
+    - Bot_UtilityAI
+    - Bot_SLM_ActionGPT
+    - Bot_Template
+    - Bot_FSM
 --- !u!114 &2130233545
 MonoBehaviour:
   m_ObjectHideFlags: 0
