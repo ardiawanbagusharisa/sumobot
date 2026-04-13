@@ -1,0 +1,29 @@
+<linker>
+  <!-- Preserve all Bot types for reflection-based instantiation -->
+  <assembly fullname="Assembly-CSharp" preserve="all">
+    <type fullname="SumoBot.Bot" preserve="all" />
+    <namespace fullname="SumoBot" preserve="all" />
+  </assembly>
+
+  <!-- Preserve Bot implementations -->
+  <assembly fullname="Assembly-CSharp">
+    <!-- Rule-Based Bots -->
+    <type fullname="SumoBot.AIBot_BT" preserve="all" />
+    <type fullname="SumoBot.AIBot_FSM" preserve="all" />
+    <type fullname="SumoBot.AIBot_Primitive" preserve="all" />
+    <type fullname="SumoBot.AIBot_RuleBased_Fuzzy" preserve="all" />
+    <type fullname="SumoBot.AIBot_RuleBased_Utility" preserve="all" />
+
+    <!-- ML Bots -->
+    <type fullname="SumoBot.AIBot_DQN" preserve="all" />
+    <type fullname="SumoBot.AIBot_PPO" preserve="all" />
+    <type fullname="SumoBot.AIBot_ML_Classification" preserve="all" />
+    <type fullname="SumoBot.AIBot_NN" preserve="all" />
+    <type fullname="SumoBot.AIBot_LLM_ActionGPT" preserve="all" />
+    <type fullname="SumoBot.AIBot_SLM_ActionGPT" preserve="all" />
+
+    <!-- EA Bots -->
+    <type fullname="SumoBot.AIBot_EA_GA" preserve="all" />
+    <type fullname="SumoBot.AIBot_EA_MCTS" preserve="all" />
+  </assembly>
+</linker>
