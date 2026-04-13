@@ -61,4 +61,4 @@ mono_crash**.json
 # Ensure important Unity package files are included
 #!Packages/manifest.json
 #!Packages/packages-lock.json
-
+Simulation/*.txt

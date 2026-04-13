@@ -43,19 +43,57 @@ Clone Sumobot with `git clone https://github.com/ardiawanbagusharisa/sumobot.git
 
     Choose the script for your platform (can be found on Sumobot/Simulation/...):
 
+    The scripts support two modes:
+    - **Range Mode**: Run multiple configurations in batches
+    - **Single Mode**: Run a single specific configuration
+
+    #### Range Mode Examples
+
     **Windows**
     ```batch
+    REM Basic - Run configs 0-99 with batch size 20
     run_simulator.bat "C:\path\to\Sumobot.exe" 0 100 20
+
+    REM With time scale - Run configs 0-99 at 5x speed
+    run_simulator.bat "C:\path\to\Sumobot.exe" 0 100 20 5.0
     ```
 
     **macOS**
     ```bash
+    # Basic - Run configs 0-99 with batch size 20
     ./run_simulator.sh "/path/to/Sumobot.app" 0 100 20
+
+    # With time scale - Run configs 0-99 at 5x speed
+    ./run_simulator.sh "/path/to/Sumobot.app" 0 100 20 5.0
     ```
 
     **Linux**
     ```bash
+    # Basic - Run configs 0-99 with batch size 20
     ./run_simulator.sh "/path/to/Sumobot.x86_64" 0 100 20
+
+    # With time scale - Run configs 0-99 at 5x speed
+    ./run_simulator.sh "/path/to/Sumobot.x86_64" 0 100 20 5.0
+    ```
+
+    #### Single Mode Examples
+
+    **Windows**
+    ```batch
+    REM Run only config 933
+    run_simulator.bat "C:\path\to\Sumobot.exe" 933 "" ""
+
+    REM Run config 933 at 10x speed
+    run_simulator.bat "C:\path\to\Sumobot.exe" 933 "" "" 10.0
+    ```
+
+    **macOS/Linux**
+    ```bash
+    # Run only config 933
+    ./run_simulator.sh "/path/to/Sumobot.app" 933 "" ""
+
+    # Run config 933 at 10x speed
+    ./run_simulator.sh "/path/to/Sumobot.app" 933 "" "" 10.0
     ```
 
     Change the /path/to with location of Sumobot executable that have just been built
@@ -74,20 +112,23 @@ Clone Sumobot with `git clone https://github.com/ardiawanbagusharisa/sumobot.git
       - Example: `"/opt/Sumobot/Sumobot.x86_64"`
       - Make sure file has execute permissions: `chmod +x /path/to/executable`
 
-    ##### 2. **config_start** (Starting Index)
-    - First configuration to process
-    - Usually `0` to start from the beginning
-    - Must be less than `config_end`
+    ##### 2. **config_start / config_index**
+    - **Range Mode**: First configuration to process (usually `0` to start from the beginning)
+    - **Single Mode**: Specific configuration index to run
+    - Must be less than `config_end` in range mode
+    - Uses 0-based indexing (first config is 0)
 
-    ##### 3. **config_end** (Ending Index)
+    ##### 3. **config_end** (Range Mode Only)
     - Last configuration to process (exclusive)
     - Example: If you have 100 configs (0-99), use `100` as end
     - Total configs processed: `config_end - config_start`
+    - **Single Mode**: Pass empty string `""`
 
-    ##### 4. **batch_size** (Parallel Instances)
+    ##### 4. **batch_size** (Range Mode Only)
     - Number of configs each simulator instance processes
     - Controls how many parallel instances run
     - **Total instances** = `(config_end - config_start) / batch_size`
+    - **Single Mode**: Pass empty string `""`
 
     **Example:**
     ```bash
@@ -100,6 +141,57 @@ Clone Sumobot with `git clone https://github.com/ardiawanbagusharisa/sumobot.git
     #   Instance 3: configs 40-59
     #   Instance 4: configs 60-79
     #   Instance 5: configs 80-99
+    ```
+
+    ##### 5. **time_scale** (Optional)
+    - Time scale multiplier for simulation speed
+    - Default uses value from Unity inspector (`DefaultTimeScale`)
+    - Examples: `1.0` (normal), `5.0` (5x speed), `10.0` (10x speed)
+    - Available in both Range and Single modes
+
+    #### Advanced Command-Line Parameters
+
+    The simulator supports additional command-line parameters for fine-grained control:
+
+    ##### **--configIndex** (Run Single Configuration)
+    Run a specific configuration by index (0-based indexing).
+
+    **Examples:**
+    ```bash
+    # Run only configuration at index 933
+    "/path/to/Sumobot.app/Contents/MacOS/Sumobot" -batchmode --configIndex=933
+
+    # Run config 0 (first configuration)
+    "/path/to/Sumobot.app/Contents/MacOS/Sumobot" -batchmode --configIndex=0
+
+    # Run config 22463 (if you have 22,464 total configs)
+    "/path/to/Sumobot.app/Contents/MacOS/Sumobot" -batchmode --configIndex=22463
+    ```
+
+    **Note:** This is useful for re-running specific failed or missing configurations identified in `config_index_mapping.txt`.
+
+    ##### **--configTimeScale** (Override Time Scale)
+    Override the default time scale for faster/slower simulation.
+
+    **Examples:**
+    ```bash
+    # Run configs 0-99 at 5x speed
+    "/path/to/Sumobot" -batchmode --configStart=0 --configEnd=100 --configTimeScale=5.0
+
+    # Run single config at 10x speed
+    "/path/to/Sumobot" -batchmode --configIndex=933 --configTimeScale=10.0
+
+    # Run at normal speed (1x)
+    "/path/to/Sumobot" -batchmode --configStart=0 --configEnd=100 --configTimeScale=1.0
+    ```
+
+    **Combined Example:**
+    ```bash
+    # Windows - Run configs 100-199 at 5x speed with custom log file
+    "C:\Path\to\Sumobot.exe" -batchmode --configStart=100 --configEnd=200 --configTimeScale=5.0 -logFile "custom_log.txt"
+
+    # macOS/Linux - Run single config 933 at 10x speed
+    "/Applications/Sumobot.app/Contents/MacOS/Sumobot" -batchmode --configIndex=933 --configTimeScale=10.0 -logFile "config_933.txt"
     ```
 
 8. Additional Setup on Bot_LLM (LLM Agent)
@@ -140,10 +232,12 @@ All scripts use the same 4 parameters:
 
 | Parameter | Type | Description | Example |
 |-----------|------|-------------|---------|
-| **sumobot_path** | String | Path to Sumobot executable or .app bundle | `"C:\Games\Sumobot.exe"` or `"/Applications/Sumobot.app/Contents/MacOS/Sumobot"` |
-| **config_start** | Integer | Starting configuration index (inclusive) | `0` |
-| **config_end** | Integer | Ending configuration index (exclusive) | `100` |
-| **batch_size** | Integer | Number of configurations per parallel instance | `20` |
+| **sumobot_path** | String | Path to Sumobot executable or .app bundle | `"C:\Games\Sumobot.exe"` or `"/Applications/Sumobot.app"` |
+| **config_start** | Integer | Starting configuration index (inclusive, range mode) | `0` |
+| **config_index** | Integer | Single configuration index (single mode) | `933` |
+| **config_end** | Integer / String | Ending configuration index (exclusive, range mode) or `""` (single mode) | `100` or `""` |
+| **batch_size** | Integer / String | Number of configurations per parallel instance (range mode) or `""` (single mode) | `20` or `""` |
+| **time_scale** | Float | Optional time scale multiplier (both modes) | `5.0` |
 
 
 

@@ -45,6 +45,8 @@ namespace SumoHelper
         #region No-Graphic simulation setting
         private static int ConfigStart = -1;
         private static int ConfigEnd = -1;
+        private static int ConfigIndex = -1;
+        private static float ConfigTimeScale = -1f;
         private static bool Batched = false;
         #endregion
 
@@ -113,6 +115,24 @@ namespace SumoHelper
                         ConfigEnd = end;
                 }
 
+                if (arg.StartsWith("--configIndex="))
+                {
+                    string value = arg.Substring("--configIndex=".Length);
+                    if (int.TryParse(value, out int index))
+                    {
+                        ConfigIndex = index;
+                        ConfigStart = index;
+                        ConfigEnd = index + 1;
+                    }
+                }
+
+                if (arg.StartsWith("--configTimeScale="))
+                {
+                    string value = arg.Substring("--configTimeScale=".Length);
+                    if (float.TryParse(value, out float timeScale))
+                        ConfigTimeScale = timeScale;
+                }
+
                 if (arg.StartsWith("--batchLogFile="))
                 {
                     string value = arg.Substring("--batchLogFile=".Length);
@@ -128,7 +148,14 @@ namespace SumoHelper
                 }
             }
 
-            Logger.Info($"[BatchedCommandLineArgs] ConfigStart={ConfigStart}, ConfigEnd={ConfigEnd}", true);
+            if (ConfigIndex > -1)
+            {
+                Logger.Info($"[BatchedCommandLineArgs] ConfigIndex={ConfigIndex}, ConfigTimeScale={ConfigTimeScale}", true);
+            }
+            else
+            {
+                Logger.Info($"[BatchedCommandLineArgs] ConfigStart={ConfigStart}, ConfigEnd={ConfigEnd}, ConfigTimeScale={ConfigTimeScale}", true);
+            }
         }
 
         public void PrepareSimulation()
@@ -262,7 +289,8 @@ namespace SumoHelper
                 yield return new WaitForEndOfFrame();
 
                 // if (!cfg.AgentLeft.UseAsync && !cfg.AgentRight.UseAsync)
-                Time.timeScale = cfg.TimeScale;
+                // Apply ConfigTimeScale override if provided via command line, otherwise use cfg.TimeScale
+                Time.timeScale = ConfigTimeScale > 0 ? ConfigTimeScale : cfg.TimeScale;
 
                 for (int iter = resumeAt; iter < cfg.Iteration; iter++)
                 {
