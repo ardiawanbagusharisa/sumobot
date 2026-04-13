@@ -11,7 +11,7 @@ namespace SumoBot.RuleBased.Primitive
 
         public override SkillType DefaultSkillType => SkillType.Boost;
 
-        public string Name = "Primitive";
+        public string Name = "Bot_Primitive";
         private const float actionInterval = 0.4f;
         private SumoAPI api;
         private BattleState currState;
