@@ -78,18 +78,19 @@ Clone Sumobot with `git clone https://github.com/ardiawanbagusharisa/sumobot.git
 
     #### Single Mode Examples
 
-    **Note**: When running single config mode, you must pass empty strings (`""`) for parameters 3 and 4, and time scale goes in parameter 5.
-
     **Windows**
     ```batch
     REM Run only config 933 (no time scale override)
-    run_simulator.bat "C:\path\to\Sumobot.exe" 933 "" ""
+    run_simulator.bat "C:\path\to\Sumobot.exe" 993 single single
 
     REM Run config 933 at 10x speed
-    run_simulator.bat "C:\path\to\Sumobot.exe" 933 "" "" 10.0
+    run_simulator.bat "C:\path\to\Sumobot.exe" 993 single single 10.0
     ```
 
     **macOS/Linux**
+
+    **Note**: When running single config mode, you must pass empty strings (`""`) for parameters 3 and 4, and time scale goes in parameter 5.
+
     ```bash
     # Run only config 933 (no time scale override)
     ./run_simulator.sh "/path/to/Sumobot.app" 933 "" ""
