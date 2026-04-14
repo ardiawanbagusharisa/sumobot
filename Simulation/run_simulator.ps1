@@ -33,7 +33,7 @@ if ($Param3 -eq "single") {
 }
 
 # Build common args
-$CommonArgs = "-batchmode -logFile nul"
+$CommonArgs = "-batchmode -logFile run_simulator.log"
 
 # Add time scale if provided
 $TimeScaleArg = ""
