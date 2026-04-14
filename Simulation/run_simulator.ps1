@@ -33,7 +33,7 @@ if ($Param3 -eq "single") {
 }
 
 # Build common args
-$CommonArgs = "-batchmode -nographics"
+$CommonArgs = "-batchmode -logFile nul"
 
 # Add time scale if provided
 $TimeScaleArg = ""
