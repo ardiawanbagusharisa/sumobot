@@ -54,7 +54,7 @@ if "!SINGLE_MODE!"=="true" (
     echo.
 
     echo Launching config !CONFIG_INDEX! (log: log_config_!CONFIG_INDEX!.txt)
-    start "Sumobot" "!UNITY_PATH!" !COMMON_ARGS! --configIndex=!CONFIG_INDEX! !TIME_SCALE_ARG! --batchLogFile="log_config_!CONFIG_INDEX!.txt"
+    start "SumobotSim" "!UNITY_PATH!" !COMMON_ARGS! --configIndex=!CONFIG_INDEX! !TIME_SCALE_ARG! --batchLogFile="log_config_!CONFIG_INDEX!.txt"
 
     echo.
     echo Simulation launched successfully!
