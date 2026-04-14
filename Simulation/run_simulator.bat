@@ -38,18 +38,21 @@ set "SCRIPT_DIR=%~dp0"
 set "SCRIPT_DIR=%SCRIPT_DIR:~0,-1%"
 
 echo ========================================
-echo Sumobot Simulator Runner
+echo Sumobot Simulator Runner v0.0.1
 echo ========================================
 echo Simulator: !UNITY_PATH!
 echo.
 
 echo [DEBUG] SINGLE_MODE = "!SINGLE_MODE!"
-if "!SINGLE_MODE!"=="true" (
+
+if /I "!SINGLE_MODE!"=="true" (
     echo [DEBUG] Executing SINGLE mode block
     REM Single config mode
     echo Mode: Single Configuration
     echo Config index: !CONFIG_INDEX!
-    if not "!TIME_SCALE!"=="" (echo Time scale: !TIME_SCALE!x)
+    if not "!TIME_SCALE!"=="" (
+        echo Time scale: !TIME_SCALE!x
+    )
     echo Log directory: !SCRIPT_DIR!
     echo.
 
@@ -59,39 +62,44 @@ if "!SINGLE_MODE!"=="true" (
     echo.
     echo Simulation launched successfully!
     echo Check log file: log_config_!CONFIG_INDEX!.txt
-) else (
-    echo [DEBUG] Executing RANGE mode block
-    REM Range mode
-    echo Mode: Range
-    echo Config range: !CONFIG_START! to !CONFIG_END!
-    echo Batch size: !BATCH!
-    if not "!TIME_SCALE!"=="" (echo Time scale: !TIME_SCALE!x)
-    echo Log directory: !SCRIPT_DIR!
-    echo.
 
-    set current=!CONFIG_START!
-    set batch_count=0
-
-    :loop
-    if !current! GEQ !CONFIG_END! goto done
-
-    set /a next=!current! + !BATCH!
-    if !next! GTR !CONFIG_END! set next=!CONFIG_END!
-
-    set /a batch_count+=1
-
-    echo [Batch !batch_count!] Launching configs !current! to !next! (log: log_!current!-!next!.txt)
-    start "Sumobot" "!UNITY_PATH!" !COMMON_ARGS! --configStart=!current! --configEnd=!next! !TIME_SCALE_ARG! --batchLogFile="log_!current!-!next!.txt"
-
-    set current=!next!
-    goto loop
-
-    :done
-    echo.
-    echo All simulations launched successfully!
-    echo Total batches: !batch_count!
+    goto end
 )
 
+REM If we get here, we're in RANGE mode
+echo [DEBUG] Executing RANGE mode block
+echo Mode: Range
+echo Config range: !CONFIG_START! to !CONFIG_END!
+echo Batch size: !BATCH!
+if not "!TIME_SCALE!"=="" (
+    echo Time scale: !TIME_SCALE!x
+)
+echo Log directory: !SCRIPT_DIR!
+echo.
+
+set current=!CONFIG_START!
+set batch_count=0
+
+:loop
+if !current! GEQ !CONFIG_END! goto done
+
+set /a next=!current! + !BATCH!
+if !next! GTR !CONFIG_END! set next=!CONFIG_END!
+
+set /a batch_count+=1
+
+echo [Batch !batch_count!] Launching configs !current! to !next! (log: log_!current!-!next!.txt)
+start "Sumobot" "!UNITY_PATH!" !COMMON_ARGS! --configStart=!current! --configEnd=!next! !TIME_SCALE_ARG! --batchLogFile="log_!current!-!next!.txt"
+
+set current=!next!
+goto loop
+
+:done
+echo.
+echo All simulations launched successfully!
+echo Total batches: !batch_count!
+
+:end
 echo.
 echo ========================================
 pause
