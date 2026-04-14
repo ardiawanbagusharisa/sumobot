@@ -26,8 +26,8 @@ REM Build arguments
 set COMMON_ARGS=-batchmode -nographics
 
 set "TIME_SCALE_ARG="
-if not "%TIME_SCALE%"=="" (
-    set "TIME_SCALE_ARG=--configTimeScale=%TIME_SCALE%"
+if not "!TIME_SCALE!"=="" (
+    set "TIME_SCALE_ARG=--configTimeScale=!TIME_SCALE!"
 )
 
 REM Get script directory
@@ -37,7 +37,8 @@ set "SCRIPT_DIR=%SCRIPT_DIR:~0,-1%"
 echo ========================================
 echo Sumobot Simulator Runner
 echo ========================================
-echo Simulator: %UNITY_PATH%
+echo Simulator: !UNITY_PATH!
+echo.
 
 if "!SINGLE_MODE!"=="true" (
     REM Single config mode
@@ -82,8 +83,9 @@ if "!SINGLE_MODE!"=="true" (
     :done
     echo.
     echo All simulations launched successfully!
-    echo Total batches: %batch_count%
+    echo Total batches: !batch_count!
 )
 
+echo.
 echo ========================================
 pause
