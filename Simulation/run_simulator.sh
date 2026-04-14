@@ -185,12 +185,10 @@ if [[ "$SINGLE_MODE" = true ]]; then
     echo "Log directory: $SCRIPT_DIR"
     echo ""
 
-    LOGFILE="$SCRIPT_DIR/log_config_${CONFIG_INDEX}.txt"
-
     echo "Launching config $CONFIG_INDEX (log: log_config_${CONFIG_INDEX}.txt)"
 
     # Launch in background
-    "$UNITY_PATH" $COMMON_ARGS --configIndex=$CONFIG_INDEX $TIME_SCALE_ARG -logFile "$LOGFILE" &
+    "$UNITY_PATH" $COMMON_ARGS --configIndex=$CONFIG_INDEX $TIME_SCALE_ARG --batchLogFile="log_config_${CONFIG_INDEX}.txt" &
 
     echo ""
     echo "========================================"
@@ -220,13 +218,12 @@ else
             next=$CONFIG_END
         fi
 
-        LOGFILE="$SCRIPT_DIR/log_${current}-${next}.txt"
         batch_count=$((batch_count + 1))
 
         echo "[Batch $batch_count] Launching configs $current to $next (log: log_${current}-${next}.txt)"
 
         # Launch in background
-        "$UNITY_PATH" $COMMON_ARGS --configStart=$current --configEnd=$next $TIME_SCALE_ARG -logFile "$LOGFILE" &
+        "$UNITY_PATH" $COMMON_ARGS --configStart=$current --configEnd=$next $TIME_SCALE_ARG --batchLogFile="log_${current}-${next}.txt" &
 
         current=$next
     done

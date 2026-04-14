@@ -47,10 +47,8 @@ if "!SINGLE_MODE!"=="true" (
     echo Log directory: !SCRIPT_DIR!
     echo.
 
-    set "LOGFILE=!SCRIPT_DIR!\log_config_!CONFIG_INDEX!.txt"
-
     echo Launching config !CONFIG_INDEX! (log: log_config_!CONFIG_INDEX!.txt)
-    start "Sumobot" "!UNITY_PATH!" !COMMON_ARGS! --configIndex=!CONFIG_INDEX! !TIME_SCALE_ARG! -logFile "!LOGFILE!"
+    start "Sumobot" "!UNITY_PATH!" !COMMON_ARGS! --configIndex=!CONFIG_INDEX! !TIME_SCALE_ARG! --batchLogFile="log_config_!CONFIG_INDEX!.txt"
 
     echo.
     echo Simulation launched successfully!
@@ -73,11 +71,10 @@ if "!SINGLE_MODE!"=="true" (
     set /a next=!current! + !BATCH!
     if !next! GTR !CONFIG_END! set next=!CONFIG_END!
 
-    set "LOGFILE=%SCRIPT_DIR%\log_!current!-!next!.txt"
     set /a batch_count+=1
 
     echo [Batch !batch_count!] Launching configs !current! to !next! (log: log_!current!-!next!.txt)
-    start "Sumobot" "%UNITY_PATH%" %COMMON_ARGS% --configStart=!current! --configEnd=!next! %TIME_SCALE_ARG% -logFile "!LOGFILE!"
+    start "Sumobot" "!UNITY_PATH!" !COMMON_ARGS! --configStart=!current! --configEnd=!next! !TIME_SCALE_ARG! --batchLogFile="log_!current!-!next!.txt"
 
     set current=!next!
     goto loop
