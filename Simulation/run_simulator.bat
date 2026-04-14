@@ -49,7 +49,7 @@ if "!SINGLE_MODE!"=="true" (
     REM Single config mode
     echo Mode: Single Configuration
     echo Config index: !CONFIG_INDEX!
-    if not "!TIME_SCALE!"=="" echo Time scale: !TIME_SCALE!x
+    if not "!TIME_SCALE!"=="" (echo Time scale: !TIME_SCALE!x)
     echo Log directory: !SCRIPT_DIR!
     echo.
 
@@ -65,7 +65,7 @@ if "!SINGLE_MODE!"=="true" (
     echo Mode: Range
     echo Config range: !CONFIG_START! to !CONFIG_END!
     echo Batch size: !BATCH!
-    if not "!TIME_SCALE!"=="" echo Time scale: !TIME_SCALE!x
+    if not "!TIME_SCALE!"=="" (echo Time scale: !TIME_SCALE!x)
     echo Log directory: !SCRIPT_DIR!
     echo.
 
