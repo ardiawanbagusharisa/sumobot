@@ -11,11 +11,14 @@ set "UNITY_PATH=%~1"
 set "SINGLE_MODE=false"
 
 REM Detect mode: if %3 is "single", treat as single config mode
+echo [DEBUG] Param 3: "%~3"
 if /I "%~3"=="single" (
+    echo [DEBUG] Entering SINGLE mode
     set "SINGLE_MODE=true"
     set "CONFIG_INDEX=%~2"
     set "TIME_SCALE=%~5"
 ) else (
+    echo [DEBUG] Entering RANGE mode
     set "CONFIG_START=%~2"
     set "CONFIG_END=%~3"
     set "BATCH=%~4"
@@ -40,7 +43,9 @@ echo ========================================
 echo Simulator: !UNITY_PATH!
 echo.
 
+echo [DEBUG] SINGLE_MODE = "!SINGLE_MODE!"
 if "!SINGLE_MODE!"=="true" (
+    echo [DEBUG] Executing SINGLE mode block
     REM Single config mode
     echo Mode: Single Configuration
     echo Config index: !CONFIG_INDEX!
@@ -55,6 +60,7 @@ if "!SINGLE_MODE!"=="true" (
     echo Simulation launched successfully!
     echo Check log file: log_config_!CONFIG_INDEX!.txt
 ) else (
+    echo [DEBUG] Executing RANGE mode block
     REM Range mode
     echo Mode: Range
     echo Config range: !CONFIG_START! to !CONFIG_END!
