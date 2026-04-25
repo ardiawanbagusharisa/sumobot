@@ -54,7 +54,9 @@ public class ReplayManager : MonoBehaviour
     [Header("Replay UI")]
     public TMP_Text GameUI;
     public TMP_Text RoundUI;
-    public TMP_Text LogUI;
+    // public TMP_Text LogUI;
+    public GameObject LogItemPrefab;
+    public Transform LogContainer;
     public ScrollRect LogScrollRect;
     public Scrollbar LogScrollbar;
     public TMP_Text GameDurationUI;
@@ -116,15 +118,12 @@ public class ReplayManager : MonoBehaviour
     private Rigidbody2D leftRigidBody;
     private Rigidbody2D rightRigidBody;
     private Dictionary<string, string> logMap = new();
+    private Dictionary<string, GameObject> spawnedLogItems = new();
+    private Queue<GameObject> logItemPool = new();
     private bool autoScrollLog = true;
     private Dictionary<string, bool> chartVisibilityMap = new();
     private (float, float) originalBotRotation = new();
     private (Vector2, Vector2) originalBotPosition = new();
-    private bool logMapDirty = false;
-    private StringBuilder logBuilder = new();
-    private int lastLogMapCount = 0;
-    private float lastChartUpdateTime = 0f;
-    private const float CHART_UPDATE_INTERVAL = 0.2f; // Update charts every 2 seconds to minimize frame drops
     private bool isWaitingForRoundTransition = false;
     private float roundTransitionTimer = 0f;
     private const float ROUND_TRANSITION_DELAY = 1f; // 1 second delay before changing rounds
@@ -155,22 +154,25 @@ public class ReplayManager : MonoBehaviour
         if (LoadFromPath)
             LoadGameFromPath();
 #endif
+
     }
 
     void OnEnable()
     {
         if (ScrollEvent != null)
-            ScrollEvent.Events[CustomHandlerListener.OnScrolling].Subscribe(OnDrag);
+            ScrollEvent.Events[CustomHandlerListener.OnDrag].Subscribe(OnDrag);
 
         if (LogScrollbar != null)
         {
             LogScrollbar.onValueChanged.AddListener((val) =>
             {
-                Logger.Info($"LogScrollBar.onValueChanged {val}");
-                if (val < 0.01f)
+                // Re-enable auto-scroll when scrolled to the bottom (where new logs appear)
+                if (val < 0.05f)
                 {
                     autoScrollLog = true;
                 }
+
+                Logger.Info($"LogScrollBar.onValueChanged {val}, autoScrollLog: {autoScrollLog}");
             });
         }
 
@@ -194,7 +196,7 @@ public class ReplayManager : MonoBehaviour
             PlaybackSpeedSlider.onValueChanged.RemoveListener(OnPlayBackSpeedChanged);
 
         if (ScrollEvent != null)
-            ScrollEvent.Events[CustomHandlerListener.OnScrolling].Unsubscribe(OnDrag);
+            ScrollEvent.Events[CustomHandlerListener.OnDrag].Unsubscribe(OnDrag);
 
         if (TimerSlider != null)
         {
@@ -271,61 +273,33 @@ public class ReplayManager : MonoBehaviour
         InterpolateBot(leftRigidBody, leftEvents, ref leftEventIndex);
         InterpolateBot(rightRigidBody, rightEvents, ref rightEventIndex);
 
-        CollectEventLogs();
-
-        if (ChartContainer != null && ChartContainer.activeSelf && isPlaying &&
-            Time.time - lastChartUpdateTime >= CHART_UPDATE_INTERVAL)
-        {
-            ShowCharts();
-            lastChartUpdateTime = Time.time;
-        }
     }
 
     void CollectEventLogs()
     {
-        // Collect logs for left bot
-        if (leftEventIndex < leftEvents.Count)
-        {
-            EventLog currentEvent = leftEvents[leftEventIndex];
-            CollectEventLog(currentEvent);
-        }
+        if (!isPlaying || !IsEnable || isBuffer)
+            return;
 
-        // Collect logs for right bot
-        if (rightEventIndex < rightEvents.Count)
-        {
-            EventLog currentEvent = rightEvents[rightEventIndex];
-            CollectEventLog(currentEvent);
-        }
-    }
+        var lastEvents = currentRoundEvents.TakeWhile((x) => x.UpdatedAt < currentTime);
 
-    void CollectEventLog(EventLog currentEvent)
-    {
-        var key = currentEvent.GetKey();
-
-        if (currentEvent.Category == "Action")
+        foreach (var eventLog in lastEvents)
         {
-            if (currentEvent.Actor == "Left")
+            var key = eventLog.GetKey();
+
+            if (eventLog.Actor == "Left")
             {
-                if (!leftActionMap.ContainsKey(key))
-                    leftActionMap.Add(key, currentEvent);
+                if (eventLog.Category == "Action")
+                    leftActionMap.TryAdd(eventLog.GetKey(), eventLog);
             }
-            else if (currentEvent.Actor == "Right")
+            else if (eventLog.Actor == "Right")
             {
-                if (!rightActionMap.ContainsKey(key))
-                    rightActionMap.Add(key, currentEvent);
+                if (eventLog.Category == "Action")
+                    rightActionMap.TryAdd(eventLog.GetKey(), eventLog);
             }
 
-        }
-
-        key = currentEvent.GetKey(withUpdate: false);
-        if (!logMap.ContainsKey(key))
-        {
-            var log = currentEvent.GetLogText();
+            var log = eventLog.GetLogText();
             if (log != null)
-            {
-                logMap.Add(key, log);
-                logMapDirty = true;
-            }
+                logMap.TryAdd(key, eventLog.GetLogText());
         }
     }
 
@@ -583,38 +557,52 @@ public class ReplayManager : MonoBehaviour
         RightWinCount?.SetText(metadata.RightPlayerStats.WinPerGame.ToString());
         RightActionTaken?.SetText(metadata.RightPlayerStats.ActionTaken.ToString());
 
-        // Only update log text if logMap has changed 
-        if (logMapDirty || logMap.Count != lastLogMapCount)
-        {
-            UpdateLogUI();
-            lastLogMapCount = logMap.Count;
-            logMapDirty = false;
-        }
+        if (!LogsPanel.activeSelf) return;
 
+        UpdateLogUI();
+
+        // Only auto-scroll when new logs are actually added
         if (autoScrollLog)
         {
-            LogScrollRect.verticalNormalizedPosition = 0f;
-            Canvas.ForceUpdateCanvases();
+            // Scroll to bottom since new logs are appended at the end
+            LogScrollRect.verticalNormalizedPosition = 0.0f;
         }
     }
 
     void UpdateLogUI()
     {
-        if (LogUI == null || logMap.Count == 0)
+        if (LogItemPrefab == null || LogContainer == null || logMap.Count == 0)
             return;
 
-        logBuilder.Clear();
-        bool first = true;
-
-        foreach (var log in logMap.Values)
+        // Spawn new log items for any logs not yet spawned
+        foreach (var kvp in logMap)
         {
-            if (!first)
-                logBuilder.Append('\n');
-            logBuilder.Append(log);
-            first = false;
-        }
+            if (!spawnedLogItems.ContainsKey(kvp.Key))
+            {
+                GameObject logItem;
 
-        LogUI.text = logBuilder.ToString();
+                // Try to get from pool first, otherwise instantiate new
+                if (logItemPool.Count > 0)
+                {
+                    logItem = logItemPool.Dequeue();
+                    logItem.SetActive(true);
+                    // Move to end when reusing from pool
+                    logItem.transform.SetAsLastSibling();
+                }
+                else
+                {
+                    logItem = Instantiate(LogItemPrefab, LogContainer);
+                    // New items are automatically added as last sibling
+                }
+
+                TMP_Text textComponent = logItem.GetComponent<TMP_Text>();
+                if (textComponent != null)
+                {
+                    textComponent.text = kvp.Value;
+                }
+                spawnedLogItems.Add(kvp.Key, logItem);
+            }
+        }
     }
     #endregion
 
@@ -682,6 +670,16 @@ public class ReplayManager : MonoBehaviour
 
     void OnTimeSliderChanged(float value)
     {
+        if (isPlaying)
+        {
+            CollectEventLogs();
+
+            if (ChartContainer != null && ChartContainer.activeSelf && isPlaying)
+            {
+                ShowCharts();
+            }
+        }
+
         if (isDraggingSlider)
         {
             currentTime = value;
@@ -704,7 +702,17 @@ public class ReplayManager : MonoBehaviour
         leftActionMap.Clear();
         rightActionMap.Clear();
         logMap.Clear();
-        lastChartUpdateTime = 0f;
+
+        // Return spawned log items to pool instead of destroying
+        foreach (var logItem in spawnedLogItems.Values)
+        {
+            if (logItem != null)
+            {
+                logItem.SetActive(false);
+                logItemPool.Enqueue(logItem);
+            }
+        }
+        spawnedLogItems.Clear();
 
         if (Chart != null)
         {
@@ -730,12 +738,14 @@ public class ReplayManager : MonoBehaviour
         isDraggingSlider = false;
         isBuffer = true;
 
-        ResetReplay(includeEvents: false);
+        ResetReplay(includeEvents: false, includePlayer: true);
 
         currentTime = TimeSliderUI.value;
 
-        IEnumerable<EventLog> lastLeft = leftEvents.TakeWhile((x) => x.UpdatedAt < currentTime);
-        IEnumerable<EventLog> lastRight = rightEvents.TakeWhile((x) => x.UpdatedAt < currentTime);
+        IEnumerable<EventLog> lastLeft = leftEvents.Where((x) => x.UpdatedAt < currentTime);
+        IEnumerable<EventLog> lastRight = rightEvents.Where((x) => x.UpdatedAt < currentTime);
+
+        Logger.Info($"[ReplayManager][OnTimeSliderPointerUp] Time {currentTime}, Left Events: {lastLeft.Count()}, Right Events: {lastRight.Count()}, TotalLeft Events: {leftEvents.Count()}, TotalRight Events: {rightEvents.Count()}");
 
         if (lastLeft.Count() > 0 || lastRight.Count() > 0)
         {
@@ -750,36 +760,6 @@ public class ReplayManager : MonoBehaviour
             leftActionMap.Clear();
             rightActionMap.Clear();
             logMap.Clear();
-
-            foreach (var eventLog in lastLeft)
-            {
-                if (eventLog.State != PeriodicState.End)
-                {
-                    var key = eventLog.GetKey();
-
-                    if (eventLog.Category == "Action")
-                        leftActionMap.Add(eventLog.GetKey(), eventLog);
-
-                    var log = eventLog.GetLogText();
-                    if (log != null)
-                        logMap.TryAdd(key, eventLog.GetLogText());
-                }
-            }
-
-            foreach (var eventLog in lastRight)
-            {
-                if (eventLog.State != PeriodicState.End)
-                {
-                    var key = eventLog.GetKey();
-
-                    if (eventLog.Category == "Action")
-                        rightActionMap.Add(eventLog.GetKey(), eventLog);
-
-                    var log = eventLog.GetLogText();
-                    if (log != null)
-                        logMap.TryAdd(key, eventLog.GetLogText());
-                }
-            }
         }
 
         InterpolateBot(leftRigidBody, leftEvents, ref leftEventIndex);
@@ -1036,22 +1016,23 @@ public class ReplayManager : MonoBehaviour
     }
     #endregion
 
-    public void OnDrag(EventParameter param)
+    public void OnDrag(EventParameter _)
     {
+        Logger.Info("OnDrag");
         autoScrollLog = false;
     }
 
     public void BackToBattle()
     {
-        SFXManager.Instance.Play2D("ui_accept");
-        GameManager.Instance.Replay_BackToBattle();
+        SFXManager.Instance?.Play2D("ui_accept");
+        GameManager.Instance?.Replay_BackToBattle();
     }
 
     public void ToggleDetails()
     {
         if (DetailsPanel != null)
         {
-            SFXManager.Instance.Play2D("ui_accept");
+            SFXManager.Instance?.Play2D("ui_accept");
             bool isActive = DetailsPanel.activeSelf;
             DetailsPanel.SetActive(!isActive);
             FoldDetails.gameObject.SetActive(!isActive);
@@ -1063,7 +1044,7 @@ public class ReplayManager : MonoBehaviour
     {
         if (ChartsPanel != null)
         {
-            SFXManager.Instance.Play2D("ui_accept");
+            SFXManager.Instance?.Play2D("ui_accept");
             bool isActive = ChartsPanel.activeSelf;
             ChartsPanel.SetActive(!isActive);
             FoldCharts.gameObject.SetActive(!isActive);
@@ -1075,7 +1056,7 @@ public class ReplayManager : MonoBehaviour
     {
         if (LogsPanel != null)
         {
-            SFXManager.Instance.Play2D("ui_accept");
+            SFXManager.Instance?.Play2D("ui_accept");
             bool isActive = LogsPanel.activeSelf;
             LogsPanel.SetActive(!isActive);
             FoldLogs.gameObject.SetActive(!isActive);
