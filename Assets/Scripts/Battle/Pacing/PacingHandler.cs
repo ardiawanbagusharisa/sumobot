@@ -29,6 +29,9 @@ namespace PacingFramework
 
 		public PacingTargetConfig PacingTarget;
 
+		// Enable/disable action filtering (toggleable for testing)
+		public bool EnableActionFiltering = true;
+
 		private int tickCount;
 
 		private SegmentPacing currentSegmentPacing;
@@ -39,6 +42,21 @@ namespace PacingFramework
 
 		// Filtered Actions Storage (Testing)
 		private List<ISumoAction> filteredActions = new List<ISumoAction>();
+
+		// Fixed action pool (inspired by MCTS approach for reliable candidate actions)
+		private static readonly List<ISumoAction> BaseActionPool = new List<ISumoAction>
+		{
+			new TurnAction(InputType.Script, ActionType.TurnLeft, 0.1f),
+			new TurnAction(InputType.Script, ActionType.TurnRight, 0.1f),
+			new TurnAction(InputType.Script, ActionType.TurnLeft, 0.3f),
+			new TurnAction(InputType.Script, ActionType.TurnRight, 0.3f),
+			new AccelerateAction(InputType.Script, 0.1f),
+			new AccelerateAction(InputType.Script, 0.3f),
+			new AccelerateAction(InputType.Script, 0.5f),
+			new DashAction(InputType.Script),
+			new SkillAction(InputType.Script, ActionType.SkillBoost),
+			new SkillAction(InputType.Script, ActionType.SkillStone),
+		};
 
 		// Progressive improvement tracking
 		private List<float> improvementHistory = new List<float>();
@@ -60,6 +78,7 @@ namespace PacingFramework
 			// Subscribe to events
 			controller.Events[SumoController.OnBounce].Subscribe(OnBounce);
 			controller.Events[SumoController.OnAction].Subscribe(OnAction);
+			controller.Events[SumoController.OnBeforeActionsQueued].Subscribe(OnBeforeActionsQueued);
 
 			// Load pacing config
 			LoadPacingConfig();
@@ -86,6 +105,7 @@ namespace PacingFramework
 		{
 			controller.Events[SumoController.OnBounce].Unsubscribe(OnBounce);
 			controller.Events[SumoController.OnAction].Unsubscribe(OnAction);
+			controller.Events[SumoController.OnBeforeActionsQueued].Unsubscribe(OnBeforeActionsQueued);
 		}
 
 		// ================================
@@ -126,15 +146,35 @@ namespace PacingFramework
 			var (filtThreat, filtTempo) = CalculatePredictedPacing(filteredActions, eval);
 
 			// Calculate improvements and percentage closer to target
-			float origThreatDelta = Mathf.Abs(eval.ThreatDelta);
-			float filtThreatDelta = Mathf.Abs(filtThreat - eval.TargetThreat);
-			float threatImprovement = origThreatDelta - filtThreatDelta;
-			float threatClosenessPercent = origThreatDelta > 0 ? (threatImprovement / origThreatDelta) * 100f : 0f;
+			// Use CURRENT predictions (not past eval) for fair comparison
+			float origThreatDelta = origThreat - eval.TargetThreat; // Current original prediction delta
+			float filtThreatDelta = filtThreat - eval.TargetThreat; // Current filtered prediction delta
 
-			float origTempoDelta = Mathf.Abs(eval.TempoDelta);
-			float filtTempoDelta = Mathf.Abs(filtTempo - eval.TargetTempo);
-			float tempoImprovement = origTempoDelta - filtTempoDelta;
-			float tempoClosenessPercent = origTempoDelta > 0 ? (tempoImprovement / origTempoDelta) * 100f : 0f;
+			float origTempoDelta = origTempo - eval.TargetTempo; // Current original prediction delta
+			float filtTempoDelta = filtTempo - eval.TargetTempo; // Current filtered prediction delta
+
+			// Calculate absolute distances for improvement measurement
+			float origThreatDistance = Mathf.Abs(origThreatDelta);
+			float filtThreatDistance = Mathf.Abs(filtThreatDelta);
+			float origTempoDistance = Mathf.Abs(origTempoDelta);
+			float filtTempoDistance = Mathf.Abs(filtTempoDelta);
+
+			// Calculate improvement (positive = better, negative = worse)
+			float threatImprovement = origThreatDistance - filtThreatDistance;
+			float tempoImprovement = origTempoDistance - filtTempoDistance;
+
+			// Calculate closeness percentage
+			float threatClosenessPercent = 0f;
+			if (origThreatDistance > 0.001f) // Avoid division by zero
+			{
+				threatClosenessPercent = (threatImprovement / origThreatDistance) * 100f;
+			}
+
+			float tempoClosenessPercent = 0f;
+			if (origTempoDistance > 0.001f)
+			{
+				tempoClosenessPercent = (tempoImprovement / origTempoDistance) * 100f;
+			}
 
 			// Calculate averages
 			float origAverage = (origThreat + origTempo) / 2f;
@@ -163,7 +203,7 @@ namespace PacingFramework
 
 
 			// Multi-line log with all info including progressive average
-			Logger.Info($"[{controller.Side}] PACING FILTER\n\nOriginal:\t\tThreat={origThreat:F3}({eval.ThreatDelta:F3}), Tempo={origTempo:F3}({eval.TempoDelta:F3}), Avg={origAverage:F3}\nFiltered:\t\tThreat={filtThreat:F3}({filtThreatDelta:F3}), Tempo={filtTempo:F3}({filtTempoDelta:F3}), Avg={filtAverage:F3}\nTarget:\t\tThreat={eval.TargetThreat:F3}, Tempo={eval.TargetTempo:F3}, Avg={targetAverage:F3}\nImprove:\t\tThreat={threatImprovement:F3} ({threatClosenessPercent:F1}%), Tempo={tempoImprovement:F3} ({tempoClosenessPercent:F1}%), Closeness={overallClosenessPercent:F1}%\nAct Changed:\t{changedCount}/{currentGameplayData.Actions.Count} ({changedCount * 100f / currentGameplayData.Actions.Count:F0}%)\nProgressive Avg=\t{progressiveAvgCloseness:F1}% (n={evalCount})");
+			Logger.Info($"[{controller.Side}] PACING FILTER\n\nPast Eval:\t\tThreat Δ={eval.ThreatDelta:F3}, Tempo Δ={eval.TempoDelta:F3}\nOriginal:\t\tThreat={origThreat:F3}({origThreatDelta:+0.000;-0.000;0.000}), Tempo={origTempo:F3}({origTempoDelta:+0.000;-0.000;0.000}), Avg={origAverage:F3}\nFiltered:\t\tThreat={filtThreat:F3}({filtThreatDelta:+0.000;-0.000;0.000}), Tempo={filtTempo:F3}({filtTempoDelta:+0.000;-0.000;0.000}), Avg={filtAverage:F3}\nTarget:\t\t\tThreat={eval.TargetThreat:F3}, Tempo={eval.TargetTempo:F3}, Avg={targetAverage:F3}\nImprove:\t\tThreat={threatImprovement:F3} ({threatClosenessPercent:F1}%), Tempo={tempoImprovement:F3} ({tempoClosenessPercent:F1}%), Closeness={overallClosenessPercent:F1}%\nAct Changed:\t\t{changedCount}/{currentGameplayData.Actions.Count} ({changedCount * 100f / currentGameplayData.Actions.Count:F0}%)\nProgressive Avg=\t{progressiveAvgCloseness:F1}% (n={evalCount})");
 		}
 
 		/// <summary>
@@ -291,6 +331,42 @@ namespace PacingFramework
 			}
 		}
 
+		/// <summary>
+		/// Called before actions are queued to allow synchronous filtering.
+		/// Evaluates pacing and provides filtered actions if filtering is enabled.
+		/// </summary>
+		private void OnBeforeActionsQueued(EventParameter parameter)
+		{
+			// Skip if filtering is disabled
+			if (!EnableActionFiltering)
+				return;
+
+			// Skip if no actions to filter
+			if (parameter.ActionList == null || parameter.ActionList.Count == 0)
+				return;
+
+			// Perform synchronous evaluation
+			PacingEvaluation eval = EvaluatePacing();
+			if (eval == null)
+			{
+				// No evaluation available yet (e.g., first segment), use original actions
+				return;
+			}
+
+			// Filter the actions
+			List<ISumoAction> filtered = EvaluateAction(parameter.ActionList, eval);
+
+			// Provide filtered actions back to the controller
+			if (filtered != null && filtered.Count > 0)
+			{
+				parameter.FilteredActionList = filtered;
+
+				// Log the filtering result for debugging
+				Logger.Info($"[{controller.Side}] ACTION FILTER: Original={parameter.ActionList.Count}, Filtered={filtered.Count}, " +
+					$"ThreatDelta={eval.ThreatDelta:F3}, TempoDelta={eval.TempoDelta:F3}");
+			}
+		}
+
 		// ================================
 		// Evaluation methods
 		// ================================
@@ -408,6 +484,11 @@ namespace PacingFramework
 
 			var pacedActions = new List<ISumoAction>();
 
+			// Calculate current predicted pacing to determine what needs fixing
+			var (predictedThreat, predictedTempo) = CalculatePredictedPacing(originalActions, evaluation);
+			float currentThreatDelta = predictedThreat - evaluation.TargetThreat;
+			float currentTempoDelta = predictedTempo - evaluation.TargetTempo;
+
 			// Track simulated state as we build the action sequence
 			var simulatedActions = new List<ISumoAction>();
 
@@ -418,16 +499,16 @@ namespace PacingFramework
 				float bestScore = float.MaxValue;
 
 				// Generate candidates dynamically based on current state and pacing needs
-				var candidateActions = GenerateCandidateActions(evaluation, simulatedActions);
+				var candidateActions = GenerateCandidateActions(evaluation, simulatedActions, currentThreatDelta, currentTempoDelta);
 
 				// Evaluate original action
-				float originalScore = ScoreAction(originalAction, simulatedActions, evaluation);
+				float originalScore = ScoreAction(originalAction, simulatedActions, evaluation, currentThreatDelta, currentTempoDelta);
 				bestScore = originalScore;
 
 				// Try alternative actions
 				foreach (var candidateAction in candidateActions)
 				{
-					float score = ScoreAction(candidateAction, simulatedActions, evaluation);
+					float score = ScoreAction(candidateAction, simulatedActions, evaluation, currentThreatDelta, currentTempoDelta);
 
 					if (score < bestScore)
 					{
@@ -445,123 +526,145 @@ namespace PacingFramework
 		}
 
 		/// <summary>
-		/// Generates a set of candidate actions optimized for the current pacing target.
-		/// Calculates durations based on desired distance/angle changes using API measurements.
+		/// Generates a set of candidate actions using a fixed pool with context-based filtering.
+		/// Uses MCTS-inspired approach with proven action durations and validation checks.
 		/// </summary>
-		private List<ISumoAction> GenerateCandidateActions(PacingEvaluation evaluation, List<ISumoAction> previousActions)
+		private List<ISumoAction> GenerateCandidateActions(PacingEvaluation evaluation, List<ISumoAction> previousActions, float currentThreatDelta, float currentTempoDelta)
 		{
 			var candidates = new List<ISumoAction>();
 			SumoAPI api = controller.InputProvider.API;
-			SumoBotAPI myState = api.MyRobot;
 
 			// Get current simulated state
 			var (currentPos, currentRot) = previousActions.Count > 0
 				? api.Simulate(previousActions)
-				: (myState.Position, myState.Rotation);
+				: (api.MyRobot.Position, api.MyRobot.Rotation);
 
-			// Calculate current state metrics using API
-			float angleToEnemy = api.Angle(currentPos, currentRot, api.EnemyRobot.Position);
-			Vector2 distanceVector = api.Distance(currentPos, api.EnemyRobot.Position);
-			float distanceToEnemy = distanceVector.magnitude;
+			// Calculate current angle to enemy (normalized 0-1)
+			float angleToEnemy = api.Angle(currentPos, currentRot, api.EnemyRobot.Position, normalized: true);
 
-			// Determine what we need based on pacing deltas
-			bool needHigherThreat = evaluation.ThreatDelta < 0;
-			bool needHigherTempo = evaluation.TempoDelta < 0;
+			// Determine what we need based on CURRENT predicted deltas (not past)
+			bool needHigherThreat = currentThreatDelta < 0;
+			bool needHigherTempo = currentTempoDelta < 0;
 
-			// Generate Turn actions based on angle needs
-			if (needHigherThreat)
+			// Filter base pool by context and validation
+			foreach (var action in BaseActionPool)
 			{
-				// Higher threat = better angle alignment (face enemy)
-				// Calculate exact turn duration to face enemy
-				float angleInDur = Mathf.Abs(angleToEnemy) / myState.RotateSpeed;
-				angleInDur = Mathf.Clamp(angleInDur, ISumoAction.MinDuration, 1.0f);
+				bool shouldInclude = true;
 
-				// Determine turn direction
-				ActionType turnDirection = angleToEnemy > 0 ? ActionType.TurnLeft : ActionType.TurnRight;
+				// CRITICAL: Validate that action doesn't go out of bounds (hard constraint)
+				var testActions = new List<ISumoAction>(previousActions) { action };
+				var (testPos, testRot) = api.Simulate(testActions);
+				Vector2 distanceFromArena = api.Distance(targetPos: api.BattleInfo.ArenaPosition, oriPos: testPos);
+				if (distanceFromArena.magnitude >= api.BattleInfo.ArenaRadius)
+				{
+					// HARD REJECT: This action would take us out of bounds
+					continue; // Skip this action entirely
+				}
 
-				candidates.Add(new TurnAction(InputType.Script, turnDirection, angleInDur)); // Exact turn to face
-				candidates.Add(new TurnAction(InputType.Script, turnDirection, angleInDur * 0.5f)); // Partial turn
-				candidates.Add(new TurnAction(InputType.Script, turnDirection, angleInDur * 0.25f)); // Quarter turn
+				// Validate skills - only include if executable
+				if (action.Type == ActionType.SkillBoost || action.Type == ActionType.SkillStone)
+				{
+					if (!api.CanExecute(action))
+					{
+						shouldInclude = false;
+					}
+					else
+					{
+						// Only include boost/dash for aggressive play
+						if (action.Type == ActionType.SkillBoost && !needHigherThreat && !needHigherTempo)
+							shouldInclude = false;
+						// Only include stone for defensive play
+						if (action.Type == ActionType.SkillStone && (needHigherThreat || needHigherTempo))
+							shouldInclude = false;
+					}
+				}
+
+				// Validate dash - skip if on cooldown
+				if (action.Type == ActionType.Dash)
+				{
+					if (api.MyRobot.IsDashOnCooldown)
+					{
+						shouldInclude = false;
+					}
+					else if (!needHigherThreat && !needHigherTempo)
+					{
+						// Only include dash for aggressive play
+						shouldInclude = false;
+					}
+				}
+
+				// Filter turns based on threat needs
+				if (action is TurnAction turn)
+				{
+					// Determine if this turn helps or hurts angle alignment
+					bool turnTowardsEnemy = TurnHelpsAngle(turn.Type, angleToEnemy);
+
+					if (needHigherThreat && !turnTowardsEnemy)
+					{
+						// Skip turns that worsen angle when we need threat
+						shouldInclude = false;
+					}
+					else if (!needHigherThreat && turnTowardsEnemy)
+					{
+						// Skip turns that improve angle when we don't need threat
+						shouldInclude = false;
+					}
+				}
+
+				// Filter aggressive accelerate actions based on tempo needs
+				if (action is AccelerateAction accel && accel.Duration >= 0.3f)
+				{
+					if (!needHigherTempo)
+					{
+						// Skip long accelerates when we don't need tempo
+						shouldInclude = false;
+					}
+				}
+
+				if (shouldInclude)
+					candidates.Add(action);
 			}
-			else
+
+			// Always include at least one fallback option
+			if (candidates.Count == 0)
 			{
-				// Lower threat = turn away or maintain poor angle
-				ActionType turnAwayDirection = angleToEnemy > 0 ? ActionType.TurnRight : ActionType.TurnLeft;
-
-				// Generate turns that worsen angle
-				float turnAwayDuration = Mathf.Abs(angleToEnemy) / myState.RotateSpeed;
-				turnAwayDuration = Mathf.Clamp(turnAwayDuration * 0.5f, ISumoAction.MinDuration, 0.5f);
-
-				candidates.Add(new TurnAction(InputType.Script, turnAwayDirection, turnAwayDuration));
-				candidates.Add(new TurnAction(InputType.Script, turnAwayDirection, ISumoAction.MinDuration));
-			}
-
-			// Generate Accelerate actions with calculated durations based on distance
-			if (needHigherTempo)
-			{
-				// Higher tempo = get closer to enemy
-				// Calculate duration to close distance significantly
-				float closeDistanceDur = CalculateAccelerateDuration(distanceToEnemy * 0.3f, myState.MoveSpeed); // Close 30% gap
-				float aggressiveDur = CalculateAccelerateDuration(distanceToEnemy * 0.5f, myState.MoveSpeed); // Close 50% gap
-
-				candidates.Add(new AccelerateAction(InputType.Script, duration: closeDistanceDur));
-				candidates.Add(new AccelerateAction(InputType.Script, duration: aggressiveDur));
-			}
-			else
-			{
-				// Lower tempo = minimal movement
-				float minimalDur = CalculateAccelerateDuration(distanceToEnemy * 0.05f, myState.MoveSpeed); // Move only 5%
-				float moderateDur = CalculateAccelerateDuration(distanceToEnemy * 0.1f, myState.MoveSpeed); // Move 10%
-
-				candidates.Add(new AccelerateAction(InputType.Script, duration: minimalDur));
-				candidates.Add(new AccelerateAction(InputType.Script, duration: moderateDur));
-			}
-
-			// Always include minimal actions as fallback
-			candidates.Add(new AccelerateAction(InputType.Script, duration: ISumoAction.MinDuration));
-			candidates.Add(new TurnAction(InputType.Script, ActionType.TurnLeft, ISumoAction.MinDuration));
-			candidates.Add(new TurnAction(InputType.Script, ActionType.TurnRight, ISumoAction.MinDuration));
-
-			// Add abilities based on need
-			if (needHigherThreat || needHigherTempo)
-			{
-				candidates.Add(new DashAction(InputType.Script)); // High threat & tempo
-				candidates.Add(new SkillAction(InputType.Script, ActionType.SkillBoost)); // High threat & tempo
-			}
-
-			// Stone skill for defensive/low tempo play
-			if (!needHigherTempo)
-			{
-				candidates.Add(new SkillAction(InputType.Script, ActionType.SkillStone));
+				candidates.Add(new AccelerateAction(InputType.Script, duration: ISumoAction.MinDuration));
 			}
 
 			return candidates;
 		}
 
 		/// <summary>
-		/// Calculates the duration needed to travel a specific distance at given speed.
+		/// Determines if a turn action helps align with enemy based on current angle.
 		/// </summary>
-		private float CalculateAccelerateDuration(float distance, float moveSpeed)
+		private bool TurnHelpsAngle(ActionType turnType, float normalizedAngleToEnemy)
 		{
-			if (moveSpeed <= 0) return ISumoAction.MinDuration;
+			// Angle is normalized 0-1, where 1 = perfectly aligned, 0 = facing away
+			// If angle < 0.5, we need to turn to improve alignment
 
-			float duration = distance / moveSpeed;
-			return Mathf.Clamp(duration, ISumoAction.MinDuration, 1.0f);
+			// This is a simplified check - in reality we'd need to know which direction improves angle
+			// For now, assume any turn when poorly aligned helps
+			return normalizedAngleToEnemy < 0.7f;
 		}
 
 		/// <summary>
 		/// Scores an action based on how well it helps achieve target pacing.
+		/// Includes MCTS-inspired bonus/penalty system for tactical awareness.
 		/// Lower score is better (closer to target).
 		/// </summary>
 		/// <param name="action">The action to evaluate</param>
 		/// <param name="previousActions">Actions that have been simulated so far</param>
 		/// <param name="evaluation">Current pacing evaluation with deltas</param>
+		/// <param name="currentThreatDelta">Current predicted threat delta (not past)</param>
+		/// <param name="currentTempoDelta">Current predicted tempo delta (not past)</param>
 		/// <returns>Score where lower is better</returns>
-		private float ScoreAction(ISumoAction action, List<ISumoAction> previousActions, PacingEvaluation evaluation)
+		private float ScoreAction(ISumoAction action, List<ISumoAction> previousActions, PacingEvaluation evaluation, float currentThreatDelta, float currentTempoDelta)
 		{
+			SumoAPI api = controller.InputProvider.API;
+
 			// Simulate the action to get predicted position/rotation
 			var testActions = new List<ISumoAction>(previousActions) { action };
-			var (predictedPos, predictedRot) = controller.InputProvider.API.Simulate(testActions);
+			var (predictedPos, predictedRot) = api.Simulate(testActions);
 
 			// Calculate predicted pacing factors
 			var predictedFactors = PredictPacingFactors(predictedPos, predictedRot, action);
@@ -570,12 +673,113 @@ namespace PacingFramework
 			float threatImpact = CalculateThreatImpact(predictedFactors, evaluation);
 			float tempoImpact = CalculateTempoImpact(predictedFactors, evaluation);
 
-			// Weight the impacts (can be tuned later)
-			// Prioritize fixing the larger delta
-			float threatWeight = Mathf.Abs(evaluation.ThreatDelta) > Mathf.Abs(evaluation.TempoDelta) ? 1.5f : 1.0f;
-			float tempoWeight = Mathf.Abs(evaluation.TempoDelta) > Mathf.Abs(evaluation.ThreatDelta) ? 1.5f : 1.0f;
+			// Dynamic weighting based on CURRENT predicted deltas (not past eval)
+			// Larger deltas get proportionally higher weights to prioritize fixing bigger problems
+			float absThreatDelta = Mathf.Abs(currentThreatDelta);
+			float absTempoDelta = Mathf.Abs(currentTempoDelta);
+			float totalDelta = absThreatDelta + absTempoDelta;
 
-			return threatImpact * threatWeight + tempoImpact * tempoWeight;
+			float threatWeight, tempoWeight;
+			if (totalDelta < 0.001f) // Near-perfect pacing, equal weights
+			{
+				threatWeight = 1.0f;
+				tempoWeight = 1.0f;
+			}
+			else
+			{
+				// Calculate base ratio (0-1 for each, sum = 1.0)
+				float threatRatio = absThreatDelta / totalDelta;
+				float tempoRatio = absTempoDelta / totalDelta;
+
+				// Scale weights: 0.5 min (still consider both) to 3.0 max (strong priority)
+				// Formula: lerp between min and max based on ratio, with exponential scaling
+				float minWeight = 0.5f;
+				float maxWeight = 3.0f;
+				float exponent = 1.5f; // Controls aggressiveness (higher = more aggressive prioritization)
+
+				threatWeight = Mathf.Lerp(minWeight, maxWeight, Mathf.Pow(threatRatio, exponent));
+				tempoWeight = Mathf.Lerp(minWeight, maxWeight, Mathf.Pow(tempoRatio, exponent));
+
+				// Boost tempo weight if it's the larger problem (helps tempo catch up faster)
+				if (absTempoDelta > absThreatDelta)
+				{
+					tempoWeight *= 1.5f; // 50% boost for tempo when it's struggling
+				}
+			}
+
+			float baseScore = threatImpact * threatWeight + tempoImpact * tempoWeight;
+
+			// ===== MCTS-Inspired Bonus/Penalty System =====
+			float bonusOrPenalty = 0f;
+
+			// Get current angle for tactical checks
+			float currentAngle = api.Angle(normalized: true);
+			float predictedAngle = api.Angle(predictedPos, predictedRot, api.EnemyRobot.Position, normalized: true);
+
+			// Penalty for going out of bounds (critical failure)
+			Vector2 distanceFromArena = api.Distance(targetPos: api.BattleInfo.ArenaPosition, oriPos: predictedPos);
+			if (distanceFromArena.magnitude >= api.BattleInfo.ArenaRadius)
+			{
+				bonusOrPenalty += 10000f; // ABSOLUTELY MASSIVE penalty - this should NEVER happen
+			}
+			// Also penalize getting too close to edge (within 10% of radius)
+			else if (distanceFromArena.magnitude >= api.BattleInfo.ArenaRadius * 0.9f)
+			{
+				bonusOrPenalty += 5.0f; // Strong penalty for danger zone
+			}
+
+			// Penalty for poor angle alignment (minimum engagement requirement)
+			if (predictedAngle < 0.3f) // Less than 30% aligned = facing away
+			{
+				bonusOrPenalty += 10.0f; // Heavy penalty for ignoring enemy
+			}
+
+			// Tactical bonuses for smart plays (MCTS-inspired)
+			if (action.Type == ActionType.SkillStone || action.Type == ActionType.SkillBoost)
+			{
+				if (api.CanExecute(action))
+				{
+					bonusOrPenalty -= 1.0f; // Bonus for using available skills
+				}
+				else
+				{
+					bonusOrPenalty += 0.5f; // Small penalty for trying unusable skills
+				}
+			}
+
+			if (action is TurnAction)
+			{
+				// Penalty if turn worsens angle alignment
+				if (predictedAngle < currentAngle)
+				{
+					bonusOrPenalty += 0.5f;
+				}
+			}
+
+			if (action is AccelerateAction)
+			{
+				// Bonus for accelerating when well-aligned (smart aggressive play)
+				if (predictedAngle > 0.85f)
+				{
+					bonusOrPenalty -= 0.3f;
+				}
+			}
+
+			if (action.Type == ActionType.Dash && !api.MyRobot.IsDashOnCooldown)
+			{
+				// Bonus for dashing when perfectly aligned (MCTS uses 0.95 threshold)
+				if (predictedAngle > 0.95f)
+				{
+					bonusOrPenalty -= 0.5f;
+				}
+				else
+				{
+					// Small penalty for dashing when not aligned
+					bonusOrPenalty += 0.2f;
+				}
+			}
+
+			return baseScore + bonusOrPenalty;
 		}
 
 		/// <summary>

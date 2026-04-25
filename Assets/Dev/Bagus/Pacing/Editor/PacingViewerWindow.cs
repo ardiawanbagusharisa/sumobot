@@ -882,10 +882,10 @@ namespace PacingFramework
 				float threatDiff = actualThreat[i] - alignedThreat[i];
 				float tempoDiff = actualTempo[i] - alignedTempo[i];
 
-				float mse = threatDiff * threatDiff + tempoDiff * tempoDiff;
+				float mse = (threatDiff * threatDiff + tempoDiff * tempoDiff) / 2f;
 
 				EditorGUILayout.LabelField(
-					$"Segment {i}  |  ThreatΔ: {threatDiff:F3}  TempoΔ: {tempoDiff:F3}  Error: {mse:F4}");
+					$"Segment {i}  |  ThreatΔ: {threatDiff:F3}  TempoΔ: {tempoDiff:F3}  MSE: {mse:F4}");
 			}
 
 			if (useScroll)

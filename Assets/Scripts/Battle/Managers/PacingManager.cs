@@ -21,12 +21,15 @@ namespace SumoManager
 		public string LeftPacingFileName = "Default";
 		public float LeftSegmentDuration = 2f;
 		public int LeftCollisionWindowSize = 2;
+		public bool LeftEnableActionFiltering = false;
+
 
 		[Header("Right Player Pacing Configuration")]
 		[Tooltip("Fallback pacing filename for right player (human). Can be overridden by Bot.PacingFileName")]
 		public string RightPacingFileName = "Default";
 		public float RightSegmentDuration = 2f;
 		public int RightCollisionWindowSize = 2;
+		public bool RightEnableActionFiltering = false;
 
 		#endregion
 
@@ -56,6 +59,18 @@ namespace SumoManager
 			RightPacingHandler?.Dispose();
 		}
 
+		void Update()
+		{
+			if (LeftPacingHandler != null && LeftPacingHandler.EnableActionFiltering != LeftEnableActionFiltering)
+			{
+				LeftPacingHandler.EnableActionFiltering = LeftEnableActionFiltering;
+			}
+			if (RightPacingHandler != null && RightPacingHandler.EnableActionFiltering != RightEnableActionFiltering)
+			{
+				RightPacingHandler.EnableActionFiltering = RightEnableActionFiltering;
+			}
+		}
+
 		#endregion
 
 		#region Initialization Methods
@@ -69,7 +84,7 @@ namespace SumoManager
 		public void Initialize(PlayerSide side, SumoController controller)
 		{
 			if (!enabled) return;
-			
+
 			if (side == PlayerSide.Left)
 			{
 				// Cleanup existing handler
@@ -120,32 +135,6 @@ namespace SumoManager
 
 				Debug.Log($"[PacingManager] Right handler initialized with PacingFile='{finalPacingFileName}', SegmentDuration={RightSegmentDuration}s, WindowSize={RightCollisionWindowSize}");
 			}
-		}
-
-		/// <summary>
-		/// Resolves which pacing filename to use based on priority:
-		/// 1. If managerFileName is filled and botFileName is provided and not empty -> use botFileName (Bot overrides)
-		/// 2. If managerFileName is filled and botFileName is empty/null -> use managerFileName (Manager default for human)
-		/// 3. If managerFileName is empty and botFileName is provided -> use botFileName (Bot's config)
-		/// 4. Otherwise -> use empty string (will use default constraints)
-		/// </summary>
-		private string ResolvePacingFileName(string managerFileName, string botFileName)
-		{
-			// If manager has a filename set
-			if (!string.IsNullOrEmpty(managerFileName))
-			{
-				// If bot also has a filename, bot overrides
-				if (!string.IsNullOrEmpty(botFileName))
-				{
-					Debug.Log($"[PacingManager] Bot PacingFileName '{botFileName}' overrides manager's '{managerFileName}'");
-					return botFileName;
-				}
-				// Otherwise use manager's filename (for human players)
-				return managerFileName;
-			}
-
-			// Manager has no filename, use bot's (or empty if bot also has none)
-			return botFileName ?? "Default";
 		}
 
 		#endregion

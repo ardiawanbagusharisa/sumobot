@@ -67,6 +67,9 @@ public class EventParameter
     public BattleWinner? Winner;
     public readonly SkillType SkillType;
 
+    // Filtered actions provided by pacing system (mutable for filtering)
+    public List<ISumoAction> FilteredActionList;
+
     public EventParameter(
         List<ISumoAction> actionListParam = null,
         PlayerSide? sideParam = null,

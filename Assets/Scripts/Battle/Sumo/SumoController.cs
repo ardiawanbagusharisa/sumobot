@@ -92,12 +92,13 @@ namespace SumoCore
         public bool IsMovementDisabled => (BattleManager.Instance != null && BattleManager.Instance.CurrentState != BattleState.Battle_Ongoing) || moveLockTime > 0f;
         public float LastDashTime = 0;
 
-        // Events 
+        // Events
         public EventRegistry Events = new();
         public const string OnBounce = "OnBounce"; // [BounceEvent]
         public const string OnOutOfArena = "OnOutOfArena"; // [Side]
         public const string OnAction = "OnAction"; // [Side, ISumoAction, IsExecuted]
         public const string OnSkillAssigned = "OnSkillAssigned"; // [SkillType?, Side]
+        public const string OnBeforeActionsQueued = "OnBeforeActionsQueued"; // [Side, ActionList] - Allows filtering before actions are queued
         #endregion
 
 
@@ -640,11 +641,24 @@ namespace SumoCore
                     VFXManager.Instance.PlayDash(transform, facing);
                 }
 
-                Actions.Enqueue(action);
                 tempActions.Add(action);
             }
 
-            Events[OnAction]?.Invoke(new(sideParam: Side, actionListParam: tempActions, boolParam: false));
+            // Fire event allowing pacing system to filter actions before queueing
+            var eventParam = new EventParameter(sideParam: Side, actionListParam: tempActions);
+            Events[OnBeforeActionsQueued]?.Invoke(eventParam);
+            Logger.Info($"[SumoController][FlushInput] {eventParam?.FilteredActionList?.Count ?? -1}/{tempActions.Count}");
+            // Use filtered actions if provided, otherwise use original actions
+            List<ISumoAction> actionsToQueue = eventParam.FilteredActionList ?? tempActions;
+
+            // Queue the actions (either original or filtered)
+            foreach (var action in actionsToQueue)
+            {
+                Actions.Enqueue(action);
+            }
+
+            // Fire original OnAction event with the actions that were queued
+            Events[OnAction]?.Invoke(new(sideParam: Side, actionListParam: actionsToQueue, boolParam: false));
         }
 
         public void ClearInput()
