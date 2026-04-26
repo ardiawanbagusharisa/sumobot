@@ -122,6 +122,7 @@ namespace PacingFramework
 		public void Tick()
 		{
 			RunEval();
+			
 			tickCount += 1;
 			if ((tickCount / 10) < segmentDuration)
 				return;
@@ -167,13 +168,13 @@ namespace PacingFramework
 			float threatClosenessPercent = 0f;
 			if (origThreatDistance > 0.001f) // Avoid division by zero
 			{
-				threatClosenessPercent = (threatImprovement / origThreatDistance) * 100f;
+				threatClosenessPercent = threatImprovement / origThreatDistance * 100f;
 			}
 
 			float tempoClosenessPercent = 0f;
 			if (origTempoDistance > 0.001f)
 			{
-				tempoClosenessPercent = (tempoImprovement / origTempoDistance) * 100f;
+				tempoClosenessPercent = tempoImprovement / origTempoDistance * 100f;
 			}
 
 			// Calculate averages
