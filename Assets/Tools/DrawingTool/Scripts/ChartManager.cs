@@ -340,7 +340,7 @@ public class ChartManager : MonoBehaviour
                         float x = paddingLeft + group * groupWidth + cat * barWidth;
 
                         // Color: use per-category if defined, else fallback by group
-                        Color barColor = (series.CategoryColors != null && series.CategoryColors.Length > cat)
+                        Color barColor = (series.CategoryColors != null && series.CategoryColors.Length > group)
                             ? series.CategoryColors[group]
                             : (group == 0 ? Color.green : Color.red);
 
