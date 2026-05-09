@@ -40,10 +40,18 @@ namespace SumoBot
             var allBotInstances = BotUtility.GetAllBotInstances();
 
             if (LeftEnabled && leftBotIndex >= 0 && leftBotIndex < allBotInstances.Count)
-                Left = allBotInstances[leftBotIndex];
+            {
+                // Create a separate instance for left player to avoid shared state
+                Left = Instantiate(allBotInstances[leftBotIndex]);
+                Left.name = $"{allBotInstances[leftBotIndex].name}_Left";
+            }
 
             if (RightEnabled && rightBotIndex >= 0 && rightBotIndex < allBotInstances.Count)
-                Right = allBotInstances[rightBotIndex];
+            {
+                // Create a separate instance for right player to avoid shared state
+                Right = Instantiate(allBotInstances[rightBotIndex]);
+                Right.name = $"{allBotInstances[rightBotIndex].name}_Right";
+            }
         }
 
         public void OnUpdate()
