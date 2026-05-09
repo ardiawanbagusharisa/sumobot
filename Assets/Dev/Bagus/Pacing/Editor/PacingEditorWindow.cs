@@ -24,7 +24,7 @@ namespace PacingFramework
 
 		// [Todo] Get this from battle info. 
 		private float battleTimer = 60f;
-		private int segmentCount = 25;
+		private int segmentCount = 60;
 		private int selectedSegmentTimeIndex = 0;
 		private readonly int[] segmentTimeOptions = new int[] { 1, 5, 10 };
 		private readonly string[] segmentTimeLabels = new string[] { "1 Second", "5 Seconds", "10 Seconds" };

@@ -53,18 +53,22 @@ namespace PacingFramework
 		private int segmentIndex = 0;
 		// private int totalTemp
 
+		private SumoAPI api;
+
 		// ================================
 		// Unity
 		// ================================
 
 		void Start()
 		{
+			api = controller.InputProvider.API;
+
 			if (PacingFileName.Count() == 0)
 			{
 				Logger.Warning($"[{controller.Side}] PacingFileName not set. Default constraints is used");
 				PacingTarget = new PacingTargetConfig();
-				// Create default target values (0.5 for 25 segments as baseline)
-				for (int i = 0; i < 25; i++)
+				// Create default target values (0.5 for api.BattleInfo.Duration segments as baseline)
+				for (int i = 0; i < (int)api.BattleInfo.Duration; i++)
 				{
 					PacingTarget.ThreatTargets.Add(0.5f);
 					PacingTarget.TempoTargets.Add(0.5f);
@@ -112,7 +116,7 @@ namespace PacingFramework
 		{
 			RunEval();
 			tickCount += 1;
-			if ((tickCount / 10) < segmentDuration)
+			if ((tickCount / (api.BattleInfo.ActionInterval * 100)) < segmentDuration)
 				return;
 
 			FinalizeSegment();
@@ -313,9 +317,10 @@ namespace PacingFramework
 			int segmentIndex = pacingHistory.CurrentRound().SegmentPacings.Count - 1;
 			SegmentPacing latestPacing = pacingHistory.CurrentRound().SegmentPacings[segmentIndex];
 
-			// Get target values for current segment index (with bounds checking)
-			float threatTarget = GetTargetValue(PacingTarget.ThreatTargets, segmentIndex);
-			float tempoTarget = GetTargetValue(PacingTarget.TempoTargets, segmentIndex);
+			// Get gradual target values using current pacing as baseline
+			// This calculates incremental targets based on remaining ticks in current segment
+			float threatTarget = GetTargetValue(PacingTarget.ThreatTargets, segmentIndex, latestPacing.Threat.Value);
+			float tempoTarget = GetTargetValue(PacingTarget.TempoTargets, segmentIndex, latestPacing.Tempo.Value);
 
 			// Calculate deltas
 			float threatDelta = latestPacing.Threat.Value - threatTarget;
@@ -336,57 +341,46 @@ namespace PacingFramework
 		}
 
 		/// <summary>
-		/// Helper method to get target value from list with bounds checking.
-		/// If index exceeds list size, returns the last available value.
-		/// If list is empty, returns 0.5 as default target (middle of normalized range).
+		/// Helper method to get gradual target value based on current position within segment.
+		/// Calculates incremental target to smoothly transition from current value to next segment's target.
 		/// </summary>
-		private float GetTargetValue(List<float> targetList, int index)
+		/// <param name="targetList">List of target values per segment</param>
+		/// <param name="segmentIndex">Current segment index</param>
+		/// <param name="currentPacingValue">Current predicted pacing value (threat or tempo)</param>
+		/// <returns>Gradual target value for this tick</returns>
+		private float GetTargetValue(List<float> targetList, int segmentIndex, float currentPacingValue)
 		{
 			if (targetList.Count == 0)
 				return 0.5f; // Default to middle of normalized range
 
-			if (index >= targetList.Count)
+			// Calculate total ticks per segment (segmentDuration is in seconds, each tick is 0.1s)
+			int totalTicksPerSegment = Mathf.RoundToInt(segmentDuration * (api.BattleInfo.ActionInterval * 100));
+
+			// Calculate remaining ticks in current segment
+			int remainingTicks = totalTicksPerSegment - tickCount;
+
+			// If no ticks remaining or at segment boundary, return current segment target
+			if (remainingTicks <= 0)
+				remainingTicks = 1; // Prevent division by zero
+
+			// Get next segment target (segmentIndex + 1 because we're working towards the next segment)
+			int nextSegmentIndex = segmentIndex + 1;
+
+			// Bounds checking for next segment
+			if (nextSegmentIndex >= targetList.Count)
 				return targetList[^1]; // Use last available target
 
-			return targetList[index];
+			float nextSegmentTarget = targetList[nextSegmentIndex];
+
+			// Calculate the delta we need to cover
+			float targetDelta = nextSegmentTarget - currentPacingValue;
+
+			// Calculate incremental target: current value + (delta / remaining ticks)
+			float incrementalTarget = currentPacingValue + (targetDelta / remainingTicks);
+
+			return incrementalTarget;
 		}
 
-		public void TestSimulation()
-		{
-			Debug.Log("Running Pacing Test Simulation...");
-
-			for (int i = 0; i < 20; i++)
-			{
-				currentGameplayData.RegisterCollision((CollisionType)UnityEngine.Random.Range(0, Enum.GetValues(typeof(CollisionType)).Length));
-				currentGameplayData.RegisterAngle(UnityEngine.Random.Range(0f, 180f));
-				currentGameplayData.RegisterSafeDistance(UnityEngine.Random.Range(1f, 5f));
-				currentGameplayData.RegisterVelocity(UnityEngine.Random.Range(0f, 10f));
-				currentGameplayData.RegisterBotsDistance(UnityEngine.Random.Range(1f, 5f));
-
-				int actions = UnityEngine.Random.Range(0, 50);
-				for (int j = 0; j < actions; j++)
-				{
-					currentGameplayData.RegisterAction(new AccelerateAction(InputType.Script, duration: 0.1f));
-				}
-			}
-
-			FinalizeSegment();
-		}
-
-		private void TestSimulationContinuous()
-		{
-			currentGameplayData.RegisterCollision((CollisionType)UnityEngine.Random.Range(0, Enum.GetValues(typeof(CollisionType)).Length));
-			currentGameplayData.RegisterAngle(UnityEngine.Random.Range(0f, 180f));
-			currentGameplayData.RegisterSafeDistance(UnityEngine.Random.Range(1f, 5f));
-			currentGameplayData.RegisterVelocity(UnityEngine.Random.Range(0f, 10f));
-			currentGameplayData.RegisterBotsDistance(UnityEngine.Random.Range(1f, 5f));
-
-			int actions = UnityEngine.Random.Range(0, 50);
-			for (int i = 0; i < actions; i++)
-			{
-				currentGameplayData.RegisterAction(new AccelerateAction(InputType.Script, duration: 0.1f));
-			}
-		}
 
 		// ================================
 		// Action Evaluation & Filtering

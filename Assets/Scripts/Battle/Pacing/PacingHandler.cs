@@ -121,8 +121,18 @@ namespace PacingFramework
 
 		public void Tick()
 		{
-			RunEval();
+			SumoAPI api = controller.InputProvider.API;
 			
+			var safeDist = 1 - (api.BattleInfo.ArenaPosition - api.MyRobot.Position).magnitude / api.BattleInfo.ArenaRadius;
+			float angle = Mathf.Clamp01(api.Angle(normalized: true));
+
+			currentGameplayData.RegisterBotsDistance(api.DistanceNormalized());
+			currentGameplayData.RegisterSafeDistance(safeDist);
+			currentGameplayData.RegisterAngle(angle);
+			currentGameplayData.RegisterVelocity(controller.CachedVelocity.magnitude);
+
+			RunEval();
+
 			tickCount += 1;
 			if ((tickCount / 10) < segmentDuration)
 				return;
@@ -304,9 +314,9 @@ namespace PacingFramework
 			SumoAPI api = controller.InputProvider.API;
 
 			float angle = Mathf.Clamp01(api.Angle(normalized: true));
+			currentGameplayData.RegisterAngle(angle);
 
 			currentGameplayData.RegisterCollision(type);
-			currentGameplayData.RegisterAngle(angle);
 		}
 
 		private void OnAction(EventParameter parameter)
@@ -422,43 +432,6 @@ namespace PacingFramework
 				return targetList[^1]; // Use last available target
 
 			return targetList[index];
-		}
-
-		public void TestSimulation()
-		{
-			Debug.Log("Running Pacing Test Simulation...");
-
-			for (int i = 0; i < 20; i++)
-			{
-				currentGameplayData.RegisterCollision((CollisionType)UnityEngine.Random.Range(0, Enum.GetValues(typeof(CollisionType)).Length));
-				currentGameplayData.RegisterAngle(UnityEngine.Random.Range(0f, 180f));
-				currentGameplayData.RegisterSafeDistance(UnityEngine.Random.Range(1f, 5f));
-				currentGameplayData.RegisterVelocity(UnityEngine.Random.Range(0f, 10f));
-				currentGameplayData.RegisterBotsDistance(UnityEngine.Random.Range(1f, 5f));
-
-				int actions = UnityEngine.Random.Range(0, 50);
-				for (int j = 0; j < actions; j++)
-				{
-					currentGameplayData.RegisterAction(new AccelerateAction(InputType.Script, duration: 0.1f));
-				}
-			}
-
-			FinalizeSegment();
-		}
-
-		private void TestSimulationContinuous()
-		{
-			currentGameplayData.RegisterCollision((CollisionType)UnityEngine.Random.Range(0, Enum.GetValues(typeof(CollisionType)).Length));
-			currentGameplayData.RegisterAngle(UnityEngine.Random.Range(0f, 180f));
-			currentGameplayData.RegisterSafeDistance(UnityEngine.Random.Range(1f, 5f));
-			currentGameplayData.RegisterVelocity(UnityEngine.Random.Range(0f, 10f));
-			currentGameplayData.RegisterBotsDistance(UnityEngine.Random.Range(1f, 5f));
-
-			int actions = UnityEngine.Random.Range(0, 50);
-			for (int i = 0; i < actions; i++)
-			{
-				currentGameplayData.RegisterAction(new AccelerateAction(InputType.Script, duration: 0.1f));
-			}
 		}
 
 		// ================================
