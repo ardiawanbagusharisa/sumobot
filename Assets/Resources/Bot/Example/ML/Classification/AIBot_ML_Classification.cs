@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using SumoBot;
@@ -11,7 +10,7 @@ using UnityEngine;
 
 class AIBot_ML_Classification : Bot
 {
-    public override string ID => "Bot_ML_Classification";
+    public override string ID => "MLP";
     public override SkillType DefaultSkillType => SkillType.Boost;
 
     public Model runtimeModel;

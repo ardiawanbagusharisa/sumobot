@@ -7,7 +7,6 @@ using UnityEngine.UI;
 using System.Collections;
 using UnityEngine.SceneManagement;
 using SumoInput;
-using SumoBot;
 
 namespace SumoManager
 {
@@ -490,7 +489,8 @@ Skill			C			M
                 if (isActive && botInstances.Count > 0)
                 {
                     botManager.leftBotIndex = 0;
-                    botManager.Left = botInstances[0];
+                    botManager.Left = Instantiate(botInstances[0]);
+                    botManager.Left.name = $"{botInstances[0].name}_Left";
                 }
             }
             else
@@ -500,7 +500,8 @@ Skill			C			M
                 if (isActive && botInstances.Count > 0)
                 {
                     botManager.rightBotIndex = 0;
-                    botManager.Right = botInstances[0];
+                    botManager.Right = Instantiate(botInstances[0]);
+                    botManager.Right.name = $"{botInstances[0].name}_Right";
                 }
             }
             dropdown.gameObject.SetActive(isActive);

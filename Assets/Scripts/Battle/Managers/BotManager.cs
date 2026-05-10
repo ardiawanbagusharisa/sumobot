@@ -116,12 +116,14 @@ namespace SumoBot
             if (side == PlayerSide.Left)
             {
                 UnInit(leftPlayer, destroyScriptInstance);
-                Left = param;
+                Left = Instantiate(param);
+                Left.name = $"{param.ID}_Left";
             }
             else
             {
                 UnInit(rightPlayer, destroyScriptInstance);
-                Right = param;
+                Right = Instantiate(param);
+                Right.name = $"{param.ID}_Right";
             }
 
 
