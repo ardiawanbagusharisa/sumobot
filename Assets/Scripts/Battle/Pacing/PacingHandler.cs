@@ -1,6 +1,4 @@
-using System;
 using System.Collections.Generic;
-using System.Linq;
 using SumoBot;
 using SumoCore;
 using SumoInput;
@@ -122,7 +120,7 @@ namespace PacingFramework
 		public void Tick()
 		{
 			SumoAPI api = controller.InputProvider.API;
-			
+
 			var safeDist = 1 - (api.BattleInfo.ArenaPosition - api.MyRobot.Position).magnitude / api.BattleInfo.ArenaRadius;
 			float angle = Mathf.Clamp01(api.Angle(normalized: true));
 

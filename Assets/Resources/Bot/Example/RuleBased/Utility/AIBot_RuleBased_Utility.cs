@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using UnityEngine;
 using SumoCore;
 using SumoManager;
-using SumoLog;
 using System.Linq;
 using System;
 using SumoInput;
@@ -11,7 +10,7 @@ namespace SumoBot.RuleBased.Utility
 {
     public class AIBot_RuleBased_Utility : Bot
     {
-        public override string ID => "Bot_UtilityAI";
+        public override string ID => "Utility";
         public override SkillType DefaultSkillType => SkillType.Boost;
 
         private SumoAPI api;

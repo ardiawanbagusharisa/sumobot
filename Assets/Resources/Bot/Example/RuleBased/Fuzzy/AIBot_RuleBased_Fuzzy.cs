@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using SumoCore;
 using SumoInput;
-using SumoLog;
 using SumoManager;
 using UnityEngine;
 
@@ -14,7 +13,7 @@ namespace SumoBot.RuleBased.Fuzzy
         public override string ID => Name;
         public override SkillType DefaultSkillType => SkillType;
 
-        public string Name = "Bot_FuzzyLogic";
+        public string Name = "FuzzyLogic";
         public SkillType SkillType = SkillType.Boost;
 
         public FuzzySugeno Fuzzy = new();

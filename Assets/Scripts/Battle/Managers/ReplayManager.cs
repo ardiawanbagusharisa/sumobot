@@ -10,9 +10,6 @@ using System;
 using System.Collections;
 using UnityEngine.UI;
 using SumoCore;
-using SumoManager;
-using System.Text;
-using System.Threading.Tasks;
 
 #if UNITY_EDITOR
 using UnityEditor;

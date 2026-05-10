@@ -11,7 +11,7 @@ namespace SumoBot
 {
     public class AIBot_Template : Bot
     {
-        public override string ID => "Bot_Template";
+        public override string ID => "Template";
         public override SkillType DefaultSkillType => SkillType.Boost;
 
         private SumoAPI api;
