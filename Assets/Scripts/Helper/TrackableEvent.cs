@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using SumoCore;
 using SumoLog;
 using SumoManager;
-using UnityEngine;
 
 namespace SumoHelper
 {
@@ -58,7 +57,7 @@ namespace SumoHelper
 [Serializable]
 public class EventParameter
 {
-    public readonly ISumoAction Action;
+    public readonly List<ISumoAction> ActionList;
     public readonly PlayerSide Side;
     public readonly bool Bool;
     public readonly float Float;
@@ -67,8 +66,11 @@ public class EventParameter
     public BattleWinner? Winner;
     public readonly SkillType SkillType;
 
+    // Filtered actions provided by pacing system (mutable for filtering)
+    public List<ISumoAction> FilteredActionList;
+
     public EventParameter(
-        ISumoAction actionParam = null,
+        List<ISumoAction> actionListParam = null,
         PlayerSide? sideParam = null,
         bool? boolParam = null,
         float? floatParam = null,
@@ -84,14 +86,14 @@ public class EventParameter
             SkillType = (SkillType)skillType;
         if (battleStateParam != null)
             BattleState = (BattleState)battleStateParam;
-        if (sideParam != null)
-            Action = actionParam;
         if (boolParam != null)
             Bool = (bool)boolParam;
         if (floatParam != null)
             Float = (float)floatParam;
         if (bounceInfoParam != null)
             BounceEvent = bounceInfoParam;
+        if (actionListParam != null)
+            ActionList = actionListParam;
         if (winnerParam != null)
             Winner = (BattleWinner)winnerParam;
     }

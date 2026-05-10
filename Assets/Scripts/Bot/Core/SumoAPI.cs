@@ -1,4 +1,3 @@
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using SumoCore;
@@ -292,10 +291,10 @@ namespace SumoBot
             BounceResistance = controller.BounceResistance;
             Skill = new(controller.Skill);
 
-            Position = controller.RigidBody.position;
-            Rotation = controller.RigidBody.rotation;
-            LinearVelocity = controller.RigidBody.linearVelocity;
-            AngularVelocity = controller.RigidBody.angularVelocity;
+            Position = controller.CachedPosition;
+            Rotation = controller.CachedRotation;
+            LinearVelocity = controller.CachedVelocity;
+            AngularVelocity = controller.CachedAngularVelocity;
 
             IsDashOnCooldown = controller.IsDashOnCooldown;
             IsDashActive = controller.IsDashActive;

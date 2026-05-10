@@ -27,6 +27,7 @@ namespace SumoHelper
         public int TotalSimulations = 5;
         public float SimpleTimeScale = 1f;
         public int SwapAIInterval = 0;
+        public bool QuitAfterDone = true;
 
         [Header("Advanced Mode Settings")]
         public float DefaultTimeScale = 2f;
@@ -44,6 +45,8 @@ namespace SumoHelper
         #region No-Graphic simulation setting
         private static int ConfigStart = -1;
         private static int ConfigEnd = -1;
+        private static int ConfigIndex = -1;
+        private static float ConfigTimeScale = -1f;
         private static bool Batched = false;
         #endregion
 
@@ -82,7 +85,10 @@ namespace SumoHelper
 
             Logger.Info("[Simple Simulation] Complete.", true);
 #if UNITY_EDITOR
-            UnityEditor.EditorApplication.isPlaying = false;
+            if (QuitAfterDone)
+                UnityEditor.EditorApplication.isPlaying = false;
+            else
+                Time.timeScale = 1;
 #else
             Application.Quit();
 #endif
@@ -109,6 +115,24 @@ namespace SumoHelper
                         ConfigEnd = end;
                 }
 
+                if (arg.StartsWith("--configIndex="))
+                {
+                    string value = arg.Substring("--configIndex=".Length);
+                    if (int.TryParse(value, out int index))
+                    {
+                        ConfigIndex = index;
+                        ConfigStart = index;
+                        ConfigEnd = index + 1;
+                    }
+                }
+
+                if (arg.StartsWith("--configTimeScale="))
+                {
+                    string value = arg.Substring("--configTimeScale=".Length);
+                    if (float.TryParse(value, out float timeScale))
+                        ConfigTimeScale = timeScale;
+                }
+
                 if (arg.StartsWith("--batchLogFile="))
                 {
                     string value = arg.Substring("--batchLogFile=".Length);
@@ -124,7 +148,14 @@ namespace SumoHelper
                 }
             }
 
-            Logger.Info($"[BatchedCommandLineArgs] ConfigStart={ConfigStart}, ConfigEnd={ConfigEnd}", true);
+            if (ConfigIndex > -1)
+            {
+                Logger.Info($"[BatchedCommandLineArgs] ConfigIndex={ConfigIndex}, ConfigTimeScale={ConfigTimeScale}", true);
+            }
+            else
+            {
+                Logger.Info($"[BatchedCommandLineArgs] ConfigStart={ConfigStart}, ConfigEnd={ConfigEnd}, ConfigTimeScale={ConfigTimeScale}", true);
+            }
         }
 
         public void PrepareSimulation()
@@ -156,7 +187,7 @@ namespace SumoHelper
                 throw new Exception("Timers can't be empty");
             if (Setting.RoundSystem.Length == 0)
                 throw new Exception("RoundSystem can't be empty");
-            if (Setting.SelectedAgents.Length == 1)
+            if (Setting.SelectedAgents.Length <= 1)
                 throw new Exception("SelectedAgents must > 1");
 
             SelectAgents();
@@ -167,6 +198,12 @@ namespace SumoHelper
             BattleManager.Instance.BotManager.RightEnabled = true;
 
             _configs = GenerateConfigs(Agents);
+
+            // Generate config index mapping for easier re-simulation
+            if (Mode == SimulatorMode.Advanced)
+            {
+                GenerateConfigIndexMapping(_configs, Agents);
+            }
 
             if (Batched)
             {
@@ -182,6 +219,19 @@ namespace SumoHelper
             }
 
             checkpoint.TotalConfigs = _configs.Count();
+
+            // Validate config index is within bounds
+            if (_configs.Count == 0)
+            {
+                Logger.Error("[Simulation] No configurations generated. Check SimulationSetting and SelectedAgents.");
+                return;
+            }
+
+            if (currentConfigIndex >= _configs.Count)
+            {
+                Logger.Error($"[Simulation] ConfigIndex {currentConfigIndex} is out of range. Total configs: {_configs.Count} (0-{_configs.Count - 1})");
+                return;
+            }
 
             ApplyConfig(_configs[currentConfigIndex]);
 
@@ -203,24 +253,36 @@ namespace SumoHelper
 
         private void SelectAgents()
         {
-            var botTypes = BotUtility.GetAllBotTypes();
-            var loadedAgents = botTypes.ConvertAll(t => t.Name).ToList();
+            var botTypes = BotUtility.GetAllBotInstances();
+            Logger.Info($"[SelectAgents] BotUtility returned {botTypes.Count} bot instances", true);
 
-            foreach (var item in botTypes)
+            var loadedAgents = botTypes.ConvertAll(t => t.ID).ToList();
+            Logger.Info($"[SelectAgents] Bot IDs: {string.Join(", ", loadedAgents)}", true);
+            Logger.Info($"[SelectAgents] Setting.SelectedAgents.Length: {Setting.SelectedAgents.Length}", true);
+
+            foreach (var botInstance in botTypes)
             {
-                var botInstance = ScriptableObject.CreateInstance(item) as Bot;
+                Logger.Info($"[SelectAgents] Processing bot: {botInstance?.name ?? "null"}, ID: {botInstance?.ID ?? "null"}", true);
+
                 if (botInstance != null)
                 {
                     if (Setting.SelectedAgents.Length > 0)
                     {
-                        if (Setting.SelectedAgents.Contains(botInstance.ID))
+                        bool contains = Setting.SelectedAgents.Contains(botInstance.ID);
+                        Logger.Info($"[SelectAgents] SelectedAgents contains '{botInstance.ID}': {contains}", true);
+                        if (contains)
                             Agents.Add(botInstance);
                     }
                     else
                     {
                         // If no agents selected, add all agents
+                        Logger.Info($"[SelectAgents] No agents filter, adding {botInstance.ID}", true);
                         Agents.Add(botInstance);
                     }
+                }
+                else
+                {
+                    Logger.Warning($"[SelectAgents] Bot instance is null!");
                 }
             }
             Logger.Info($"[Simulation] Loaded {Agents.Count} agents", true);
@@ -252,7 +314,8 @@ namespace SumoHelper
                 yield return new WaitForEndOfFrame();
 
                 // if (!cfg.AgentLeft.UseAsync && !cfg.AgentRight.UseAsync)
-                Time.timeScale = cfg.TimeScale;
+                // Apply ConfigTimeScale override if provided via command line, otherwise use cfg.TimeScale
+                Time.timeScale = ConfigTimeScale > 0 ? ConfigTimeScale : cfg.TimeScale;
 
                 for (int iter = resumeAt; iter < cfg.Iteration; iter++)
                 {
@@ -288,6 +351,7 @@ namespace SumoHelper
             }
 
             Logger.Info("[Simulation] All simulations complete.", true);
+
 #if UNITY_EDITOR
             UnityEditor.EditorApplication.isPlaying = false;
 #else
@@ -309,11 +373,12 @@ namespace SumoHelper
             LogManager.InitLog(true, folder);
             LogManager.InitBattle(cfg);
 
-            var newBattle = new Battle(Guid.NewGuid().ToString(), cfg.RoundSystem);
-
-            // Apply previous players to new battle
-            newBattle.LeftPlayer = BattleManager.Instance.Battle.LeftPlayer;
-            newBattle.RightPlayer = BattleManager.Instance.Battle.RightPlayer;
+            var newBattle = new Battle(Guid.NewGuid().ToString(), cfg.RoundSystem)
+            {
+                // Apply previous players to new battle
+                LeftPlayer = BattleManager.Instance.Battle.LeftPlayer,
+                RightPlayer = BattleManager.Instance.Battle.RightPlayer
+            };
             BattleManager.Instance.Battle = newBattle;
         }
 
@@ -383,6 +448,92 @@ namespace SumoHelper
             Logger.Info($"Generated configs: {configs.Count}", true);
             Logger.Info($"Game will run {configs.Aggregate(0, (sum, cfg) => sum + cfg.Iteration)} matches in total.", true);
             return configs;
+        }
+
+        private void GenerateConfigIndexMapping(List<BattleConfig> configs, List<Bot> agents)
+        {
+            try
+            {
+                // Create mapping file path inside the checkpoint's batch folder
+                string logsPath = Path.Combine(Application.persistentDataPath, "Logs", "Batch", checkpoint.ID);
+                if (!Directory.Exists(logsPath))
+                {
+                    Directory.CreateDirectory(logsPath);
+                }
+
+                string mappingFilePath = Path.Combine(logsPath, "config_index_mapping.txt");
+
+                using (StreamWriter writer = new StreamWriter(mappingFilePath))
+                {
+                    writer.WriteLine("=============================================================");
+                    writer.WriteLine($"Config Index Mapping - Simulation ID: {checkpoint.ID}");
+                    writer.WriteLine($"Generated: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+                    writer.WriteLine($"Total Configs: {configs.Count}");
+                    writer.WriteLine($"Total Agents: {agents.Count}");
+                    writer.WriteLine("=============================================================");
+                    writer.WriteLine();
+
+                    // Group configs by bot (AgentLeft)
+                    var botGroups = new Dictionary<string, List<(int index, BattleConfig config)>>();
+
+                    for (int i = 0; i < configs.Count; i++)
+                    {
+                        var cfg = configs[i];
+                        string botId = cfg.AgentLeft.ID;
+
+                        if (!botGroups.ContainsKey(botId))
+                        {
+                            botGroups[botId] = new List<(int, BattleConfig)>();
+                        }
+
+                        botGroups[botId].Add((i, cfg));
+                    }
+
+                    // Write bot sections
+                    foreach (var bot in agents)
+                    {
+                        if (!botGroups.ContainsKey(bot.ID))
+                            continue;
+
+                        var botConfigs = botGroups[bot.ID];
+                        int startIndex = botConfigs[0].index;
+                        int endIndex = botConfigs[botConfigs.Count - 1].index;
+
+                        writer.WriteLine($"{bot.ID} (StartIndex: {startIndex}, EndIndex: {endIndex}, Total: {botConfigs.Count})");
+                        writer.WriteLine(new string('-', 80));
+
+                        foreach (var (index, config) in botConfigs)
+                        {
+                            string configName = $"Timer_{config.Timer}__ActInterval_{config.ActionInterval}__Round_{config.RoundSystem}__SkillLeft_{config.SkillSetLeft}__SkillRight_{config.SkillSetRight}";
+                            writer.WriteLine($"  [{index:D5}] {config.AgentLeft.ID}_vs_{config.AgentRight.ID} | {configName}");
+                        }
+
+                        writer.WriteLine();
+                    }
+
+                    writer.WriteLine("=============================================================");
+                    writer.WriteLine("SUMMARY BY BOT");
+                    writer.WriteLine("=============================================================");
+
+                    foreach (var bot in agents)
+                    {
+                        if (!botGroups.ContainsKey(bot.ID))
+                            continue;
+
+                        var botConfigs = botGroups[bot.ID];
+                        int startIndex = botConfigs[0].index;
+                        int endIndex = botConfigs[botConfigs.Count - 1].index;
+
+                        writer.WriteLine($"{bot.ID,-30} StartIndex: {startIndex,5} | EndIndex: {endIndex,5} | Total: {botConfigs.Count,5}");
+                    }
+                }
+
+                Logger.Info($"[Simulation] Config index mapping saved to: {mappingFilePath}", true);
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"[Simulation] Failed to generate config index mapping: {ex.Message}");
+            }
         }
 
 

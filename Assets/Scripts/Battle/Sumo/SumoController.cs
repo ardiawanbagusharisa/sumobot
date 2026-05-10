@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Drawing;
 using System.Linq;
 using SumoHelper;
 using SumoInput;
@@ -78,6 +77,12 @@ namespace SumoCore
         private EventLogger collisionLogger;
         private float time => BattleManager.Instance.ElapsedTime;
 
+        // Cache physics data at the start of physics frame for consistent logging & collision detection
+        public Vector2 CachedVelocity { get; private set; }
+        public float CachedAngularVelocity { get; private set; }
+        public Vector2 CachedPosition { get; private set; }
+        public float CachedRotation { get; private set; }
+
         // Derived 
         public bool IsDashActive => LastDashTime != 0f && (LastDashTime + DashDuration) >= time;
         public float DashCooldownTimer => LastDashTime + DashCooldown - time;
@@ -86,12 +91,13 @@ namespace SumoCore
         public bool IsMovementDisabled => (BattleManager.Instance != null && BattleManager.Instance.CurrentState != BattleState.Battle_Ongoing) || moveLockTime > 0f;
         public float LastDashTime = 0;
 
-        // Events 
+        // Events
         public EventRegistry Events = new();
-        public const string OnBounce = "OnBounce"; // [Side]
+        public const string OnBounce = "OnBounce"; // [BounceEvent]
         public const string OnOutOfArena = "OnOutOfArena"; // [Side]
-        public const string OnAction = "OnAction"; // [Side, ISumoAction, bool]
-        public const string OnSkillAssigned = "OnSkillAssigned"; // [Side, ISumoAction, bool]
+        public const string OnAction = "OnAction"; // [Side, ISumoAction, IsExecuted]
+        public const string OnSkillAssigned = "OnSkillAssigned"; // [SkillType?, Side]
+        public const string OnBeforeActionsQueued = "OnBeforeActionsQueued"; // [Side, ActionList] - Allows filtering before actions are queued
         #endregion
 
 
@@ -151,6 +157,10 @@ namespace SumoCore
 
         void FixedUpdate()
         {
+            CachedVelocity = RigidBody.linearVelocity;
+            CachedPosition = transform.position;
+            CachedRotation = transform.eulerAngles.z;
+
             foreach (var (key, _) in ActiveActions.ToList())
             {
                 ActiveActions[key] -= Time.fixedDeltaTime;
@@ -268,6 +278,7 @@ namespace SumoCore
         public void Log(ISumoAction action)
         {
             bool isActive = IsActionActive(action.Type);
+            Logger.Info($"[SumoController][Log][{Side}] {action.Name} isActive:{isActive}");
             if (isActive)
             {
                 LogManager.FlushActionLog(Side, action, isActive);
@@ -355,9 +366,12 @@ namespace SumoCore
                     accelerateSource.src.Play();
                 }
 
-                RigidBody.linearVelocity = movementVelocity;
+                // Only override velocity if new speed is higher, otherwise let natural deceleration continue
+                if (movementVelocity.magnitude >= RigidBody.linearVelocity.magnitude)
+                {
+                    RigidBody.linearVelocity = movementVelocity;
+                }
                 accelerateTimeRemaining -= Time.fixedDeltaTime;
-                Log(lastAccelerateAction);
             }
             else
             {
@@ -387,8 +401,6 @@ namespace SumoCore
 
             remainingAngle -= Mathf.Abs(step);
 
-
-            Log(lastTurnAction);
 
             if (remainingAngle <= 0.001f)
             {
@@ -458,15 +470,15 @@ namespace SumoCore
             if (!collision.gameObject.TryGetComponent<SumoController>(out var enemyRobot))
                 return;
 
-            float actorVelocity = RigidBody.linearVelocity.magnitude + float.Epsilon;
-            float enemyVelocity = enemyRobot.RigidBody.linearVelocity.magnitude + float.Epsilon;
+            float actorVelocity = CachedVelocity.magnitude + float.Epsilon;
+            float enemyVelocity = enemyRobot.CachedVelocity.magnitude + float.Epsilon;
 
             Vector2 collisionNormal = collision.contacts[0].normal;
 
             const float compareThreshold = 0.001f;
             bool isTieBreaker = Mathf.Abs(actorVelocity - enemyVelocity) < compareThreshold;
 
-            // Decide who is handling the bounce logic, if the velocity reaching equal, use the instance id
+            // Decide who is handling the bounce logic based on velocity, or InstanceID for ties
             bool isActor = actorVelocity > enemyVelocity || (isTieBreaker && GetInstanceID() > enemyRobot.GetInstanceID());
 
             StopOngoingAction();
@@ -477,7 +489,7 @@ namespace SumoCore
                 SFXManager.Instance.Play2D("collision_small");
                 VFXManager.Instance.PlayCollisionSpark(collision.contacts[0].point, enemyVelocity);
             }
-            else 
+            else
             {
                 SFXManager.Instance.Play2D("collision_big");
                 VFXManager.Instance.PlayCollisionSpark(collision.contacts[0].point, actorVelocity);
@@ -595,7 +607,7 @@ namespace SumoCore
                 RigidBody.linearVelocity = Vector2.Lerp(RigidBody.linearVelocity, Vector2.zero, SlowDownRate * Time.deltaTime);
                 RigidBody.angularVelocity = Mathf.Lerp(RigidBody.angularVelocity, 0, SlowDownRate * Time.deltaTime);
             }
-            
+
             if (Mathf.Abs(RigidBody.angularVelocity) <= AngularStopDelay)
             {
                 RigidBody.angularVelocity = 0;
@@ -609,6 +621,7 @@ namespace SumoCore
         public void FlushInput()
         {
             if (InputProvider == null || isInputDisabled) return;
+            List<ISumoAction> tempActions = new();
 
             foreach (var action in InputProvider.Flush())
             {
@@ -627,9 +640,24 @@ namespace SumoCore
                     VFXManager.Instance.PlayDash(transform, facing);
                 }
 
+                tempActions.Add(action);
+            }
+
+            // Fire event allowing pacing system to filter actions before queueing
+            var eventParam = new EventParameter(sideParam: Side, actionListParam: tempActions);
+            Events[OnBeforeActionsQueued]?.Invoke(eventParam);
+            Logger.Info($"[SumoController][FlushInput] {eventParam?.FilteredActionList?.Count ?? -1}/{tempActions.Count}");
+            // Use filtered actions if provided, otherwise use original actions
+            List<ISumoAction> actionsToQueue = eventParam.FilteredActionList ?? tempActions;
+
+            // Queue the actions (either original or filtered)
+            foreach (var action in actionsToQueue)
+            {
                 Actions.Enqueue(action);
             }
 
+            // Fire original OnAction event with the actions that were queued
+            Events[OnAction]?.Invoke(new(sideParam: Side, actionListParam: actionsToQueue, boolParam: false));
         }
 
         public void ClearInput()
@@ -645,13 +673,17 @@ namespace SumoCore
             if (InputProvider == null) return;
             if (isInputDisabled) return;
 
+            List<ISumoAction> tempActions = new();
+
             while (Actions.Count > 0)
             {
                 ISumoAction action = Actions.Dequeue();
 
                 action.Execute(this);
-                Events[OnAction]?.Invoke(new(sideParam: Side, actionParam: action));
+                tempActions.Add(action);
             }
+
+            Events[OnAction]?.Invoke(new(sideParam: Side, actionListParam: tempActions, boolParam: true));
         }
         #endregion
     }

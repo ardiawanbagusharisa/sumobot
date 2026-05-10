@@ -1,4 +1,3 @@
-using NUnit.Framework;
 using SumoCore;
 using SumoLog;
 using SumoManager;
@@ -158,13 +157,9 @@ namespace SumoHelper
 
         public void Save(string customCategory, float time)
         {
-            BaseLog log = new()
-            {
-                Rotation = Normalize360(controller.RigidBody.rotation),
-                Position = controller.RigidBody.position,
-                LinearVelocity = controller.RigidBody.linearVelocity.magnitude,
-                AngularVelocity = controller.RigidBody.angularVelocity
-            };
+            RobotLog log = new();
+
+            SetState(log);
 
             LogManager.LogPlayerEvents(
                 actor: controller.Side,
@@ -174,27 +169,28 @@ namespace SumoHelper
                 category: customCategory,
                 dataMap: new()
                 {
-                    {"Robot", log.ToMap()}
+                    { "Robot", log.Robot.ToMap()},
+                    { "EnemyRobot", log.EnemyRobot.ToMap()},
                 }
             );
         }
 
-        public void SetState()
+        public void SetState(RobotLog existingLog = null)
         {
-            RobotLog log = Collision != null ? Collision : action;
+            RobotLog log = existingLog ?? (Collision != null ? Collision : action);
 
-            log.Robot.Position = controller.RigidBody.position;
-            log.Robot.Rotation = Normalize360(controller.RigidBody.rotation);
-            log.Robot.LinearVelocity = controller.RigidBody.linearVelocity.magnitude;
-            log.Robot.AngularVelocity = controller.RigidBody.angularVelocity;
+            log.Robot.Position = controller.CachedPosition;
+            log.Robot.Rotation = Normalize360(controller.CachedRotation);
+            log.Robot.LinearVelocity = controller.CachedVelocity.magnitude;
+            log.Robot.AngularVelocity = controller.CachedAngularVelocity;
             log.Robot.IsDashActive = controller.IsDashActive;
             log.Robot.IsSkillActive = controller.Skill.IsActive;
             log.Robot.IsOutFromArena = controller.IsOutOfArena;
 
-            log.EnemyRobot.Position = enemyController.RigidBody.position;
-            log.EnemyRobot.Rotation = Normalize360(enemyController.RigidBody.rotation);
-            log.EnemyRobot.LinearVelocity = enemyController.RigidBody.linearVelocity.magnitude;
-            log.EnemyRobot.AngularVelocity = enemyController.RigidBody.angularVelocity;
+            log.EnemyRobot.Position = enemyController.CachedPosition;
+            log.EnemyRobot.Rotation = Normalize360(enemyController.CachedRotation);
+            log.EnemyRobot.LinearVelocity = enemyController.CachedVelocity.magnitude;
+            log.EnemyRobot.AngularVelocity = enemyController.CachedAngularVelocity;
             log.EnemyRobot.IsDashActive = enemyController.IsDashActive;
             log.EnemyRobot.IsSkillActive = enemyController.Skill.IsActive;
             log.EnemyRobot.IsOutFromArena = enemyController.IsOutOfArena;

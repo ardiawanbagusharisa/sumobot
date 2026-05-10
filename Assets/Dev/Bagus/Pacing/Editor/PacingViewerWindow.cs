@@ -1,6 +1,10 @@
+
 using SumoBot;
+using SumoCore;
+using SumoManager;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
@@ -10,15 +14,15 @@ namespace PacingFramework
 	{
 		private bool showBots;
 		private bool showPacingDetails;
-		private bool showSegmentDetails;
 		private bool showEvaluationDetails;
+		private bool showGlobalConstraints;
 
 		private Vector2 pacingScroll;
-		private Vector2 segmentScroll;
 		private Vector2 evaluationScroll;
 
-		private PacingController controller;
-		private PacingTargetConfig targetConfig;
+		private PacingHandler handler;
+		private PlayerSide selectedSide = PlayerSide.Left;
+		private PacingTargetConfig targetConfig = null;
 		private string loadedConfigPath = "";
 
 		private Vector2 scroll;
@@ -27,39 +31,102 @@ namespace PacingFramework
 
 		private bool overlayTarget = true;
 
-		// [Test] For testing only. 
-		private string botName = "Bot1";
-		private string botScore = "3";
-		private string botName1 = "Bot2";
-		private string botScore1 = "5";
+		// Tab selection
+		private int selectedGameTab = 0;
+		private int selectedRoundTab = 0;
+		private GamePacingItem cachedPacingItem = null;
+		private bool autoFollow = true;
+
+		// [Test] For testing only.
+		private string leftBotName = "Left";
+		private string leftBotScore = "3";
+		private string rightBotName = "Right";
+		private string rightBotScore = "5";
 
 		[MenuItem("Tools/Pacing Framework/Pacing Viewer")]
-		public static void Open() {
+		public static void Open()
+		{
 			GetWindow<PacingViewerWindow>("Pacing Viewer");
 		}
 
-		private void OnGUI() {
+		private void OnEnable()
+		{
+			// Subscribe to editor update to continuously repaint during play mode
+			EditorApplication.update += OnEditorUpdate;
+		}
+
+		private void OnDisable()
+		{
+			// Unsubscribe to avoid memory leaks
+			EditorApplication.update -= OnEditorUpdate;
+		}
+
+		private void OnEditorUpdate()
+		{
+			// Continuously repaint during play mode for live updates
+			if (Application.isPlaying)
+			{
+				Repaint();
+			}
+		}
+
+		private void OnGUI()
+		{
+			if (!Application.isPlaying) return;
+
 			scroll = EditorGUILayout.BeginScrollView(scroll);
 
 			DrawSelectionSection();
 
-			if (controller == null) {
-				EditorGUILayout.HelpBox("Assign a PacingController.", MessageType.Info);
+			if (handler == null)
+			{
+				EditorGUILayout.HelpBox("Select a side to view pacing data. Make sure battle has started.", MessageType.Info);
 				EditorGUILayout.EndScrollView();
 				return;
 			}
 
-			GamePacing history = controller.GetHistory();
-
-			if (history.SegmentPacings.Count == 0) {
-				EditorGUILayout.HelpBox("No pacing data yet.", MessageType.Info);
+			if (BattleManager.Instance.CurrentState < BattleState.Battle_Countdown)
+			{
+				EditorGUILayout.HelpBox("Waiting for battle to start...", MessageType.Info);
 				EditorGUILayout.EndScrollView();
 				return;
 			}
 
-			List<float> threat = ExtractThreat(history);
-			List<float> tempo = ExtractTempo(history);
-			List<float> overall = ExtractOverall(history);
+			leftBotScore = BattleManager.Instance.Battle.LeftWinCount.ToString();
+			rightBotScore = BattleManager.Instance.Battle.RightWinCount.ToString();
+
+			GamePacing history = handler.GetHistory();
+
+			// Draw game and round tabs
+			DrawGameRoundTabs(history);
+
+			// Get the selected game pacing item
+			GamePacingItem selectedPacingItem = GetSelectedPacingItem(history);
+
+			// Update cache if we have valid data
+			if (selectedPacingItem != null && selectedPacingItem.SegmentPacings.Count > 0)
+			{
+				cachedPacingItem = selectedPacingItem;
+			}
+
+			// Use cached item if current selection is invalid (prevents UI glitch during transitions)
+			if (selectedPacingItem == null || selectedPacingItem.SegmentPacings.Count == 0)
+			{
+				if (cachedPacingItem != null && cachedPacingItem.SegmentPacings.Count > 0)
+				{
+					selectedPacingItem = cachedPacingItem;
+				}
+				else
+				{
+					EditorGUILayout.HelpBox("No pacing data for selected game/round.", MessageType.Info);
+					EditorGUILayout.EndScrollView();
+					return;
+				}
+			}
+
+			List<float> threat = ExtractThreat(selectedPacingItem);
+			List<float> tempo = ExtractTempo(selectedPacingItem);
+			List<float> overall = ExtractOverall(selectedPacingItem);
 
 			Rect rect = GUILayoutUtility.GetRect(position.width - 20, 400);
 			EditorGUI.DrawRect(rect, new Color(0.12f, 0.12f, 0.12f));
@@ -71,20 +138,40 @@ namespace PacingFramework
 			DrawCurve(rect, tempo, Color.cyan);
 			DrawCurve(rect, overall, Color.green);
 
-			if (overlayTarget && targetConfig != null) {
-				DrawTargetOverlay(rect, targetConfig);
+			if (overlayTarget && (targetConfig != null || handler.PacingTarget != null))
+			{
+				// Use targetConfig if it has valid data, otherwise use handler's PacingTarget
+				targetConfig = (targetConfig != null && targetConfig.ThreatTargets != null && targetConfig.ThreatTargets.Count > 0)
+					? targetConfig
+					: handler.PacingTarget;
+
+				// Resample targets to match actual data count
+				var resampledThreat = ResampleCurve(targetConfig.ThreatTargets, threat.Count);
+				var resampledTempo = ResampleCurve(targetConfig.TempoTargets, tempo.Count);
+
+				// Draw target overlay (dashed lines)
+				DrawTargetOverlay(rect, targetConfig, threat.Count);
+
+				// Draw delta bars showing deviation from target
+				DrawDeltaBars(rect, threat, resampledThreat, Color.red);
+				DrawDeltaBars(rect, tempo, resampledTempo, Color.cyan);
+
+				// Draw enhanced legend with stats
+				DrawEnhancedLegend(rect, threat, tempo, overall, targetConfig);
+
 				DrawEvaluation(threat, tempo);
+				DrawSegmentEvaluation(threat, tempo);
+			}
+			else
+			{
+				// Draw simple legend when no target is available
+				DrawLegend(rect);
 			}
 
-			DrawLegend(rect);
-
-			DrawBotsSection(controller);
-			DrawPacingDetails(history);
-			DrawSegmentDetails(history);
-			DrawSegmentEvaluation(threat, tempo);
-
-			Repaint(); // live update
-
+			DrawGlobalConstraintsSection();
+			DrawBotsSection(handler);
+			DrawPacingDetails(selectedPacingItem);
+			
 			EditorGUILayout.EndScrollView();
 		}
 
@@ -92,35 +179,161 @@ namespace PacingFramework
 		// UI
 		// ======================================================
 
-		private void DrawSelectionSection() {
+		private void DrawGameRoundTabs(GamePacing history)
+		{
+			if (history.PacingHistories.Count == 0) return;
+
 			EditorGUILayout.BeginVertical("box");
 
-			controller = (PacingController)EditorGUILayout.ObjectField(
-				"Pacing Controller",
-				controller,
-				typeof(PacingController),
-				true);
+			// Auto-follow checkbox
+			EditorGUILayout.BeginHorizontal();
+			autoFollow = EditorGUILayout.Toggle("Auto-Follow Latest", autoFollow);
+			EditorGUILayout.EndHorizontal();
+
+			EditorGUILayout.Space(5);
+
+			// Game tabs
+			var gameIndices = history.PacingHistories.Keys.OrderBy(k => k).ToList();
+
+			// Auto-follow: select latest game
+			if (autoFollow && gameIndices.Count > 0)
+			{
+				selectedGameTab = gameIndices.Count - 1;
+			}
+
+			EditorGUILayout.LabelField("Game Selection", EditorStyles.boldLabel);
+			EditorGUILayout.BeginHorizontal();
+
+			for (int i = 0; i < gameIndices.Count; i++)
+			{
+				int gameIdx = gameIndices[i];
+				bool isSelected = (selectedGameTab == i);
+
+				if (GUILayout.Toggle(isSelected, $"Game {gameIdx + 1}", "Button", GUILayout.Width(80)))
+				{
+					if (selectedGameTab != i)
+					{
+						selectedGameTab = i;
+						selectedRoundTab = 0; // Reset round selection when game changes
+						autoFollow = false; // Disable auto-follow on manual selection
+					}
+				}
+			}
+
+			EditorGUILayout.EndHorizontal();
+
+			// Round tabs for selected game
+			if (selectedGameTab < gameIndices.Count)
+			{
+				int currentGameIdx = gameIndices[selectedGameTab];
+				var roundIndices = history.PacingHistories[currentGameIdx].Keys.OrderBy(k => k).ToList();
+
+				// Auto-follow: select latest round
+				if (autoFollow && roundIndices.Count > 0)
+				{
+					selectedRoundTab = roundIndices.Count - 1;
+				}
+				// Clamp selectedRoundTab to valid range to prevent glitches
+				else if (roundIndices.Count > 0 && selectedRoundTab >= roundIndices.Count)
+				{
+					selectedRoundTab = roundIndices.Count - 1;
+				}
+
+				EditorGUILayout.LabelField("Round Selection", EditorStyles.boldLabel);
+				EditorGUILayout.BeginHorizontal();
+
+				for (int i = 0; i < roundIndices.Count; i++)
+				{
+					int roundIdx = roundIndices[i];
+					bool isSelected = (selectedRoundTab == i);
+
+					if (GUILayout.Toggle(isSelected, $"Round {roundIdx}", "Button", GUILayout.Width(80)))
+					{
+						if (selectedRoundTab != i)
+						{
+							selectedRoundTab = i;
+							autoFollow = false; // Disable auto-follow on manual selection
+						}
+					}
+				}
+
+				EditorGUILayout.EndHorizontal();
+			}
+
+			EditorGUILayout.EndVertical();
+		}
+
+		private GamePacingItem GetSelectedPacingItem(GamePacing history)
+		{
+			if (history.PacingHistories.Count == 0) return null;
+
+			var gameIndices = history.PacingHistories.Keys.OrderBy(k => k).ToList();
+			if (gameIndices.Count == 0 || selectedGameTab >= gameIndices.Count) return null;
+
+			int currentGameIdx = gameIndices[selectedGameTab];
+			if (!history.PacingHistories.ContainsKey(currentGameIdx)) return null;
+
+			var roundIndices = history.PacingHistories[currentGameIdx].Keys.OrderBy(k => k).ToList();
+			if (roundIndices.Count == 0 || selectedRoundTab >= roundIndices.Count) return null;
+
+			int currentRoundIdx = roundIndices[selectedRoundTab];
+			if (!history.PacingHistories[currentGameIdx].ContainsKey(currentRoundIdx)) return null;
+
+			return history.PacingHistories[currentGameIdx][currentRoundIdx];
+		}
+
+		private void DrawSelectionSection()
+		{
+			EditorGUILayout.BeginVertical("box");
+
+			// Select which side to view
+			EditorGUILayout.BeginHorizontal();
+			EditorGUILayout.LabelField("View Side:", GUILayout.Width(80));
+			selectedSide = (PlayerSide)EditorGUILayout.EnumPopup(selectedSide, GUILayout.Width(100));
+			EditorGUILayout.EndHorizontal();
+
+			// Get handler from PacingManager based on selected side
+			if (Application.isPlaying && PacingManager.Instance != null)
+			{
+				handler = selectedSide == PlayerSide.Left
+					? PacingManager.Instance.LeftPacingHandler
+					: PacingManager.Instance.RightPacingHandler;
+
+				string status = handler != null ? "✓ Active" : "✗ Not initialized";
+				EditorGUILayout.LabelField($"Handler Status: {status}");
+			}
+			else
+			{
+				handler = null;
+				EditorGUILayout.HelpBox("PacingManager not found. Make sure it's attached to BattleManager GameObject.", MessageType.Warning);
+			}
 
 			EditorGUILayout.BeginVertical("box");
 
 			EditorGUILayout.BeginHorizontal();
 
-			EditorGUILayout.LabelField("Target Config (Optional)", GUILayout.Width(160));
+			EditorGUILayout.LabelField("Target Config (Override)", GUILayout.Width(160));
 
-			EditorGUI.BeginDisabledGroup(true);
+			// EditorGUI.BeginDisabledGroup(true);
 			EditorGUILayout.TextField("Loaded Path", loadedConfigPath);
-			EditorGUI.EndDisabledGroup();
+			// EditorGUI.EndDisabledGroup();
 
-			if (GUILayout.Button("Load JSON", GUILayout.Width(100))) {
+			if (GUILayout.Button("Load JSON", GUILayout.Width(100)))
+			{
 				string path = EditorUtility.OpenFilePanel(
 					"Load Target Config",
 					"",
 					"json");
 
-				if (!string.IsNullOrEmpty(path)) {
+				if (!string.IsNullOrEmpty(path))
+				{
 					string json = System.IO.File.ReadAllText(path);
 					targetConfig = JsonUtility.FromJson<PacingTargetConfig>(json);
 					loadedConfigPath = path;
+
+					Debug.Log($"[PacingViewer] Loaded config from {path}");
+					Debug.Log($"[PacingViewer] ThreatTargets count: {targetConfig?.ThreatTargets?.Count ?? -1}");
+					Debug.Log($"[PacingViewer] TempoTargets count: {targetConfig?.TempoTargets?.Count ?? -1}");
 				}
 			}
 
@@ -136,23 +349,26 @@ namespace PacingFramework
 		// DATA EXTRACTION
 		// ======================================================
 
-		private List<float> ExtractThreat(GamePacing history) {
+		private List<float> ExtractThreat(GamePacingItem pacingItem)
+		{
 			var list = new List<float>();
-			foreach (var p in history.SegmentPacings)
+			foreach (var p in pacingItem.SegmentPacings)
 				list.Add(p.Threat.Value);
 			return list;
 		}
 
-		private List<float> ExtractTempo(GamePacing history) {
+		private List<float> ExtractTempo(GamePacingItem pacingItem)
+		{
 			var list = new List<float>();
-			foreach (var p in history.SegmentPacings)
+			foreach (var p in pacingItem.SegmentPacings)
 				list.Add(p.Tempo.Value);
 			return list;
 		}
 
-		private List<float> ExtractOverall(GamePacing history) {
+		private List<float> ExtractOverall(GamePacingItem pacingItem)
+		{
 			var list = new List<float>();
-			foreach (var p in history.SegmentPacings)
+			foreach (var p in pacingItem.SegmentPacings)
 				list.Add(p.GetOverallPacing());
 			return list;
 		}
@@ -161,7 +377,8 @@ namespace PacingFramework
 		// DRAWING
 		// ======================================================
 
-		private void DrawGrid(Rect rect, int count) {
+		private void DrawGrid(Rect rect, int count)
+		{
 			Handles.BeginGUI();
 			Handles.color = new Color(0.3f, 0.3f, 0.3f, 0.4f);
 
@@ -175,7 +392,8 @@ namespace PacingFramework
 
 			int xSteps = Mathf.Max(1, count - 1);
 
-			for (int i = 0; i <= xSteps; i++) {
+			for (int i = 0; i <= xSteps; i++)
+			{
 				float x = left + i / (float)xSteps * width;
 				Handles.DrawLine(new Vector3(x, top), new Vector3(x, bottom));
 
@@ -183,7 +401,8 @@ namespace PacingFramework
 					GUI.Label(new Rect(x - 10, bottom + 2, 40, 20), i.ToString());
 			}
 
-			for (int i = 0; i <= 4; i++) {
+			for (int i = 0; i <= 4; i++)
+			{
 				float t = i / 4f;
 				float y = bottom - t * height;
 				Handles.DrawLine(new Vector3(left, y), new Vector3(right, y));
@@ -194,7 +413,8 @@ namespace PacingFramework
 			Handles.EndGUI();
 		}
 
-		private void DrawAxes(Rect rect) {
+		private void DrawAxes(Rect rect)
+		{
 			Handles.BeginGUI();
 			Handles.color = Color.gray;
 
@@ -209,7 +429,8 @@ namespace PacingFramework
 			Handles.EndGUI();
 		}
 
-		private void DrawCurve(Rect rect, List<float> list, Color color) {
+		private void DrawCurve(Rect rect, List<float> list, Color color)
+		{
 			if (list.Count < 2)
 				return;
 
@@ -224,7 +445,8 @@ namespace PacingFramework
 			float width = right - left;
 			float height = bottom - top;
 
-			Vector2 GetPoint(int i) {
+			Vector2 GetPoint(int i)
+			{
 				float x = left + i / (float)(list.Count - 1) * width;
 				float y = bottom - Mathf.Clamp01(list[i]) * height;
 				return new Vector2(x, y);
@@ -239,12 +461,19 @@ namespace PacingFramework
 			Handles.EndGUI();
 		}
 
-		private void DrawTargetOverlay(Rect rect, PacingTargetConfig target) {
-			DrawDashed(rect, target.ThreatTargets, Color.red);
-			DrawDashed(rect, target.TempoTargets, Color.cyan);
+		private void DrawTargetOverlay(Rect rect, PacingTargetConfig target, int actualDataCount)
+		{
+			// The target config has a fixed number of segments (e.g., 25)
+			// We need to resample it to match the actual data count for proper alignment
+			var resampledThreat = ResampleCurve(target.ThreatTargets, actualDataCount);
+			var resampledTempo = ResampleCurve(target.TempoTargets, actualDataCount);
+
+			DrawDashed(rect, resampledThreat, Color.red);
+			DrawDashed(rect, resampledTempo, Color.cyan);
 		}
 
-		private void DrawDashed(Rect rect, List<float> list, Color color) {
+		private void DrawDashed(Rect rect, List<float> list, Color color)
+		{
 			if (list == null || list.Count < 2)
 				return;
 
@@ -259,19 +488,69 @@ namespace PacingFramework
 			float width = right - left;
 			float height = bottom - top;
 
-			Vector2 GetPoint(int i) {
+			Vector2 GetPoint(int i)
+			{
 				float x = left + i / (float)(list.Count - 1) * width;
 				float y = bottom - Mathf.Clamp01(list[i]) * height;
 				return new Vector2(x, y);
 			}
 
+			// Draw dotted lines between consecutive points
 			for (int i = 0; i < list.Count - 1; i++)
 				Handles.DrawDottedLine(GetPoint(i), GetPoint(i + 1), 4f);
+
+			// Draw small circles at each point for better visibility
+			for (int i = 0; i < list.Count; i++)
+				Handles.DrawSolidDisc(GetPoint(i), Vector3.forward, pointRadius * 0.6f);
 
 			Handles.EndGUI();
 		}
 
-		private void DrawLegend(Rect rect) {
+		private void DrawDeltaBars(Rect rect, List<float> actual, List<float> target, Color baseColor)
+		{
+			if (actual == null || target == null || actual.Count == 0 || target.Count == 0)
+				return;
+
+			Handles.BeginGUI();
+
+			float left = rect.x + padding;
+			float right = rect.x + rect.width - padding;
+			float top = rect.y + padding;
+			float bottom = rect.y + rect.height - padding;
+
+			float width = right - left;
+			float height = bottom - top;
+
+			int count = Mathf.Min(actual.Count, target.Count);
+
+			for (int i = 0; i < count; i++)
+			{
+				float x = left + i / (float)(actual.Count - 1) * width;
+				float actualY = bottom - Mathf.Clamp01(actual[i]) * height;
+				float targetY = bottom - Mathf.Clamp01(target[i]) * height;
+
+				// Calculate delta magnitude for color coding
+				float delta = Mathf.Abs(actual[i] - target[i]);
+				Color barColor;
+
+				// Color coding based on delta magnitude
+				if (delta < 0.1f)
+					barColor = new Color(0f, 1f, 0f, 0.3f); // Green - close to target
+				else if (delta < 0.2f)
+					barColor = new Color(1f, 1f, 0f, 0.3f); // Yellow - moderate deviation
+				else
+					barColor = new Color(1f, 0f, 0f, 0.3f); // Red - large deviation
+
+				// Draw vertical bar from actual to target
+				Handles.color = barColor;
+				Handles.DrawLine(new Vector3(x, actualY, 0), new Vector3(x, targetY, 0));
+			}
+
+			Handles.EndGUI();
+		}
+
+		private void DrawLegend(Rect rect)
+		{
 			float boxWidth = 110f;
 			float boxHeight = 60f;
 			float margin = 10f;
@@ -291,7 +570,88 @@ namespace PacingFramework
 			//DrawLegendItem(legendRect, 3, Color.white, "Dashed = Target");
 		}
 
-		private void DrawLegendItem(Rect legendRect, int row, Color color, string label) {
+		private void DrawEnhancedLegend(Rect rect, List<float> threat, List<float> tempo, List<float> overall, PacingTargetConfig targetConfig)
+		{
+			if (threat == null || tempo == null || overall == null) return;
+
+			float boxWidth = 280f;
+			float boxHeight = 90f;
+			float margin = 10f;
+
+			Rect legendRect = new Rect(
+				rect.xMax - boxWidth - margin,
+				rect.y + margin,
+				boxWidth,
+				boxHeight
+			);
+
+			EditorGUI.DrawRect(legendRect, new Color(0f, 0f, 0f, 0.6f));
+
+			// Calculate averages
+			float threatAvg = threat.Count > 0 ? threat.Average() : 0f;
+			float tempoAvg = tempo.Count > 0 ? tempo.Average() : 0f;
+			float overallAvg = overall.Count > 0 ? overall.Average() : 0f;
+
+			// Get target averages if available
+			float threatTarget = 0f;
+			float tempoTarget = 0f;
+			if (targetConfig != null)
+			{
+				var resampledThreat = ResampleCurve(targetConfig.ThreatTargets, threat.Count);
+				var resampledTempo = ResampleCurve(targetConfig.TempoTargets, tempo.Count);
+				threatTarget = resampledThreat.Count > 0 ? resampledThreat.Average() : 0f;
+				tempoTarget = resampledTempo.Count > 0 ? resampledTempo.Average() : 0f;
+			}
+
+			// Calculate deltas
+			float threatDelta = threatAvg - threatTarget;
+			float tempoDelta = tempoAvg - tempoTarget;
+
+			// Draw legend items with stats
+			DrawEnhancedLegendItem(legendRect, 0, Color.red, "Threat", threatAvg, threatTarget, threatDelta);
+			DrawEnhancedLegendItem(legendRect, 1, Color.cyan, "Tempo", tempoAvg, tempoTarget, tempoDelta);
+			DrawEnhancedLegendItem(legendRect, 2, Color.green, "Overall", overallAvg, 0f, 0f);
+		}
+
+		private void DrawEnhancedLegendItem(Rect legendRect, int row, Color color, string label, float avg, float target, float delta)
+		{
+			float rowHeight = 28f;
+			float y = legendRect.y + 6 + row * rowHeight;
+
+			// Color box
+			Rect colorRect = new Rect(legendRect.x + 6, y + 6, 10, 10);
+			EditorGUI.DrawRect(colorRect, color);
+
+			// Label
+			EditorGUI.LabelField(
+				new Rect(legendRect.x + 20, y, 50, 18),
+				label,
+				EditorStyles.whiteBoldLabel
+			);
+
+			// Stats text
+			string statsText;
+			if (target > 0f)
+			{
+				string deltaStr = delta >= 0 ? $"+{delta:F2}" : $"{delta:F2}";
+				statsText = $"Avg:{avg:F2} Tgt:{target:F2}\nΔ:{deltaStr}";
+			}
+			else
+			{
+				statsText = $"Avg: {avg:F2}";
+			}
+
+			GUIStyle smallStyle = new GUIStyle(EditorStyles.whiteLabel);
+			smallStyle.fontSize = 9;
+			EditorGUI.LabelField(
+				new Rect(legendRect.x + 70, y, 200, rowHeight),
+				statsText,
+				smallStyle
+			);
+		}
+
+		private void DrawLegendItem(Rect legendRect, int row, Color color, string label)
+		{
 			float rowHeight = 18f;
 			float y = legendRect.y + 6 + row * rowHeight;
 
@@ -305,54 +665,68 @@ namespace PacingFramework
 			);
 		}
 
-		private void DrawBotsSection(PacingController controller) {
+		private void DrawGlobalConstraintsSection()
+		{
+			if (handler == null || handler.PacingTarget == null || handler.PacingTarget.GlobalConstraints == null)
+				return;
+
+			showGlobalConstraints = EditorGUILayout.Foldout(showGlobalConstraints, "Global Constraints", true);
+			if (!showGlobalConstraints) return;
+
+			var constraints = handler.PacingTarget.GlobalConstraints;
+
+			EditorGUILayout.BeginVertical("box");
+
+			// Display each constraint in a compact format
+			DrawConstraintRow("Collision Ratio", constraints.CollisionRatio);
+			DrawConstraintRow("Ability Ratio", constraints.AbilityRatio);
+			DrawConstraintRow("Angle", constraints.Angle);
+			DrawConstraintRow("Safe Distance", constraints.SafeDistance);
+			DrawConstraintRow("Action Intensity", constraints.ActionIntensity);
+			DrawConstraintRow("Action Density", constraints.ActionDensity);
+			DrawConstraintRow("Bots Distance", constraints.BotsDistance);
+			DrawConstraintRow("Velocity", constraints.Velocity);
+
+			EditorGUILayout.EndVertical();
+		}
+
+		private void DrawConstraintRow(string label, ConstraintMinMax constraint)
+		{
+			EditorGUILayout.BeginHorizontal();
+			EditorGUILayout.LabelField(label, GUILayout.Width(120));
+			EditorGUILayout.LabelField($"Min: {constraint.Min:F2} | Max: {constraint.Max:F2} | Limits: [{constraint.MinLimit:F2}, {constraint.MaxLimit:F2}] | Weight: {constraint.Weight:F2}");
+			EditorGUILayout.EndHorizontal();
+		}
+
+		private void DrawBotsSection(PacingHandler handler)
+		{
 			showBots = EditorGUILayout.Foldout(showBots, "Bot Details", true);
 			if (!showBots) return;
 
 			EditorGUILayout.BeginVertical("box");
-			EditorGUILayout.LabelField($"{botName}  |  Score: {botScore}");
-			EditorGUILayout.LabelField($"{botName1}  |  Score: {botScore1}");
-			
+			EditorGUILayout.LabelField($"Viewing: {selectedSide} Side");
+			EditorGUILayout.LabelField($"{leftBotName}  |  Score: {leftBotScore}");
+			EditorGUILayout.LabelField($"{rightBotName}  |  Score: {rightBotScore}");
+
 			EditorGUILayout.EndVertical();
 		}
 
-		private void DrawPacingDetails(GamePacing history) {
-			showPacingDetails = EditorGUILayout.Foldout(showPacingDetails, "Pacing Details (Aspects / Factors)", true);
+		private void DrawPacingDetails(GamePacingItem pacingItem)
+		{
+			showPacingDetails = EditorGUILayout.Foldout(showPacingDetails, "Per-Segment Details (Factors & Raw Data)", true);
 			if (!showPacingDetails) return;
 
 			EditorGUILayout.BeginVertical("box");
 
-			bool useScroll = history.SegmentPacings.Count > 10;
-
+			bool useScroll = pacingItem.SegmentPacings.Count > 5;
 			if (useScroll)
-				pacingScroll = EditorGUILayout.BeginScrollView(pacingScroll, GUILayout.Height(200));
+				pacingScroll = EditorGUILayout.BeginScrollView(pacingScroll, GUILayout.Height(400));
 
-			for (int i = 0; i < history.SegmentPacings.Count; i++) {
-				var p = history.SegmentPacings[i];
-
-				EditorGUILayout.LabelField($"Segment {i}", EditorStyles.boldLabel);
-
-				EditorGUILayout.LabelField($"Threat: {p.Threat.Value:F3}");
-				EditorGUILayout.LabelField($"Tempo: {p.Tempo.Value:F3}");
-				// Modify the block code below because we now have GetFactorsInfo() in threat and tempo 
-				//foreach (var factor in p.Threat. Factors) {
-				//	EditorGUILayout.LabelField(
-				//		$"   {factor.Key}: {factor.Value:F3}");
-				//}
-				foreach (var info in p.Threat.GetFactorsInfo()) {
-					// Now show the factor and its value. 
-					EditorGUILayout.LabelField(info.factor.ToString());
-					//EditorGUILayout.LabelField(
-					//	$"   {info.Name}: {info.Value:F3}");
-				}
-				foreach (var info in p.Tempo.GetFactorsInfo()) {
-					// Now show the factor and its value. 
-					EditorGUILayout.LabelField(info.factor.ToString());
-					//EditorGUILayout.LabelField(
-					//	$"   {info.Name}: {info.Value:F3}");
-				}
-
-				EditorGUILayout.Space(4);
+			// Draw merged table for each segment
+			for (int i = 0; i < pacingItem.SegmentPacings.Count; i++)
+			{
+				DrawMergedSegmentDetails(pacingItem, i);
+				EditorGUILayout.Space(8);
 			}
 
 			if (useScroll)
@@ -361,38 +735,124 @@ namespace PacingFramework
 			EditorGUILayout.EndVertical();
 		}
 
-		private void DrawSegmentDetails(GamePacing history) {
-			showSegmentDetails = EditorGUILayout.Foldout(showSegmentDetails, "Segment Raw Data", true);
-			if (!showSegmentDetails) return;
+		private void DrawMergedSegmentDetails(GamePacingItem pacingItem, int segmentIndex)
+		{
+			var pacing = pacingItem.SegmentPacings[segmentIndex];
+			var rawData = pacingItem.SegmentGameplayDatas[segmentIndex];
+			var history = pacingItem.SegmentGameplayDatas.Take(segmentIndex + 1).ToList();
+
+			// Color bgColor = segmentIndex % 2 == 0 ? new Color(0.15f, 0.15f, 0.2f, 0.8f) : new Color(0.2f, 0.2f, 0.25f, 0.8f);
 
 			EditorGUILayout.BeginVertical("box");
+			// Rect boxRect = GUILayoutUtility.GetLastRect();
 
-			bool useScroll = history.SegmentPacings.Count > 10;
+			// Header
+			EditorGUILayout.BeginHorizontal();
+			EditorGUILayout.LabelField($"SEGMENT {segmentIndex}", EditorStyles.whiteLargeLabel, GUILayout.Width(120));
+			EditorGUILayout.LabelField($"Overall: {pacing.GetOverallPacing():F3}", EditorStyles.boldLabel);
+			EditorGUILayout.EndHorizontal();
 
-			if (useScroll)
-				segmentScroll = EditorGUILayout.BeginScrollView(segmentScroll, GUILayout.Height(200));
+			EditorGUILayout.Space(5);
 
-			for (int i = 0; i < history.SegmentPacings.Count; i++) {
-				var info = history.SegmentGameplayDatas[i];
-				EditorGUILayout.LabelField($"Segment {i} Counts", EditorStyles.boldLabel);
-				EditorGUILayout.LabelField($"Collisions: {info.Collisions.Count}");
-				EditorGUILayout.LabelField($"Angles: {info.Angles.Count}");
-				EditorGUILayout.LabelField($"SafeDist: {info.SafeDistances.Count}");
-				EditorGUILayout.LabelField($"Actions: {info.Actions.Count}");
-				EditorGUILayout.LabelField($"BotDist: {info.BotsDistances.Count}");
-				EditorGUILayout.LabelField($"Velocity: {info.Velocities.Count}");
-				EditorGUILayout.Space(4);
+			// --- THREAT FACTORS SECTION ---
+			EditorGUILayout.LabelField("THREAT FACTORS", EditorStyles.boldLabel);
+			EditorGUILayout.BeginVertical("box");
+
+			EditorGUILayout.BeginHorizontal();
+			EditorGUILayout.LabelField("Threat Value:", GUILayout.Width(120));
+			EditorGUILayout.LabelField($"{pacing.Threat.Value:F3}", EditorStyles.boldLabel);
+			EditorGUILayout.EndHorizontal();
+
+			var threatFactors = pacing.Threat.GetFactorsInfo();
+			foreach (var factorInfo in threatFactors)
+			{
+				EditorGUILayout.BeginHorizontal();
+				EditorGUILayout.LabelField($"  {factorInfo.factor}", GUILayout.Width(120));
+				EditorGUILayout.LabelField($"{factorInfo.value:F3}");
+				EditorGUILayout.EndHorizontal();
 			}
 
-			if (useScroll)
-				EditorGUILayout.EndScrollView();
+			EditorGUILayout.EndVertical();
+			EditorGUILayout.Space(3);
+
+			// --- TEMPO FACTORS SECTION ---
+			EditorGUILayout.LabelField("TEMPO FACTORS", EditorStyles.boldLabel);
+			EditorGUILayout.BeginVertical("box");
+
+			EditorGUILayout.BeginHorizontal();
+			EditorGUILayout.LabelField("Tempo Value:", GUILayout.Width(120));
+			EditorGUILayout.LabelField($"{pacing.Tempo.Value:F3}", EditorStyles.boldLabel);
+			EditorGUILayout.EndHorizontal();
+
+			var tempoFactors = pacing.Tempo.GetFactorsInfo();
+			foreach (var factorInfo in tempoFactors)
+			{
+				EditorGUILayout.BeginHorizontal();
+				EditorGUILayout.LabelField($"  {factorInfo.factor}", GUILayout.Width(120));
+				EditorGUILayout.LabelField($"{factorInfo.value:F3}");
+				EditorGUILayout.EndHorizontal();
+			}
+
+			EditorGUILayout.EndVertical();
+			EditorGUILayout.Space(3);
+
+			// --- RAW DATA SECTION ---
+			EditorGUILayout.LabelField("RAW DATA", EditorStyles.boldLabel);
+			EditorGUILayout.BeginVertical("box");
+
+			DrawRawDataRow("Collisions", rawData.Collisions);
+			DrawRawDataRow("Angles", rawData.Angles);
+			DrawRawDataRow("SafeDistances", rawData.SafeDistances);
+			DrawRawDataRow("Actions", rawData.Actions);
+			DrawRawDataRow("BotsDistances", rawData.BotsDistances);
+			DrawRawDataRow("Velocities", rawData.Velocities);
+
+			EditorGUILayout.EndVertical();
 
 			EditorGUILayout.EndVertical();
 		}
+
+		private void DrawRawDataRow<T>(string label, List<T> content)
+		{
+			EditorGUILayout.BeginHorizontal();
+			EditorGUILayout.LabelField($"  {label}", GUILayout.Width(120));
+
+			// Calculate and display average for numeric types
+			string countLabel = $"Count: {content.Count}";
+			if (content.Count > 0 && content[0] is float)
+			{
+				float avg = content.Cast<float>().Average();
+				countLabel += $", Avg: {avg:F2}";
+			}
+			EditorGUILayout.LabelField(countLabel, GUILayout.Width(160));
+
+			if (content.Count > 0)
+			{
+				string contentStr = string.Join(", ", content.Select(x =>
+				{
+					if (x is float f) return f.ToString("F2");
+					return x.ToString();
+				}));
+
+				// Truncate if too long
+				// if (contentStr.Length > 80)
+				// 	contentStr = contentStr.Substring(0, 77) + "...";
+
+				EditorGUILayout.LabelField($"[{contentStr}]");
+			}
+			else
+			{
+				EditorGUILayout.LabelField("[]", new GUIStyle(EditorStyles.label) { fontStyle = FontStyle.Italic });
+			}
+
+			EditorGUILayout.EndHorizontal();
+		}
+
 
 		private void DrawSegmentEvaluation(
 			List<float> actualThreat,
-			List<float> actualTempo) {
+			List<float> actualTempo)
+		{
 			if (targetConfig == null)
 				return;
 
@@ -404,19 +864,28 @@ namespace PacingFramework
 			var alignedThreat = ResampleCurve(targetConfig.ThreatTargets, actualThreat.Count);
 			var alignedTempo = ResampleCurve(targetConfig.TempoTargets, actualTempo.Count);
 
+			// Safety check: ensure resampled lists match actual lists
+			if (alignedThreat.Count != actualThreat.Count || alignedTempo.Count != actualTempo.Count)
+			{
+				EditorGUILayout.LabelField($"Error: Mismatched segment counts (Threat: {alignedThreat.Count} vs {actualThreat.Count}, Tempo: {alignedTempo.Count} vs {actualTempo.Count})");
+				EditorGUILayout.EndVertical();
+				return;
+			}
+
 			bool useScroll = actualThreat.Count > 10;
 
 			if (useScroll)
 				evaluationScroll = EditorGUILayout.BeginScrollView(evaluationScroll, GUILayout.Height(200));
 
-			for (int i = 0; i < actualThreat.Count; i++) {
+			for (int i = 0; i < actualThreat.Count; i++)
+			{
 				float threatDiff = actualThreat[i] - alignedThreat[i];
 				float tempoDiff = actualTempo[i] - alignedTempo[i];
 
-				float mse = threatDiff * threatDiff + tempoDiff * tempoDiff;
+				float mse = (threatDiff * threatDiff + tempoDiff * tempoDiff) / 2f;
 
 				EditorGUILayout.LabelField(
-					$"Segment {i}  |  ThreatΔ: {threatDiff:F3}  TempoΔ: {tempoDiff:F3}  Error: {mse:F4}");
+					$"Segment {i}  |  ThreatΔ: {threatDiff:F3}  TempoΔ: {tempoDiff:F3}  MSE: {mse:F4}");
 			}
 
 			if (useScroll)
@@ -429,26 +898,35 @@ namespace PacingFramework
 		// EVALUATION
 		// ======================================================
 
-		private void DrawEvaluation(List<float> threat, List<float> tempo) {
+		private void DrawEvaluation(List<float> threat, List<float> tempo)
+		{
 			if (targetConfig == null) return;
 
 			float threatError = CalculateMSE(threat, targetConfig.ThreatTargets);
 			float tempoError = CalculateMSE(tempo, targetConfig.TempoTargets);
+			float threatAvg = threat.Sum() / threat.Count;
+			float tempoAvg = tempo.Sum() / tempo.Count;
+			float overall = (threatAvg + tempoAvg) / 2;
 
 			EditorGUILayout.Space();
 			EditorGUILayout.LabelField(
-				$"Threat MSE: {threatError:F4}    Tempo MSE: {tempoError:F4}",
+				$"Threat AVG: {threatAvg:F2}, MSE: {threatError:F4}    Tempo AVG: {tempoAvg:F2}, MSE: {tempoError:F4}",
 				EditorStyles.boldLabel);
+			EditorGUILayout.LabelField(
+			$"Overall Pacing: {overall:F2}",
+			EditorStyles.boldLabel);
 		}
 
-		private float CalculateMSE(List<float> a, List<float> b) {
+		private float CalculateMSE(List<float> a, List<float> b)
+		{
 			if (a == null || b == null) return 0f;
 
 			int count = Mathf.Min(a.Count, b.Count);
 			if (count == 0) return 0f;
 
 			float error = 0f;
-			for (int i = 0; i < count; i++) {
+			for (int i = 0; i < count; i++)
+			{
 				float d = a[i] - b[i];
 				error += d * d;
 			}
@@ -456,12 +934,21 @@ namespace PacingFramework
 			return error / count;
 		}
 
-		private List<float> ResampleCurve(List<float> source, int targetCount) {
+		private List<float> ResampleCurve(List<float> source, int targetCount)
+		{
 			var result = new List<float>();
 			if (source == null || source.Count == 0 || targetCount <= 0)
 				return result;
 
-			for (int i = 0; i < targetCount; i++) {
+			// Handle single target count case
+			if (targetCount == 1)
+			{
+				result.Add(source[0]);
+				return result;
+			}
+
+			for (int i = 0; i < targetCount; i++)
+			{
 				float t = i / (float)(targetCount - 1);
 				float srcIndex = t * (source.Count - 1);
 

@@ -8,7 +8,7 @@ public class CostumeManager : MonoBehaviour
 
     void Start()
     {
-        PlayerTxt.text = $"Preview {GameManager.Instance.GetProfileById().Name}'s";
+        PlayerTxt.text = $"{GameManager.Instance.GetProfileById().Name}'s Bot Preview ";
     }
 
     public void SaveAndBack()
@@ -16,4 +16,15 @@ public class CostumeManager : MonoBehaviour
         SFXManager.Instance.Play2D("ui_accept");
         GameManager.Instance.BotCreator_SaveAndBack();
     }
+
+    public void BackToBattle()
+    {
+		SFXManager.Instance.Play2D("ui_accept");
+		UnityEngine.SceneManagement.SceneManager.LoadScene("Battle");
+	}
+
+    public void GoToModule() {
+		SFXManager.Instance.Play2D("ui_accept");
+		UnityEngine.SceneManagement.SceneManager.LoadScene("Dev/Bagus/BotModulesCreator");
+	}
 }

@@ -78,6 +78,17 @@ namespace SumoManager
             public float Duration;
             public List<EventLog> PlayerEvents = new();
             public List<EventLog> StateEvents = new();
+            public Dictionary<int, PacingLog> LeftPacingSegment = new();
+            public Dictionary<int, PacingLog> RightPacingSegment = new();
+        }
+
+        [Serializable]
+        public class PacingLog
+        {
+            public SegmentData SegmentData;
+            public float Tempo;
+            public float Threat;
+            public float OverallPacing;
         }
 
         [Serializable]
@@ -264,8 +275,11 @@ namespace SumoManager
 
         public static void SetPlayerBots(Bot left, Bot right)
         {
-            Log.LeftPlayerStats.Bot = left.ID;
-            Log.RightPlayerStats.Bot = right.ID;
+            if (left != null)
+                Log.LeftPlayerStats.Bot = left.ID;
+
+            if (right != null)
+                Log.RightPlayerStats.Bot = right.ID;
         }
 
         public static void UpdateMetadata(bool logTakenAction = true)
@@ -436,6 +450,28 @@ namespace SumoManager
                 roundLog.PlayerEvents.Add(eventLog);
             }
         }
+
+        public static void LogPacing(
+            SegmentData data,
+            SegmentPacing pacing,
+            int index,
+            PlayerSide side
+        )
+        {
+            RoundLog roundLog = GetCurrentRound();
+            var pace = new PacingLog
+            {
+                OverallPacing = pacing.GetOverallPacing(),
+                SegmentData = data,
+                Tempo = pacing.Tempo.Value,
+                Threat = pacing.Threat.Value,
+            };
+            if (side == PlayerSide.Left)
+                roundLog.LeftPacingSegment.Add(index, pace);
+            else
+                roundLog.RightPacingSegment.Add(index, pace);
+        }
+
         public static RoundLog GetCurrentRound()
         {
             if (Log.Games[CurrentGameIndex].Rounds.Count == 0)

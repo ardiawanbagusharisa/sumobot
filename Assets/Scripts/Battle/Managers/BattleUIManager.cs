@@ -7,7 +7,6 @@ using UnityEngine.UI;
 using System.Collections;
 using UnityEngine.SceneManagement;
 using SumoInput;
-using SumoBot;
 
 namespace SumoManager
 {
@@ -84,55 +83,57 @@ namespace SumoManager
 
         #region Runtime (readonly) Properties
         private readonly string gameplayContent = @"
-Sumobot is a robot game that pits strength in a sumo ring. Your
-main goal is to push your opponent out of the ring, while staying in the circle.
+Sumobot: sumo robot battle arena game. 
+Goal: push the opponent out of the ring arena. 
 
 1. How to Play
-- Control your sumo robot to move, dodge, and attack your opponent.
-- Use special moves like Dash to make quick attacks or avoid enemy attacks.
-- There are two types of special skills, Boost (for quick movements) and Stone (to freeze and withstand collisions).
-- Each round starts with both robots in their respective positions.
-- The game ends when one of the robots exits the ring.
-- The player who remains in the ring is declared the winner.
+- Control your bot using: buttons, live commands, AI script, or visual script.
+- Available actions: accelerate, turn left, turn right, dash, and special skill.
+- Skill types: Boost (quick movements) and Stone (freeze & reflect collisions).
+- Keep your bot survive until the timer runs out, or push the opponent out. 
 
-2. Playing Tips
-- Use skills and Dash at the right time to avoid collisions or make surprise attacks.
-- Pay attention to your opponent''s position and direction of movement, look for gaps to attack from the side or behind.
-- Avoid being too close to the edge of the ring so that you don''t get pushed out easily.
+2. Tips
+- Timing your actions to avoid collisions or make surprise attacks.
+- Pay attention to positions and directions; attack from the blind spot.
+- Avoid being too close to the ring's edge.
 ";
 
-        private readonly string rulesContent = @"
-1. Win and Lose
-- Players will win if they successfully push their opponent out of the arena (sumo ring).
-- Players will win if they are able to survive in the arena until time runs out.
-- Players are declared the loser if their robot is pushed out first.
-- Players are declared the winner if they are able to win the most rounds
+		private readonly string rulesContent = @"
+1. Round System
+- A game takes place in rounds (1, 3, or 5), and a duration (30s or 60s). 
 
-2. Prohibitions
-You are not allowed to exploit bugs to gain an advantage.
+2. Skills and Cooldown
+- Can only choose 1 skill: Boost or Stone, each has a cooldown. 
 
-3. Round System
-- The game can take place in several rounds (according to the settings).
-- Rounds consists three types, which are Best of one, three, and five.
-- The time for one round is 30-60 seconds
-- The winning score will be calculated after each round is completed.
+3. Win and Lose 
+- Bot wins a battle round immediatley if they push the opponent out first.
+- The game winning score will be calculated after all round is completed. 
 
-4. Skills and Cooldown
-- Player can only choose Boost or Stone.
-- Players must wait for the cooldown to finish before they can use the skill again.
-
-5. Penalties
-If a player violates the rules (eg: bug exploit), the round can be disqualified.
+4. Report 
+If you found a bug or vioaltion, report to us to make this game better. 
 ";
 
-        private readonly string controlsContent = @"
-W / O - Forward
-A / K - Turn Left
-D / ; - Turn Right
-C / M - Special Skill
-Left Shift / Right Shift - Dash
+		private readonly string controlsContent = @"
+1. Control - Buttons
+
+		     Left Player	    	    Right Player 
+Forward		W			O
+Turn Left		A			K
+Turn Right		D			;
+Dash			L. Shift			R. Shift 
+Skill			C			M 
+
+2. Control - Live Commands
+- Type ""help"" to show all commands. 
+- Press `tab` for autocomplete, press `enter` to execute a command.
+
+3. Control - AI Script (for advance player only)
+- Download and modify the AI script templates in our GitHub page, then submit it. 
+
+4. Control - Visual Script 
+*Coming soon*
 ";
-        private Dictionary<GuideTab, Button> guideButtonsMap => new()
+		private Dictionary<GuideTab, Button> guideButtonsMap => new()
         {
             {GuideTab.Gameplay,GuideGameplayTab},
             {GuideTab.Rules,GuideRulesTab},
@@ -251,7 +252,7 @@ Left Shift / Right Shift - Dash
 
             Round round = battle.CurrentRound;
             BattleState state = BattleManager.Instance.CurrentState;
-            BattleStateUI.SetText(state.ToString());
+            BattleStateUI.SetText(state.ToString().Replace("_", " "));
 
             SumoController leftPlayer = battle.LeftPlayer;
             SumoController rightPlayer = battle.RightPlayer;
@@ -463,12 +464,21 @@ Left Shift / Right Shift - Dash
         private void EnableBotSelector(PlayerSide side, TMP_Dropdown dropdown, bool isActive)
         {
             var botManager = BattleManager.Instance.BotManager;
-            var botTypes = BotUtility.GetAllBotTypes();
-            var botNames = botTypes.ConvertAll(t => t.Name).ToArray();
+            var botInstances = BotUtility.GetAllBotInstances();
+
+            // Safety check: ensure we have bot instances
+            if (botInstances == null || botInstances.Count == 0)
+            {
+                Debug.LogError("No Bot ScriptableObject instances found! Make sure Bot assets exist in the project.");
+                return;
+            }
+
+            var botIDs = botInstances.ConvertAll(bot => bot.ID).ToArray();
 
             if (isActive)
             {
-                dropdown.AddOptions(botNames.ToList());
+                dropdown.ClearOptions();
+                dropdown.AddOptions(botIDs.ToList());
                 dropdown.value = 0;
             }
 
@@ -476,20 +486,22 @@ Left Shift / Right Shift - Dash
             {
                 LeftSkill.interactable = !isActive;
                 botManager.LeftEnabled = isActive;
-                if (isActive)
+                if (isActive && botInstances.Count > 0)
                 {
                     botManager.leftBotIndex = 0;
-                    botManager.Left = ScriptableObject.CreateInstance(botTypes[0]) as Bot;
+                    botManager.Left = Instantiate(botInstances[0]);
+                    botManager.Left.name = $"{botInstances[0].name}_Left";
                 }
             }
             else
             {
                 RightSkill.interactable = !isActive;
                 botManager.RightEnabled = isActive;
-                if (isActive)
+                if (isActive && botInstances.Count > 0)
                 {
                     botManager.rightBotIndex = 0;
-                    botManager.Right = ScriptableObject.CreateInstance(botTypes[0]) as Bot;
+                    botManager.Right = Instantiate(botInstances[0]);
+                    botManager.Right.name = $"{botInstances[0].name}_Right";
                 }
             }
             dropdown.gameObject.SetActive(isActive);
@@ -499,8 +511,16 @@ Left Shift / Right Shift - Dash
         {
             SFXManager.Instance.Play2D("ui_accept");
             var botManager = BattleManager.Instance.BotManager;
-            var botTypes = BotUtility.GetAllBotTypes();
-            var bot = ScriptableObject.CreateInstance(botTypes[index]) as Bot;
+            var botInstances = BotUtility.GetAllBotInstances();
+
+            // Safety check
+            if (botInstances == null || index >= botInstances.Count)
+            {
+                Debug.LogError($"Invalid bot index {index}. Available bots: {botInstances?.Count ?? 0}");
+                return;
+            }
+
+            var bot = botInstances[index];
             if (side == PlayerSide.Left)
             {
                 botManager.leftBotIndex = index;
@@ -537,7 +557,13 @@ Left Shift / Right Shift - Dash
             SceneManager.LoadScene(SceneManager.GetActiveScene().name);
         }
 
-        public void ShowReplay()
+		public void GoToMainMenu() {
+			SFXManager.Instance.Play2D("ui_accept");
+			Time.timeScale = 1;
+			SceneManager.LoadScene("MainMenu");
+		}
+
+		public void ShowReplay()
         {
             SFXManager.Instance.Play2D("ui_accept");
             GameManager.Instance.Battle_ShowReplay();

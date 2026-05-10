@@ -64,6 +64,7 @@ namespace SumoManager
 
         public Battle Battle;
         public BotManager BotManager;
+        public PacingManager PacingManager;
         private BattleSimulator simulator;
         #endregion
 
@@ -71,6 +72,7 @@ namespace SumoManager
         public EventRegistry Events = new();
         public const string OnCountdownChanged = "OnCountdownChanged";  // [float]
         public const string OnBattleChanged = "OnBattleChanged"; // [Battle]
+        public const string OnActionUpdate = "OnActionUpdate"; // [Battle]
 
         private Coroutine battleTimerCoroutine;
         private Coroutine countdownCoroutine;
@@ -95,6 +97,7 @@ namespace SumoManager
 
             simulator = GetComponent<BattleSimulator>();
             BotManager = GetComponent<BotManager>();
+            PacingManager = GetComponent<PacingManager>();
 
             if (simulator.enabled)
             {
@@ -148,6 +151,9 @@ namespace SumoManager
 
                     left.OnUpdate();
                     right.OnUpdate();
+
+                    // Tick pacing handlers
+                    PacingManager?.Tick();
                 }
             }
         }
@@ -237,26 +243,27 @@ namespace SumoManager
             }
 
             LogManager.FlushActionLog();
-            // PlayerSide? side = LogManager.GetWinnerByContactMade();
-            // if (side == null)
-            // {
-            //     LogManager.SetRoundWinner(side.ToString());
-            //     Battle.SetRoundWinner(side == PlayerSide.Left ? Battle.LeftPlayer : Battle.RightPlayer);
-            // }
-            // else
-            // {
-            LogManager.SetRoundWinner("Draw");
-            Battle.CurrentRound.RoundWinner = null;
-            Battle.Winners[Battle.CurrentRound.RoundNumber] = null;
-            // }
+            PlayerSide? side = LogManager.GetWinnerByContactMade();
+            if (side == null)
+            {
+                LogManager.SetRoundWinner(side.ToString());
+                Battle.SetRoundWinner(side == PlayerSide.Left ? Battle.LeftPlayer : Battle.RightPlayer);
+            }
+            else
+            {
+                LogManager.SetRoundWinner("Draw");
+                Battle.CurrentRound.RoundWinner = null;
+                Battle.Winners[Battle.CurrentRound.RoundNumber] = null;
+            }
 
             TransitionToState(BattleState.Battle_End);
         }
 
         private IEnumerator ResetBattle()
         {
-            yield return new WaitForSeconds(3f);
+            yield return new WaitForSeconds(2.5f);
             LogManager.LogLastPosition();
+            yield return new WaitForSeconds(0.5f);
 
             Battle.LeftPlayer.Reset();
             Battle.RightPlayer.Reset();

@@ -24,26 +24,34 @@ namespace SumoBot
 
         public bool BotEnabled => LeftEnabled || RightEnabled;
 
-        private BotHandler leftConfig;
-        private BotHandler rightConfig;
-
+        private BotHandler leftHandler;
+        private BotHandler rightHandler;
 
         private void OnEnable()
         {
             BattleManager.Instance.Events[BattleManager.OnBattleChanged].Subscribe(OnBattleStateChanged);
         }
+
         void Start()
         {
             if (!enabled)
                 return;
 
-            var allTypes = BotUtility.GetAllBotTypes();
+            var allBotInstances = BotUtility.GetAllBotInstances();
 
-            if (LeftEnabled && leftBotIndex >= 0 && leftBotIndex < allTypes.Count)
-                Left = ScriptableObject.CreateInstance(allTypes[leftBotIndex]) as Bot;
+            if (LeftEnabled && leftBotIndex >= 0 && leftBotIndex < allBotInstances.Count)
+            {
+                // Create a separate instance for left player to avoid shared state
+                Left = Instantiate(allBotInstances[leftBotIndex]);
+                Left.name = $"{allBotInstances[leftBotIndex].name}_Left";
+            }
 
-            if (RightEnabled && rightBotIndex >= 0 && rightBotIndex < allTypes.Count)
-                Right = ScriptableObject.CreateInstance(allTypes[rightBotIndex]) as Bot;
+            if (RightEnabled && rightBotIndex >= 0 && rightBotIndex < allBotInstances.Count)
+            {
+                // Create a separate instance for right player to avoid shared state
+                Right = Instantiate(allBotInstances[rightBotIndex]);
+                Right.name = $"{allBotInstances[rightBotIndex].name}_Right";
+            }
         }
 
         public void OnUpdate()
@@ -53,7 +61,7 @@ namespace SumoBot
 
             if (LeftEnabled && Left != null)
             {
-                leftConfig.IsOnUpdate = true;
+                leftHandler.IsOnUpdate = true;
 
                 try
                 {
@@ -61,14 +69,14 @@ namespace SumoBot
                 }
                 finally
                 {
-                    leftConfig.IsOnUpdate = false;
+                    leftHandler.IsOnUpdate = false;
                 }
 
             }
 
             if (RightEnabled && Right != null)
             {
-                rightConfig.IsOnUpdate = true;
+                rightHandler.IsOnUpdate = true;
 
                 try
                 {
@@ -76,10 +84,11 @@ namespace SumoBot
                 }
                 finally
                 {
-                    rightConfig.IsOnUpdate = false;
+                    rightHandler.IsOnUpdate = false;
                 }
-
             }
+
+
         }
 
         public void OnBattleStateChanged(EventParameter param)
@@ -107,12 +116,14 @@ namespace SumoBot
             if (side == PlayerSide.Left)
             {
                 UnInit(leftPlayer, destroyScriptInstance);
-                Left = param;
+                Left = Instantiate(param);
+                Left.name = $"{param.ID}_Left";
             }
             else
             {
                 UnInit(rightPlayer, destroyScriptInstance);
-                Right = param;
+                Right = Instantiate(param);
+                Right.name = $"{param.ID}_Right";
             }
 
 
@@ -132,30 +143,30 @@ namespace SumoBot
 
             if (LeftEnabled && Left != null && controller.Side == PlayerSide.Left)
             {
-                leftConfig = new()
+                leftHandler = new()
                 {
                     InputProvider = controller.InputProvider,
                     Actions = new(),
                     SkillType = skillType ?? Left.DefaultSkillType
                 };
-                controller.AssignSkill(leftConfig.SkillType);
+                controller.AssignSkill(leftHandler.SkillType);
                 controller.Events[SumoController.OnBounce].Subscribe(OnLeftBounce);
-                Left.Init(leftConfig);
-                Left.OnBotInit(leftConfig.InputProvider.API);
+                Left.Init(leftHandler);
+                Left.OnBotInit(leftHandler.InputProvider.API);
             }
 
             if (RightEnabled && Right != null && controller.Side == PlayerSide.Right)
             {
-                rightConfig = new()
+                rightHandler = new()
                 {
                     InputProvider = controller.InputProvider,
                     Actions = new(),
                     SkillType = skillType ?? Left.DefaultSkillType
                 };
-                controller.AssignSkill(rightConfig.SkillType);
+                controller.AssignSkill(rightHandler.SkillType);
                 controller.Events[SumoController.OnBounce].Subscribe(OnRightBounce);
-                Right.Init(rightConfig);
-                Right.OnBotInit(rightConfig.InputProvider.API);
+                Right.Init(rightHandler);
+                Right.OnBotInit(rightHandler.InputProvider.API);
             }
         }
 

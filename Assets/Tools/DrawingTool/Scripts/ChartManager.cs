@@ -188,11 +188,15 @@ public class ChartManager : MonoBehaviour
     {
         foreach (Transform toggle in panelParent)
             Destroy(toggle.gameObject);
+
+        // Don't destroy label pool - labels are managed separately
     }
 
     private void ClearCanvas()
     {
         drawer.ClearCanvas(backgroundColour);
+
+        // Destroy all label children (original approach)
         foreach (Transform child in labelParent)
             Destroy(child.gameObject);
     }
@@ -336,7 +340,7 @@ public class ChartManager : MonoBehaviour
                         float x = paddingLeft + group * groupWidth + cat * barWidth;
 
                         // Color: use per-category if defined, else fallback by group
-                        Color barColor = (series.CategoryColors != null && series.CategoryColors.Length > cat)
+                        Color barColor = (series.CategoryColors != null && series.CategoryColors.Length > group)
                             ? series.CategoryColors[group]
                             : (group == 0 ? Color.green : Color.red);
 
@@ -537,7 +541,6 @@ public class ChartManager : MonoBehaviour
 
         RectTransform rt = label.GetComponent<RectTransform>();
         rt.sizeDelta = new Vector2(100, 30);
-
         rt.localRotation = Quaternion.Euler(0, 0, rotation);
 
         RectTransform rawImageRectTransform = rawImage.rectTransform;

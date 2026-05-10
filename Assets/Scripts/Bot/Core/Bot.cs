@@ -29,11 +29,6 @@ namespace SumoBot
         public abstract string ID { get; }
 
         /// <summary>
-        /// Indicates whether the bot uses asynchronous operations (e.g., for ML inference).
-        /// </summary>
-        public virtual bool UseAsync { get; } = false;
-
-        /// <summary>
         /// Type of skill the bot uses (e.g., Boost, Stone).
         /// </summary>
         public virtual SkillType DefaultSkillType { get; }

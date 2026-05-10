@@ -1,105 +1,105 @@
 @echo off
 REM Sumobot Simulator Runner for Windows
 REM
-REM Usage: run_simulator.bat "C:\path\to\Sumobot.exe" 0 100 20
-REM   %1 = exe path
-REM   %2 = configStart
-REM   %3 = configEnd
-REM   %4 = batch size
+REM Usage:
+REM   Range Mode:  run_simulator.bat "C:\path\to\Sumobot.exe" 0 100 20 [timeScale]
+REM   Single Mode: run_simulator.bat "C:\path\to\Sumobot.exe" 993 single single [timeScale]
 
-if "%~4"=="" (
-    echo Usage: run_simulator.bat ^<exe_path^> ^<config_start^> ^<config_end^> ^<batch_size^>
-    echo.
-    echo Example:
-    echo   run_simulator.bat "C:\path\to\Sumobot.exe" 0 100 20
-    echo.
-    echo Arguments:
-    echo   exe_path      : Path to Sumobot executable
-    echo   config_start  : Starting configuration index
-    echo   config_end    : Ending configuration index
-    echo   batch_size    : Number of configs to run per instance
-    exit /b 1
-)
+setlocal enabledelayedexpansion
 
 set "UNITY_PATH=%~1"
-set CONFIG_START=%2
-set CONFIG_END=%3
-set BATCH=%4
+set "SINGLE_MODE=false"
 
-REM Validate executable exists
-if not exist "%UNITY_PATH%" (
-    echo Error: Executable not found at '%UNITY_PATH%'
-    exit /b 1
+REM Detect mode: if %3 is "single", treat as single config mode
+echo [DEBUG] Param 3: "%~3"
+if /I "%~3"=="single" (
+    echo [DEBUG] Entering SINGLE mode
+    set "SINGLE_MODE=true"
+    set "CONFIG_INDEX=%~2"
+    set "TIME_SCALE=%~5"
+) else (
+    echo [DEBUG] Entering RANGE mode
+    set "CONFIG_START=%~2"
+    set "CONFIG_END=%~3"
+    set "BATCH=%~4"
+    set "TIME_SCALE=%~5"
 )
 
-REM Validate numeric arguments
-set /a test=%CONFIG_START% 2>nul
-if errorlevel 1 (
-    echo Error: config_start must be a number
-    exit /b 1
-)
-
-set /a test=%CONFIG_END% 2>nul
-if errorlevel 1 (
-    echo Error: config_end must be a number
-    exit /b 1
-)
-
-set /a test=%BATCH% 2>nul
-if errorlevel 1 (
-    echo Error: batch_size must be a number
-    exit /b 1
-)
-
-if %CONFIG_START% GEQ %CONFIG_END% (
-    echo Error: config_start must be less than config_end
-    exit /b 1
-)
-
-if %BATCH% LEQ 0 (
-    echo Error: batch_size must be positive
-    exit /b 1
-)
-
+REM Build arguments
 set COMMON_ARGS=-batchmode -nographics
 
-REM Get the directory where the script is located
+set "TIME_SCALE_ARG="
+if not "!TIME_SCALE!"=="" (
+    set "TIME_SCALE_ARG=--configTimeScale=!TIME_SCALE!"
+)
+
+REM Get script directory
 set "SCRIPT_DIR=%~dp0"
-REM Remove trailing backslash
 set "SCRIPT_DIR=%SCRIPT_DIR:~0,-1%"
 
 echo ========================================
-echo Sumobot Simulator Runner
+echo Sumobot Simulator Runner v0.0.1
 echo ========================================
-echo Simulator: %UNITY_PATH%
-echo Config range: %CONFIG_START% to %CONFIG_END%
-echo Batch size: %BATCH%
-echo Log directory: %SCRIPT_DIR%
+echo Simulator: !UNITY_PATH!
 echo.
 
-setlocal enabledelayedexpansion
-set current=%CONFIG_START%
+echo [DEBUG] SINGLE_MODE = "!SINGLE_MODE!"
+
+if /I "!SINGLE_MODE!"=="true" (
+    echo [DEBUG] Executing SINGLE mode block
+    REM Single config mode
+    echo Mode: Single Configuration
+    echo Config index: !CONFIG_INDEX!
+    if not "!TIME_SCALE!"=="" (
+        echo Time scale: !TIME_SCALE!x
+    )
+    echo Log directory: !SCRIPT_DIR!
+    echo.
+
+    echo Launching config !CONFIG_INDEX! (log: log_config_!CONFIG_INDEX!.txt)
+    start "SumobotSim" "!UNITY_PATH!" !COMMON_ARGS! --configIndex=!CONFIG_INDEX! !TIME_SCALE_ARG! --batchLogFile="log_config_!CONFIG_INDEX!.txt"
+
+    echo.
+    echo Simulation launched successfully!
+    echo Check log file: log_config_!CONFIG_INDEX!.txt
+
+    goto end
+)
+
+REM If we get here, we're in RANGE mode
+echo [DEBUG] Executing RANGE mode block
+echo Mode: Range
+echo Config range: !CONFIG_START! to !CONFIG_END!
+echo Batch size: !BATCH!
+if not "!TIME_SCALE!"=="" (
+    echo Time scale: !TIME_SCALE!x
+)
+echo Log directory: !SCRIPT_DIR!
+echo.
+
+set current=!CONFIG_START!
 set batch_count=0
 
 :loop
-if %current% GEQ %CONFIG_END% goto done
+if !current! GEQ !CONFIG_END! goto done
 
-set /a next=%current% + %BATCH%
-if !next! GTR %CONFIG_END% set next=%CONFIG_END%
+set /a next=!current! + !BATCH!
+if !next! GTR !CONFIG_END! set next=!CONFIG_END!
 
-set "LOGFILE=%SCRIPT_DIR%\log_!current!-!next!.txt"
 set /a batch_count+=1
 
 echo [Batch !batch_count!] Launching configs !current! to !next! (log: log_!current!-!next!.txt)
-start "Sumobot Simulator" "%UNITY_PATH%" %COMMON_ARGS% --configStart=%current% --configEnd=!next! -logFile "!LOGFILE!"
+start "Sumobot" "!UNITY_PATH!" !COMMON_ARGS! --configStart=!current! --configEnd=!next! !TIME_SCALE_ARG! --batchLogFile="log_!current!-!next!.txt"
 
 set current=!next!
 goto loop
 
 :done
 echo.
-echo ========================================
 echo All simulations launched successfully!
-echo Total batches: %batch_count%
+echo Total batches: !batch_count!
+
+:end
+echo.
 echo ========================================
 pause
