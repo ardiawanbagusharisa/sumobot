@@ -34,7 +34,7 @@ namespace PacingFramework
 
 		private SegmentPacing currentSegmentPacing;
 
-		private GamePacing pacingHistory = new GamePacing();
+		private GamePacing pacingHistory;
 
 		private SumoController controller;
 
@@ -66,12 +66,13 @@ namespace PacingFramework
 		// ================================
 		// Constructor
 		// ================================
-		public PacingHandler(SumoController controller, string pacingFileName, float segmentDuration, int collisionWindowSize)
+		public PacingHandler(SumoController controller, string pacingFileName, float segmentDuration, int collisionWindowSize, GamePacing sharedPacingHistory)
 		{
 			this.controller = controller;
 			this.segmentDuration = segmentDuration;
 			this.collisionWindowSize = collisionWindowSize;
 			PacingFileName = pacingFileName;
+			this.pacingHistory = sharedPacingHistory;
 
 			// Subscribe to events
 			controller.Events[SumoController.OnBounce].Subscribe(OnBounce);
