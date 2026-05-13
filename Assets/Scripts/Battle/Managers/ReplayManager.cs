@@ -611,58 +611,63 @@ public class ReplayManager : MonoBehaviour
         {
             currentGameIndex--;
             currentRoundIndex = 0;
+
+            // Reset transition delay when manually navigating
+            isWaitingForRoundTransition = false;
+            roundTransitionTimer = 0f;
+
+            LoadRound(currentGameIndex, currentRoundIndex);
+            isPlaying = true;
         }
-
-        // Reset transition delay when manually navigating
-        isWaitingForRoundTransition = false;
-        roundTransitionTimer = 0f;
-
-        LoadRound(currentGameIndex, currentRoundIndex);
-        isPlaying = true;
     }
 
     void GoToNextGame()
     {
+
         if (currentGameIndex < gameLogs.Count - 1)
         {
             currentGameIndex++;
             currentRoundIndex = 0;
+
+            // Reset transition delay when manually navigating
+            isWaitingForRoundTransition = false;
+            roundTransitionTimer = 0f;
+
+            LoadRound(currentGameIndex, currentRoundIndex);
+            isPlaying = true;
         }
-
-        // Reset transition delay when manually navigating
-        isWaitingForRoundTransition = false;
-        roundTransitionTimer = 0f;
-
-        LoadRound(currentGameIndex, currentRoundIndex);
-        isPlaying = true;
     }
 
     void GoToPreviousRound()
     {
+
         if (currentRoundIndex > 0)
+        {
             currentRoundIndex--;
 
-        // Reset transition delay when manually navigating
-        isWaitingForRoundTransition = false;
-        roundTransitionTimer = 0f;
+            // Reset transition delay when manually navigating
+            isWaitingForRoundTransition = false;
+            roundTransitionTimer = 0f;
 
-        LoadRound(currentGameIndex, currentRoundIndex);
-        isPlaying = true;
+            LoadRound(currentGameIndex, currentRoundIndex);
+            isPlaying = true;
+        }
     }
 
     void GoToNextRound()
     {
+
         if (currentRoundIndex < gameLogs[currentGameIndex].Rounds.Count - 1)
+        {
             currentRoundIndex++;
-        else
-            currentRoundIndex = gameLogs[currentGameIndex].Rounds.Count - 1;
 
-        // Reset transition delay when manually navigating
-        isWaitingForRoundTransition = false;
-        roundTransitionTimer = 0f;
+            // Reset transition delay when manually navigating
+            isWaitingForRoundTransition = false;
+            roundTransitionTimer = 0f;
 
-        LoadRound(currentGameIndex, currentRoundIndex);
-        isPlaying = true;
+            LoadRound(currentGameIndex, currentRoundIndex);
+            isPlaying = true;
+        }
     }
 
     void OnTimeSliderChanged(float value)
