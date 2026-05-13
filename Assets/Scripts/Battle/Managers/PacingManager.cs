@@ -37,6 +37,10 @@ namespace SumoManager
 		public PacingHandler LeftPacingHandler { get; private set; }
 		public PacingHandler RightPacingHandler { get; private set; }
 
+		// Persistent pacing histories that survive rematch/Battle_Start
+		private GamePacing leftPacingHistory = new GamePacing();
+		private GamePacing rightPacingHistory = new GamePacing();
+
 		#endregion
 
 		#region Unity Lifecycle
@@ -97,12 +101,12 @@ namespace SumoManager
 					finalPacingFileName = "Default";
 				}
 
-				// Create new handler
 				LeftPacingHandler = new PacingHandler(
 					controller,
 					finalPacingFileName,
 					LeftSegmentDuration,
-					LeftCollisionWindowSize
+					LeftCollisionWindowSize,
+					leftPacingHistory
 				);
 
 				// Initialize
@@ -121,12 +125,12 @@ namespace SumoManager
 					finalPacingFileName = "Default";
 				}
 
-				// Create new handler
 				RightPacingHandler = new PacingHandler(
 					controller,
 					finalPacingFileName,
 					RightSegmentDuration,
-					RightCollisionWindowSize
+					RightCollisionWindowSize,
+					rightPacingHistory
 				);
 
 				// Initialize

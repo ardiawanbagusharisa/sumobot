@@ -416,6 +416,8 @@ public class GamePacing
 		var currGameIdx = LogManager.CurrentGameIndex;
 		var roundIdx = LogManager.GetCurrentRound().Index;
 
+		Logger.Info($"[PacingClass][GamePacing] currGameIdx: {currGameIdx}, roundIdx: {roundIdx} PacingHistories length: {PacingHistories.Count()}");
+
 		if (PacingHistories.TryGetValue(currGameIdx, out var _))
 		{
 			if (!PacingHistories[currGameIdx].TryGetValue(roundIdx, out var _))
