@@ -246,7 +246,7 @@ def generate_goal_and_actions(
     return reason, final_actions
 
 
-def export_dataset(df, output_path, format="txt", completion_mode="normal", include_pos_rot=True):
+def export_dataset(df, output_path, isSLM=True):
     """
     Export dataset in either txt or jsonl format.
 
@@ -282,55 +282,33 @@ def export_dataset(df, output_path, format="txt", completion_mode="normal", incl
                     bot_pos[1],
                     bot_rot,
                     actedAt,
-                    completion_mode
+                    "short"
                 )
 
                 # Build prompt text
                 prompt_str = (
-                    f"AngleToEnemy={signed_angle_result:.2f}, "
-                    f"AngleToEnemyScore={signed_angle_result_norm:.2f}, "
-                    f"DistanceToEnemyScore={distance_to_enemy_result:.2f}, "
-                    f"NearBorderArenaScore={near_arena_result:.2f}, "
-                    f"FacingToArena={facing_to_outside_result:.2f}."
+                    f"EnemyAngle={signed_angle_result:.2f} "
+                    f"EnemyAngleScore={signed_angle_result_norm:.2f} "
+                    f"EnemyDistance={distance_to_enemy_result:.2f} "
+                    f"BotArena={near_arena_result:.2f} "
+                    f"FaceArena={facing_to_outside_result:.2f}"
                 )
 
-                if include_pos_rot:
+                if isSLM:
                     extra = (
-                        f"BotPos=[{row['BotPosX']:.2f},{row['BotPosY']:.2f}], "
-                        f"BotRot={int(row['BotRot'])}, "
-                        f"EnemyPos=[{row['EnemyBotPosX']:.2f},{row['EnemyBotPosY']:.2f}], "
-                        f"EnemyRot={int(row['EnemyBotRot'])}, "
+                        f"BotPos=[{row['BotPosX']:.2f},{row['BotPosY']:.2f}] "
+                        f"BotRot={int(row['BotRot'])} "
+                        f"EnemyPos=[{row['EnemyBotPosX']:.2f},{row['EnemyBotPosY']:.2f}] "
+                        f"EnemyRot={int(row['EnemyBotRot'])} "
                     )
                     prompt_str = extra + prompt_str
 
-                if format == "txt":
+                if isSLM:
                     line = f"{prompt_str} Result: {', '.join(actions)}"
                     f.write(line + "\n")
-                elif format == "jsonl_prompt_completion":
-                    line = f"You are a Sumobot assistant. Given this state: {prompt_str} Suggested Action:"
+                else:
                     record = {
-                        "prompt": line,
-                        "completion": ', '.join(actions)
-                    }
-                    f.write(json.dumps(record) + "\n")
-                elif format == "jsonl_message":
-                    record = {
-                        "messages": [
-                            {"role": "system", "content": "You are a Sumobot assistant that decides actions based on game state."},
-                            {"role": "user", "content": f"Given this game state: {prompt_str}"},
-                            {"role": "assistant", "content": ', '.join(actions)}
-                        ]
-                    }
-                    f.write(json.dumps(record) + "\n")
-                elif format == "jsonl_text":
-                    line = f"You are a Sumobot assistant. Given this state: {prompt_str} Suggested Action: {', '.join(actions)}"
-                    record = {
-                        "text": line,
-                    }
-                    f.write(json.dumps(record) + "\n")
-                elif format == "jsonl_state_action":
-                    record = {
-                        "state": line,
+                        "state": prompt_str,
                         "action": ', '.join(actions),
                     }
                     f.write(json.dumps(record) + "\n")

@@ -62,3 +62,4 @@ mono_crash**.json
 #!Packages/manifest.json
 #!Packages/packages-lock.json
 Simulation/*.txt
+sumobot.wiki
