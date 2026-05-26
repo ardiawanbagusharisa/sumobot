@@ -63,3 +63,4 @@ mono_crash**.json
 #!Packages/packages-lock.json
 Simulation/*.txt
 sumobot.wiki
+*.lscache

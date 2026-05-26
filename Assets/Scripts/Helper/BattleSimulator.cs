@@ -67,7 +67,10 @@ namespace SumoHelper
                 {
                     BattleManager.Instance.BotManager.Swap();
                 }
+
                 yield return new WaitForSeconds(1);
+
+                Time.timeScale = SimpleTimeScale;
 
                 if (SimulationOnStart || i > 0)
                 {
@@ -79,6 +82,7 @@ namespace SumoHelper
                     yield return null; // wait frame
                 }
 
+                Time.timeScale = 1;
                 yield return new WaitForSeconds(1);
                 yield return new WaitForEndOfFrame(); // Delay if needed
             }
@@ -170,8 +174,8 @@ namespace SumoHelper
 
             if (Mode == SimulatorMode.Simple)
             {
-                Time.timeScale = SimpleTimeScale;
                 Application.runInBackground = true;
+                Time.timeScale = SimpleTimeScale;
                 StartCoroutine(RunSimpleSimulations());
             }
             else

@@ -346,6 +346,12 @@ namespace SumoManager
                 Timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss")
             };
             Log.Games[CurrentGameIndex].Rounds.Add(newRound);
+
+            // Clear collision cache at start of each round to prevent duplicates
+            SumoCore.SumoController.ClearCollisionCache();
+
+            // Initialize pacing history for new round to prevent cross-round contamination
+            PacingManager.Instance?.InitRound();
         }
 
         public static PlayerSide? GetWinnerByContactMade()
@@ -459,13 +465,15 @@ namespace SumoManager
         )
         {
             RoundLog roundLog = GetCurrentRound();
+
             var pace = new PacingLog
             {
                 OverallPacing = pacing.GetOverallPacing(),
-                SegmentData = data,
+                SegmentData = new SegmentData(data),
                 Tempo = pacing.Tempo.Value,
                 Threat = pacing.Threat.Value,
             };
+
             if (side == PlayerSide.Left)
                 roundLog.LeftPacingSegment.Add(index, pace);
             else

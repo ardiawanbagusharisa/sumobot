@@ -142,6 +142,21 @@ namespace SumoManager
 
 		#endregion
 
+		#region Round Management
+
+		/// <summary>
+		/// Initialize pacing history for a new round. Should be called at the start of each round.
+		/// </summary>
+		public void InitRound()
+		{
+			if (!enabled) return;
+			leftPacingHistory.InitBattle();
+			rightPacingHistory.InitBattle();
+			Debug.Log("[PacingManager] Round pacing history initialized");
+		}
+
+		#endregion
+
 		#region Tick Methods
 
 		/// <summary>

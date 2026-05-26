@@ -72,9 +72,7 @@ namespace SumoHelper
 
         public void Update()
         {
-            if (Collision == null) return;
-
-            if (IsActive && debounceTime != 0f && lastCallTime != 0f && BattleManager.Instance.ElapsedTime - lastCallTime >= debounceTime)
+            if (IsActive && debounceTime != 0f && lastCallTime != 0f && (BattleManager.Instance.ElapsedTime - lastCallTime) >= debounceTime)
             {
                 IsActive = false;
 
