@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using SumoBot;
 using SumoCore;
 using SumoInput;
@@ -49,8 +51,6 @@ namespace PacingFramework
 			new TurnAction(InputType.Script, ActionType.TurnLeft, 0.3f),
 			new TurnAction(InputType.Script, ActionType.TurnRight, 0.3f),
 			new AccelerateAction(InputType.Script, 0.1f),
-			new AccelerateAction(InputType.Script, 0.3f),
-			new AccelerateAction(InputType.Script, 0.5f),
 			new DashAction(InputType.Script),
 			new SkillAction(InputType.Script, ActionType.SkillBoost),
 			new SkillAction(InputType.Script, ActionType.SkillStone),
@@ -112,10 +112,16 @@ namespace PacingFramework
 		// ================================
 		public void Init()
 		{
+			// Reset segment tracking
 			currentGameplayData = new SegmentData();
 			tickCount = 0;
 			segmentIndex = 0;
+
+			// Initialize pacing history for current round
+			// This creates a fresh GamePacingItem with empty SegmentGameplayDatas
 			pacingHistory.InitBattle();
+
+			Logger.Info($"[{controller.Side}] PacingHandler.Init() completed for Game {LogManager.CurrentGameIndex}, Round {LogManager.GetCurrentRound()?.Index}");
 		}
 
 		public void Tick()
@@ -132,13 +138,15 @@ namespace PacingFramework
 
 			RunEval();
 
-			tickCount += 1;
-			if ((tickCount / 10) < segmentDuration)
-				return;
+			if (tickCount * api.BattleInfo.ActionInterval >= segmentDuration)
+			{
+				FinalizeSegment();
+				tickCount = 0;
+				currentGameplayData.Reset();
+			}
 
-			FinalizeSegment();
-			tickCount = 0;
-			currentGameplayData.Reset();
+			tickCount++;
+
 		}
 
 		private void RunEval()
@@ -173,18 +181,11 @@ namespace PacingFramework
 			float threatImprovement = origThreatDistance - filtThreatDistance;
 			float tempoImprovement = origTempoDistance - filtTempoDistance;
 
-			// Calculate closeness percentage
-			float threatClosenessPercent = 0f;
-			if (origThreatDistance > 0.001f) // Avoid division by zero
-			{
-				threatClosenessPercent = threatImprovement / origThreatDistance * 100f;
-			}
-
-			float tempoClosenessPercent = 0f;
-			if (origTempoDistance > 0.001f)
-			{
-				tempoClosenessPercent = tempoImprovement / origTempoDistance * 100f;
-			}
+			// Calculate closeness percentage relative to full pacing range (0-1)
+			// This prevents extreme percentages when already close to target
+			const float PACING_RANGE = 1.0f; // Normalized pacing values are 0-1
+			float threatClosenessPercent = (threatImprovement / PACING_RANGE) * 100f;
+			float tempoClosenessPercent = (tempoImprovement / PACING_RANGE) * 100f;
 
 			// Calculate averages
 			float origAverage = (origThreat + origTempo) / 2f;
@@ -213,7 +214,7 @@ namespace PacingFramework
 
 
 			// Multi-line log with all info including progressive average
-			Logger.Info($"[{controller.Side}] PACING FILTER\n\nPast Eval:\t\tThreat Δ={eval.ThreatDelta:F3}, Tempo Δ={eval.TempoDelta:F3}\nOriginal:\t\tThreat={origThreat:F3}({origThreatDelta:+0.000;-0.000;0.000}), Tempo={origTempo:F3}({origTempoDelta:+0.000;-0.000;0.000}), Avg={origAverage:F3}\nFiltered:\t\tThreat={filtThreat:F3}({filtThreatDelta:+0.000;-0.000;0.000}), Tempo={filtTempo:F3}({filtTempoDelta:+0.000;-0.000;0.000}), Avg={filtAverage:F3}\nTarget:\t\t\tThreat={eval.TargetThreat:F3}, Tempo={eval.TargetTempo:F3}, Avg={targetAverage:F3}\nImprove:\t\tThreat={threatImprovement:F3} ({threatClosenessPercent:F1}%), Tempo={tempoImprovement:F3} ({tempoClosenessPercent:F1}%), Closeness={overallClosenessPercent:F1}%\nAct Changed:\t\t{changedCount}/{currentGameplayData.Actions.Count} ({changedCount * 100f / currentGameplayData.Actions.Count:F0}%)\nProgressive Avg=\t{progressiveAvgCloseness:F1}% (n={evalCount})");
+			Logger.Info($"[{controller.Side}][{BattleManager.Instance.ElapsedTime}][Segment {segmentIndex}] PACING FILTER\n\nPast Eval:\t\tThreat Δ={eval.ThreatDelta:F3}, Tempo Δ={eval.TempoDelta:F3}\nOriginal:\t\tThreat={origThreat:F3}({origThreatDelta:+0.000;-0.000;0.000}), Tempo={origTempo:F3}({origTempoDelta:+0.000;-0.000;0.000}), Avg={origAverage:F3}\nFiltered:\t\tThreat={filtThreat:F3}({filtThreatDelta:+0.000;-0.000;0.000}), Tempo={filtTempo:F3}({filtTempoDelta:+0.000;-0.000;0.000}), Avg={filtAverage:F3}\nTarget:\t\t\tThreat={eval.TargetThreat:F3}, Tempo={eval.TargetTempo:F3}, Avg={targetAverage:F3}\nImprove:\t\tThreat={threatImprovement:F3} ({threatClosenessPercent:F1}%), Tempo={tempoImprovement:F3} ({tempoClosenessPercent:F1}%), Closeness={overallClosenessPercent:F1}%\nAct Changed:\t\t{changedCount}/{currentGameplayData.Actions.Count} ({changedCount * 100f / currentGameplayData.Actions.Count:F0}%)\nProgressive Avg=\t{progressiveAvgCloseness:F1}% (n={evalCount})\nOrig Actions: [{string.Join(", ",currentGameplayData.Actions)}]\nFilter Actions: [{string.Join(", ", filteredActions)}]");
 		}
 
 		/// <summary>
@@ -229,6 +230,12 @@ namespace PacingFramework
 			var predictedSegmentData = new SegmentData();
 			SumoAPI api = controller.InputProvider.API;
 
+			Vector2 prevPos = api.MyRobot.Position;
+			float actionInterval = api.BattleInfo.ActionInterval;
+
+			// Collision detection constants (approximate bot radius + buffer)
+			const float COLLISION_THRESHOLD = 4.0f; // Adjust based on actual bot size
+
 			for (int i = 0; i < actions.Count; i++)
 			{
 				var previousActions = actions.GetRange(0, i);
@@ -238,32 +245,72 @@ namespace PacingFramework
 
 				var factors = PredictPacingFactors(predictedPos, predictedRot, actions[i]);
 
+				// Calculate predicted velocity from position change
+				float predictedVelocity = (predictedPos - prevPos).magnitude / actionInterval;
+
+				// Detect potential collision with enemy
+				// Assuming enemy position stays relatively constant during prediction
+				float distanceToEnemy = (predictedPos - api.EnemyRobot.Position).magnitude;
+				if (distanceToEnemy <= COLLISION_THRESHOLD)
+				{
+					// Predict collision type based on velocity comparison
+					float myPredictedSpeed = predictedVelocity;
+					float enemySpeed = api.EnemyRobot.LinearVelocity.magnitude;
+
+					if (myPredictedSpeed > enemySpeed + 0.1f)
+						predictedSegmentData.RegisterCollision(CollisionType.Hit);
+					else if (enemySpeed > myPredictedSpeed + 0.1f)
+						predictedSegmentData.RegisterCollision(CollisionType.Struck);
+					else
+						predictedSegmentData.RegisterCollision(CollisionType.Tie);
+				}
+
+				prevPos = predictedPos;
+
 				// Add to predicted segment data
 				predictedSegmentData.RegisterAngle(factors[FactorType.Angle]);
 				predictedSegmentData.RegisterSafeDistance(factors[FactorType.SafeDistance]);
 				predictedSegmentData.RegisterBotsDistance(factors[FactorType.BotsDistance]);
 				predictedSegmentData.RegisterAction(actions[i]);
+
+				predictedSegmentData.RegisterVelocity(predictedVelocity);
 			}
 
 			// Calculate predicted pacing
-			var predictedPacing = new SegmentPacing(predictedSegmentData, PacingTarget.GlobalConstraints, pacingHistory.CurrentRound().SegmentGameplayDatas, collisionWindowSize);
+			var predictedPacing = new SegmentPacing(predictedSegmentData, PacingTarget.GlobalConstraints);
 
 			return (predictedPacing.Threat.Value, predictedPacing.Tempo.Value);
 		}
 
 		private void FinalizeSegment()
 		{
-			// [Todo] Handle segment's local constraints if needed.
-			GamePacingItem currentPacing = pacingHistory.CurrentRound();
-			currentPacing.SegmentGameplayDatas.Add(new SegmentData(currentGameplayData));
-			currentSegmentPacing = new SegmentPacing(currentGameplayData, PacingTarget.GlobalConstraints, currentPacing.SegmentGameplayDatas, collisionWindowSize);
-			currentPacing.SegmentPacings.Add(currentSegmentPacing);
+			// Get current round's pacing data
+			GamePacingItem currentRound = pacingHistory.CurrentRound();
 
-			LogManager.LogPacing(currentGameplayData, currentSegmentPacing, segmentIndex, controller.Side);
+			// Create deep copy of current segment data to preserve it in history
+			SegmentData segmentCopy = new SegmentData(currentGameplayData);
 
-			// Test
+			// Add the copy to history BEFORE calculating collision window
+			currentRound.SegmentGameplayDatas.Add(segmentCopy);
+
+			// Calculate and store collision window for this segment
+			segmentCopy.CollisionData.CalculateWindow(currentRound.SegmentGameplayDatas, collisionWindowSize);
+
+			currentSegmentPacing = new SegmentPacing(
+				segmentCopy,
+				PacingTarget.GlobalConstraints
+			);
+
+			// Store calculated pacing
+			currentRound.SegmentPacings.Add(currentSegmentPacing);
+
+			// Log for external viewers/debugging
+			LogManager.LogPacing(segmentCopy, currentSegmentPacing, segmentIndex, controller.Side);
+
+			// Debug output
 			DebugPacing(currentSegmentPacing);
 			DebugSegmentData(currentGameplayData);
+
 			segmentIndex++;
 		}
 
@@ -310,11 +357,6 @@ namespace PacingFramework
 			else
 				type = CollisionType.Struck;
 
-			SumoAPI api = controller.InputProvider.API;
-
-			float angle = Mathf.Clamp01(api.Angle(normalized: true));
-			currentGameplayData.RegisterAngle(angle);
-
 			currentGameplayData.RegisterCollision(type);
 		}
 
@@ -322,20 +364,6 @@ namespace PacingFramework
 		{
 			if (!parameter.Bool) // !isExecuted
 			{
-				SumoAPI api = controller.InputProvider.API;
-
-				var safeDist = 1 - (api.BattleInfo.ArenaPosition - api.MyRobot.Position).magnitude / api.BattleInfo.ArenaRadius;
-
-				Debug.Log($"SafeDistance {safeDist}");
-
-				currentGameplayData.RegisterBotsDistance(api.DistanceNormalized());
-				currentGameplayData.RegisterSafeDistance(safeDist);
-
-				float angle = Mathf.Clamp01(api.Angle(normalized: true));
-
-				currentGameplayData.RegisterAngle(angle);
-				currentGameplayData.RegisterVelocity(controller.CachedVelocity.magnitude);
-
 				foreach (var action in parameter.ActionList)
 					currentGameplayData.RegisterAction(action);
 			}
@@ -552,25 +580,46 @@ namespace PacingFramework
 					}
 				}
 
-				// Validate dash - skip if on cooldown
+				// Validate dash - skip if on cooldown or unsafe
 				if (action.Type == ActionType.Dash)
 				{
 					if (api.MyRobot.IsDashOnCooldown)
 					{
 						shouldInclude = false;
 					}
-					else if (!needHigherThreat && !needHigherTempo)
+					else
 					{
-						// Only include dash for aggressive play
-						shouldInclude = false;
+						// Check if dashing in current direction leads toward arena edge
+						float angleToCenter = api.Angle(currentPos, currentRot, api.BattleInfo.ArenaPosition, normalized: true);
+						Vector2 distFromCenter = api.Distance(targetPos: api.BattleInfo.ArenaPosition, oriPos: currentPos);
+						float normalizedDist = distFromCenter.magnitude / api.BattleInfo.ArenaRadius;
+						bool nearEdge = normalizedDist > 0.6f; // Dash is more aggressive, use tighter threshold
+						bool facingAwayFromCenter = angleToCenter < 0.5f; // > 60 degrees off from center
+
+						if (nearEdge && facingAwayFromCenter)
+						{
+							// Skip dash when near edge and facing away from center (very dangerous)
+							shouldInclude = false;
+						}
+						else if (!needHigherThreat && !needHigherTempo)
+						{
+							// Only include dash for aggressive play
+							shouldInclude = false;
+						}
 					}
 				}
 
-				// Filter turns based on threat needs
+				// Filter turns based on threat needs and arena safety
 				if (action is TurnAction turn)
 				{
 					// Determine if this turn helps or hurts angle alignment
-					bool turnTowardsEnemy = TurnHelpsAngle(turn.Type, angleToEnemy);
+					bool turnTowardsEnemy = angleToEnemy > 0.7f;
+
+					// Check if turning makes us face away from arena center
+					// Higher angle value = better alignment with center = safer
+					float angleToCenter = api.Angle(currentPos, currentRot, api.BattleInfo.ArenaPosition, normalized: true);
+					float angleAfterTurn = api.Angle(testPos, testRot, api.BattleInfo.ArenaPosition, normalized: true);
+					bool turningAwayFromCenter = angleAfterTurn < angleToCenter; // Lower alignment = facing more toward edge
 
 					if (needHigherThreat && !turnTowardsEnemy)
 					{
@@ -579,15 +628,36 @@ namespace PacingFramework
 					}
 					else if (!needHigherThreat && turnTowardsEnemy)
 					{
-						// Skip turns that improve angle when we don't need threat
+						// Skip turns toward enemy when we don't need threat
+						shouldInclude = false;
+					}
+					else if (!needHigherThreat && !turnTowardsEnemy && turningAwayFromCenter)
+					{
+						// When lowering threat by turning away from enemy,
+						// reject if this turn makes us face away from arena center (toward edge)
 						shouldInclude = false;
 					}
 				}
 
-				// Filter aggressive accelerate actions based on tempo needs
-				if (action is AccelerateAction accel && accel.Duration >= 0.3f)
+				// Filter accelerate actions based on tempo needs and arena safety
+				if (action is AccelerateAction accel)
 				{
-					if (!needHigherTempo)
+					// Check if accelerating in current direction leads toward arena edge
+					float angleToCenter = api.Angle(currentPos, currentRot, api.BattleInfo.ArenaPosition, normalized: true);
+
+					// If facing away from center (angle < 0.5 means > 60 degrees away from center)
+					// and we're already close to edge, skip acceleration
+					Vector2 distFromCenter = api.Distance(targetPos: api.BattleInfo.ArenaPosition, oriPos: currentPos);
+					float normalizedDist = distFromCenter.magnitude / api.BattleInfo.ArenaRadius;
+					bool nearEdge = normalizedDist > 0.7f; // Within 30% of arena radius from edge
+					bool facingAwayFromCenter = angleToCenter < 0.5f; // > 60 degrees off from center
+
+					if (nearEdge && facingAwayFromCenter)
+					{
+						// Skip acceleration when near edge and facing away from center
+						shouldInclude = false;
+					}
+					else if (accel.Duration >= 0.3f && !needHigherTempo)
 					{
 						// Skip long accelerates when we don't need tempo
 						shouldInclude = false;

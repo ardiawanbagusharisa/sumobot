@@ -465,26 +465,55 @@ namespace SumoCore
 
         #region Robot Physics Methods
 
+        private static HashSet<(int, int, float)> processedCollisions = new HashSet<(int, int, float)>();
+
+        public static void ClearCollisionCache()
+        {
+            processedCollisions.Clear();
+        }
+
         void BounceRule(Collision2D collision)
         {
             if (!collision.gameObject.TryGetComponent<SumoController>(out var enemyRobot))
                 return;
 
-            float actorVelocity = CachedVelocity.magnitude + float.Epsilon;
-            float enemyVelocity = enemyRobot.CachedVelocity.magnitude + float.Epsilon;
+            // Only process collision once - the bot with lower InstanceID handles it
+            int myId = GetInstanceID();
+            int enemyId = enemyRobot.GetInstanceID();
+
+            if (myId > enemyId)
+                return;
+
+            float myVelocity = CachedVelocity.magnitude + float.Epsilon;
+            float enemyVelocityMag = enemyRobot.CachedVelocity.magnitude + float.Epsilon;
 
             Vector2 collisionNormal = collision.contacts[0].normal;
 
             const float compareThreshold = 0.001f;
-            bool isTieBreaker = Mathf.Abs(actorVelocity - enemyVelocity) < compareThreshold;
+            bool isTieBreaker = Mathf.Abs(myVelocity - enemyVelocityMag) < compareThreshold;
 
-            // Decide who is handling the bounce logic based on velocity, or InstanceID for ties
-            bool isActor = actorVelocity > enemyVelocity || (isTieBreaker && GetInstanceID() > enemyRobot.GetInstanceID());
+            // Determine who is the actual actor (the one with higher velocity, or higher ID in ties)
+            // Actor selection rule: higher velocity wins, or higher ID in case of tie
+            bool iAmTheActor;
+            if (Mathf.Abs(myVelocity - enemyVelocityMag) < compareThreshold)
+                iAmTheActor = false;
+            else
+                iAmTheActor = myVelocity > enemyVelocityMag;
 
+            // Set references based on who is the actor
+            SumoController actorBot = iAmTheActor ? this : enemyRobot;
+            SumoController targetBot = iAmTheActor ? enemyRobot : this;
+            float actorVelocity = iAmTheActor ? myVelocity : enemyVelocityMag;
+            float enemyVelocity = iAmTheActor ? enemyVelocityMag : myVelocity;
+
+            // Both bots stop their actions and flush logs
             StopOngoingAction();
             LogManager.FlushActionLog(Side);
+            enemyRobot.StopOngoingAction();
+            LogManager.FlushActionLog(enemyRobot.Side);
 
-            if (isActor)
+            // Play sound effects
+            if (iAmTheActor)
             {
                 SFXManager.Instance.Play2D("collision_small");
                 VFXManager.Instance.PlayCollisionSpark(collision.contacts[0].point, enemyVelocity);
@@ -495,20 +524,19 @@ namespace SumoCore
                 VFXManager.Instance.PlayCollisionSpark(collision.contacts[0].point, actorVelocity);
             }
 
-            if (!isActor) return;
-
-            EventLogger actorEventLog = EventLogger.CreateCollisionLog(this, enemyRobot);
-            EventLogger targetEventLog = EventLogger.CreateCollisionLog(enemyRobot, this);
+            EventLogger actorEventLog = EventLogger.CreateCollisionLog(actorBot, targetBot);
+            EventLogger targetEventLog = EventLogger.CreateCollisionLog(targetBot, actorBot);
 
             // Initially set stat of [actor] and [target]
             actorEventLog.SetState();
             targetEventLog.SetState();
 
-            float actorImpact = Bounce(collisionNormal, enemyVelocity, actorVelocity, enemyRobot, isTieBreaker);
-            float targetImpact = enemyRobot.Bounce(-collisionNormal, actorVelocity, enemyVelocity, this, isTieBreaker);
+            Vector2 actorCollisionNormal = iAmTheActor ? collisionNormal : -collisionNormal;
+            float actorImpact = actorBot.Bounce(actorCollisionNormal, enemyVelocity, actorVelocity, targetBot, isTieBreaker);
+            float targetImpact = targetBot.Bounce(-actorCollisionNormal, actorVelocity, enemyVelocity, actorBot, isTieBreaker);
 
-            float actorLockDuration = LockMovement(true, actorImpact, targetImpact, isTieBreaker);
-            float targetLockDuration = enemyRobot.LockMovement(false, targetImpact, actorImpact, isTieBreaker);
+            float actorLockDuration = actorBot.LockMovement(true, actorImpact, targetImpact, isTieBreaker);
+            float targetLockDuration = targetBot.LockMovement(false, targetImpact, actorImpact, isTieBreaker);
 
             CollisionLog actorColLog = actorEventLog.Collision;
             CollisionLog targetColLog = targetEventLog.Collision;
@@ -523,19 +551,19 @@ namespace SumoCore
             targetColLog.Impact = targetImpact;
             targetColLog.LockDuration = targetLockDuration;
 
-            collisionLogger = actorEventLog;
-            enemyRobot.collisionLogger = targetEventLog;
+            actorBot.collisionLogger = actorEventLog;
+            targetBot.collisionLogger = targetEventLog;
 
-            BounceEvent actorBounceEvent = new(Side, actorColLog, targetColLog);
-            Events[OnBounce].Invoke(new(bounceInfoParam: actorBounceEvent));
+            BounceEvent actorBounceEvent = new(actorBot.Side, actorColLog, targetColLog);
+            actorBot.Events[OnBounce].Invoke(new(bounceInfoParam: actorBounceEvent));
 
-            BounceEvent targetBounceEvent = new(Side, targetColLog, actorColLog);
-            enemyRobot.Events[OnBounce].Invoke(new(bounceInfoParam: targetBounceEvent));
+            BounceEvent targetBounceEvent = new(targetBot.Side, targetColLog, actorColLog);
+            targetBot.Events[OnBounce].Invoke(new(bounceInfoParam: targetBounceEvent));
 
-            collisionLogger.Call();
-            enemyRobot.collisionLogger.Call();
+            actorEventLog.Call();
+            targetEventLog.Call();
 
-            Logger.Info($"[BounceRule] - IsTieBreaker ({isTieBreaker})\nActor=>{Side},Target=>{enemyRobot.Side}\nActorVelocity=>{actorVelocity},TargetVelocity=>{enemyVelocity}\nActorCurrentSkill=> {Skill.Type} isActive:{Skill.IsActive}, TargetCurrentSkill=>{enemyRobot.Skill.Type} isActive: {enemyRobot.Skill.IsActive} \nActorImpact=>{actorImpact}, TargetImpact=>{targetImpact}\nActorLock=>{actorLockDuration}, TargetLock=>{targetLockDuration}");
+            Logger.Info($"[BounceRule] - IsTieBreaker ({isTieBreaker}) - (Time {BattleManager.Instance.ElapsedTime}) - (Game {LogManager.CurrentGameIndex}) - (Round {LogManager.GetCurrentRound().Index})\nActor=>{actorBot.Side},Target=>{targetBot.Side}\nActorVelocity=>{actorVelocity},TargetVelocity=>{enemyVelocity}\nActorCurrentSkill=> {actorBot.Skill.Type} isActive:{actorBot.Skill.IsActive}, TargetCurrentSkill=>{targetBot.Skill.Type} isActive: {targetBot.Skill.IsActive} \nActorImpact=>{actorImpact}, TargetImpact=>{targetImpact}\nActorLock=>{actorLockDuration}, TargetLock=>{targetLockDuration}");
 
         }
 

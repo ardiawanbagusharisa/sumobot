@@ -3,16 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using SumoCore;
 using SumoManager;
+using Unity.VisualScripting;
 using UnityEngine;
-
-public enum AspectType { Threat, Tempo }
-public enum CollisionType { Hit, Struck, Tie }
-
-public enum FactorType
-{
-	HitCollision, Ability, Angle, SafeDistance,             // Threat factors
-	ActionIntensity, ActionDensity, BotsDistance, Velocity  // Tempo factors
-}
 
 [Serializable]
 public class PacingEvaluation
@@ -40,10 +32,10 @@ public class SegmentPacing
 	public ThreatAspect Threat;
 	public TempoAspect Tempo;
 
-	public SegmentPacing(SegmentData data, ConstraintConfig constraints, List<SegmentData> history, int collisionWindowSize = -1)
+	public SegmentPacing(SegmentData data, ConstraintConfig constraints)
 	{
-		Threat = new ThreatAspect(data, constraints, history, collisionWindowSize);
-		Tempo = new TempoAspect(data, constraints, history, collisionWindowSize);
+		Threat = new ThreatAspect(data, constraints);
+		Tempo = new TempoAspect(data, constraints);
 	}
 
 	public float GetOverallPacing()
@@ -66,7 +58,7 @@ public class SegmentPacing
 
 public class ThreatAspect : Aspect
 {
-	public ThreatAspect(SegmentData data, ConstraintConfig constraints, List<SegmentData> history, int collisionWindowSize) : base(data, constraints, history, collisionWindowSize)
+	public ThreatAspect(SegmentData data, ConstraintConfig constraints) : base(data, constraints)
 	{
 		Factors.Add(new Factor(FactorType.HitCollision, 1f));
 		Factors.Add(new Factor(FactorType.Ability, 1f));
@@ -78,7 +70,7 @@ public class ThreatAspect : Aspect
 
 public class TempoAspect : Aspect
 {
-	public TempoAspect(SegmentData data, ConstraintConfig constraints, List<SegmentData> history, int collisionWindowSize) : base(data, constraints, history, collisionWindowSize)
+	public TempoAspect(SegmentData data, ConstraintConfig constraints) : base(data, constraints)
 	{
 		Factors.Add(new Factor(FactorType.ActionIntensity, 1f));
 		Factors.Add(new Factor(FactorType.ActionDensity, 1f));
@@ -93,18 +85,13 @@ public abstract class Aspect
 	protected SegmentData Data;
 	protected ConstraintConfig Constraints;
 	protected List<Factor> Factors = new();
-	protected List<SegmentData> History;
-	protected int CollisionWindowSize;
-
 	public float Value { get; protected set; }
 	public float Weight = 1f;
 
-	public Aspect(SegmentData data, ConstraintConfig constraints, List<SegmentData> history, int collisionWindowSize)
+	public Aspect(SegmentData data, ConstraintConfig constraints)
 	{
 		Data = new SegmentData(data);
 		Constraints = constraints;
-		History = history;
-		CollisionWindowSize = collisionWindowSize;
 		Calculate();
 	}
 
@@ -115,7 +102,7 @@ public abstract class Aspect
 
 		foreach (var f in Factors)
 		{
-			float v = f.Evaluate(Data, Constraints, History, CollisionWindowSize);
+			float v = f.Evaluate(Data, Constraints);
 
 			// Skip NaN values to prevent contamination
 			if (float.IsNaN(v))
@@ -136,16 +123,94 @@ public abstract class Aspect
 	public List<(AspectType aspect, FactorType factor, float value, float weight)> GetFactorsInfo()
 	{
 		AspectType aspectType = (this is ThreatAspect) ? AspectType.Threat : AspectType.Tempo;
-		return Factors.Select(f => (aspectType, f.Type, f.Evaluate(Data, Constraints, History, CollisionWindowSize), f.Weight)).ToList();
+		return Factors.Select(f => (aspectType, f.Type, f.Evaluate(Data, Constraints), f.Weight)).ToList();
 	}
 }
 
 
+/// <summary>
+/// Stores collision data with pre-calculated window for efficient evaluation.
+/// The window is calculated once when segment is finalized, eliminating need to pass history around.
+/// </summary>
+[Serializable]
+public class CollisionWindowData
+{
+	// Current segment's collisions only
+	public List<CollisionType> CurrentSegmentCollisions = new();
+
+	// Pre-calculated window including history (set during segment finalization)
+	public List<CollisionType> WindowCollisions = new();
+
+	// Window size used for calculation (for debugging/transparency)
+	public int WindowSize = 0;
+
+	public CollisionWindowData() { }
+
+	public CollisionWindowData(CollisionWindowData other)
+	{
+		CurrentSegmentCollisions = new(other.CurrentSegmentCollisions);
+		WindowCollisions = new(other.WindowCollisions);
+		WindowSize = other.WindowSize;
+	}
+
+	public void AddCollision(CollisionType type)
+	{
+		CurrentSegmentCollisions.Add(type);
+	}
+
+	/// <summary>
+	/// Calculate and store the collision window from history.
+	/// This should be called once when segment is finalized.
+	/// </summary>
+	public void CalculateWindow(List<SegmentData> history, int windowSize)
+	{
+		WindowSize = windowSize;
+		WindowCollisions.Clear();
+
+		Debug.Log($"[CollisionWindowData] CalculateWindow called: windowSize={windowSize}, history.Count={history.Count}");
+
+		if (windowSize == 0)
+		{
+			// Current segment only
+			WindowCollisions.AddRange(CurrentSegmentCollisions);
+			Debug.Log($"  Mode: Current only, WindowCollisions.Count={WindowCollisions.Count}");
+		}
+		else if (windowSize < 0)
+		{
+			// All history + current
+			foreach (var segment in history)
+			{
+				WindowCollisions.AddRange(segment.CollisionData.CurrentSegmentCollisions);
+			}
+			Debug.Log($"  Mode: All history, WindowCollisions.Count={WindowCollisions.Count}");
+		}
+		else
+		{
+			// Sliding window: last N segments from history (including current)
+			int startIndex = Mathf.Max(0, history.Count - windowSize);
+			Debug.Log($"  Mode: Sliding window, startIndex={startIndex}, will read segments [{startIndex}..{history.Count-1}]");
+			for (int i = startIndex; i < history.Count; i++)
+			{
+				int segmentCollisions = history[i].CollisionData.CurrentSegmentCollisions.Count;
+				WindowCollisions.AddRange(history[i].CollisionData.CurrentSegmentCollisions);
+				Debug.Log($"    Segment {i}: added {segmentCollisions} collisions, total now={WindowCollisions.Count}");
+			}
+		}
+		Debug.Log($"  Final: WindowSize={WindowSize}, WindowCollisions.Count={WindowCollisions.Count}");
+	}
+}
+
 [Serializable]
 public class SegmentData
 {
+	// Collision data with window (refactored)
+	public CollisionWindowData CollisionData = new();
+
+	// Legacy property for backwards compatibility (can be removed later)
+	[DoNotSerialize]
+	public List<CollisionType> Collisions => CollisionData.CurrentSegmentCollisions;
+
 	// Threat fields
-	public List<CollisionType> Collisions = new();
 	public List<float> Angles = new();
 	public List<float> SafeDistances = new();
 
@@ -158,7 +223,7 @@ public class SegmentData
 
 	public SegmentData(SegmentData other)
 	{
-		Collisions = new(other.Collisions);
+		CollisionData = new(other.CollisionData);
 		Angles = new(other.Angles);
 		SafeDistances = new(other.SafeDistances);
 		Actions = new(other.Actions);
@@ -168,7 +233,8 @@ public class SegmentData
 
 	public void Reset()
 	{
-		Collisions.Clear();
+		CollisionData.CurrentSegmentCollisions.Clear();
+		CollisionData.WindowCollisions.Clear();
 		Angles.Clear();
 		SafeDistances.Clear();
 		Actions.Clear();
@@ -176,7 +242,7 @@ public class SegmentData
 		Velocities.Clear();
 	}
 
-	public void RegisterCollision(CollisionType type) => Collisions.Add(type);
+	public void RegisterCollision(CollisionType type) => CollisionData.AddCollision(type);
 	public void RegisterAngle(float angle) => Angles.Add(angle);
 	public void RegisterSafeDistance(float d) => SafeDistances.Add(d);
 	public void RegisterAction(ISumoAction action) => Actions.Add(action);
@@ -191,7 +257,7 @@ public class SegmentData
 
 	public Dictionary<CollisionType, int> GetCollisionCounts()
 	{
-		return Collisions.GroupBy(c => c).ToDictionary(g => g.Key, g => g.Count());
+		return CollisionData.CurrentSegmentCollisions.GroupBy(c => c).ToDictionary(g => g.Key, g => g.Count());
 	}
 }
 
@@ -266,12 +332,12 @@ public class Factor
 		Weight = weight;
 	}
 
-	public float Evaluate(SegmentData data, ConstraintConfig constraints, List<SegmentData> history, int windowSize)
+	public float Evaluate(SegmentData data, ConstraintConfig constraints)
 	{
 		float score;
 		// HitCollision requires history and window size; other factors use only current segment data
 		if (Type == FactorType.HitCollision)
-			score = EvaluateHitCollisionWithWindow(data, constraints, history, windowSize);
+			score = EvaluateHitCollisionWithWindow(data, constraints);
 		else if (Type == FactorType.Ability)
 			score = EvaluateAbility(data, constraints);
 		else if (Type == FactorType.Angle)
@@ -298,50 +364,29 @@ public class Factor
 	/// Evaluate the ratio of hit collisions among all collisions using a sliding window.
 	/// windowSize: -1 = all history, 0 = current only, N = last N segments from history
 	/// </summary>
-	private float EvaluateHitCollisionWithWindow(SegmentData data, ConstraintConfig constraints, List<SegmentData> history, int windowSize)
+	private float EvaluateHitCollisionWithWindow(SegmentData data, ConstraintConfig constraints)
 	{
-		float totalHitCollisions = 0;
-		float totalStruckCollisions = 0;
+		// Use pre-calculated collision window from SegmentData
+		// The window was already calculated when the segment was finalized
+		var windowCollisions = data.CollisionData.WindowCollisions;
 
-		// Determine which segments to include based on window size
-		if (windowSize == 0)
-		{
-			// Current segment only
-			totalHitCollisions = data.Collisions.Count(c => c == CollisionType.Hit);
-			totalStruckCollisions = data.Collisions.Count(c => c == CollisionType.Struck);
-		}
-		else if (windowSize < 0)
-		{
-			// All history
-			totalHitCollisions = data.Collisions.Count(c => c == CollisionType.Hit);
-			totalStruckCollisions = data.Collisions.Count(c => c == CollisionType.Struck);
-			foreach (var segment in history)
-			{
-				totalHitCollisions += segment.Collisions.Count(c => c == CollisionType.Hit);
-				totalStruckCollisions += segment.Collisions.Count(c => c == CollisionType.Struck);
-			}
-		}
-		else
-		{
-			// Sliding window: last N segments from history (not including current)
-			// Note: history already includes current segment (added in FinalizeSegment before SegmentPacing creation)
-			int startIndex = Mathf.Max(0, history.Count - windowSize);
-			for (int i = startIndex; i < history.Count; i++)
-			{
-				totalHitCollisions += history[i].Collisions.Count(c => c == CollisionType.Hit);
-				totalStruckCollisions += history[i].Collisions.Count(c => c == CollisionType.Struck);
-			}
-		}
+		// Count hits and strucks from the pre-calculated window
+		float totalHitCollisions = windowCollisions.Count(c => c == CollisionType.Hit);
+		float totalStruckCollisions = windowCollisions.Count(c => c == CollisionType.Struck);
+
+		Debug.Log($"[HitCollision] WindowSize={data.CollisionData.WindowSize}, Window Total={windowCollisions.Count}, Hits={totalHitCollisions}, Strucks={totalStruckCollisions}");
 
 		if (totalHitCollisions + totalStruckCollisions == 0f)
 		{
 			// No collisions in window
+			Debug.Log($"  No collisions in window, returning normalized 0");
 			return constraints.CollisionRatio.Normalize(0f);
 		}
 
 		float hitCollisionRatio = totalHitCollisions / (totalHitCollisions + totalStruckCollisions);
-		Debug.Log($"Collision Ratio {hitCollisionRatio} - Min: {constraints.CollisionRatio.Min}, Max: {constraints.CollisionRatio.Max}, MinLimit: {constraints.CollisionRatio.MinLimit}, MaxLimit: {constraints.CollisionRatio.MaxLimit}");
-		return constraints.CollisionRatio.Normalize(hitCollisionRatio);
+		float normalized = constraints.CollisionRatio.Normalize(hitCollisionRatio);
+		Debug.Log($"  Collision Ratio={hitCollisionRatio:F3}, Normalized={normalized:F3}");
+		return normalized;
 	}
 
 	// Evaluate the ratio of ability usage among all actions.
@@ -416,40 +461,61 @@ public class GamePacing
 		var currGameIdx = LogManager.CurrentGameIndex;
 		var roundIdx = LogManager.GetCurrentRound().Index;
 
-		Logger.Info($"[PacingClass][GamePacing] currGameIdx: {currGameIdx}, roundIdx: {roundIdx} PacingHistories length: {PacingHistories.Count()}");
+		Logger.Info($"[PacingClass][GamePacing] InitBattle called for Game {currGameIdx}, Round {roundIdx}");
 
-		if (PacingHistories.TryGetValue(currGameIdx, out var _))
+		// Always create a fresh GamePacingItem for the round to prevent cross-round contamination
+		if (PacingHistories.TryGetValue(currGameIdx, out var rounds))
 		{
-			if (!PacingHistories[currGameIdx].TryGetValue(roundIdx, out var _))
-				PacingHistories[currGameIdx].Add(roundIdx, new GamePacingItem());
+			// Overwrite existing round data with fresh instance (important for rematches/new rounds)
+			rounds[roundIdx] = new GamePacingItem();
+			Logger.Info($"  Replaced existing round data for Game {currGameIdx}, Round {roundIdx}");
 		}
 		else
+		{
+			// Create new game entry with first round
 			PacingHistories.Add(currGameIdx, new() { [roundIdx] = new GamePacingItem() });
+			Logger.Info($"  Created new game entry for Game {currGameIdx}, Round {roundIdx}");
+		}
 	}
 
 	public GamePacingItem CurrentRound()
 	{
 		var currGameIdx = LogManager.CurrentGameIndex;
-		var roundIdx = LogManager.GetCurrentRound().Index;
-		if (PacingHistories.TryGetValue(currGameIdx, out Dictionary<int, GamePacingItem> round))
-		{
-			if (round.TryGetValue(roundIdx, out var item))
-			{
-				return round[roundIdx];
-			}
-			else
-			{
-				var newInst = new GamePacingItem();
-				PacingHistories[currGameIdx].Add(roundIdx, newInst);
-				return newInst;
-			}
+		var currRound = LogManager.GetCurrentRound();
 
-		}
-		else
+		if (currRound == null)
 		{
-			var newInst = new GamePacingItem();
-			PacingHistories[currGameIdx].Add(roundIdx, newInst);
-			return newInst;
+			Logger.Error("[GamePacing] CurrentRound() called but LogManager.GetCurrentRound() is null!");
+			return new GamePacingItem(); // Return empty instance to prevent crashes
 		}
+
+		var roundIdx = currRound.Index;
+
+		// Ensure game exists in history
+		if (!PacingHistories.ContainsKey(currGameIdx))
+		{
+			Logger.Warning($"[GamePacing] Game {currGameIdx} not found in history. Creating new entry.");
+			PacingHistories[currGameIdx] = new Dictionary<int, GamePacingItem>();
+		}
+
+		// Ensure round exists in game
+		if (!PacingHistories[currGameIdx].ContainsKey(roundIdx))
+		{
+			Logger.Warning($"[GamePacing] Round {roundIdx} not found for Game {currGameIdx}. Creating new GamePacingItem.");
+			Logger.Warning($"  This might indicate InitBattle() was not called for this round!");
+			PacingHistories[currGameIdx][roundIdx] = new GamePacingItem();
+		}
+
+		return PacingHistories[currGameIdx][roundIdx];
 	}
+}
+
+public enum AspectType { Threat, Tempo }
+
+public enum CollisionType { Hit, Struck, Tie }
+
+public enum FactorType
+{
+	HitCollision, Ability, Angle, SafeDistance,             // Threat factors
+	ActionIntensity, ActionDensity, BotsDistance, Velocity  // Tempo factors
 }
