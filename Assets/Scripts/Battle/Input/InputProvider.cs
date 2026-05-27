@@ -42,6 +42,7 @@ namespace SumoInput
         public PlayerSide PlayerSide;
         public SumoAPI API;
         public InputType InputType = InputType.UI;
+        public string DisplayName { get; private set; } = string.Empty;
         #endregion
 
         #region Runtime properties
@@ -71,6 +72,11 @@ namespace SumoInput
 
         private Queue<ISumoAction> actionQueue = new();
         #endregion
+
+        public void SetDisplayName(string displayName)
+        {
+            DisplayName = displayName ?? string.Empty;
+        }
 
         public InputProvider(PlayerSide side, bool includeKeyboard = false)
         {

@@ -36,6 +36,7 @@ namespace SumoManager
         public Sprite CrownSprite;
 
         [Header("Battle UI - Left Player")]
+        public TMP_Text LeftBotName;
         public TMP_Dropdown LeftInputType;
         public TMP_Dropdown LeftSkill;
         public TMP_Dropdown LeftScript;
@@ -51,6 +52,7 @@ namespace SumoManager
 
 
         [Header("Battle UI - Right Player")]
+        public TMP_Text RightBotName;
         public TMP_Dropdown RightInputType;
         public TMP_Dropdown RightSkill;
         public TMP_Dropdown RightScript;
@@ -78,11 +80,13 @@ namespace SumoManager
         public Color GuideActiveTabColor = new Color(1f, 0.89f, 0.62f);
         public Color GuideInactiveTabColor = new Color(0.88f, 0.88f, 0.88f);
 
-        #endregion
+        private string defaultLeftName = "Player 1";
+		private string defaultRightName = "Player 2";
+		#endregion
 
 
-        #region Runtime (readonly) Properties
-        private readonly string gameplayContent = @"
+		#region Runtime (readonly) Properties
+		private readonly string gameplayContent = @"
 Sumobot: sumo robot battle arena game. 
 Goal: push the opponent out of the ring arena. 
 
@@ -271,6 +275,9 @@ Skill			C			M
                     LeftFinalScore.SetText("");
                     RightFinalScore.SetText("");
 
+                    if (LeftBotName != null) LeftBotName.text = BattleManager.Instance.LeftInputType == InputType.Script && BattleManager.Instance.BotManager.Left != null ? BattleManager.Instance.BotManager.Left.ID : defaultLeftName;
+                    if (RightBotName != null) RightBotName.text = BattleManager.Instance.RightInputType == InputType.Script && BattleManager.Instance.BotManager.Right != null ? BattleManager.Instance.BotManager.Right.ID : defaultRightName;
+
                     LeftCustomBtn.onClick.AddListener(() => CreateCostume(leftPlayer.Profile.ID));
                     RightCustomBtn.onClick.AddListener(() => CreateCostume(rightPlayer.Profile.ID));
                     break;
@@ -289,7 +296,11 @@ Skill			C			M
                     Round.SetText("");
                     BattlePanels.Find((o) => o.CompareTag("BattleState/Pre")).SetActive(false);
                     BattlePanels.Find((o) => o.CompareTag("BattleState/Post")).SetActive(false);
-                    break;
+                    
+                    LeftBotName.SetText(BattleManager.Instance.BotManager.Left != null ? BattleManager.Instance.BotManager.Left.ID : defaultLeftName);
+					RightBotName.SetText(BattleManager.Instance.BotManager.Right != null ? BattleManager.Instance.BotManager.Right.ID : defaultRightName);
+
+					break;
                 case BattleState.Battle_Countdown:
                     var leftSkill = leftPlayer.Skill;
                     var rightSkill = rightPlayer.Skill;
@@ -491,6 +502,11 @@ Skill			C			M
                     botManager.leftBotIndex = 0;
                     botManager.Left = Instantiate(botInstances[0]);
                     botManager.Left.name = $"{botInstances[0].name}_Left";
+                    if (LeftBotName != null) LeftBotName.text = botManager.Left.ID;
+                }
+                else
+                {
+                    if (LeftBotName != null) LeftBotName.text = defaultLeftName;
                 }
             }
             else
@@ -502,6 +518,11 @@ Skill			C			M
                     botManager.rightBotIndex = 0;
                     botManager.Right = Instantiate(botInstances[0]);
                     botManager.Right.name = $"{botInstances[0].name}_Right";
+                    if (RightBotName != null) RightBotName.text = botManager.Right.ID;
+                }
+                else
+                {
+                    if (RightBotName != null) RightBotName.text = defaultRightName;
                 }
             }
             dropdown.gameObject.SetActive(isActive);
@@ -525,11 +546,13 @@ Skill			C			M
             {
                 botManager.leftBotIndex = index;
                 botManager.Assign(bot, PlayerSide.Left);
+                if (LeftBotName != null) LeftBotName.text = bot.ID;
             }
             else
             {
                 botManager.rightBotIndex = index;
                 botManager.Assign(bot, PlayerSide.Right);
+                if (RightBotName != null) RightBotName.text = bot.ID;
             }
 
         }
