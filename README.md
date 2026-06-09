@@ -23,3 +23,21 @@ Go to [players page](https://github.com/ardiawanbagusharisa/sumobot/wiki/Players
 Go to [developers page](https://github.com/ardiawanbagusharisa/sumobot/wiki/Developers-Page) if you are a developer who want to contribute in building the platform. 
 
 ---
+
+## Micro-Competition 
+
+<html>
+<body>
+<!--StartFragment-->
+
+Rank | Bot | Win-rate | Action Duration | Actions | Collisions
+-- | -- | -- | -- | -- | --
+1 | **DAPPO_Cimin** :crown: | **0.81 (0.27)** | 13.29 (17.98) | 117.98 (114.58) | 9.18 (5.64)
+2 | NN (baseline) | 0.77 (0.36) | 5.94 (5.65) | 76.5 (68.43) | 8.15 (4.03)
+3 | FSM_Anandan | 0.7 (0.35) | 16.13 (19.87) | 224.11 (265.83) | 7.97 (5.61)
+8 | ... | ... | ... | ... | ...
+<!--EndFragment-->
+</body>
+</html>
+
+Go to [Micro-Competition May 2026](https://github.com/ardiawanbagusharisa/sumobot/wiki/Micro%E2%80%90Competition-May2026) to see the detailed of our first micro-competition. 
