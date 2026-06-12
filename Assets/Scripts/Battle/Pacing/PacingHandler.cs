@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using NUnit.Framework.Internal;
 using SumoBot;
 using SumoCore;
 using SumoInput;
@@ -43,14 +44,27 @@ namespace PacingFramework
 		// Filtered Actions Storage (Testing)
 		private List<ISumoAction> filteredActions = new List<ISumoAction>();
 
+		// Store original unfiltered actions for comparison in RunEval
+		private List<ISumoAction> originalUnfilteredActions = new List<ISumoAction>();
+
+		// Neural network for pacing-aware action selection
+		private PacingBrain pacingBrain;
+
 		// Fixed action pool (inspired by MCTS approach for reliable candidate actions)
+		// Balanced pool: more acceleration options to prevent excessive turning
 		private static readonly List<ISumoAction> BaseActionPool = new List<ISumoAction>
 		{
-			new TurnAction(InputType.Script, ActionType.TurnLeft, 0.1f),
-			new TurnAction(InputType.Script, ActionType.TurnRight, 0.1f),
-			new TurnAction(InputType.Script, ActionType.TurnLeft, 0.3f),
-			new TurnAction(InputType.Script, ActionType.TurnRight, 0.3f),
+			// Turning actions (reduced from 4 to 2)
+			new TurnAction(InputType.Script, ActionType.TurnLeft, 0.2f),
+			new TurnAction(InputType.Script, ActionType.TurnRight, 0.2f),
+
+			// Acceleration actions (increased from 1 to 4 for better forward movement)
 			new AccelerateAction(InputType.Script, 0.1f),
+			new AccelerateAction(InputType.Script, 0.2f),
+			new AccelerateAction(InputType.Script, 0.3f),
+			new AccelerateAction(InputType.Script, 0.15f),
+
+			// Special actions
 			new DashAction(InputType.Script),
 			new SkillAction(InputType.Script, ActionType.SkillBoost),
 			new SkillAction(InputType.Script, ActionType.SkillStone),
@@ -66,13 +80,14 @@ namespace PacingFramework
 		// ================================
 		// Constructor
 		// ================================
-		public PacingHandler(SumoController controller, string pacingFileName, float segmentDuration, int collisionWindowSize, GamePacing sharedPacingHistory)
+		public PacingHandler(SumoController controller, string pacingFileName, float segmentDuration, int collisionWindowSize, GamePacing sharedPacingHistory, PacingBrain sharedPacingBrain = null)
 		{
 			this.controller = controller;
 			this.segmentDuration = segmentDuration;
 			this.collisionWindowSize = collisionWindowSize;
 			PacingFileName = pacingFileName;
 			this.pacingHistory = sharedPacingHistory;
+			pacingBrain = sharedPacingBrain;
 
 			// Subscribe to events
 			controller.Events[SumoController.OnBounce].Subscribe(OnBounce);
@@ -81,6 +96,15 @@ namespace PacingFramework
 
 			// Load pacing config
 			LoadPacingConfig();
+
+			// Use shared PacingBrain if provided (persistent across rounds)
+			// Otherwise create new one (legacy behavior)
+			if (sharedPacingBrain != null)
+			{
+				pacingBrain = sharedPacingBrain;
+				pacingBrain.UpdateController(controller);  // Update controller reference for new round
+				Logger.Info($"[{controller.Side}] Using shared PacingBrain (persistent across rounds, Episode={pacingBrain.GetEpisodeCount()})");
+			}
 		}
 
 		// ================================
@@ -105,6 +129,9 @@ namespace PacingFramework
 			controller.Events[SumoController.OnBounce].Unsubscribe(OnBounce);
 			controller.Events[SumoController.OnAction].Unsubscribe(OnAction);
 			controller.Events[SumoController.OnBeforeActionsQueued].Unsubscribe(OnBeforeActionsQueued);
+
+			// Note: Episode tracking is now per-segment, not per-round
+			// Model saving is handled by PacingManager
 		}
 
 		// ================================
@@ -120,6 +147,12 @@ namespace PacingFramework
 			// Initialize pacing history for current round
 			// This creates a fresh GamePacingItem with empty SegmentGameplayDatas
 			pacingHistory.InitBattle();
+
+			// Reset PacingBrain experience for new round (but keep learned weights)
+			if (pacingBrain != null)
+			{
+				pacingBrain.OnRoundStart();
+			}
 
 			Logger.Info($"[{controller.Side}] PacingHandler.Init() completed for Game {LogManager.CurrentGameIndex}, Round {LogManager.GetCurrentRound()?.Index}");
 		}
@@ -154,11 +187,23 @@ namespace PacingFramework
 			PacingEvaluation eval = EvaluatePacing();
 			if (eval == null) return;
 
+			// Train PacingBrain from experience (learns from previous decisions)
+			if (pacingBrain != null)
+			{
+				pacingBrain.TrainFromExperience(eval);
+			}
+
+			// Use originalUnfilteredActions if available, otherwise fall back to currentGameplayData.Actions
+			// This ensures we compare the TRUE original actions vs filtered actions
+			var actionsToEvaluate = originalUnfilteredActions.Count > 0
+				? originalUnfilteredActions
+				: currentGameplayData.Actions;
+
 			// Calculate original prediction
-			var (origThreat, origTempo) = CalculatePredictedPacing(currentGameplayData.Actions, eval);
+			var (origThreat, origTempo) = CalculatePredictedPacing(actionsToEvaluate, eval);
 
 			// Filter actions and store them
-			filteredActions = EvaluateAction(currentGameplayData.Actions, eval);
+			filteredActions = EvaluateAction(actionsToEvaluate, eval);
 
 			// Calculate filtered prediction
 			var (filtThreat, filtTempo) = CalculatePredictedPacing(filteredActions, eval);
@@ -195,10 +240,10 @@ namespace PacingFramework
 
 			// Count changed actions
 			int changedCount = 0;
-			for (int i = 0; i < Mathf.Min(currentGameplayData.Actions.Count, filteredActions.Count); i++)
+			for (int i = 0; i < Mathf.Min(actionsToEvaluate.Count, filteredActions.Count); i++)
 			{
-				if (currentGameplayData.Actions[i].Type != filteredActions[i].Type ||
-					Mathf.Abs(currentGameplayData.Actions[i].Duration - filteredActions[i].Duration) > 0.01f)
+				if (actionsToEvaluate[i].Type != filteredActions[i].Type ||
+					Mathf.Abs(actionsToEvaluate[i].Duration - filteredActions[i].Duration) > 0.01f)
 					changedCount++;
 			}
 
@@ -214,7 +259,7 @@ namespace PacingFramework
 
 
 			// Multi-line log with all info including progressive average
-			Logger.Info($"[{controller.Side}][{BattleManager.Instance.ElapsedTime}][Segment {segmentIndex}] PACING FILTER\n\nPast Eval:\t\tThreat Δ={eval.ThreatDelta:F3}, Tempo Δ={eval.TempoDelta:F3}\nOriginal:\t\tThreat={origThreat:F3}({origThreatDelta:+0.000;-0.000;0.000}), Tempo={origTempo:F3}({origTempoDelta:+0.000;-0.000;0.000}), Avg={origAverage:F3}\nFiltered:\t\tThreat={filtThreat:F3}({filtThreatDelta:+0.000;-0.000;0.000}), Tempo={filtTempo:F3}({filtTempoDelta:+0.000;-0.000;0.000}), Avg={filtAverage:F3}\nTarget:\t\t\tThreat={eval.TargetThreat:F3}, Tempo={eval.TargetTempo:F3}, Avg={targetAverage:F3}\nImprove:\t\tThreat={threatImprovement:F3} ({threatClosenessPercent:F1}%), Tempo={tempoImprovement:F3} ({tempoClosenessPercent:F1}%), Closeness={overallClosenessPercent:F1}%\nAct Changed:\t\t{changedCount}/{currentGameplayData.Actions.Count} ({changedCount * 100f / currentGameplayData.Actions.Count:F0}%)\nProgressive Avg=\t{progressiveAvgCloseness:F1}% (n={evalCount})\nOrig Actions: [{string.Join(", ",currentGameplayData.Actions)}]\nFilter Actions: [{string.Join(", ", filteredActions)}]");
+			Logger.Info($"[{controller.Side}][{BattleManager.Instance.ElapsedTime}][Segment {segmentIndex}] PACING FILTER\n\nPast Eval:\t\tThreat Δ={eval.ThreatDelta:F3}, Tempo Δ={eval.TempoDelta:F3}\nOriginal:\t\tThreat={origThreat:F3}({origThreatDelta:+0.000;-0.000;0.000}), Tempo={origTempo:F3}({origTempoDelta:+0.000;-0.000;0.000}), Avg={origAverage:F3}\nFiltered:\t\tThreat={filtThreat:F3}({filtThreatDelta:+0.000;-0.000;0.000}), Tempo={filtTempo:F3}({filtTempoDelta:+0.000;-0.000;0.000}), Avg={filtAverage:F3}\nTarget:\t\t\tThreat={eval.TargetThreat:F3}, Tempo={eval.TargetTempo:F3}, Avg={targetAverage:F3}\nImprove:\t\tThreat={threatImprovement:F3} ({threatClosenessPercent:F1}%), Tempo={tempoImprovement:F3} ({tempoClosenessPercent:F1}%), Closeness={overallClosenessPercent:F1}%\nAct Changed:\t\t{changedCount}/{actionsToEvaluate.Count} ({changedCount * 100f / actionsToEvaluate.Count:F0}%)\nProgressive Avg=\t{progressiveAvgCloseness:F1}% (n={evalCount})\nOrig Actions: [{string.Join(", ", actionsToEvaluate)}]\nFilter Actions: [{string.Join(", ", filteredActions)}]");
 		}
 
 		/// <summary>
@@ -311,6 +356,11 @@ namespace PacingFramework
 			DebugPacing(currentSegmentPacing);
 			DebugSegmentData(currentGameplayData);
 
+			if (pacingBrain != null)
+			{
+				pacingBrain.OnEpisodeEnd();
+			}
+
 			segmentIndex++;
 		}
 
@@ -375,6 +425,13 @@ namespace PacingFramework
 		/// </summary>
 		private void OnBeforeActionsQueued(EventParameter parameter)
 		{
+			// Store original unfiltered actions for comparison in RunEval
+			// This must happen BEFORE filtering to capture the true original actions
+			if (parameter.ActionList != null && parameter.ActionList.Count > 0)
+			{
+				originalUnfilteredActions = new List<ISumoAction>(parameter.ActionList);
+			}
+
 			// Skip if filtering is disabled
 			if (!EnableActionFiltering)
 				return;
@@ -468,6 +525,7 @@ namespace PacingFramework
 		/// <summary>
 		/// Evaluates and filters actions to better match target pacing values.
 		/// Uses simulation to predict outcomes and selects actions that minimize pacing deltas.
+		/// Can generate completely different action sequences (different count and types).
 		/// </summary>
 		/// <param name="originalActions">The original sequence of actions from the bot</param>
 		/// <param name="evaluation">Current pacing evaluation with threat/tempo deltas</param>
@@ -493,42 +551,97 @@ namespace PacingFramework
 			// Track simulated state as we build the action sequence
 			var simulatedActions = new List<ISumoAction>();
 
-			for (int i = 0; i < originalActions.Count; i++)
+			// Generate action sequence independently of original count
+			// Allow flexible sequence length (1-5 actions typical for most bots)
+			int maxActions = Mathf.Max(originalActions.Count, 3); // At least 3 actions for flexibility
+
+			for (int i = 0; i < maxActions; i++)
 			{
-				ISumoAction originalAction = originalActions[i];
+				// Get original action if available, otherwise null
+				ISumoAction originalAction = i < originalActions.Count ? originalActions[i] : null;
 				ISumoAction bestAction = originalAction;
-				float bestScore = float.MaxValue;
 
 				// Generate candidates dynamically based on current state and pacing needs
 				var candidateActions = GenerateCandidateActions(evaluation, simulatedActions, currentThreatDelta, currentTempoDelta);
 
-				// Evaluate original action
-				float originalScore = ScoreAction(originalAction, simulatedActions, evaluation, currentThreatDelta, currentTempoDelta);
-				bestScore = originalScore;
+				// If no candidates available, stop generating actions
+				if (candidateActions.Count == 0)
+					break;
 
-				// Try alternative actions
-				foreach (var candidateAction in candidateActions)
+				// Select best action using PacingBrain or traditional heuristic
+				if (pacingBrain != null)
 				{
-					float score = ScoreAction(candidateAction, simulatedActions, evaluation, currentThreatDelta, currentTempoDelta);
-
-					if (score < bestScore)
+					// Add original action to candidates if available
+					if (originalAction != null && !candidateActions.Contains(originalAction))
 					{
-						bestScore = score;
-						bestAction = candidateAction;
+						candidateActions.Add(originalAction);
+					}
+
+					// Use neural network to select best action
+					bestAction = pacingBrain.SelectBestAction(candidateActions, evaluation, controller.InputProvider.API, simulatedActions);
+					if (bestAction == null)
+					{
+						// Fallback to original if available, otherwise use first candidate
+						bestAction = originalAction ?? candidateActions[0];
 					}
 				}
+				else
+				{
+					// Use traditional heuristic scoring
+					float bestScore = float.MaxValue;
+
+					// Evaluate original action if available
+					if (originalAction != null)
+					{
+						float originalScore = ScoreAction(originalAction, simulatedActions, evaluation, currentThreatDelta, currentTempoDelta);
+						bestScore = originalScore;
+						bestAction = originalAction;
+					}
+
+					// Try alternative actions
+					foreach (var candidateAction in candidateActions)
+					{
+						float score = ScoreAction(candidateAction, simulatedActions, evaluation, currentThreatDelta, currentTempoDelta);
+
+						if (score < bestScore)
+						{
+							bestScore = score;
+							bestAction = candidateAction;
+						}
+					}
+
+					// If no best action found, use first candidate
+					if (bestAction == null && candidateActions.Count > 0)
+						bestAction = candidateActions[0];
+				}
+
+				// If we couldn't find any action, stop
+				if (bestAction == null)
+					break;
 
 				// Add best action to sequence
 				pacedActions.Add(bestAction);
 				simulatedActions.Add(bestAction);
+
+				// Recalculate deltas for next iteration based on current progress
+				var (currentThreat, currentTempo) = CalculatePredictedPacing(simulatedActions, evaluation);
+				currentThreatDelta = currentThreat - evaluation.TargetThreat;
+				currentTempoDelta = currentTempo - evaluation.TargetTempo;
+
+				// Early termination: if we're close enough to target, stop adding actions
+				if (Mathf.Abs(currentThreatDelta) < 0.05f && Mathf.Abs(currentTempoDelta) < 0.05f)
+				{
+					Logger.Info($"[{controller.Side}] Early termination: Close to target (ThreatΔ={currentThreatDelta:F3}, TempoΔ={currentTempoDelta:F3}) after {pacedActions.Count} actions");
+					break;
+				}
 			}
 
 			return pacedActions;
 		}
 
 		/// <summary>
-		/// Generates a set of candidate actions using a fixed pool with context-based filtering.
-		/// Uses MCTS-inspired approach with proven action durations and validation checks.
+		/// Generates a set of candidate actions from base pool with only safety validation.
+		/// Neural network will handle all scoring and selection - no heuristic filtering!
 		/// </summary>
 		private List<ISumoAction> GenerateCandidateActions(PacingEvaluation evaluation, List<ISumoAction> previousActions, float currentThreatDelta, float currentTempoDelta)
 		{
@@ -540,14 +653,57 @@ namespace PacingFramework
 				? api.Simulate(previousActions)
 				: (api.MyRobot.Position, api.MyRobot.Rotation);
 
-			// Calculate current angle to enemy (normalized 0-1)
-			float angleToEnemy = api.Angle(currentPos, currentRot, api.EnemyRobot.Position, normalized: true);
+			// When using PacingBrain: Only filter for HARD SAFETY constraints
+			// Let the neural network learn everything else!
+			if (pacingBrain != null)
+			{
+				foreach (var action in BaseActionPool)
+				{
+					// Only check: 1) Bounds safety, 2) Ability availability
+					bool isSafe = true;
 
-			// Determine what we need based on CURRENT predicted deltas (not past)
+					// HARD CONSTRAINT 1: Don't go out of bounds (with safety margin)
+					var testActions = new List<ISumoAction>(previousActions) { action };
+					var (testPos, testRot) = api.Simulate(testActions);
+					float distanceFromCenter = Vector2.Distance(testPos, api.BattleInfo.ArenaPosition);
+					float safetyMargin = 0.5f; // Keep 0.5 units away from edge
+					if (distanceFromCenter >= api.BattleInfo.ArenaRadius - safetyMargin)
+					{
+						isSafe = false; // Would go too close to or past bounds
+					}
+
+					// HARD CONSTRAINT 2: Skills must be available
+					if ((action.Type == ActionType.SkillBoost || action.Type == ActionType.SkillStone) && !api.CanExecute(action))
+					{
+						isSafe = false;
+					}
+
+					// HARD CONSTRAINT 3: Dash must be off cooldown
+					if (action.Type == ActionType.Dash && api.MyRobot.IsDashOnCooldown)
+					{
+						isSafe = false;
+					}
+
+					if (isSafe)
+					{
+						candidates.Add(action);
+					}
+				}
+
+				if(candidates.Count == 0)
+				{
+					candidates.Add(new AccelerateAction(InputType.Script, ISumoAction.MinDuration));
+				}
+
+				return candidates;
+			}
+
+			// OLD HEURISTIC PATH (when PacingBrain not available)
+			// Keep this for fallback compatibility
+			float angleToEnemy = api.Angle(currentPos, currentRot, api.EnemyRobot.Position, normalized: true);
 			bool needHigherThreat = currentThreatDelta < 0;
 			bool needHigherTempo = currentTempoDelta < 0;
 
-			// Filter base pool by context and validation
 			foreach (var action in BaseActionPool)
 			{
 				bool shouldInclude = true;
@@ -667,13 +823,6 @@ namespace PacingFramework
 				if (shouldInclude)
 					candidates.Add(action);
 			}
-
-			// Always include at least one fallback option
-			if (candidates.Count == 0)
-			{
-				candidates.Add(new AccelerateAction(InputType.Script, duration: ISumoAction.MinDuration));
-			}
-
 			return candidates;
 		}
 

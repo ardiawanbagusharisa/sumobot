@@ -50,12 +50,12 @@ Clone Sumobot with `git clone https://github.com/ardiawanbagusharisa/sumobot.git
     #### Range Mode Examples
 
     **Windows**
-    ```batch
-    REM Basic - Run configs 0-99 with batch size 20
-    run_simulator.bat "C:\path\to\Sumobot.exe" 0 100 20
+    ```powershell
+    # Basic - Run configs 0-99 with batch size 20
+    .\run_simulator.ps1 "C:\path\to\Sumobot.exe" 0 100 20
 
-    REM With time scale - Run configs 0-99 at 5x speed
-    run_simulator.bat "C:\path\to\Sumobot.exe" 0 100 20 5.0
+    # With time scale - Run configs 0-99 at 5x speed
+    .\run_simulator.ps1 "C:\path\to\Sumobot.exe" 0 100 20 5.0
     ```
 
     **macOS**
@@ -79,12 +79,12 @@ Clone Sumobot with `git clone https://github.com/ardiawanbagusharisa/sumobot.git
     #### Single Mode Examples
 
     **Windows**
-    ```batch
-    REM Run only config 933 (no time scale override)
-    run_simulator.bat "C:\path\to\Sumobot.exe" 993 single single
+    ```powershell
+    # Run only config 933 (no time scale override)
+    .\run_simulator.ps1 "C:\path\to\Sumobot.exe" 993 single single
 
-    REM Run config 933 at 10x speed
-    run_simulator.bat "C:\path\to\Sumobot.exe" 993 single single 10.0
+    # Run config 933 at 10x speed
+    .\run_simulator.ps1 "C:\path\to\Sumobot.exe" 993 single single 10.0
     ```
 
     **macOS/Linux**

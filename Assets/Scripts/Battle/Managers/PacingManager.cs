@@ -21,6 +21,8 @@ namespace SumoManager
 		public float LeftSegmentDuration = 2f;
 		public int LeftCollisionWindowSize = 2;
 		public bool LeftEnableActionFiltering = false;
+		public bool LeftEnableTraining = false;
+		public bool LeftEnableSaveTraining = false;
 
 
 		[Header("Right Player Pacing Configuration")]
@@ -29,6 +31,8 @@ namespace SumoManager
 		public float RightSegmentDuration = 2f;
 		public int RightCollisionWindowSize = 2;
 		public bool RightEnableActionFiltering = false;
+		public bool RightEnableTraining = false;
+		public bool RightEnableSaveTraining = false;
 
 		#endregion
 
@@ -40,6 +44,11 @@ namespace SumoManager
 		// Persistent pacing histories that survive rematch/Battle_Start
 		private GamePacing leftPacingHistory = new GamePacing();
 		private GamePacing rightPacingHistory = new GamePacing();
+
+		// Persistent PacingBrain instances that survive rematch/Battle_Start
+		// These maintain episode counts and learned weights across all rounds
+		private PacingBrain leftPacingBrain = null;
+		private PacingBrain rightPacingBrain = null;
 
 		#endregion
 
@@ -60,6 +69,10 @@ namespace SumoManager
 			// Cleanup handlers
 			LeftPacingHandler?.Dispose();
 			RightPacingHandler?.Dispose();
+
+			// Save PacingBrain models before destruction
+			leftPacingBrain?.SaveModelToDisk();
+			rightPacingBrain?.SaveModelToDisk();
 		}
 
 		void Update()
@@ -68,6 +81,7 @@ namespace SumoManager
 			{
 				LeftPacingHandler.EnableActionFiltering = LeftEnableActionFiltering;
 			}
+
 			if (RightPacingHandler != null && RightPacingHandler.EnableActionFiltering != RightEnableActionFiltering)
 			{
 				RightPacingHandler.EnableActionFiltering = RightEnableActionFiltering;
@@ -90,7 +104,7 @@ namespace SumoManager
 
 			if (side == PlayerSide.Left)
 			{
-				// Cleanup existing handler
+				// Cleanup existing handler (but keep PacingBrain alive!)
 				LeftPacingHandler?.Dispose();
 
 				string finalPacingFileName = LeftPacingFileName;
@@ -101,12 +115,20 @@ namespace SumoManager
 					finalPacingFileName = "Default";
 				}
 
+				// Create or reuse PacingBrain (persistent across rounds)
+				if (LeftEnableTraining && leftPacingBrain == null)
+				{
+					leftPacingBrain = new PacingBrain(controller, null, loadModel: true, saveModel: LeftEnableSaveTraining);
+					Debug.Log($"[PacingManager] Created new Left PacingBrain instance");
+				}
+
 				LeftPacingHandler = new PacingHandler(
 					controller,
 					finalPacingFileName,
 					LeftSegmentDuration,
 					LeftCollisionWindowSize,
-					leftPacingHistory
+					leftPacingHistory,
+					leftPacingBrain  // Pass persistent brain
 				);
 
 				// Initialize
@@ -116,13 +138,21 @@ namespace SumoManager
 			}
 			else
 			{
+				// Cleanup existing handler (but keep PacingBrain alive!)
 				RightPacingHandler?.Dispose();
 
 				string finalPacingFileName = RightPacingFileName;
 				if (string.IsNullOrEmpty(finalPacingFileName))
 				{
-					Logger.Warning($"[PacingManager][Initialize][{controller.Side}] LeftPacingFileName is empty, using Default.json");
+					Logger.Warning($"[PacingManager][Initialize][{controller.Side}] RightPacingFileName is empty, using Default.json");
 					finalPacingFileName = "Default";
+				}
+
+				// Create or reuse PacingBrain (persistent across rounds)
+				if (RightEnableTraining && rightPacingBrain == null)
+				{
+					rightPacingBrain = new PacingFramework.PacingBrain(controller, null, loadModel: true, saveModel: RightEnableSaveTraining);
+					Debug.Log($"[PacingManager] Created new Right PacingBrain instance");
 				}
 
 				RightPacingHandler = new PacingHandler(
@@ -130,7 +160,8 @@ namespace SumoManager
 					finalPacingFileName,
 					RightSegmentDuration,
 					RightCollisionWindowSize,
-					rightPacingHistory
+					rightPacingHistory,
+					rightPacingBrain  // Pass persistent brain
 				);
 
 				// Initialize
@@ -146,13 +177,56 @@ namespace SumoManager
 
 		/// <summary>
 		/// Initialize pacing history for a new round. Should be called at the start of each round.
+		/// Randomizes target pacing values for more natural training.
 		/// </summary>
 		public void InitRound()
 		{
 			if (!enabled) return;
 			leftPacingHistory.InitBattle();
 			rightPacingHistory.InitBattle();
-			Debug.Log("[PacingManager] Round pacing history initialized");
+
+			// Randomize pacing targets for natural training variation
+			// RandomizePacingTargets();
+
+			Debug.Log("[PacingManager] Round pacing history initialized with randomized targets");
+		}
+
+		/// <summary>
+		/// Randomizes the threat and tempo targets for both handlers.
+		/// Each target value is randomized within a reasonable range around 0.5 (±0.3).
+		/// This creates natural variation for training while keeping targets achievable.
+		/// </summary>
+		private void RandomizePacingTargets()
+		{
+			// Randomize left handler targets
+			if (LeftPacingHandler != null && LeftPacingHandler.PacingTarget != null)
+			{
+				RandomizeTargetList(LeftPacingHandler.PacingTarget.ThreatTargets);
+				RandomizeTargetList(LeftPacingHandler.PacingTarget.TempoTargets);
+				Debug.Log($"[PacingManager] Left targets randomized - Sample: Threat[0]={LeftPacingHandler.PacingTarget.ThreatTargets[0]:F3}, Tempo[0]={LeftPacingHandler.PacingTarget.TempoTargets[0]:F3}");
+			}
+
+			// Randomize right handler targets
+			if (RightPacingHandler != null && RightPacingHandler.PacingTarget != null)
+			{
+				RandomizeTargetList(RightPacingHandler.PacingTarget.ThreatTargets);
+				RandomizeTargetList(RightPacingHandler.PacingTarget.TempoTargets);
+				Debug.Log($"[PacingManager] Right targets randomized - Sample: Threat[0]={RightPacingHandler.PacingTarget.ThreatTargets[0]:F3}, Tempo[0]={RightPacingHandler.PacingTarget.TempoTargets[0]:F3}");
+			}
+		}
+
+		/// <summary>
+		/// Randomizes all values in a target list.
+		/// </summary>
+		private void RandomizeTargetList(System.Collections.Generic.List<float> targets)
+		{
+			const float MIN_TARGET = 0.2f;
+			const float MAX_TARGET = 0.8f;
+
+			for (int i = 0; i < targets.Count; i++)
+			{
+				targets[i] = Random.Range(MIN_TARGET, MAX_TARGET);
+			}
 		}
 
 		#endregion

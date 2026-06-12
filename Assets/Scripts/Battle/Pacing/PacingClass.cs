@@ -20,6 +20,24 @@ public class PacingEvaluation
 	public bool IsThreatAboveTarget => ThreatDelta > 0;
 	public bool IsTempoAboveTarget => TempoDelta > 0;
 
+	/// <summary>
+	/// Creates a deep copy of this PacingEvaluation instance.
+	/// Useful to prevent reference sharing when passing to methods that may modify the data.
+	/// </summary>
+	public PacingEvaluation Copy()
+	{
+		return new PacingEvaluation
+		{
+			SegmentIndex = this.SegmentIndex,
+			ActualThreat = this.ActualThreat,
+			TargetThreat = this.TargetThreat,
+			ThreatDelta = this.ThreatDelta,
+			ActualTempo = this.ActualTempo,
+			TargetTempo = this.TargetTempo,
+			TempoDelta = this.TempoDelta
+		};
+	}
+
 	public override string ToString()
 	{
 		return $"Segment {SegmentIndex}: Threat={ActualThreat:F3} (Target={TargetThreat:F3}, Delta={ThreatDelta:F3}), " +
@@ -188,7 +206,7 @@ public class CollisionWindowData
 		{
 			// Sliding window: last N segments from history (including current)
 			int startIndex = Mathf.Max(0, history.Count - windowSize);
-			Debug.Log($"  Mode: Sliding window, startIndex={startIndex}, will read segments [{startIndex}..{history.Count-1}]");
+			Debug.Log($"  Mode: Sliding window, startIndex={startIndex}, will read segments [{startIndex}..{history.Count - 1}]");
 			for (int i = startIndex; i < history.Count; i++)
 			{
 				int segmentCollisions = history[i].CollisionData.CurrentSegmentCollisions.Count;
