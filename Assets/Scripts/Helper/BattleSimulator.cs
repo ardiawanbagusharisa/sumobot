@@ -36,6 +36,19 @@ namespace SumoHelper
         public int RoundCountdown = 3;
         public SimulationSetting Setting;
 
+        [Header("Bot Exclusion (Performance Optimization)")]
+        [Tooltip("Exclude heavy ML bots from simulation. Uncheck to include all bots.")]
+        public bool ExcludeHeavyMLBots = true;
+
+        // ML bots that require heavy processing
+        // Comment out any bot ID below to re-enable it in simulations
+        private readonly string[] HeavyMLBotIDs = new string[]
+        {
+            "SLM",   // Bot_SLM_ActionGPT - Small Language Model
+            "LLM",   // Bot_LLM_ActionGPT - Large Language Model
+            "MLP"    // Bot_ML_Classification - Multi-Layer Perceptron
+        };
+
         private List<Bot> Agents = new();
         private List<BattleConfig> _configs;
         private int currentConfigIndex = 0;
@@ -270,6 +283,13 @@ namespace SumoHelper
 
                 if (botInstance != null)
                 {
+                    // Check if bot is excluded (heavy ML bots)
+                    if (ExcludeHeavyMLBots && HeavyMLBotIDs.Contains(botInstance.ID))
+                    {
+                        Logger.Info($"[SelectAgents] Excluding heavy ML bot '{botInstance.ID}' (ExcludeHeavyMLBots=true)", true);
+                        continue;
+                    }
+
                     if (Setting.SelectedAgents.Length > 0)
                     {
                         bool contains = Setting.SelectedAgents.Contains(botInstance.ID);
@@ -279,7 +299,7 @@ namespace SumoHelper
                     }
                     else
                     {
-                        // If no agents selected, add all agents
+                        // If no agents selected, add all agents (except excluded ones)
                         Logger.Info($"[SelectAgents] No agents filter, adding {botInstance.ID}", true);
                         Agents.Add(botInstance);
                     }

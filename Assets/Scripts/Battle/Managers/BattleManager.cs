@@ -88,6 +88,7 @@ namespace SumoManager
                 return;
             }
             Instance = this;
+
         }
 
         void OnEnable()

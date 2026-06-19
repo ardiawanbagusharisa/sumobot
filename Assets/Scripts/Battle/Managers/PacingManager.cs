@@ -1,7 +1,6 @@
 using PacingFramework;
 using SumoCore;
 using UnityEngine;
-
 namespace SumoManager
 {
 	/// <summary>
@@ -15,14 +14,23 @@ namespace SumoManager
 
 		#region Inspector Configuration
 
+		[Header("Percentile Calibration")]
+		[Tooltip("Minimum pacing value for percentile mapping (0th percentile)")]
+		public float MinPacing = 0.0f;
+
+		[Tooltip("Maximum pacing value for percentile mapping (100th percentile)")]
+		public float MaxPacing = 0.43f;
+
+		public bool RandomPacingTarget = false;
+
 		[Header("Left Player Pacing Configuration")]
 		[Tooltip("Fallback pacing filename for left player (human). Can be overridden by Bot.PacingFileName")]
 		public string LeftPacingFileName = "Default";
 		public float LeftSegmentDuration = 2f;
 		public int LeftCollisionWindowSize = 2;
 		public bool LeftEnableActionFiltering = false;
-		public bool LeftEnableTraining = false;
-		public bool LeftEnableSaveTraining = false;
+		[Tooltip("Use heuristic (rule-based) brain instead of NN-based brain. No training required!")]
+		public bool LeftUseHeuristicBrain = true;
 
 
 		[Header("Right Player Pacing Configuration")]
@@ -31,8 +39,9 @@ namespace SumoManager
 		public float RightSegmentDuration = 2f;
 		public int RightCollisionWindowSize = 2;
 		public bool RightEnableActionFiltering = false;
-		public bool RightEnableTraining = false;
-		public bool RightEnableSaveTraining = false;
+		
+		[Tooltip("Use heuristic (rule-based) brain instead of NN-based brain. No training required!")]
+		public bool RightUseHeuristicBrain = true;
 
 		#endregion
 
@@ -45,10 +54,8 @@ namespace SumoManager
 		private GamePacing leftPacingHistory = new GamePacing();
 		private GamePacing rightPacingHistory = new GamePacing();
 
-		// Persistent PacingBrain instances that survive rematch/Battle_Start
-		// These maintain episode counts and learned weights across all rounds
-		private PacingBrain leftPacingBrain = null;
-		private PacingBrain rightPacingBrain = null;
+		private PacingBrainHeuristic leftPacingBrainHeuristic = null;
+		private PacingBrainHeuristic rightPacingBrainHeuristic = null;
 
 		#endregion
 
@@ -70,9 +77,9 @@ namespace SumoManager
 			LeftPacingHandler?.Dispose();
 			RightPacingHandler?.Dispose();
 
-			// Save PacingBrain models before destruction
-			leftPacingBrain?.SaveModelToDisk();
-			rightPacingBrain?.SaveModelToDisk();
+			// Save PacingBrain models before destruction (NN only - heuristic doesn't save)
+			leftPacingBrainHeuristic?.SaveModelToDisk();  // No-op
+			rightPacingBrainHeuristic?.SaveModelToDisk();  // No-op
 		}
 
 		void Update()
@@ -115,11 +122,10 @@ namespace SumoManager
 					finalPacingFileName = "Default";
 				}
 
-				// Create or reuse PacingBrain (persistent across rounds)
-				if (LeftEnableTraining && leftPacingBrain == null)
+				if (LeftUseHeuristicBrain && leftPacingBrainHeuristic == null)
 				{
-					leftPacingBrain = new PacingBrain(controller, null, loadModel: true, saveModel: LeftEnableSaveTraining);
-					Debug.Log($"[PacingManager] Created new Left PacingBrain instance");
+					leftPacingBrainHeuristic = new PacingBrainHeuristic(controller);
+					Debug.Log($"[PacingManager] Created new Left PacingBrain Heuristic instance (no training required)");
 				}
 
 				LeftPacingHandler = new PacingHandler(
@@ -128,8 +134,13 @@ namespace SumoManager
 					LeftSegmentDuration,
 					LeftCollisionWindowSize,
 					leftPacingHistory,
-					leftPacingBrain  // Pass persistent brain
+					MinPacing,
+					MaxPacing,
+					leftPacingBrainHeuristic  // Pass persistent heuristic brain (may be null)
 				);
+
+				// Set the direct reference on controller for action filtering
+				controller.PacingHandler = LeftPacingHandler;
 
 				// Initialize
 				LeftPacingHandler.Init();
@@ -148,11 +159,10 @@ namespace SumoManager
 					finalPacingFileName = "Default";
 				}
 
-				// Create or reuse PacingBrain (persistent across rounds)
-				if (RightEnableTraining && rightPacingBrain == null)
+				if (RightUseHeuristicBrain && rightPacingBrainHeuristic == null)
 				{
-					rightPacingBrain = new PacingFramework.PacingBrain(controller, null, loadModel: true, saveModel: RightEnableSaveTraining);
-					Debug.Log($"[PacingManager] Created new Right PacingBrain instance");
+					rightPacingBrainHeuristic = new PacingBrainHeuristic(controller);
+					Debug.Log($"[PacingManager] Created new Right PacingBrain Heuristic instance (no training required)");
 				}
 
 				RightPacingHandler = new PacingHandler(
@@ -161,8 +171,13 @@ namespace SumoManager
 					RightSegmentDuration,
 					RightCollisionWindowSize,
 					rightPacingHistory,
-					rightPacingBrain  // Pass persistent brain
+					MinPacing,
+					MaxPacing,
+					rightPacingBrainHeuristic  // Pass persistent heuristic brain (may be null)
 				);
+
+				// Set the direct reference on controller for action filtering
+				controller.PacingHandler = RightPacingHandler;
 
 				// Initialize
 				RightPacingHandler.Init();
@@ -186,7 +201,8 @@ namespace SumoManager
 			rightPacingHistory.InitBattle();
 
 			// Randomize pacing targets for natural training variation
-			// RandomizePacingTargets();
+			if (RandomPacingTarget)
+				RandomizePacingTargets();
 
 			Debug.Log("[PacingManager] Round pacing history initialized with randomized targets");
 		}

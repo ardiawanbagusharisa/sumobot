@@ -72,6 +72,34 @@ public class SegmentPacing
 		// Ensure result is never NaN
 		return float.IsNaN(result) ? 0f : result;
 	}
+
+	/// <summary>
+	/// Gets percentile-based pacing score (0-100) using linear interpolation.
+	/// Maps [minPacing, maxPacing] to [0, 100].
+	/// </summary>
+	public float GetPercentilePacing(float minPacing, float maxPacing)
+	{
+		float rawPacing = GetOverallPacing();
+		if (Mathf.Approximately(maxPacing, minPacing))
+			return 50f;
+
+		float percentile = ((rawPacing - minPacing) / (maxPacing - minPacing)) * 100f;
+		return Mathf.Clamp(percentile, 0f, 100f);
+	}
+
+	/// <summary>
+	/// Gets normalized pacing (0-1) using linear scaling.
+	/// Maps [minPacing, maxPacing] to [0, 1].
+	/// </summary>
+	public float GetNormalizedPacing(float minPacing, float maxPacing)
+	{
+		float rawPacing = GetOverallPacing();
+		if (Mathf.Approximately(maxPacing, minPacing))
+			return 0.5f;
+
+		float normalized = (rawPacing - minPacing) / (maxPacing - minPacing);
+		return Mathf.Clamp01(normalized);
+	}
 }
 
 public class ThreatAspect : Aspect
@@ -286,11 +314,86 @@ public class PacingTargetConfig
 	public List<float> TempoTargets;
 	public ConstraintConfig GlobalConstraints;
 
+	// Cache for calibrated targets (computed once when min/max is set)
+	[NonSerialized]
+	private List<float> _calibratedThreatTargets = null;
+	[NonSerialized]
+	private List<float> _calibratedTempoTargets = null;
+	[NonSerialized]
+	private float _cachedMinPacing = -1f;
+	[NonSerialized]
+	private float _cachedMaxPacing = -1f;
+
 	public PacingTargetConfig()
 	{
 		ThreatTargets = new List<float>();
 		TempoTargets = new List<float>();
 		GlobalConstraints = new ConstraintConfig();
+	}
+
+	/// <summary>
+	/// Gets threat targets converted from percentile (0-1) to raw pacing values.
+	/// Uses linear interpolation: Lerp(minPacing, maxPacing, percentile).
+	/// </summary>
+	public List<float> GetCalibratedThreatTargets(float minPacing, float maxPacing)
+	{
+		// Recalculate if min/max changed
+		if (!Mathf.Approximately(_cachedMinPacing, minPacing) ||
+		    !Mathf.Approximately(_cachedMaxPacing, maxPacing) ||
+		    _calibratedThreatTargets == null)
+		{
+			_calibratedThreatTargets = new List<float>();
+			foreach (float normalizedPercentile in ThreatTargets)
+				_calibratedThreatTargets.Add(PercentileToRaw(normalizedPercentile, minPacing, maxPacing));
+			_cachedMinPacing = minPacing;
+			_cachedMaxPacing = maxPacing;
+		}
+
+		return _calibratedThreatTargets;
+	}
+
+	/// <summary>
+	/// Gets tempo targets converted from percentile (0-1) to raw pacing values.
+	/// Uses linear interpolation: Lerp(minPacing, maxPacing, percentile).
+	/// </summary>
+	public List<float> GetCalibratedTempoTargets(float minPacing, float maxPacing)
+	{
+		// Recalculate if min/max changed
+		if (!Mathf.Approximately(_cachedMinPacing, minPacing) ||
+		    !Mathf.Approximately(_cachedMaxPacing, maxPacing) ||
+		    _calibratedTempoTargets == null)
+		{
+			_calibratedTempoTargets = new List<float>();
+			foreach (float normalizedPercentile in TempoTargets)
+				_calibratedTempoTargets.Add(PercentileToRaw(normalizedPercentile, minPacing, maxPacing));
+			_cachedMinPacing = minPacing;
+			_cachedMaxPacing = maxPacing;
+		}
+
+		return _calibratedTempoTargets;
+	}
+
+	/// <summary>
+	/// Inverse percentile lookup: normalized percentile (0-1) → raw pacing (0-1).
+	/// Uses linear interpolation: Lerp(minPacing, maxPacing, normalizedPercentile).
+	/// Example: 0.90 with range [0.2, 0.8] → Lerp(0.2, 0.8, 0.90) = 0.74
+	/// </summary>
+	private float PercentileToRaw(float normalizedPercentile, float minPacing, float maxPacing)
+	{
+		// Simple linear interpolation between min and max
+		float t = Mathf.Clamp01(normalizedPercentile);
+		return Mathf.Lerp(minPacing, maxPacing, t);
+	}
+
+	/// <summary>
+	/// Invalidates cached calibrated targets (call when min/max changes).
+	/// </summary>
+	public void InvalidateCache()
+	{
+		_calibratedThreatTargets = null;
+		_calibratedTempoTargets = null;
+		_cachedMinPacing = -1f;
+		_cachedMaxPacing = -1f;
 	}
 }
 
@@ -537,3 +640,4 @@ public enum FactorType
 	HitCollision, Ability, Angle, SafeDistance,             // Threat factors
 	ActionIntensity, ActionDensity, BotsDistance, Velocity  // Tempo factors
 }
+

@@ -89,6 +89,14 @@ namespace SumoManager
             public float Tempo;
             public float Threat;
             public float OverallPacing;
+
+            // Percentile-based pacing scores (0-100)
+            public float OverallPacingPercentile;
+            public float TempoPercentile;
+            public float ThreatPercentile;
+
+            // Normalized pacing scores (0-1)
+            public float OverallPacingNormalized;
         }
 
         [Serializable]
@@ -466,6 +474,10 @@ namespace SumoManager
         {
             RoundLog roundLog = GetCurrentRound();
 
+            // Get min/max from PacingManager
+            float minPacing = PacingManager.Instance?.MinPacing ?? 0.0f;
+            float maxPacing = PacingManager.Instance?.MaxPacing ?? 0.43f;
+
             var pace = new PacingLog
             {
                 OverallPacing = pacing.GetOverallPacing(),
@@ -473,6 +485,16 @@ namespace SumoManager
                 Tempo = pacing.Tempo.Value,
                 Threat = pacing.Threat.Value,
             };
+
+            // Calculate percentile scores using linear interpolation
+            pace.OverallPacingPercentile = pacing.GetPercentilePacing(minPacing, maxPacing);
+            pace.OverallPacingNormalized = pacing.GetNormalizedPacing(minPacing, maxPacing);
+
+            // Calculate percentiles for individual aspects (using same linear interpolation)
+            pace.TempoPercentile = (Mathf.Approximately(maxPacing, minPacing)) ? 50f :
+                Mathf.Clamp(((pacing.Tempo.Value - minPacing) / (maxPacing - minPacing)) * 100f, 0f, 100f);
+            pace.ThreatPercentile = (Mathf.Approximately(maxPacing, minPacing)) ? 50f :
+                Mathf.Clamp(((pacing.Threat.Value - minPacing) / (maxPacing - minPacing)) * 100f, 0f, 100f);
 
             if (side == PlayerSide.Left)
                 roundLog.LeftPacingSegment.Add(index, pace);

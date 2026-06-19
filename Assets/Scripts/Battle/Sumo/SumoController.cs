@@ -61,6 +61,9 @@ namespace SumoCore
         public PlayerSide Side;
         public InputProvider InputProvider;
         public PlayerProfile Profile;
+
+        // Direct reference to PacingHandler for action filtering
+        public PacingFramework.PacingHandler PacingHandler;
         #endregion
 
         #region Runtime (readonly) Properties
@@ -670,12 +673,13 @@ namespace SumoCore
                 tempActions.Add(action);
             }
 
-            // Fire event allowing pacing system to filter actions before queueing
-            var eventParam = new EventParameter(sideParam: Side, actionListParam: tempActions);
-            Events[OnBeforeActionsQueued]?.Invoke(eventParam);
-            Logger.Info($"[SumoController][FlushInput] {eventParam?.FilteredActionList?.Count ?? -1}/{tempActions.Count}");
-            // Use filtered actions if provided, otherwise use original actions
-            List<ISumoAction> actionsToQueue = eventParam.FilteredActionList ?? tempActions;
+            // Direct call to PacingHandler for action filtering (no event indirection)
+            List<ISumoAction> filteredActions = PacingHandler?.FilterActions(tempActions);
+
+            // Use filtered actions if provided AND non-empty, otherwise use original actions
+            List<ISumoAction> actionsToQueue = (filteredActions != null && filteredActions.Count > 0) ? filteredActions : tempActions;
+
+            Logger.Info($"[{Side}][FRAME {Time.frameCount}][TIME {Time.time:F3}][SumoController][FlushInput] Filtered={filteredActions?.Count ?? -1}, Queued={actionsToQueue.Count}/{tempActions.Count}");
 
             // Queue the actions (either original or filtered)
             foreach (var action in actionsToQueue)
@@ -708,6 +712,11 @@ namespace SumoCore
 
                 action.Execute(this);
                 tempActions.Add(action);
+            }
+
+            if (tempActions.Count > 0)
+            {
+                Logger.Info($"[{Side}][FRAME {Time.frameCount}][TIME {Time.time:F3}][SumoController][OnUpdate] Executed {tempActions.Count} actions");
             }
 
             Events[OnAction]?.Invoke(new(sideParam: Side, actionListParam: tempActions, boolParam: true));

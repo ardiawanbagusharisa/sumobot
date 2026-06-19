@@ -342,6 +342,25 @@ namespace PacingFramework
 
 			overlayTarget = EditorGUILayout.Toggle("Overlay Target", overlayTarget);
 
+			// Show calibration status
+			EditorGUILayout.Space(5);
+			EditorGUILayout.BeginVertical("box");
+			EditorGUILayout.LabelField("Calibration Status", EditorStyles.boldLabel);
+
+			var pacingManager = PacingManager.Instance;
+			if (pacingManager != null)
+			{
+				EditorGUILayout.LabelField($"✓ Percentile Range: [{pacingManager.MinPacing:F3}, {pacingManager.MaxPacing:F3}]");
+				EditorGUILayout.HelpBox("Targets (0-1) are linearly mapped to raw pacing using the percentile range.\nExample: 0.90 → Lerp(MinPacing, MaxPacing, 0.90)\nAdjust MinPacing and MaxPacing in PacingManager inspector.", MessageType.Info);
+			}
+			else
+			{
+				EditorGUILayout.LabelField("✗ PacingManager not found");
+				EditorGUILayout.HelpBox("Ensure PacingManager is in the scene.", MessageType.Warning);
+			}
+
+			EditorGUILayout.EndVertical();
+
 			EditorGUILayout.EndVertical();
 		}
 
