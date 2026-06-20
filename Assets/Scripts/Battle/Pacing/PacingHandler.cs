@@ -6,6 +6,7 @@ using SumoBot;
 using SumoCore;
 using SumoInput;
 using SumoManager;
+using Unity.VisualScripting;
 using UnityEngine;
 
 /// Structure:
@@ -52,7 +53,7 @@ namespace PacingFramework
 
 		// Original bot NN for generating candidate actions
 		private NeuralNetwork originalBotNN;
-		public bool UseNNCandidates = false; // Enable NN-based candidate generation
+		public bool useNNCandidates = false; // Enable NN-based candidate generation
 		public string NNModelPath = "ML/Models/NN/NN_Model";
 
 		// Fixed action pool (inspired by MCTS approach for reliable candidate actions)
@@ -85,7 +86,7 @@ namespace PacingFramework
 		// ================================
 		// Constructor
 		// ================================
-		public PacingHandler(SumoController controller, string pacingFileName, float segmentDuration, int collisionWindowSize, GamePacing sharedPacingHistory, float minPacing, float maxPacing, PacingBrainHeuristic sharedPacingBrainHeuristic = null)
+		public PacingHandler(SumoController controller, string pacingFileName, float segmentDuration, int collisionWindowSize, GamePacing sharedPacingHistory, float minPacing, float maxPacing, PacingBrainHeuristic sharedPacingBrainHeuristic = null, bool useNNCandidates = false)
 		{
 			this.controller = controller;
 			this.segmentDuration = segmentDuration;
@@ -94,6 +95,7 @@ namespace PacingFramework
 			this.pacingHistory = sharedPacingHistory;
 			this.MinPacing = minPacing;
 			this.MaxPacing = maxPacing;
+			this.useNNCandidates = useNNCandidates;
 			pacingBrainHeuristic = sharedPacingBrainHeuristic;
 
 			// Subscribe to events
@@ -150,7 +152,7 @@ namespace PacingFramework
 			segmentIndex = 0;
 
 			// Load original bot NN for candidate generation
-			if (UseNNCandidates && originalBotNN == null)
+			if (useNNCandidates && originalBotNN == null)
 			{
 				try
 				{
@@ -160,7 +162,7 @@ namespace PacingFramework
 				catch (Exception e)
 				{
 					Logger.Warning($"[{controller.Side}] Failed to load NN model: {e.Message}. Using heuristic candidates only.");
-					UseNNCandidates = false;
+					useNNCandidates = false;
 				}
 			}
 
@@ -392,16 +394,16 @@ namespace PacingFramework
 		// Test Functions
 		// ================================
 
-	private void DebugPacing(SegmentPacing pacing)
-	{
-		Debug.Log($"===== SEGMENT {segmentIndex} FINALIZED =====");
+		private void DebugPacing(SegmentPacing pacing)
+		{
+			Debug.Log($"===== SEGMENT {segmentIndex} FINALIZED =====");
 
-		float overallRaw = pacing.GetOverallPacing();
-		float overallPercentile = pacing.GetPercentilePacing(MinPacing, MaxPacing);
+			float overallRaw = pacing.GetOverallPacing();
+			float overallPercentile = pacing.GetPercentilePacing(MinPacing, MaxPacing);
 
-		Debug.Log($"PACING (RAW) --> Threat: {pacing.Threat.Value:F3}, Tempo: {pacing.Tempo.Value:F3}, Overall: {overallRaw:F3}");
-		Debug.Log($"PACING (PERCENTILE) --> Overall: {overallPercentile:F1}th percentile in range [{MinPacing:F3}, {MaxPacing:F3}]");
-	}
+			Debug.Log($"PACING (RAW) --> Threat: {pacing.Threat.Value:F3}, Tempo: {pacing.Tempo.Value:F3}, Overall: {overallRaw:F3}");
+			Debug.Log($"PACING (PERCENTILE) --> Overall: {overallPercentile:F1}th percentile in range [{MinPacing:F3}, {MaxPacing:F3}]");
+		}
 
 		private void DebugSegmentData(SegmentData data)
 		{
@@ -440,6 +442,12 @@ namespace PacingFramework
 		/// </summary>
 		public List<ISumoAction> FilterActions(List<ISumoAction> originalActions)
 		{
+
+			if (!BattleManager.Instance.BotManager.LeftEnabled && controller.Side == PlayerSide.Left)
+				return originalActions;
+			if (!BattleManager.Instance.BotManager.RightEnabled && controller.Side == PlayerSide.Right)
+				return originalActions;
+
 			// Store original unfiltered actions for comparison in RunEval
 			if (originalActions != null && originalActions.Count > 0)
 			{
@@ -841,7 +849,7 @@ namespace PacingFramework
 			}
 
 			// Merge with NN-based candidates for richer action pool
-			if (UseNNCandidates && originalBotNN != null)
+			if (useNNCandidates && originalBotNN != null)
 			{
 				var nnCandidates = GetNNCandidateActions(previousActions);
 				Debug.Log($"[PacingHandler] Candidate pool: {candidates.Count} total (heuristic + NN)\nNN: {string.Join(", ", nnCandidates)}\nHeuristic: {string.Join(", ", candidates)}");
@@ -876,7 +884,7 @@ namespace PacingFramework
 		{
 			var candidates = new List<ISumoAction>();
 
-			if (!UseNNCandidates || originalBotNN == null)
+			if (!useNNCandidates || originalBotNN == null)
 				return candidates;
 
 			SumoAPI api = controller.InputProvider.API;

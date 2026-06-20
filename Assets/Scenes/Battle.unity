@@ -3053,43 +3053,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 269909110}
   m_CullTransparentMesh: 1
---- !u!84 &279451926
-RenderTexture:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_Name: 
-  m_ImageContentsHash:
-    serializedVersion: 2
-    Hash: 00000000000000000000000000000000
-  m_IsAlphaChannelOptional: 0
-  serializedVersion: 6
-  m_Width: 1920
-  m_Height: 1080
-  m_AntiAliasing: 1
-  m_MipCount: -1
-  m_DepthStencilFormat: 0
-  m_ColorFormat: 4
-  m_MipMap: 0
-  m_GenerateMips: 0
-  m_SRGB: 1
-  m_UseDynamicScale: 0
-  m_UseDynamicScaleExplicit: 0
-  m_BindMS: 0
-  m_EnableCompatibleFormat: 1
-  m_EnableRandomWrite: 1
-  m_TextureSettings:
-    serializedVersion: 2
-    m_FilterMode: 0
-    m_Aniso: 1
-    m_MipBias: 0
-    m_WrapU: 1
-    m_WrapV: 1
-    m_WrapW: 1
-  m_Dimension: 2
-  m_VolumeDepth: 1
-  m_ShadowSamplingMode: 2
 --- !u!1 &286310963
 GameObject:
   m_ObjectHideFlags: 0
@@ -8472,6 +8435,43 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 773275109}
   m_CullTransparentMesh: 1
+--- !u!84 &778593031
+RenderTexture:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: 
+  m_ImageContentsHash:
+    serializedVersion: 2
+    Hash: 00000000000000000000000000000000
+  m_IsAlphaChannelOptional: 0
+  serializedVersion: 6
+  m_Width: 1920
+  m_Height: 1080
+  m_AntiAliasing: 1
+  m_MipCount: -1
+  m_DepthStencilFormat: 0
+  m_ColorFormat: 4
+  m_MipMap: 0
+  m_GenerateMips: 0
+  m_SRGB: 1
+  m_UseDynamicScale: 0
+  m_UseDynamicScaleExplicit: 0
+  m_BindMS: 0
+  m_EnableCompatibleFormat: 1
+  m_EnableRandomWrite: 1
+  m_TextureSettings:
+    serializedVersion: 2
+    m_FilterMode: 0
+    m_Aniso: 1
+    m_MipBias: 0
+    m_WrapU: 1
+    m_WrapV: 1
+    m_WrapW: 1
+  m_Dimension: 2
+  m_VolumeDepth: 1
+  m_ShadowSamplingMode: 2
 --- !u!1 &778668034
 GameObject:
   m_ObjectHideFlags: 0
@@ -23159,7 +23159,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Texture: {fileID: 279451926}
+  m_Texture: {fileID: 778593031}
   m_UVRect:
     serializedVersion: 2
     x: 0
@@ -26794,7 +26794,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2130233538}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: b33ce51748b63457ebe9b59f80ac599c, type: 3}
   m_Name: 
@@ -26835,7 +26835,7 @@ MonoBehaviour:
   RightEnabled: 1
   Right: {fileID: 0}
   leftBotIndex: 18
-  rightBotIndex: 2
+  rightBotIndex: 0
 --- !u!114 &2130233546
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -26850,17 +26850,17 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::SumoManager.PacingManager
   MinPacing: 0.05
   MaxPacing: 0.43
-  RandomPacingTarget: 0
-  LeftPacingFileName: Maxed
+  RandomTarget: 0
+  LeftFileName: Default
   LeftSegmentDuration: 1
   LeftCollisionWindowSize: 3
-  LeftEnableActionFiltering: 1
-  LeftUseHeuristicBrain: 1
-  RightPacingFileName: Maxed
+  LeftActionFiltering: 1
+  LeftNNCandidates: 1
+  RightFileName: Default
   RightSegmentDuration: 1
   RightCollisionWindowSize: 3
-  RightEnableActionFiltering: 1
-  RightUseHeuristicBrain: 1
+  RightActionFiltering: 1
+  RightNNCandidates: 0
 --- !u!1 &2132169806
 GameObject:
   m_ObjectHideFlags: 0

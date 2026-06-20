@@ -356,10 +356,7 @@ namespace SumoManager
             Log.Games[CurrentGameIndex].Rounds.Add(newRound);
 
             // Clear collision cache at start of each round to prevent duplicates
-            SumoCore.SumoController.ClearCollisionCache();
-
-            // Initialize pacing history for new round to prevent cross-round contamination
-            PacingManager.Instance?.InitRound();
+            SumoController.ClearCollisionCache();
         }
 
         public static PlayerSide? GetWinnerByContactMade()

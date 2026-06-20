@@ -161,7 +161,7 @@ namespace SumoBot
                 {
                     InputProvider = controller.InputProvider,
                     Actions = new(),
-                    SkillType = skillType ?? Left.DefaultSkillType
+                    SkillType = skillType ?? Right.DefaultSkillType
                 };
                 controller.AssignSkill(rightHandler.SkillType);
                 controller.Events[SumoController.OnBounce].Subscribe(OnRightBounce);

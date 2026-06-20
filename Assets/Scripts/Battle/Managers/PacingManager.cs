@@ -14,34 +14,31 @@ namespace SumoManager
 
 		#region Inspector Configuration
 
-		[Header("Percentile Calibration")]
 		[Tooltip("Minimum pacing value for percentile mapping (0th percentile)")]
 		public float MinPacing = 0.0f;
 
 		[Tooltip("Maximum pacing value for percentile mapping (100th percentile)")]
 		public float MaxPacing = 0.43f;
 
-		public bool RandomPacingTarget = false;
+		public bool RandomTarget = false;
 
 		[Header("Left Player Pacing Configuration")]
 		[Tooltip("Fallback pacing filename for left player (human). Can be overridden by Bot.PacingFileName")]
-		public string LeftPacingFileName = "Default";
+		public string LeftFileName = "Default";
 		public float LeftSegmentDuration = 2f;
 		public int LeftCollisionWindowSize = 2;
-		public bool LeftEnableActionFiltering = false;
-		[Tooltip("Use heuristic (rule-based) brain instead of NN-based brain. No training required!")]
-		public bool LeftUseHeuristicBrain = true;
+		public bool LeftActionFiltering = false;
+		public bool LeftNNCandidates = false;
 
 
 		[Header("Right Player Pacing Configuration")]
 		[Tooltip("Fallback pacing filename for right player (human). Can be overridden by Bot.PacingFileName")]
-		public string RightPacingFileName = "Default";
+		public string RightFileName = "Default";
 		public float RightSegmentDuration = 2f;
 		public int RightCollisionWindowSize = 2;
-		public bool RightEnableActionFiltering = false;
-		
-		[Tooltip("Use heuristic (rule-based) brain instead of NN-based brain. No training required!")]
-		public bool RightUseHeuristicBrain = true;
+
+		public bool RightActionFiltering = false;
+		public bool RightNNCandidates = false;
 
 		#endregion
 
@@ -71,6 +68,16 @@ namespace SumoManager
 			Instance = this;
 		}
 
+		void OnEnable()
+		{
+			BattleManager.Instance.Events[BattleManager.OnBattleChanged].Subscribe(OnBattleChanged);
+		}
+
+		void OnDisable()
+		{
+			BattleManager.Instance.Events[BattleManager.OnBattleChanged].Unsubscribe(OnBattleChanged);
+		}
+
 		void OnDestroy()
 		{
 			// Cleanup handlers
@@ -84,14 +91,14 @@ namespace SumoManager
 
 		void Update()
 		{
-			if (LeftPacingHandler != null && LeftPacingHandler.EnableActionFiltering != LeftEnableActionFiltering)
+			if (LeftPacingHandler != null && LeftPacingHandler.EnableActionFiltering != LeftActionFiltering)
 			{
-				LeftPacingHandler.EnableActionFiltering = LeftEnableActionFiltering;
+				LeftPacingHandler.EnableActionFiltering = LeftActionFiltering;
 			}
 
-			if (RightPacingHandler != null && RightPacingHandler.EnableActionFiltering != RightEnableActionFiltering)
+			if (RightPacingHandler != null && RightPacingHandler.EnableActionFiltering != RightActionFiltering)
 			{
-				RightPacingHandler.EnableActionFiltering = RightEnableActionFiltering;
+				RightPacingHandler.EnableActionFiltering = RightActionFiltering;
 			}
 		}
 
@@ -114,7 +121,7 @@ namespace SumoManager
 				// Cleanup existing handler (but keep PacingBrain alive!)
 				LeftPacingHandler?.Dispose();
 
-				string finalPacingFileName = LeftPacingFileName;
+				string finalPacingFileName = LeftFileName;
 
 				if (string.IsNullOrEmpty(finalPacingFileName))
 				{
@@ -122,7 +129,7 @@ namespace SumoManager
 					finalPacingFileName = "Default";
 				}
 
-				if (LeftUseHeuristicBrain && leftPacingBrainHeuristic == null)
+				if (leftPacingBrainHeuristic == null)
 				{
 					leftPacingBrainHeuristic = new PacingBrainHeuristic(controller);
 					Debug.Log($"[PacingManager] Created new Left PacingBrain Heuristic instance (no training required)");
@@ -136,7 +143,8 @@ namespace SumoManager
 					leftPacingHistory,
 					MinPacing,
 					MaxPacing,
-					leftPacingBrainHeuristic  // Pass persistent heuristic brain (may be null)
+					leftPacingBrainHeuristic,  // Pass persistent heuristic brain (may be null)
+					LeftNNCandidates
 				);
 
 				// Set the direct reference on controller for action filtering
@@ -152,14 +160,14 @@ namespace SumoManager
 				// Cleanup existing handler (but keep PacingBrain alive!)
 				RightPacingHandler?.Dispose();
 
-				string finalPacingFileName = RightPacingFileName;
+				string finalPacingFileName = RightFileName;
 				if (string.IsNullOrEmpty(finalPacingFileName))
 				{
 					Logger.Warning($"[PacingManager][Initialize][{controller.Side}] RightPacingFileName is empty, using Default.json");
 					finalPacingFileName = "Default";
 				}
 
-				if (RightUseHeuristicBrain && rightPacingBrainHeuristic == null)
+				if (rightPacingBrainHeuristic == null)
 				{
 					rightPacingBrainHeuristic = new PacingBrainHeuristic(controller);
 					Debug.Log($"[PacingManager] Created new Right PacingBrain Heuristic instance (no training required)");
@@ -173,7 +181,8 @@ namespace SumoManager
 					rightPacingHistory,
 					MinPacing,
 					MaxPacing,
-					rightPacingBrainHeuristic  // Pass persistent heuristic brain (may be null)
+					rightPacingBrainHeuristic,  // Pass persistent heuristic brain (may be null)
+					RightNNCandidates
 				);
 
 				// Set the direct reference on controller for action filtering
@@ -201,7 +210,7 @@ namespace SumoManager
 			rightPacingHistory.InitBattle();
 
 			// Randomize pacing targets for natural training variation
-			if (RandomPacingTarget)
+			if (RandomTarget)
 				RandomizePacingTargets();
 
 			Debug.Log("[PacingManager] Round pacing history initialized with randomized targets");
@@ -242,6 +251,14 @@ namespace SumoManager
 			for (int i = 0; i < targets.Count; i++)
 			{
 				targets[i] = Random.Range(MIN_TARGET, MAX_TARGET);
+			}
+		}
+
+		public void OnBattleChanged(EventParameter param)
+		{
+			if (param.BattleState == BattleState.Battle_Ongoing)
+			{
+				InitRound();
 			}
 		}
 
