@@ -672,15 +672,14 @@ namespace SumoCore
 
                 tempActions.Add(action);
             }
-            
 
-            // Direct call to PacingHandler for action filtering (no event indirection)
-            List<ISumoAction> filteredActions = PacingHandler?.FilterActions(tempActions);
 
-            // Use filtered actions if provided AND non-empty, otherwise use original actions
-            List<ISumoAction> actionsToQueue = filteredActions ?? new();
-
-            Logger.Info($"[{Side}][FRAME {Time.frameCount}][TIME {Time.time:F3}][SumoController][FlushInput] Filtered={filteredActions?.Count ?? -1}, Queued={actionsToQueue.Count}/{tempActions.Count}");
+            // Fire event allowing pacing system to filter actions before queueing
+            var eventParam = new EventParameter(sideParam: Side, actionListParam: tempActions);
+            Events[OnBeforeActionsQueued]?.Invoke(eventParam);
+            Logger.Info($"[SumoController][FlushInput] {eventParam?.FilteredActionList?.Count ?? -1}/{tempActions.Count}");
+            // Use filtered actions if provided, otherwise use original actions
+            List<ISumoAction> actionsToQueue = eventParam.FilteredActionList ?? new();
 
             // Queue the actions (either original or filtered)
             foreach (var action in actionsToQueue)

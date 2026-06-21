@@ -61,16 +61,8 @@ namespace PacingFramework
 		private static readonly List<ISumoAction> BaseActionPool = new List<ISumoAction>
 		{
 			new TurnAction(InputType.Script, ActionType.TurnLeft, 0.1f),
-			new TurnAction(InputType.Script, ActionType.TurnRight, 0.1f),
-
-			new TurnAction(InputType.Script, ActionType.TurnLeft, 0.2f),
-			new TurnAction(InputType.Script, ActionType.TurnRight, 0.2f),
-
-			new TurnAction(InputType.Script, ActionType.TurnLeft, 0.3f),
 			new TurnAction(InputType.Script, ActionType.TurnRight, 0.3f),
-
 			new AccelerateAction(InputType.Script, 0.1f),
-			new AccelerateAction(InputType.Script, 0.3f),
 			new DashAction(InputType.Script),
 			new SkillAction(InputType.Script),
 		};
@@ -218,9 +210,6 @@ namespace PacingFramework
 
 			// Calculate original prediction
 			var (origThreat, origTempo) = CalculatePredictedPacing(actionsToEvaluate, eval);
-
-			// Filter actions and store them
-			filteredActions = EvaluateAction(actionsToEvaluate, eval);
 
 			// Calculate filtered prediction
 			var (filtThreat, filtTempo) = CalculatePredictedPacing(filteredActions, eval);
@@ -443,11 +432,8 @@ namespace PacingFramework
 		/// Called synchronously from SumoController.FlushInput().
 		/// Returns filtered actions or null if filtering is disabled/unavailable.
 		/// </summary>
-		public List<ISumoAction> FilterActions(List<ISumoAction> actions)
+		public List<ISumoAction> FilterActions()
 		{
-
-			originalUnfilteredActions = actions;
-
 			if (!BattleManager.Instance.BotManager.LeftEnabled && controller.Side == PlayerSide.Left)
 				return originalUnfilteredActions;
 			if (!BattleManager.Instance.BotManager.RightEnabled && controller.Side == PlayerSide.Right)
@@ -493,17 +479,17 @@ namespace PacingFramework
 		{
 			// Store original unfiltered acti ons for comparison in RunEval
 			// This must happen BEFORE filtering to capture the true original actions
-			// if (parameter.ActionList != null && parameter.ActionList.Count > 0)
-			// {
-			// 	originalUnfilteredActions = new List<ISumoAction>(parameter.ActionList);
-			// }
+			if (parameter.ActionList != null && parameter.ActionList.Count > 0)
+			{
+				originalUnfilteredActions = new List<ISumoAction>(parameter.ActionList);
+			}
 
-			// var filteredActions = FilterActions();
+			filteredActions = FilterActions();
 
-			// if (filteredActions != null && filteredActions.Count > 0)
-			// {
-			// 	parameter.FilteredActionList = filteredActions;
-			// }
+			if (filteredActions != null && filteredActions.Count > 0)
+			{
+				parameter.FilteredActionList = filteredActions;
+			}
 		}
 
 		// ================================
@@ -599,7 +585,7 @@ namespace PacingFramework
 
 			// Generate action sequence independently of original count
 			// Allow flexible sequence length (1-5 actions typical for most bots)
-			int maxActions = Mathf.Max(Mathf.Min(originalActions.Count, 1), 3); // At least 3 actions for flexibility
+			int maxActions = Mathf.Max(originalActions.Count, 3); // At least 3 actions for flexibility
 
 			for (int i = 0; i < maxActions; i++)
 			{
@@ -616,20 +602,16 @@ namespace PacingFramework
 
 				if (pacingBrainHeuristic != null)
 				{
-					// Add original action to candidates if available
-					if (originalAction != null && !candidateActions.Contains(originalAction))
-					{
+					if (originalAction != null)
 						candidateActions.Add(originalAction);
-					}
 
 					if (pacingBrainHeuristic != null)
 					{
 						bestAction = pacingBrainHeuristic.SelectBestAction(candidateActions, evaluation, controller.InputProvider.API, simulatedActions);
 					}
 					else
+						// Fallback to original if available, otherwise use first candidate
 						bestAction ??= originalAction ?? candidateActions[0];
-
-					// Fallback to original if available, otherwise use first candidate
 				}
 				else
 				{
@@ -665,8 +647,7 @@ namespace PacingFramework
 				if (bestAction == null)
 					break;
 
-
-				if (pacedActions.Any((x) => x.Type == bestAction.Type && (Mathf.Abs(x.Duration - bestAction.Duration) < 0.5f))) continue;
+				if (pacedActions.Any((x) => x.Type == bestAction.Type && (Mathf.Abs(x.Duration - bestAction.Duration) < 0.1f))) continue;
 
 				// Add best action to sequence
 				pacedActions.Add(bestAction);
@@ -694,8 +675,6 @@ namespace PacingFramework
 		/// </summary>
 		private List<ISumoAction> GenerateCandidateActions(PacingEvaluation evaluation, List<ISumoAction> previousActions, float currentThreatDelta, float currentTempoDelta)
 		{
-			previousActions = previousActions.DistinctBy((x) => x.Type).ToList();
-
 			var candidates = new List<ISumoAction>();
 			SumoAPI api = controller.InputProvider.API;
 
@@ -747,71 +726,89 @@ namespace PacingFramework
 					{
 						shouldInclude = false;
 					}
+					else
+					{
+						// Check if dashing in current direction leads toward arena edge
+						float angleToCenter = api.Angle(currentPos, currentRot, api.BattleInfo.ArenaPosition, normalized: true);
+						Vector2 distFromCenter = api.Distance(targetPos: api.BattleInfo.ArenaPosition, oriPos: currentPos);
+						float normalizedDist = distFromCenter.magnitude / api.BattleInfo.ArenaRadius;
+						bool nearEdge = normalizedDist > 0.6f; // Dash is more aggressive, use tighter threshold
+						bool facingAwayFromCenter = angleToCenter < 0.5f; // > 60 degrees off from center
+
+						if (nearEdge && facingAwayFromCenter)
+						{
+							// Skip dash when near edge and facing away from center (very dangerous)
+							shouldInclude = false;
+						}
+						else if (!needHigherThreat && !needHigherTempo)
+						{
+							// Only include dash for aggressive play
+							shouldInclude = false;
+						}
+					}
 				}
 
 				// Filter turns based on threat needs and arena safety
-				if (action is TurnAction turn)
-				{
-					// Determine if this turn helps or hurts angle alignment
-					bool turnTowardsEnemy = angleToEnemy > 0.6f;
-
-					// Check if turning makes us face away from arena center
-					// Higher angle value = better alignment with center = safer
-					float angleToCenter = api.Angle(currentPos, currentRot, api.BattleInfo.ArenaPosition, normalized: true);
-					float angleAfterTurn = api.Angle(testPos, testRot, api.BattleInfo.ArenaPosition, normalized: true);
-					bool turningAwayFromCenter = angleAfterTurn < angleToCenter; // Lower alignment = facing more toward edge
-
-					if (needHigherThreat && !turnTowardsEnemy)
-					{
-						// Skip turns that worsen angle when we need threat
-						shouldInclude = false;
-					}
-					else if (!needHigherThreat && turnTowardsEnemy)
-					{
-						// Skip turns toward enemy when we don't need threat
-						shouldInclude = false;
-					}
-					// else if (!needHigherThreat && !turnTowardsEnemy && turningAwayFromCenter)
-					// {
-					// 	// When lowering threat by turning away from enemy,
-					// 	// reject if this turn makes us face away from arena center (toward edge)
-					// 	shouldInclude = false;
-					// }
-				}
-
-				// Filter accelerate actions based on tempo needs and arena safety
-				// if (action is AccelerateAction accel)
+				// if (action is TurnAction turn)
 				// {
-				// 	// Check if accelerating in current direction leads toward arena edge
+				// 	// Determine if this turn helps or hurts angle alignment
+				// 	bool turnTowardsEnemy = angleToEnemy > 0.75f;
+
+				// 	// Check if turning makes us face away from arena center
+				// 	// Higher angle value = better alignment with center = safer
 				// 	float angleToCenter = api.Angle(currentPos, currentRot, api.BattleInfo.ArenaPosition, normalized: true);
+				// 	float angleAfterTurn = api.Angle(testPos, testRot, api.BattleInfo.ArenaPosition, normalized: true);
+				// 	bool turningAwayFromCenter = angleAfterTurn < angleToCenter; // Lower alignment = facing more toward edge
 
-				// 	// If facing away from center (angle < 0.5 means > 60 degrees away from center)
-				// 	// and we're already close to edge, skip acceleration
-				// 	Vector2 distFromCenter = api.Distance(targetPos: api.BattleInfo.ArenaPosition, oriPos: currentPos);
-				// 	float normalizedDist = distFromCenter.magnitude / api.BattleInfo.ArenaRadius;
-				// 	bool nearEdge = normalizedDist > 0.7f; // Within 30% of arena radius from edge
-				// 	bool facingAwayFromCenter = angleToCenter < 0.5f; // > 60 degrees off from center
-
-				// 	if (nearEdge && facingAwayFromCenter)
+				// 	if (needHigherThreat && !turnTowardsEnemy)
 				// 	{
-				// 		// Skip acceleration when near edge and facing away from center
+				// 		// Skip turns that worsen angle when we need threat
 				// 		shouldInclude = false;
 				// 	}
-				// 	else if (accel.Duration >= 0.3f && !needHigherTempo)
+				// 	else if (!needHigherThreat && turnTowardsEnemy)
 				// 	{
-				// 		// Skip long accelerates when we don't need tempo
+				// 		// Skip turns toward enemy when we don't need threat
+				// 		shouldInclude = false;
+				// 	}
+				// 	else if (!needHigherThreat && !turnTowardsEnemy && turningAwayFromCenter)
+				// 	{
+				// 		// When lowering threat by turning away from enemy,
+				// 		// reject if this turn makes us face away from arena center (toward edge)
 				// 		shouldInclude = false;
 				// 	}
 				// }
 
-				bool isDuplicate = previousActions.Any(c =>
-						c.Type == action.Type && (Mathf.Abs(c.Duration - action.Duration) < 0.5f));
-
-				if (shouldInclude)
+				// Filter accelerate actions based on tempo needs and arena safety
+				if (action is AccelerateAction accel)
 				{
-					candidates.Add(action);
+					// Check if accelerating in current direction leads toward arena edge
+					float angleToCenter = api.Angle(currentPos, currentRot, api.BattleInfo.ArenaPosition, normalized: true);
+
+					// If facing away from center (angle < 0.5 means > 60 degrees away from center)
+					// and we're already close to edge, skip acceleration
+					Vector2 distFromCenter = api.Distance(targetPos: api.BattleInfo.ArenaPosition, oriPos: currentPos);
+					float normalizedDist = distFromCenter.magnitude / api.BattleInfo.ArenaRadius;
+					bool nearEdge = normalizedDist > 0.7f; // Within 30% of arena radius from edge
+					bool facingAwayFromCenter = angleToCenter < 0.5f; // > 60 degrees off from center
+
+					if (nearEdge && facingAwayFromCenter)
+					{
+						// Skip acceleration when near edge and facing away from center
+						shouldInclude = false;
+					}
+					else if (accel.Duration >= 0.3f && !needHigherTempo)
+					{
+						// Skip long accelerates when we don't need tempo
+						shouldInclude = false;
+					}
 				}
 
+				// Avoid duplicates (check by action type and approximate duration)
+				bool isDuplicate = candidates.Any(c =>
+					c.Type == action.Type && (Mathf.Abs(c.Duration - action.Duration) < 0.5f));
+
+				if (!isDuplicate && shouldInclude)
+					candidates.Add(action);
 			}
 
 			// Merge with NN-based candidates for richer action pool
@@ -832,6 +829,7 @@ namespace PacingFramework
 					{
 						candidates.Add(nnAction);
 					}
+					// candidates.Add(nnAction);
 				}
 
 			}
