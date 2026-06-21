@@ -672,12 +672,13 @@ namespace SumoCore
 
                 tempActions.Add(action);
             }
+            
 
             // Direct call to PacingHandler for action filtering (no event indirection)
             List<ISumoAction> filteredActions = PacingHandler?.FilterActions(tempActions);
 
             // Use filtered actions if provided AND non-empty, otherwise use original actions
-            List<ISumoAction> actionsToQueue = (filteredActions != null && filteredActions.Count > 0) ? filteredActions : tempActions;
+            List<ISumoAction> actionsToQueue = filteredActions ?? new();
 
             Logger.Info($"[{Side}][FRAME {Time.frameCount}][TIME {Time.time:F3}][SumoController][FlushInput] Filtered={filteredActions?.Count ?? -1}, Queued={actionsToQueue.Count}/{tempActions.Count}");
 

@@ -63,6 +63,9 @@ namespace PacingFramework
 			new TurnAction(InputType.Script, ActionType.TurnLeft, 0.1f),
 			new TurnAction(InputType.Script, ActionType.TurnRight, 0.1f),
 
+			new TurnAction(InputType.Script, ActionType.TurnLeft, 0.2f),
+			new TurnAction(InputType.Script, ActionType.TurnRight, 0.2f),
+
 			new TurnAction(InputType.Script, ActionType.TurnLeft, 0.3f),
 			new TurnAction(InputType.Script, ActionType.TurnRight, 0.3f),
 
@@ -273,7 +276,7 @@ namespace PacingFramework
 
 
 			// Multi-line log with all info including progressive average
-			Logger.Info($"[{controller.Side}][{BattleManager.Instance.ElapsedTime}][Segment {segmentIndex}] PACING FILTER\n\nPast Eval:\t\tThreat Δ={eval.ThreatDelta:F3}, Tempo Δ={eval.TempoDelta:F3}\nOriginal:\t\tThreat={origThreat:F3}({origThreatDelta:+0.000;-0.000;0.000}), Tempo={origTempo:F3}({origTempoDelta:+0.000;-0.000;0.000}), Avg={origAverage:F3}\nFiltered:\t\tThreat={filtThreat:F3}({filtThreatDelta:+0.000;-0.000;0.000}), Tempo={filtTempo:F3}({filtTempoDelta:+0.000;-0.000;0.000}), Avg={filtAverage:F3}\nTarget:\t\t\tThreat={eval.TargetThreat:F3}, Tempo={eval.TargetTempo:F3}, Avg={targetAverage:F3}\nImprove:\t\tThreat={threatImprovement:F3} ({threatClosenessPercent:F1}%), Tempo={tempoImprovement:F3} ({tempoClosenessPercent:F1}%), Closeness={overallClosenessPercent:F1}%\nAct Changed:\t\t{changedCount}/{actionsToEvaluate.Count} ({changedCount * 100f / actionsToEvaluate.Count:F0}%)\nProgressive Avg=\t{progressiveAvgCloseness:F1}% (n={evalCount})\nOrig Actions: [{string.Join(", ", actionsToEvaluate)}]\nFilter Actions: [{string.Join(", ", filteredActions)}]");
+			Logger.Info($"[{controller.Side}][{BattleManager.Instance.ElapsedTime}][Segment {segmentIndex}] PACING FILTER\n\nPast Eval:\t\tThreat Δ={eval.ThreatDelta:F3}, Tempo Δ={eval.TempoDelta:F3}\nOriginal:\t\tThreat={origThreat:F3}({origThreatDelta:+0.000;-0.000;0.000}), Tempo={origTempo:F3}({origTempoDelta:+0.000;-0.000;0.000}), Avg={origAverage:F3}\nFiltered:\t\tThreat={filtThreat:F3}({filtThreatDelta:+0.000;-0.000;0.000}), Tempo={filtTempo:F3}({filtTempoDelta:+0.000;-0.000;0.000}), Avg={filtAverage:F3}\nTarget:\t\t\tThreat={eval.TargetThreat:F3}, Tempo={eval.TargetTempo:F3}, Avg={targetAverage:F3}\nImprove:\t\tThreat={threatImprovement:F3} ({threatClosenessPercent:F1}%), Tempo={tempoImprovement:F3} ({tempoClosenessPercent:F1}%), Closeness={overallClosenessPercent:F1}%\nAct Changed:\t\t{changedCount}/{actionsToEvaluate.Count} ({changedCount * 100f / actionsToEvaluate.Count:F0}%)\nProgressive Avg=\t{progressiveAvgCloseness:F1}% (n={evalCount})\nOrig Actions: [{string.Join(", ", actionsToEvaluate.Select((x) => $"{x.Name} ({x.Duration})").ToList())}]\nFilter Actions: [{string.Join(", ", filteredActions.Select((x) => $"{x.Name} ({x.Duration})").ToList())}]");
 		}
 
 		/// <summary>
@@ -440,24 +443,20 @@ namespace PacingFramework
 		/// Called synchronously from SumoController.FlushInput().
 		/// Returns filtered actions or null if filtering is disabled/unavailable.
 		/// </summary>
-		public List<ISumoAction> FilterActions(List<ISumoAction> originalActions)
+		public List<ISumoAction> FilterActions(List<ISumoAction> actions)
 		{
 
-			if (!BattleManager.Instance.BotManager.LeftEnabled && controller.Side == PlayerSide.Left)
-				return originalActions;
-			if (!BattleManager.Instance.BotManager.RightEnabled && controller.Side == PlayerSide.Right)
-				return originalActions;
+			originalUnfilteredActions = actions;
 
-			// Store original unfiltered actions for comparison in RunEval
-			if (originalActions != null && originalActions.Count > 0)
-			{
-				originalUnfilteredActions = new List<ISumoAction>(originalActions);
-			}
+			if (!BattleManager.Instance.BotManager.LeftEnabled && controller.Side == PlayerSide.Left)
+				return originalUnfilteredActions;
+			if (!BattleManager.Instance.BotManager.RightEnabled && controller.Side == PlayerSide.Right)
+				return originalUnfilteredActions;
 
 			// Skip if filtering is disabled or no actions to filter
-			if (!EnableActionFiltering || originalActions == null || originalActions.Count == 0)
+			if (!EnableActionFiltering)
 			{
-				return null;
+				return originalUnfilteredActions;
 			}
 
 			// Perform synchronous evaluation
@@ -465,21 +464,21 @@ namespace PacingFramework
 			if (eval == null)
 			{
 				// No evaluation available yet (e.g., first segment), use original actions
-				return null;
+				return originalUnfilteredActions;
 			}
 
 			// Filter the actions
-			List<ISumoAction> filtered = EvaluateAction(originalActions, eval);
+			List<ISumoAction> filtered = EvaluateAction(originalUnfilteredActions, eval);
 
 			// Log the filtering result for debugging with frame number
 			if (filtered != null && filtered.Count > 0)
 			{
-				Logger.Info($"[{controller.Side}][FRAME {Time.frameCount}][TIME {Time.time:F3}] ACTION FILTER: Original={originalActions.Count}, Filtered={filtered.Count}, " +
+				Logger.Info($"[{controller.Side}][FRAME {Time.frameCount}][TIME {Time.time:F3}] ACTION FILTER: Original={originalUnfilteredActions.Count}, Filtered={filtered.Count}, " +
 					$"ThreatDelta={eval.ThreatDelta:F3}, TempoDelta={eval.TempoDelta:F3}");
 			}
-			else if (filtered == null || filtered.Count == 0)
+			else
 			{
-				Logger.Warning($"[{controller.Side}][FRAME {Time.frameCount}][TIME {Time.time:F3}] ACTION FILTER FAILED: No filtered actions generated! Using original {originalActions.Count} actions. " +
+				Logger.Warning($"[{controller.Side}][FRAME {Time.frameCount}][TIME {Time.time:F3}] ACTION FILTER FAILED: No filtered actions generated! Using original {originalUnfilteredActions.Count} actions. " +
 					$"ThreatDelta={eval.ThreatDelta:F3}, TempoDelta={eval.TempoDelta:F3}");
 			}
 
@@ -492,41 +491,19 @@ namespace PacingFramework
 		/// </summary>
 		private void OnBeforeActionsQueued(EventParameter parameter)
 		{
-			// Store original unfiltered actions for comparison in RunEval
+			// Store original unfiltered acti ons for comparison in RunEval
 			// This must happen BEFORE filtering to capture the true original actions
-			if (parameter.ActionList != null && parameter.ActionList.Count > 0)
-			{
-				originalUnfilteredActions = new List<ISumoAction>(parameter.ActionList);
-			}
+			// if (parameter.ActionList != null && parameter.ActionList.Count > 0)
+			// {
+			// 	originalUnfilteredActions = new List<ISumoAction>(parameter.ActionList);
+			// }
 
-			// Skip if filtering is disabled
-			if (!EnableActionFiltering)
-				return;
+			// var filteredActions = FilterActions();
 
-			// Skip if no actions to filter
-			if (parameter.ActionList == null || parameter.ActionList.Count == 0)
-				return;
-
-			// Perform synchronous evaluation
-			PacingEvaluation eval = EvaluatePacing();
-			if (eval == null)
-			{
-				// No evaluation available yet (e.g., first segment), use original actions
-				return;
-			}
-
-			// Filter the actions
-			List<ISumoAction> filtered = EvaluateAction(parameter.ActionList, eval);
-
-			// Provide filtered actions back to the controller
-			if (filtered != null && filtered.Count > 0)
-			{
-				parameter.FilteredActionList = filtered;
-
-				// Log the filtering result for debugging with frame number
-				Logger.Info($"[{controller.Side}][FRAME {Time.frameCount}][TIME {Time.time:F3}] ACTION FILTER: Original={parameter.ActionList.Count}, Filtered={filtered.Count}, " +
-					$"ThreatDelta={eval.ThreatDelta:F3}, TempoDelta={eval.TempoDelta:F3}");
-			}
+			// if (filteredActions != null && filteredActions.Count > 0)
+			// {
+			// 	parameter.FilteredActionList = filteredActions;
+			// }
 		}
 
 		// ================================
@@ -604,9 +581,6 @@ namespace PacingFramework
 		/// <returns>Filtered/modified action sequence that better matches target pacing</returns>
 		public List<ISumoAction> EvaluateAction(List<ISumoAction> originalActions, PacingEvaluation evaluation)
 		{
-			if (originalActions == null || originalActions.Count == 0)
-				return new List<ISumoAction>();
-
 			if (evaluation == null)
 			{
 				Logger.Warning($"[{controller.Side}] No evaluation provided, returning original actions");
@@ -625,7 +599,7 @@ namespace PacingFramework
 
 			// Generate action sequence independently of original count
 			// Allow flexible sequence length (1-5 actions typical for most bots)
-			int maxActions = Mathf.Max(originalActions.Count, 3); // At least 3 actions for flexibility
+			int maxActions = Mathf.Max(Mathf.Min(originalActions.Count, 1), 3); // At least 3 actions for flexibility
 
 			for (int i = 0; i < maxActions; i++)
 			{
@@ -652,9 +626,10 @@ namespace PacingFramework
 					{
 						bestAction = pacingBrainHeuristic.SelectBestAction(candidateActions, evaluation, controller.InputProvider.API, simulatedActions);
 					}
+					else
+						bestAction ??= originalAction ?? candidateActions[0];
 
 					// Fallback to original if available, otherwise use first candidate
-					bestAction ??= originalAction ?? candidateActions[0];
 				}
 				else
 				{
@@ -690,6 +665,9 @@ namespace PacingFramework
 				if (bestAction == null)
 					break;
 
+
+				if (pacedActions.Any((x) => x.Type == bestAction.Type && (Mathf.Abs(x.Duration - bestAction.Duration) < 0.5f))) continue;
+
 				// Add best action to sequence
 				pacedActions.Add(bestAction);
 				simulatedActions.Add(bestAction);
@@ -716,6 +694,8 @@ namespace PacingFramework
 		/// </summary>
 		private List<ISumoAction> GenerateCandidateActions(PacingEvaluation evaluation, List<ISumoAction> previousActions, float currentThreatDelta, float currentTempoDelta)
 		{
+			previousActions = previousActions.DistinctBy((x) => x.Type).ToList();
+
 			var candidates = new List<ISumoAction>();
 			SumoAPI api = controller.InputProvider.API;
 
@@ -767,33 +747,13 @@ namespace PacingFramework
 					{
 						shouldInclude = false;
 					}
-					else
-					{
-						// Check if dashing in current direction leads toward arena edge
-						float angleToCenter = api.Angle(currentPos, currentRot, api.BattleInfo.ArenaPosition, normalized: true);
-						Vector2 distFromCenter = api.Distance(targetPos: api.BattleInfo.ArenaPosition, oriPos: currentPos);
-						float normalizedDist = distFromCenter.magnitude / api.BattleInfo.ArenaRadius;
-						bool nearEdge = normalizedDist > 0.6f; // Dash is more aggressive, use tighter threshold
-						bool facingAwayFromCenter = angleToCenter < 0.5f; // > 60 degrees off from center
-
-						if (nearEdge && facingAwayFromCenter)
-						{
-							// Skip dash when near edge and facing away from center (very dangerous)
-							shouldInclude = false;
-						}
-						else if (!needHigherThreat && !needHigherTempo)
-						{
-							// Only include dash for aggressive play
-							shouldInclude = false;
-						}
-					}
 				}
 
 				// Filter turns based on threat needs and arena safety
 				if (action is TurnAction turn)
 				{
 					// Determine if this turn helps or hurts angle alignment
-					bool turnTowardsEnemy = angleToEnemy > 0.7f;
+					bool turnTowardsEnemy = angleToEnemy > 0.6f;
 
 					// Check if turning makes us face away from arena center
 					// Higher angle value = better alignment with center = safer
@@ -811,41 +771,47 @@ namespace PacingFramework
 						// Skip turns toward enemy when we don't need threat
 						shouldInclude = false;
 					}
-					else if (!needHigherThreat && !turnTowardsEnemy && turningAwayFromCenter)
-					{
-						// When lowering threat by turning away from enemy,
-						// reject if this turn makes us face away from arena center (toward edge)
-						shouldInclude = false;
-					}
+					// else if (!needHigherThreat && !turnTowardsEnemy && turningAwayFromCenter)
+					// {
+					// 	// When lowering threat by turning away from enemy,
+					// 	// reject if this turn makes us face away from arena center (toward edge)
+					// 	shouldInclude = false;
+					// }
 				}
 
 				// Filter accelerate actions based on tempo needs and arena safety
-				if (action is AccelerateAction accel)
-				{
-					// Check if accelerating in current direction leads toward arena edge
-					float angleToCenter = api.Angle(currentPos, currentRot, api.BattleInfo.ArenaPosition, normalized: true);
+				// if (action is AccelerateAction accel)
+				// {
+				// 	// Check if accelerating in current direction leads toward arena edge
+				// 	float angleToCenter = api.Angle(currentPos, currentRot, api.BattleInfo.ArenaPosition, normalized: true);
 
-					// If facing away from center (angle < 0.5 means > 60 degrees away from center)
-					// and we're already close to edge, skip acceleration
-					Vector2 distFromCenter = api.Distance(targetPos: api.BattleInfo.ArenaPosition, oriPos: currentPos);
-					float normalizedDist = distFromCenter.magnitude / api.BattleInfo.ArenaRadius;
-					bool nearEdge = normalizedDist > 0.7f; // Within 30% of arena radius from edge
-					bool facingAwayFromCenter = angleToCenter < 0.5f; // > 60 degrees off from center
+				// 	// If facing away from center (angle < 0.5 means > 60 degrees away from center)
+				// 	// and we're already close to edge, skip acceleration
+				// 	Vector2 distFromCenter = api.Distance(targetPos: api.BattleInfo.ArenaPosition, oriPos: currentPos);
+				// 	float normalizedDist = distFromCenter.magnitude / api.BattleInfo.ArenaRadius;
+				// 	bool nearEdge = normalizedDist > 0.7f; // Within 30% of arena radius from edge
+				// 	bool facingAwayFromCenter = angleToCenter < 0.5f; // > 60 degrees off from center
 
-					if (nearEdge && facingAwayFromCenter)
-					{
-						// Skip acceleration when near edge and facing away from center
-						shouldInclude = false;
-					}
-					else if (accel.Duration >= 0.3f && !needHigherTempo)
-					{
-						// Skip long accelerates when we don't need tempo
-						shouldInclude = false;
-					}
-				}
+				// 	if (nearEdge && facingAwayFromCenter)
+				// 	{
+				// 		// Skip acceleration when near edge and facing away from center
+				// 		shouldInclude = false;
+				// 	}
+				// 	else if (accel.Duration >= 0.3f && !needHigherTempo)
+				// 	{
+				// 		// Skip long accelerates when we don't need tempo
+				// 		shouldInclude = false;
+				// 	}
+				// }
+
+				bool isDuplicate = previousActions.Any(c =>
+						c.Type == action.Type && (Mathf.Abs(c.Duration - action.Duration) < 0.5f));
 
 				if (shouldInclude)
+				{
 					candidates.Add(action);
+				}
+
 			}
 
 			// Merge with NN-based candidates for richer action pool
@@ -860,15 +826,12 @@ namespace PacingFramework
 				{
 					// Avoid duplicates (check by action type and approximate duration)
 					bool isDuplicate = candidates.Any(c =>
-						c.Type == nnAction.Type &&
-						Mathf.Abs(c.Duration - nnAction.Duration) < 0.05f);
+						c.Type == nnAction.Type && (Mathf.Abs(c.Duration - nnAction.Duration) < 0.5f));
 
-					// if (!isDuplicate)
-					// {
-					candidates.Add(nnAction);
-					// }
-
-					// candidates.Add(nnAction);
+					if (!isDuplicate)
+					{
+						candidates.Add(nnAction);
+					}
 				}
 
 			}

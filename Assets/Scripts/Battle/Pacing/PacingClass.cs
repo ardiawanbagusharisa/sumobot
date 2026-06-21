@@ -522,15 +522,17 @@ public class Factor
 	}
 
 	// Evaluate the average angle between the bot and its opponents when they collide or are close.
+	// Inverted: small angle (head-on) = high threat, large angle (side/back) = low threat
 	private float EvaluateAngle(SegmentData data, ConstraintConfig constraints)
 	{
-		return data.Angles.Count > 0 ? constraints.Angle.Normalize(data.Angles.Average()) : 0f;
+		return data.Angles.Count > 0 ? 1f - constraints.Angle.Normalize(data.Angles.Average()) : 0f;
 	}
 
 	// Evaluate the average distance between the bot and its opponents when they collide or are close.
+	// Inverted: small distance (close combat) = high threat, large distance (far) = low threat
 	private float EvaluateSafeDistance(SegmentData data, ConstraintConfig constraints)
 	{
-		return data.SafeDistances.Count > 0 ? constraints.SafeDistance.Normalize(data.SafeDistances.Average()) : 0f;
+		return data.SafeDistances.Count > 0 ? 1f - constraints.SafeDistance.Normalize(data.SafeDistances.Average()) : 0f;
 	}
 
 	// Evaluate the number of actions performed by the bot.

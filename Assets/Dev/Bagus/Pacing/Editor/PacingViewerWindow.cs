@@ -140,27 +140,27 @@ namespace PacingFramework
 
 			if (overlayTarget && (targetConfig != null || handler.PacingTarget != null))
 			{
-				// Use targetConfig if it has valid data, otherwise use handler's PacingTarget
-				targetConfig = (targetConfig != null && targetConfig.ThreatTargets != null && targetConfig.ThreatTargets.Count > 0)
+				// Use manually loaded targetConfig if available, otherwise use handler's PacingTarget
+				PacingTargetConfig activeConfig = (!string.IsNullOrEmpty(loadedConfigPath) && targetConfig != null && targetConfig.ThreatTargets != null && targetConfig.ThreatTargets.Count > 0)
 					? targetConfig
 					: handler.PacingTarget;
 
 				// Resample targets to match actual data count
-				var resampledThreat = ResampleCurve(targetConfig.ThreatTargets, threat.Count);
-				var resampledTempo = ResampleCurve(targetConfig.TempoTargets, tempo.Count);
+				var resampledThreat = ResampleCurve(activeConfig.ThreatTargets, threat.Count);
+				var resampledTempo = ResampleCurve(activeConfig.TempoTargets, tempo.Count);
 
 				// Draw target overlay (dashed lines)
-				DrawTargetOverlay(rect, targetConfig, threat.Count);
+				DrawTargetOverlay(rect, activeConfig, threat.Count);
 
 				// Draw delta bars showing deviation from target
 				DrawDeltaBars(rect, threat, resampledThreat, Color.red);
 				DrawDeltaBars(rect, tempo, resampledTempo, Color.cyan);
 
 				// Draw enhanced legend with stats
-				DrawEnhancedLegend(rect, threat, tempo, overall, targetConfig);
+				DrawEnhancedLegend(rect, threat, tempo, overall, activeConfig);
 
-				DrawEvaluation(threat, tempo);
-				DrawSegmentEvaluation(threat, tempo);
+				DrawEvaluation(threat, tempo, activeConfig);
+				DrawSegmentEvaluation(threat, tempo, activeConfig);
 			}
 			else
 			{
@@ -869,9 +869,10 @@ namespace PacingFramework
 
 		private void DrawSegmentEvaluation(
 			List<float> actualThreat,
-			List<float> actualTempo)
+			List<float> actualTempo,
+			PacingTargetConfig config)
 		{
-			if (targetConfig == null)
+			if (config == null)
 				return;
 
 			showEvaluationDetails = EditorGUILayout.Foldout(showEvaluationDetails, "Per Segment Evaluation", true);
@@ -879,8 +880,8 @@ namespace PacingFramework
 
 			EditorGUILayout.BeginVertical("box");
 
-			var alignedThreat = ResampleCurve(targetConfig.ThreatTargets, actualThreat.Count);
-			var alignedTempo = ResampleCurve(targetConfig.TempoTargets, actualTempo.Count);
+			var alignedThreat = ResampleCurve(config.ThreatTargets, actualThreat.Count);
+			var alignedTempo = ResampleCurve(config.TempoTargets, actualTempo.Count);
 
 			// Safety check: ensure resampled lists match actual lists
 			if (alignedThreat.Count != actualThreat.Count || alignedTempo.Count != actualTempo.Count)
@@ -916,12 +917,12 @@ namespace PacingFramework
 		// EVALUATION
 		// ======================================================
 
-		private void DrawEvaluation(List<float> threat, List<float> tempo)
+		private void DrawEvaluation(List<float> threat, List<float> tempo, PacingTargetConfig config)
 		{
-			if (targetConfig == null) return;
+			if (config == null) return;
 
-			float threatError = CalculateMSE(threat, targetConfig.ThreatTargets);
-			float tempoError = CalculateMSE(tempo, targetConfig.TempoTargets);
+			float threatError = CalculateMSE(threat, config.ThreatTargets);
+			float tempoError = CalculateMSE(tempo, config.TempoTargets);
 			float threatAvg = threat.Sum() / threat.Count;
 			float tempoAvg = tempo.Sum() / tempo.Count;
 			float overall = (threatAvg + tempoAvg) / 2;
