@@ -60,8 +60,6 @@ namespace PacingFramework
 		// Balanced pool: more acceleration options to prevent excessive turning
 		private static readonly List<ISumoAction> BaseActionPool = new List<ISumoAction>
 		{
-			new TurnAction(InputType.Script, ActionType.TurnLeft, 0.1f),
-			new TurnAction(InputType.Script, ActionType.TurnRight, 0.3f),
 			new AccelerateAction(InputType.Script, 0.1f),
 			new DashAction(InputType.Script),
 			new SkillAction(InputType.Script),

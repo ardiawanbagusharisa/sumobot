@@ -34,16 +34,16 @@ namespace PacingFramework
 		public float NoActionThreshold = 0.3f;          // Above this avg delta = return null (no actions)
 
 		// Action base scores (before considerations)
-		public float BaseScoreAccelerate = 0.7f;
-		public float BaseScoreTurn = 0.5f;
-		public float BaseScoreDash = 0.4f;
-		public float BaseScoreSkill = 0.4f;
+		public float BaseScoreAccelerate = 1f;
+		public float BaseScoreTurn = 1f;
+		public float BaseScoreDash = 1f;
+		public float BaseScoreSkill = 1f;
 
 		// Action type preferences based on pacing needs
-		public MinMax AccelerateMultiplier = new(0.5f, 0.9f);
+		public MinMax AccelerateMultiplier = new(0.5f, 1f);
 		public MinMax DashMultiplier = new(0.5f, 1f);
 		public MinMax SkillMultiplier = new(0.5f, 1f);
-		public MinMax TurnMultiplier = new(0.3f, 0.7f);
+		public MinMax TurnMultiplier = new(0.3f, 1.5f);
 		#endregion
 
 		private SumoController controller;
@@ -82,11 +82,7 @@ namespace PacingFramework
 			// Apply boundary safety
 			float safetyScore = EvaluateBoundarySafety(action, context);
 
-			// Apply circling strategy bonus if applicable
-			float circlingBonus = EvaluateCirclingStrategy(action, context);
-
-			// Combine scores (multiplicative for strong preferences, additive for bonuses)
-			float finalScore = baseScore + pacingScore + safetyScore + circlingBonus;
+			float finalScore = baseScore + pacingScore + safetyScore;
 
 			return finalScore;
 		}
@@ -140,7 +136,7 @@ namespace PacingFramework
 			public float DistanceFromCenter;    // 0 = center, 1 = edge
 			public float DistanceToEnemy;       // Normalized distance
 			public float AngleToEnemy;          // Angle to enemy in degrees
-			public float FacingToOutside;       // +1 = facing out (dangerous), -1 = facing in (safe)
+			public bool FacingToOutside;       // +1 = facing out (dangerous), -1 = facing in (safe)
 			public bool IsInDangerZone;         // Close to arena edge AND facing outward
 			public bool IsFacingEnemy;          // Angle to enemy < 20 degrees
 			public bool ShouldCircle;           // Low targets + safe from enemy = circle
@@ -159,7 +155,7 @@ namespace PacingFramework
 
 			// Calculate angle to enemy
 			float angleToEnemy = api.Angle();
-			bool isFacingEnemy = Mathf.Abs(angleToEnemy) < 30;
+			bool isFacingEnemy = Mathf.Abs(angleToEnemy) <= 20;
 
 			// Calculate facing direction relative to arena center
 			Vector2 centerToMe = (currentPos - api.BattleInfo.ArenaPosition).normalized;
@@ -167,12 +163,10 @@ namespace PacingFramework
 			if (zRot < 0) zRot += 360f;
 			Vector2 facingDir = Quaternion.Euler(0, 0, zRot) * Vector2.up;
 			float facingToOutside = Vector2.Dot(facingDir, centerToMe);
-
-			// Danger zone: close to edge (>0.40) AND facing outward (>-0.3)
-			bool isInDangerZone = distFromCenter > 0.55f && facingToOutside > 0.3f;
+			Logger.Info($"[{controller.Side}] facingToOutside {facingToOutside}");
 
 			// Circle when we're meeting/exceeding pacing targets (positive delta) and enemy is far
-			bool shouldCircle = avgTarget < 0.3f && distToEnemy > CirclingSafeDistance;
+			bool shouldCircle = avgDelta > 0.1f && distToEnemy > CirclingSafeDistance;
 
 			return new EvaluationContext
 			{
@@ -184,8 +178,8 @@ namespace PacingFramework
 				DistanceFromCenter = distFromCenter,
 				DistanceToEnemy = distToEnemy,
 				AngleToEnemy = angleToEnemy,
-				FacingToOutside = facingToOutside,
-				IsInDangerZone = isInDangerZone,
+				FacingToOutside = facingToOutside > 0.5f,
+				IsInDangerZone = distFromCenter > 0.5f,
 				IsFacingEnemy = isFacingEnemy,
 				ShouldCircle = shouldCircle,
 			};
@@ -260,44 +254,21 @@ namespace PacingFramework
 			{
 				case ActionType.Accelerate:
 					// Acceleration increases tempo and helps close distance for threat
-					// Use delta for responsive adjustment based on current need
-					threatMultiplier = GetMultiplierFromDelta(ctx.ThreatDelta, AccelerateMultiplier);
-					tempoMultiplier = GetMultiplierFromDelta(ctx.TempoDelta, AccelerateMultiplier);
-
-					// If low target AND facing enemy, favor acceleration (maintain presence without aggression)
-					// if (ctx.ThreatDelta < 0.25f && ctx.IsFacingEnemy)
-					// {
-					// 	threatMultiplier *= 1.5f; // Boost to prefer movement over turning
-					// 	tempoMultiplier *= 1.5f;
-					// }
+					threatMultiplier = GetMultiplierFromTarget(ctx.TargetThreat, AccelerateMultiplier);
+					tempoMultiplier = GetMultiplierFromTarget(ctx.TargetTempo, AccelerateMultiplier);
 					break;
 
 				case ActionType.TurnLeft:
 				case ActionType.TurnRight:
 					// Turning reduces threat (defensive repositioning), inverse = true
-					// TurnMultiplier is (1.5, 0.5) so high target → 0.5 (low turning) naturally
 					threatMultiplier = GetMultiplierFromDelta(ctx.ThreatDelta, TurnMultiplier);
 					tempoMultiplier = GetMultiplierFromDelta(ctx.TempoDelta, TurnMultiplier);
-
-					// If low target AND already facing enemy, heavily penalize turning (prevent jiggling)
-					// if (ctx.ThreatDelta > 0.3f && ctx.IsFacingEnemy)
-					// {
-					// 	threatMultiplier *= 0.5f; // Strong penalty to avoid unnecessary turning
-					// 	tempoMultiplier *= 0.5f;
-					// }
 					break;
 
 				case ActionType.Dash:
 					// Dash increases both threat and tempo significantly
 					threatMultiplier = GetMultiplierFromDelta(ctx.ThreatDelta, DashMultiplier);
 					tempoMultiplier = GetMultiplierFromDelta(ctx.TempoDelta, DashMultiplier);
-
-					// If high target but NOT facing enemy, penalize dash (ineffective if not aimed)
-					// if (ctx.AvgTarget > 0.5f && !ctx.IsFacingEnemy)
-					// {
-					// 	threatMultiplier *= 0.5f; // Reduce effectiveness when not aimed
-					// 	tempoMultiplier *= 0.5f;
-					// }
 					break;
 
 				case ActionType.SkillBoost:
@@ -305,13 +276,6 @@ namespace PacingFramework
 					// Skills increase threat significantly
 					threatMultiplier = GetMultiplierFromDelta(ctx.ThreatDelta, SkillMultiplier);
 					tempoMultiplier = GetMultiplierFromDelta(ctx.TempoDelta, SkillMultiplier);
-
-					// If high target but NOT facing enemy, penalize skills (ineffective if not aimed)
-					// if (ctx.AvgTarget > 0.5f && !ctx.IsFacingEnemy)
-					// {
-					// 	threatMultiplier *= 0.3f; // Strong penalty since skills are precision actions
-					// 	tempoMultiplier *= 0.3f;
-					// }
 					break;
 			}
 
@@ -327,100 +291,31 @@ namespace PacingFramework
 		{
 			float score = 1.0f;
 
-			// Check if near edge but facing inward (safer condition)
-			bool nearEdgeButSafe = ctx.DistanceFromCenter > 0.50f && ctx.FacingToOutside < 0.5f;
-
 			// If in danger zone (near edge AND facing outward), penalize aggressive actions
 			if (ctx.IsInDangerZone)
 			{
 				switch (action.Type)
 				{
 					case ActionType.Dash:
-						score *= (0.1f + (ctx.FacingToOutside < 0.3f ? 2f : -0.1f)); // Risky when near edge
+						score *= ctx.IsFacingEnemy ? 1f : (ctx.FacingToOutside ? -1f : 0.5f); // Risky when near edge
 						break;
 					case ActionType.SkillBoost:
 					case ActionType.SkillStone:
 						score *= 0.5f; // Skills can push us out
 						break;
 					case ActionType.Accelerate:
-						score *= (0.5f + (ctx.FacingToOutside < 0.3f ? 1f : -0.1f)); // Stronger penalty to prevent aggressive forward movement near edge
+						score *= ctx.IsFacingEnemy ? 1f : (ctx.FacingToOutside ? -1f : 0.5f); // Stronger penalty to prevent aggressive forward movement near edge
 						break;
 					case ActionType.TurnLeft:
 					case ActionType.TurnRight:
-						// Extra bonus if facing outward (need to turn around!)
-						float turnBonus = ctx.FacingToOutside < 0.3f ? 2.0f : 1.5f;
+						// don't turn if on edge but facing enemy
+						float turnBonus = ctx.IsFacingEnemy ? 0.1f : (ctx.FacingToOutside ? 1f : 0.5f);
 						score *= turnBonus; // Strongly favor turning to reposition safely
 						break;
 				}
-
-				// Extra penalty if VERY close to edge
-				if (ctx.DistanceFromCenter > 0.7f)
-				{
-					score *= 0.3f; // Severe penalty to all actions in critical zone
-				}
-			}
-			else if (nearEdgeButSafe)
-			{
-				// Near edge but facing inward - allow aggressive plays with small penalty
-				switch (action.Type)
-				{
-					case ActionType.Dash:
-					case ActionType.SkillBoost:
-					case ActionType.SkillStone:
-						score *= 0.8f; // Slight penalty but not as harsh as danger zone
-						break;
-					case ActionType.Accelerate:
-						score *= 0.9f; // Allow forward movement when facing center
-						break;
-				}
-			}
-			else
-			{
-				// Safe from boundary - slight bonus for aggressive plays
-				if (action.Type == ActionType.Dash || action.Type == ActionType.SkillBoost || action.Type == ActionType.SkillStone)
-					score *= 1.1f;
 			}
 
 			return score;
-		}
-
-		/// <summary>
-		/// Evaluates circling strategy bonus.
-		/// When targets are low and enemy is far, favor circling (high tempo, low threat).
-		/// </summary>
-		private float EvaluateCirclingStrategy(ISumoAction action, EvaluationContext ctx)
-		{
-			if (!ctx.ShouldCircle)
-				return 0f; // No bonus
-
-			float bonus = 0f;
-
-			switch (action.Type)
-			{
-				case ActionType.TurnLeft:
-				case ActionType.TurnRight:
-					// Turning is key for circling
-					bonus = CirclingBonusWeight * CirclingTurnBonus;
-					break;
-
-				case ActionType.Accelerate:
-					// Acceleration maintains tempo while circling
-					bonus = CirclingBonusWeight * CirclingAccelBonus * 0.5f;
-					break;
-
-				case ActionType.Dash:
-					// Dash can help circle faster, but risky
-					bonus = CirclingBonusWeight * 0.3f;
-					break;
-
-				case ActionType.SkillBoost:
-				case ActionType.SkillStone:
-					// Skills break circling pattern - penalty instead of bonus
-					bonus = -CirclingBonusWeight * CirclingAggressionPenalty;
-					break;
-			}
-
-			return bonus;
 		}
 		#endregion
 
