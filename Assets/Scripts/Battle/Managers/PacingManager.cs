@@ -26,7 +26,8 @@ namespace SumoManager
 		[Tooltip("Fallback pacing filename for left player (human). Can be overridden by Bot.PacingFileName")]
 		public string LeftFileName = "Default";
 		public float LeftSegmentDuration = 2f;
-		public int LeftCollisionWindowSize = 2;
+		[Tooltip("Time-based collision window duration in seconds (e.g., 3 seconds lookback)")]
+		public float LeftCollisionWindowDuration = 3f;
 		public bool LeftActionFiltering = false;
 		public bool LeftNNCandidates = false;
 
@@ -35,7 +36,8 @@ namespace SumoManager
 		[Tooltip("Fallback pacing filename for right player (human). Can be overridden by Bot.PacingFileName")]
 		public string RightFileName = "Default";
 		public float RightSegmentDuration = 2f;
-		public int RightCollisionWindowSize = 2;
+		[Tooltip("Time-based collision window duration in seconds (e.g., 3 seconds lookback)")]
+		public float RightCollisionWindowDuration = 3f;
 
 		public bool RightActionFiltering = false;
 		public bool RightNNCandidates = false;
@@ -139,7 +141,7 @@ namespace SumoManager
 					controller,
 					finalPacingFileName,
 					LeftSegmentDuration,
-					LeftCollisionWindowSize,
+					LeftCollisionWindowDuration,
 					leftPacingHistory,
 					MinPacing,
 					MaxPacing,
@@ -153,7 +155,7 @@ namespace SumoManager
 				// Initialize
 				LeftPacingHandler.Init();
 
-				Debug.Log($"[PacingManager] Left handler initialized with PacingFile='{finalPacingFileName}', SegmentDuration={LeftSegmentDuration}s, WindowSize={LeftCollisionWindowSize}");
+				Debug.Log($"[PacingManager] Left handler initialized with PacingFile='{finalPacingFileName}', SegmentDuration={LeftSegmentDuration}s, WindowDuration={LeftCollisionWindowDuration}s");
 			}
 			else
 			{
@@ -177,7 +179,7 @@ namespace SumoManager
 					controller,
 					finalPacingFileName,
 					RightSegmentDuration,
-					RightCollisionWindowSize,
+					RightCollisionWindowDuration,
 					rightPacingHistory,
 					MinPacing,
 					MaxPacing,
@@ -191,7 +193,7 @@ namespace SumoManager
 				// Initialize
 				RightPacingHandler.Init();
 
-				Debug.Log($"[PacingManager] Right handler initialized with PacingFile='{finalPacingFileName}', SegmentDuration={RightSegmentDuration}s, WindowSize={RightCollisionWindowSize}");
+				Debug.Log($"[PacingManager] Right handler initialized with PacingFile='{finalPacingFileName}', SegmentDuration={RightSegmentDuration}s, WindowDuration={RightCollisionWindowDuration}s");
 			}
 		}
 

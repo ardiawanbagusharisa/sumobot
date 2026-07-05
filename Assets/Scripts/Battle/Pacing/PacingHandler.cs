@@ -27,7 +27,7 @@ namespace PacingFramework
 		public float segmentDuration = 2f;
 		public string PacingFileName = "";
 
-		public int collisionWindowSize = 2;
+		public float collisionWindowDuration = 3f; // Time-based window in seconds (e.g., 3 seconds lookback)
 
 		public PacingTargetConfig PacingTarget;
 
@@ -36,6 +36,14 @@ namespace PacingFramework
 
 		private int tickCount;
 
+		// Time tracking for collision storage
+		private int currentSecond = 0;  // Current game second
+		private int ticksInCurrentSecond = 0;  // Ticks accumulated in current second
+		private float actionInterval = 0f;  // Cached action interval
+
+		// Persistent collision history (survives across segments)
+		private Dictionary<int, List<CollisionType>> collisionHistory = new();
+
 		private SegmentPacing currentSegmentPacing;
 
 		private GamePacing pacingHistory;
@@ -43,10 +51,10 @@ namespace PacingFramework
 		private SumoController controller;
 
 		// Filtered Actions Storage (Testing)
-		private List<ISumoAction> filteredActions = new List<ISumoAction>();
+		private List<ISumoAction> filteredActions = new();
 
 		// Store original unfiltered actions for comparison in RunEval
-		private List<ISumoAction> originalUnfilteredActions = new List<ISumoAction>();
+		private List<ISumoAction> originalUnfilteredActions = new();
 
 		// Heuristic-based pacing brain (rule-based - no training required)
 		private PacingBrainHeuristic pacingBrainHeuristic;
@@ -58,15 +66,15 @@ namespace PacingFramework
 
 		// Fixed action pool (inspired by MCTS approach for reliable candidate actions)
 		// Balanced pool: more acceleration options to prevent excessive turning
-		private static readonly List<ISumoAction> BaseActionPool = new List<ISumoAction>
-		{
+		private static readonly List<ISumoAction> BaseActionPool = new()
+        {
 			new AccelerateAction(InputType.Script, 0.1f),
 			new DashAction(InputType.Script),
 			new SkillAction(InputType.Script),
 		};
 
 		// Progressive improvement tracking
-		private List<float> improvementHistory = new List<float>();
+		private List<float> improvementHistory = new();
 		private float cumulativeClosenessPercent = 0f;
 		private int evalCount = 0;
 
@@ -79,11 +87,11 @@ namespace PacingFramework
 		// ================================
 		// Constructor
 		// ================================
-		public PacingHandler(SumoController controller, string pacingFileName, float segmentDuration, int collisionWindowSize, GamePacing sharedPacingHistory, float minPacing, float maxPacing, PacingBrainHeuristic sharedPacingBrainHeuristic = null, bool useNNCandidates = false)
+		public PacingHandler(SumoController controller, string pacingFileName, float segmentDuration, float collisionWindowDuration, GamePacing sharedPacingHistory, float minPacing, float maxPacing, PacingBrainHeuristic sharedPacingBrainHeuristic = null, bool useNNCandidates = false)
 		{
 			this.controller = controller;
 			this.segmentDuration = segmentDuration;
-			this.collisionWindowSize = collisionWindowSize;
+			this.collisionWindowDuration = collisionWindowDuration;
 			PacingFileName = pacingFileName;
 			this.pacingHistory = sharedPacingHistory;
 			this.MinPacing = minPacing;
@@ -144,6 +152,14 @@ namespace PacingFramework
 			tickCount = 0;
 			segmentIndex = 0;
 
+			// Reset time tracking
+			currentSecond = 0;
+			ticksInCurrentSecond = 0;
+			actionInterval = controller.InputProvider.API.BattleInfo.ActionInterval;
+
+			// Clear collision history for new round
+			collisionHistory.Clear();
+
 			// Load original bot NN for candidate generation
 			if (useNNCandidates && originalBotNN == null)
 			{
@@ -181,6 +197,16 @@ namespace PacingFramework
 			currentGameplayData.RegisterVelocity(controller.CachedVelocity.magnitude);
 
 			RunEval();
+
+			// Update time tracking - check if we've reached the next second
+			ticksInCurrentSecond++;
+			int ticksPerSecond = Mathf.CeilToInt(1f / actionInterval);
+			if (ticksInCurrentSecond >= ticksPerSecond)
+			{
+				currentSecond++;
+				ticksInCurrentSecond = 0;
+				Debug.Log($"[{controller.Side}] Second advanced to {currentSecond} (ticksPerSecond={ticksPerSecond}, actionInterval={actionInterval})");
+			}
 
 			if (tickCount * api.BattleInfo.ActionInterval >= segmentDuration)
 			{
@@ -283,7 +309,7 @@ namespace PacingFramework
 			float actionInterval = api.BattleInfo.ActionInterval;
 
 			// Collision detection constants (approximate bot radius + buffer)
-			const float COLLISION_THRESHOLD = 4.0f; // Adjust based on actual bot size
+			const float COLLISION_THRESHOLD = 2.0f;
 
 			for (int i = 0; i < actions.Count; i++)
 			{
@@ -306,6 +332,7 @@ namespace PacingFramework
 					float myPredictedSpeed = predictedVelocity;
 					float enemySpeed = api.EnemyRobot.LinearVelocity.magnitude;
 
+					// Register predicted collisions (simulated, not real)
 					if (myPredictedSpeed > enemySpeed + 0.1f)
 						predictedSegmentData.RegisterCollision(CollisionType.Hit);
 					else if (enemySpeed > myPredictedSpeed + 0.1f)
@@ -342,8 +369,9 @@ namespace PacingFramework
 			// Add the copy to history BEFORE calculating collision window
 			currentRound.SegmentGameplayDatas.Add(segmentCopy);
 
-			// Calculate and store collision window for this segment
-			segmentCopy.CollisionData.CalculateWindow(currentRound.SegmentGameplayDatas, collisionWindowSize);
+			// Calculate and store collision window for this segment (true time-based, per second)
+			// Pass the persistent collision history
+			segmentCopy.CollisionData.CalculateWindow(collisionHistory, currentSecond, collisionWindowDuration);
 
 			currentSegmentPacing = new SegmentPacing(
 				segmentCopy,
@@ -413,6 +441,14 @@ namespace PacingFramework
 			else
 				type = CollisionType.Struck;
 
+			// Store in persistent collision history
+			if (!collisionHistory.ContainsKey(currentSecond))
+			{
+				collisionHistory[currentSecond] = new List<CollisionType>();
+			}
+			collisionHistory[currentSecond].Add(type);
+
+			// Also register in current segment for legacy tracking
 			currentGameplayData.RegisterCollision(type);
 		}
 

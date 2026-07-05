@@ -175,8 +175,8 @@ public abstract class Aspect
 
 
 /// <summary>
-/// Stores collision data with pre-calculated window for efficient evaluation.
-/// The window is calculated once when segment is finalized, eliminating need to pass history around.
+/// Stores collision data for a segment with pre-calculated window.
+/// Note: Actual collision history (per-second) is now managed by PacingHandler.
 /// </summary>
 [Serializable]
 public class CollisionWindowData
@@ -199,48 +199,68 @@ public class CollisionWindowData
 		WindowSize = other.WindowSize;
 	}
 
+	/// <summary>
+	/// Add collision to current segment (for legacy tracking).
+	/// Note: Persistent time-based storage is now handled by PacingHandler.
+	/// </summary>
 	public void AddCollision(CollisionType type)
 	{
 		CurrentSegmentCollisions.Add(type);
 	}
 
 	/// <summary>
-	/// Calculate and store the collision window from history.
-	/// This should be called once when segment is finalized.
+	/// Calculate and store the collision window using true time-based lookup (per second).
+	/// Looks back N seconds in the provided collision history.
 	/// </summary>
-	public void CalculateWindow(List<SegmentData> history, int windowSize)
+	/// <param name="collisionHistory">Persistent collision history from PacingHandler</param>
+	/// <param name="currentSecond">Current game second (for looking back)</param>
+	/// <param name="windowDurationSeconds">Duration in seconds to look back (e.g., 3 seconds).
+	/// 0 = current second only, -1 = all history</param>
+	public void CalculateWindow(Dictionary<int, List<CollisionType>> collisionHistory, int currentSecond, float windowDurationSeconds)
 	{
-		WindowSize = windowSize;
 		WindowCollisions.Clear();
 
-		Debug.Log($"[CollisionWindowData] CalculateWindow called: windowSize={windowSize}, history.Count={history.Count}");
+		Debug.Log($"[CollisionWindowData] CalculateWindow called: currentSecond={currentSecond}, windowDurationSeconds={windowDurationSeconds}s");
 
-		if (windowSize == 0)
+		if (windowDurationSeconds == 0)
 		{
-			// Current segment only
-			WindowCollisions.AddRange(CurrentSegmentCollisions);
-			Debug.Log($"  Mode: Current only, WindowCollisions.Count={WindowCollisions.Count}");
-		}
-		else if (windowSize < 0)
-		{
-			// All history + current
-			foreach (var segment in history)
+			// Current second only
+			if (collisionHistory.ContainsKey(currentSecond))
 			{
-				WindowCollisions.AddRange(segment.CollisionData.CurrentSegmentCollisions);
+				WindowCollisions.AddRange(collisionHistory[currentSecond]);
 			}
+			WindowSize = 0;
+			Debug.Log($"  Mode: Current second only, WindowCollisions.Count={WindowCollisions.Count}");
+		}
+		else if (windowDurationSeconds < 0)
+		{
+			// All history
+			foreach (var kvp in collisionHistory)
+			{
+				WindowCollisions.AddRange(kvp.Value);
+			}
+			WindowSize = -1;
 			Debug.Log($"  Mode: All history, WindowCollisions.Count={WindowCollisions.Count}");
 		}
 		else
 		{
-			// Sliding window: last N segments from history (including current)
-			int startIndex = Mathf.Max(0, history.Count - windowSize);
-			Debug.Log($"  Mode: Sliding window, startIndex={startIndex}, will read segments [{startIndex}..{history.Count - 1}]");
-			for (int i = startIndex; i < history.Count; i++)
+			// Time-based sliding window: look back N seconds
+			int windowSeconds = Mathf.CeilToInt(windowDurationSeconds);
+			int startSecond = Mathf.Max(0, currentSecond - windowSeconds + 1);
+			WindowSize = windowSeconds;
+
+			Debug.Log($"  Mode: Time-based window, windowSeconds={windowSeconds}, looking back from second {startSecond} to {currentSecond}");
+
+			for (int second = startSecond; second <= currentSecond; second++)
 			{
-				int segmentCollisions = history[i].CollisionData.CurrentSegmentCollisions.Count;
-				WindowCollisions.AddRange(history[i].CollisionData.CurrentSegmentCollisions);
-				Debug.Log($"    Segment {i}: added {segmentCollisions} collisions, total now={WindowCollisions.Count}");
+				if (collisionHistory.ContainsKey(second))
+				{
+					int secondCollisions = collisionHistory[second].Count;
+					WindowCollisions.AddRange(collisionHistory[second]);
+					Debug.Log($"    Second {second}: added {secondCollisions} collisions, total now={WindowCollisions.Count}");
+				}
 			}
+
 		}
 		Debug.Log($"  Final: WindowSize={WindowSize}, WindowCollisions.Count={WindowCollisions.Count}");
 	}
@@ -279,6 +299,7 @@ public class SegmentData
 
 	public void Reset()
 	{
+		// Note: CollisionsBySecond is now managed by PacingHandler, not cleared here
 		CollisionData.CurrentSegmentCollisions.Clear();
 		CollisionData.WindowCollisions.Clear();
 		Angles.Clear();

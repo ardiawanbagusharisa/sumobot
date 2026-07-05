@@ -715,43 +715,6 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
---- !u!84 &37735742
-RenderTexture:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_Name: 
-  m_ImageContentsHash:
-    serializedVersion: 2
-    Hash: 00000000000000000000000000000000
-  m_IsAlphaChannelOptional: 0
-  serializedVersion: 6
-  m_Width: 1920
-  m_Height: 1080
-  m_AntiAliasing: 1
-  m_MipCount: -1
-  m_DepthStencilFormat: 0
-  m_ColorFormat: 4
-  m_MipMap: 0
-  m_GenerateMips: 0
-  m_SRGB: 1
-  m_UseDynamicScale: 0
-  m_UseDynamicScaleExplicit: 0
-  m_BindMS: 0
-  m_EnableCompatibleFormat: 1
-  m_EnableRandomWrite: 1
-  m_TextureSettings:
-    serializedVersion: 2
-    m_FilterMode: 0
-    m_Aniso: 1
-    m_MipBias: 0
-    m_WrapU: 1
-    m_WrapV: 1
-    m_WrapW: 1
-  m_Dimension: 2
-  m_VolumeDepth: 1
-  m_ShadowSamplingMode: 2
 --- !u!1 &48721205
 GameObject:
   m_ObjectHideFlags: 0
@@ -20179,6 +20142,43 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   m_IsOn: 1
+--- !u!84 &1742505808
+RenderTexture:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: 
+  m_ImageContentsHash:
+    serializedVersion: 2
+    Hash: 00000000000000000000000000000000
+  m_IsAlphaChannelOptional: 0
+  serializedVersion: 6
+  m_Width: 1920
+  m_Height: 1080
+  m_AntiAliasing: 1
+  m_MipCount: -1
+  m_DepthStencilFormat: 0
+  m_ColorFormat: 4
+  m_MipMap: 0
+  m_GenerateMips: 0
+  m_SRGB: 1
+  m_UseDynamicScale: 0
+  m_UseDynamicScaleExplicit: 0
+  m_BindMS: 0
+  m_EnableCompatibleFormat: 1
+  m_EnableRandomWrite: 1
+  m_TextureSettings:
+    serializedVersion: 2
+    m_FilterMode: 0
+    m_Aniso: 1
+    m_MipBias: 0
+    m_WrapU: 1
+    m_WrapV: 1
+    m_WrapW: 1
+  m_Dimension: 2
+  m_VolumeDepth: 1
+  m_ShadowSamplingMode: 2
 --- !u!1001 &1749723877
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -23159,7 +23159,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Texture: {fileID: 37735742}
+  m_Texture: {fileID: 1742505808}
   m_UVRect:
     serializedVersion: 2
     x: 0
@@ -26800,7 +26800,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   Mode: 0
-  TotalSimulations: 1000
+  TotalSimulations: 25
   SimpleTimeScale: 3
   SwapAIInterval: 0
   QuitAfterDone: 0
@@ -26808,15 +26808,14 @@ MonoBehaviour:
   SimulationOnStart: 1
   RoundCountdown: 1
   Setting:
-    Iteration: 100
+    Iteration: 25
     Timers: 3c000000
     ActionIntervals:
     - 0.1
     RoundSystem: 05000000
     Skills: 0000000001000000
     SelectedAgents:
-    - NN
-    - FSM
+    - PPO
   ExcludeHeavyMLBots: 1
 --- !u!114 &2130233545
 MonoBehaviour:
@@ -26834,8 +26833,8 @@ MonoBehaviour:
   Left: {fileID: 0}
   RightEnabled: 1
   Right: {fileID: 0}
-  leftBotIndex: 10
-  rightBotIndex: 10
+  leftBotIndex: 12
+  rightBotIndex: 12
 --- !u!114 &2130233546
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -26853,12 +26852,12 @@ MonoBehaviour:
   RandomTarget: 0
   LeftFileName: Default_Target_Low
   LeftSegmentDuration: 1
-  LeftCollisionWindowSize: 3
+  LeftCollisionWindowDuration: 3
   LeftActionFiltering: 1
   LeftNNCandidates: 1
   RightFileName: Default_Target_High
   RightSegmentDuration: 1
-  RightCollisionWindowSize: 3
+  RightCollisionWindowDuration: 3
   RightActionFiltering: 1
   RightNNCandidates: 1
 --- !u!1 &2132169806
