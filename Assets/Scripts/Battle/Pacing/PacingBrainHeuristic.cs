@@ -163,7 +163,6 @@ namespace PacingFramework
 			if (zRot < 0) zRot += 360f;
 			Vector2 facingDir = Quaternion.Euler(0, 0, zRot) * Vector2.up;
 			float facingToOutside = Vector2.Dot(facingDir, centerToMe);
-			Logger.Info($"[{controller.Side}] facingToOutside {facingToOutside}");
 
 			// Circle when we're meeting/exceeding pacing targets (positive delta) and enemy is far
 			bool shouldCircle = avgDelta > 0.1f && distToEnemy > CirclingSafeDistance;

@@ -37,51 +37,51 @@
         },
         "AbilityRatio": {
             "Min": 0.0,
-            "Max": 0.2,
+            "Max": 0.71,
             "MinLimit": 0.0,
-            "MaxLimit": 0.2,
+            "MaxLimit": 0.71,
             "Weight": 1.0
         },
         "Angle": {
-            "Min": 0.0,
-            "Max": 1,
-            "MinLimit": 0.0,
-            "MaxLimit": 1,
+            "Min": 0.02,
+            "Max": 0.99,
+            "MinLimit": 0.02,
+            "MaxLimit": 0.99,
             "Weight": 1.0
         },
         "SafeDistance": {
-            "Min": 1.0,
-            "Max": 5.0,
-            "MinLimit": 1.0,
-            "MaxLimit": 5.0,
+            "Min": 0,
+            "Max": 0.79,
+            "MinLimit": 0,
+            "MaxLimit": 0.79,
             "Weight": 1.0
         },
         "ActionIntensity": {
-            "Min": 0.0,
-            "Max": 50.0,
-            "MinLimit": 0.0,
-            "MaxLimit": 50.0,
+            "Min": 1.5,
+            "Max": 88,
+            "MinLimit": 1.5,
+            "MaxLimit": 88,
             "Weight": 1.0
         },
         "ActionDensity": {
-            "Min": 0.0,
-            "Max": 1.0,
-            "MinLimit": 0.0,
-            "MaxLimit": 1.0,
+            "Min": 0.02,
+            "Max": 1.67,
+            "MinLimit": 0.02,
+            "MaxLimit": 1.67,
             "Weight": 1.0
         },
         "BotsDistance": {
-            "Min": 1.0,
-            "Max": 5.0,
-            "MinLimit": 1.0,
-            "MaxLimit": 5.0,
+            "Min": 0.12,
+            "Max": 0.52,
+            "MinLimit": 0.12,
+            "MaxLimit": 0.52,
             "Weight": 1.0
         },
         "Velocity": {
-            "Min": 0.0,
-            "Max": 10.0,
-            "MinLimit": 0.0,
-            "MaxLimit": 10.0,
+            "Min": 0.01,
+            "Max": 4.87,
+            "MinLimit": 0.01,
+            "MaxLimit": 4.87,
             "Weight": 1.0
         }
     }
