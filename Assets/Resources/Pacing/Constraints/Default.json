@@ -46,9 +46,9 @@
         },
         "ActionIntensity": {
             "Min": 1.5,
-            "Max": 88,
+            "Max": 42,
             "MinLimit": 1.5,
-            "MaxLimit": 88,
+            "MaxLimit": 42,
             "Weight": 1.0
         },
         "ActionDensity": {
