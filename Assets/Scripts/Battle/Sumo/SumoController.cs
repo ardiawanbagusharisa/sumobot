@@ -673,22 +673,32 @@ namespace SumoCore
                 tempActions.Add(action);
             }
 
-
-            // Fire event allowing pacing system to filter actions before queueing
-            var eventParam = new EventParameter(sideParam: Side, actionListParam: tempActions);
-            Events[OnBeforeActionsQueued]?.Invoke(eventParam);
-            Logger.Info($"[SumoController][FlushInput] {eventParam?.FilteredActionList?.Count ?? -1}/{tempActions.Count}");
-            // Use filtered actions if provided, otherwise use original actions
-            List<ISumoAction> actionsToQueue = eventParam.FilteredActionList ?? new();
-
-            // Queue the actions (either original or filtered)
-            foreach (var action in actionsToQueue)
+            if (PacingManager.Instance.enabled)
             {
-                Actions.Enqueue(action);
+                // Fire event allowing pacing system to filter actions before queueing
+                var eventParam = new EventParameter(sideParam: Side, actionListParam: tempActions);
+                Events[OnBeforeActionsQueued]?.Invoke(eventParam);
+                Logger.Info($"[SumoController][FlushInput] {eventParam?.FilteredActionList?.Count ?? -1}/{tempActions.Count}");
+                // Use filtered actions if provided, otherwise use original actions
+                List<ISumoAction> actionsToQueue = eventParam.FilteredActionList ?? new();
+
+                foreach (var action in actionsToQueue)
+                {
+                    Actions.Enqueue(action);
+                }
+                // Fire original OnAction event with the actions that were queued
+                Events[OnAction]?.Invoke(new(sideParam: Side, actionListParam: actionsToQueue, boolParam: false));
+            }
+            else
+            {
+                foreach (var action in tempActions)
+                {
+                    Actions.Enqueue(action);
+                }
+                // Fire original OnAction event with the actions that were queued
+                Events[OnAction]?.Invoke(new(sideParam: Side, actionListParam: tempActions, boolParam: false));
             }
 
-            // Fire original OnAction event with the actions that were queued
-            Events[OnAction]?.Invoke(new(sideParam: Side, actionListParam: actionsToQueue, boolParam: false));
         }
 
         public void ClearInput()
@@ -712,11 +722,6 @@ namespace SumoCore
 
                 action.Execute(this);
                 tempActions.Add(action);
-            }
-
-            if (tempActions.Count > 0)
-            {
-                Logger.Info($"[{Side}][FRAME {Time.frameCount}][TIME {Time.time:F3}][SumoController][OnUpdate] Executed {tempActions.Count} actions");
             }
 
             Events[OnAction]?.Invoke(new(sideParam: Side, actionListParam: tempActions, boolParam: true));
