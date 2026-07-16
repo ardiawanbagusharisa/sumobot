@@ -10,7 +10,8 @@ public class MainMenuController : MonoBehaviour
 		MultiplayerLocal,
 		Leaderboards,
 		Settings,
-		Market
+		Market,
+		Login
 	}
 
 	private MenuState currentState = MenuState.MainMenu;
@@ -25,7 +26,7 @@ public class MainMenuController : MonoBehaviour
 	public MenuMapping[] menus;
 
 	public void Start() {
-		//SwitchMenu(MenuState.MainMenu);
+		SwitchMenu(MenuState.Login);
 	}
 
 	// Call this to switch the menu
