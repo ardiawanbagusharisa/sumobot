@@ -3,7 +3,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using SumoCore;
+using SumoServices;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -44,6 +46,17 @@ public class GameManager : MonoBehaviour
 
         instance = this;
         DontDestroyOnLoad(gameObject);
+
+        GameServices.Initialize();
+    }
+
+    // Kept off Awake so scene startup never blocks on (future) network I/O.
+    public async Task<ServiceResult<PlayerAccount>> StartSessionAsync()
+    {
+        var result = await GameServices.StartSessionAsync();
+        if (!result.Success)
+            Logger.Error($"[GameManager] Session start failed: {result.Error}");
+        return result;
     }
 
     void OnEnable()
