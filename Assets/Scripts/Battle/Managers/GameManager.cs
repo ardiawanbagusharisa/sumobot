@@ -61,9 +61,37 @@ public class GameManager : MonoBehaviour
 
     void OnEnable()
     {
-        // Dummy
-        Left = PlayerProfile.CreateProfile("Player1");
-        Right = PlayerProfile.CreateProfile("Player2");
+        // Persistent local profiles so leaderboard identity survives restarts.
+        Left = PlayerProfile.LoadOrCreate("Sumobot.Profile.Left", "Player1");
+        Right = PlayerProfile.LoadOrCreate("Sumobot.Profile.Right", "Player2");
+    }
+
+    /// <summary>
+    /// Call this once after a successful login. It switches the local player's
+    /// identity from the anonymous device GUID to the server account, persists
+    /// it, and carries any anonymous leaderboard ratings over to the account.
+    /// </summary>
+    public void ApplyAccount(string accountId, string accountName)
+    {
+        if (string.IsNullOrWhiteSpace(accountId))
+            return;
+        if (accountId.StartsWith("bot:"))
+        {
+            Logger.Error("[GameManager] Account IDs must not use the reserved 'bot:' prefix.");
+            return;
+        }
+
+        string oldId = Left.ID;
+        Left.ID = accountId;
+        if (!string.IsNullOrWhiteSpace(accountName))
+            Left.Name = accountName.Trim();
+
+        PlayerPrefs.SetString("Sumobot.Profile.Left.ID", Left.ID);
+        PlayerPrefs.SetString("Sumobot.Profile.Left.Name", Left.Name);
+        PlayerPrefs.Save();
+
+        if (oldId != accountId)
+            SumoLeaderboard.LeaderboardService.Instance.ReassignProfile(oldId, accountId, Left.Name);
     }
 
     public void Battle_LoadCostumeScene(string id)
@@ -124,6 +152,46 @@ public class PlayerProfile
         };
         profile.PrepareParts();
         return profile;
+    }
+
+    /// <summary>
+    /// Loads a profile persisted in PlayerPrefs under <paramref name="prefsKey"/>,
+    /// creating (and saving) a new one on first run. Keeps the profile ID stable
+    /// across sessions, which the leaderboard relies on.
+    /// </summary>
+    public static PlayerProfile LoadOrCreate(string prefsKey, string defaultName)
+    {
+        string idKey = $"{prefsKey}.ID";
+        string nameKey = $"{prefsKey}.Name";
+
+        string id = PlayerPrefs.GetString(idKey, string.Empty);
+        string name = PlayerPrefs.GetString(nameKey, defaultName);
+
+        if (string.IsNullOrEmpty(id))
+        {
+            id = Guid.NewGuid().ToString();
+            PlayerPrefs.SetString(idKey, id);
+            PlayerPrefs.SetString(nameKey, name);
+            PlayerPrefs.Save();
+        }
+
+        PlayerProfile profile = new()
+        {
+            Name = name,
+            ID = id
+        };
+        profile.PrepareParts();
+        return profile;
+    }
+
+    /// <summary>Renames the profile and persists the new name.</summary>
+    public void Rename(string prefsKey, string newName)
+    {
+        if (string.IsNullOrWhiteSpace(newName))
+            return;
+        Name = newName.Trim();
+        PlayerPrefs.SetString($"{prefsKey}.Name", Name);
+        PlayerPrefs.Save();
     }
 
     public void SetCostume(SumoCostume objectCostume)
