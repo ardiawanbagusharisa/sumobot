@@ -353,8 +353,17 @@ Skill			C			M
                     BattlePanels.Find((o) => o.CompareTag("BattleState/Ongoing")).SetActive(false);
                     BattlePanels.Find((o) => o.CompareTag("BattleState/Pre")).SetActive(false);
 
-                    LeftFinalScore.SetText(battle.LeftWinCount.ToString());
-                    RightFinalScore.SetText(battle.RightWinCount.ToString());
+                    // Final round score, plus the Elo change when this match was ranked.
+                    if (BattleManager.Instance.LastLeaderboardOutcome is SumoLeaderboard.LeaderboardOutcome ratingOutcome)
+                    {
+                        LeftFinalScore.SetText($"{battle.LeftWinCount}{FormatRatingDelta(ratingOutcome.LeftDelta)}");
+                        RightFinalScore.SetText($"{battle.RightWinCount}{FormatRatingDelta(ratingOutcome.RightDelta)}");
+                    }
+                    else
+                    {
+                        LeftFinalScore.SetText(battle.LeftWinCount.ToString());
+                        RightFinalScore.SetText(battle.RightWinCount.ToString());
+                    }
                     break;
             }
 
@@ -367,6 +376,14 @@ Skill			C			M
                    });
 
             UpdateScore(battle);
+        }
+
+        // "+16" green, "-16" red, "+0" grey — rendered small under the final score.
+        private static string FormatRatingDelta(int delta)
+        {
+            string color = delta > 0 ? "#3FA34D" : delta < 0 ? "#C0392B" : "#7F8C8D";
+            string sign = delta >= 0 ? "+" : string.Empty;
+            return $" <size=55%><color={color}>{sign}{delta}</color></size>";
         }
 
         private void OnCountdownChanged(EventParameter param)
@@ -623,31 +640,4 @@ Skill			C			M
 
         private void ShowGuide(GuideTab tab)
         {
-            SFXManager.Instance.Play2D("ui_accept");
-            GuideContent.text = guideContentsMap[tab].Trim();
-
-            foreach (var button in guideButtonsMap)
-            {
-                bool isActive = tab == button.Key;
-
-                ColorBlock colors = button.Value.colors;
-                colors.normalColor = isActive ? GuideActiveTabColor : GuideInactiveTabColor;
-                colors.selectedColor = isActive ? GuideActiveTabColor : GuideInactiveTabColor;
-                button.Value.colors = colors;
-
-                if (button.Value.TryGetComponent(out Image tabImg))
-                    tabImg.color = isActive ? GuideActiveTabColor : GuideInactiveTabColor;
-            }
-
-            if (GuideScrollRect != null)
-                StartCoroutine(ResetScrollGuide());
-        }
-
-        private IEnumerator ResetScrollGuide()
-        {
-            yield return null;
-            GuideScrollRect.verticalNormalizedPosition = 1f;
-        }
-        #endregion
-    }
-}
+            SFXManager.Inst

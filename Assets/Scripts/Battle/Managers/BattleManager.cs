@@ -5,6 +5,7 @@ using SumoBot;
 using SumoCore;
 using SumoHelper;
 using SumoInput;
+using SumoLeaderboard;
 using Unity.VisualScripting;
 using UnityEngine;
 
@@ -77,6 +78,13 @@ namespace SumoManager
         private Coroutine battleTimerCoroutine;
         private Coroutine countdownCoroutine;
         private float elapsedActionTime = 0f;
+
+        // Guards against double-recording the same match (e.g. repeated state
+        // broadcasts); reset when a new battle/rematch is prepared.
+        private bool leaderboardRecorded = false;
+
+        /// <summary>Rating changes of the match just recorded (null when nothing was recorded).</summary>
+        public LeaderboardOutcome? LastLeaderboardOutcome { get; private set; }
         #endregion
 
         #region Unity methods 
@@ -331,6 +339,8 @@ namespace SumoManager
 
                 // Battle
                 case BattleState.Battle_Preparing:
+                    leaderboardRecorded = false;
+                    LastLeaderboardOutcome = null;
                     SFXManager.Instance.Play2D("ui_accept");
                     LogManager.SetPlayerBots(BotManager.Left, BotManager.Right);
                     LogManager.UpdateMetadata(logTakenAction: false);
@@ -400,10 +410,33 @@ namespace SumoManager
                 // Post Battle
                 case BattleState.PostBattle_ShowResult:
                     LogManager.SortAndSave();
+                    RecordLeaderboardResult();
                     break;
             }
 
             BroadcastBattleData();
+        }
+
+        // Commits the finished match to the local leaderboards exactly once.
+        // Batch simulations are excluded: they are analysis runs, not ladder play.
+        private void RecordLeaderboardResult()
+        {
+            if (leaderboardRecorded)
+                return;
+            if (simulator != null && simulator.enabled)
+                return;
+
+            leaderboardRecorded = true;
+
+            try
+            {
+                LastLeaderboardOutcome =
+                    LeaderboardService.Instance.RecordBattle(LeaderboardRecordFactory.FromBattle(this));
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"[BattleManager] Failed to record leaderboard result: {ex.Message}");
+            }
         }
 
         // Call this when we need to trigger OnBattleChanged immediately
@@ -499,55 +532,4 @@ namespace SumoManager
             }
 
             // Check whether current round reaches max round
-            if (CurrentRound.RoundNumber == (int)RoundSystem)
-            {
-                if (LeftWinCount == RightWinCount)
-                    return BattleWinner.Draw;
-                else if (LeftWinCount > RightWinCount)
-                    return BattleWinner.Left;
-                else
-                    return BattleWinner.Right;
-            }
-
-            return null;
-        }
-
-
-        public void ClearWinner()
-        {
-            Winners.Clear();
-            LeftWinCount = 0;
-            RightWinCount = 0;
-        }
-    }
-
-    [Serializable]
-    public class Round
-    {
-        public float FinishTime;
-        public int RoundNumber = 0;
-        public SumoController RoundWinner;
-        public Round(int roundNumber, int time)
-        {
-            RoundNumber = roundNumber;
-            FinishTime = time;
-        }
-    }
-
-    public static class BattleExt
-    {
-        public static SumoController ToController(this BattleWinner? battleWinner, Battle battle)
-        {
-            switch (battleWinner)
-            {
-                case BattleWinner.Left:
-                    return battle.LeftPlayer;
-                case BattleWinner.Right:
-                    return battle.RightPlayer;
-                default:
-                    return null;
-            }
-        }
-    }
-    #endregion
-}
+   

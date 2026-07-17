@@ -77938,6 +77938,7 @@ GameObject:
   - component: {fileID: 2004603559}
   - component: {fileID: 2004603561}
   - component: {fileID: 2004603560}
+  - component: {fileID: 2004603562}
   m_Layer: 5
   m_Name: MenuLeaderboards
   m_TagString: BattleState/Pre
@@ -84837,6 +84838,25 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &2004603562
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2004603558}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 60caaf28c1364e0f86a44c1a8e13843b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  PlayerModeDropdown: {fileID: 320835739}
+  ControlModeDropdown: {fileID: 1827220933}
+  RowsContent: {fileID: 611265724}
+  PlayerRankChip: {fileID: 1282451524}
+  GoldColor: {r: 0.961, g: 0.773, b: 0.259, a: 1}
+  SilverColor: {r: 0.788, g: 0.788, b: 0.788, a: 1}
+  BronzeColor: {r: 0.78, g: 0.482, b: 0.247, a: 1}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
