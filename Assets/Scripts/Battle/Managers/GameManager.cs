@@ -91,7 +91,7 @@ public class GameManager : MonoBehaviour
         PlayerPrefs.Save();
 
         if (oldId != accountId)
-            SumoLeaderboard.LeaderboardService.Instance.ReassignProfile(oldId, accountId, Left.Name);
+            GameServices.Leaderboard.ReassignProfile(oldId, accountId, Left.Name);
     }
 
     public void Battle_LoadCostumeScene(string id)
