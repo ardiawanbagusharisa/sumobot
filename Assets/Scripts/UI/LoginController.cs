@@ -61,6 +61,7 @@ public class LoginController : MonoBehaviour
         if (result.Success)
         {
             var account = result.Value;
+            GameManager.Instance.ApplyAccount(account.PlayerId, account.DisplayName);
             if (accountInfoText != null)
                 accountInfoText.text = $"{account.PlayerId}";
             if (displayNameInput != null)
@@ -99,6 +100,7 @@ public class LoginController : MonoBehaviour
                 busy = false;
                 return;
             }
+            GameManager.Instance.ApplyAccount(current.PlayerId, current.DisplayName);
         }
 
         busy = false;
