@@ -532,4 +532,55 @@ namespace SumoManager
             }
 
             // Check whether current round reaches max round
-   
+            if (CurrentRound.RoundNumber == (int)RoundSystem)
+            {
+                if (LeftWinCount == RightWinCount)
+                    return BattleWinner.Draw;
+                else if (LeftWinCount > RightWinCount)
+                    return BattleWinner.Left;
+                else
+                    return BattleWinner.Right;
+            }
+
+            return null;
+        }
+
+
+        public void ClearWinner()
+        {
+            Winners.Clear();
+            LeftWinCount = 0;
+            RightWinCount = 0;
+        }
+    }
+
+    [Serializable]
+    public class Round
+    {
+        public float FinishTime;
+        public int RoundNumber = 0;
+        public SumoController RoundWinner;
+        public Round(int roundNumber, int time)
+        {
+            RoundNumber = roundNumber;
+            FinishTime = time;
+        }
+    }
+
+    public static class BattleExt
+    {
+        public static SumoController ToController(this BattleWinner? battleWinner, Battle battle)
+        {
+            switch (battleWinner)
+            {
+                case BattleWinner.Left:
+                    return battle.LeftPlayer;
+                case BattleWinner.Right:
+                    return battle.RightPlayer;
+                default:
+                    return null;
+            }
+        }
+    }
+    #endregion
+}

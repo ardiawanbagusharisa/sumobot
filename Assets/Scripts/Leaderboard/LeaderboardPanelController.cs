@@ -485,4 +485,117 @@ namespace SumoLeaderboard
 
         private void BeginRename()
         {
- 
+            PlayerProfile local = GameManager.Instance.Left;
+            if (local == null || renaming)
+                return;
+
+            if (renameInput == null)
+                renameInput = BuildRenameInput();
+
+            renaming = true;
+            PlayerRankChip.SetActive(false);
+            renameInput.gameObject.SetActive(true);
+            renameInput.text = local.Name;
+            renameInput.ActivateInputField();
+        }
+
+        private void ApplyRename(string value)
+        {
+            if (!renaming)
+                return;
+
+            string clean = SanitizeName(value);
+            PlayerProfile local = GameManager.Instance.Left;
+
+            if (local != null && !string.IsNullOrEmpty(clean) && clean != local.Name)
+            {
+                local.Rename(LocalProfilePrefsKey, clean);
+                LeaderboardService.Instance.RenameProfile(local.ID, local.Name);
+            }
+
+            CancelRename();
+            Refresh();
+        }
+
+        private void CancelRename()
+        {
+            renaming = false;
+            if (renameInput != null)
+                renameInput.gameObject.SetActive(false);
+            if (PlayerRankChip != null)
+                PlayerRankChip.SetActive(true);
+        }
+
+        /// <summary>Trim, strip TMP rich-text brackets, cap the length.</summary>
+        private static string SanitizeName(string raw)
+        {
+            if (string.IsNullOrWhiteSpace(raw))
+                return null;
+            string clean = raw.Replace("<", string.Empty).Replace(">", string.Empty).Trim();
+            if (clean.Length > MaxNameLength)
+                clean = clean.Substring(0, MaxNameLength);
+            return clean;
+        }
+
+        /// <summary>
+        /// Builds an inline TMP_InputField styled after the rank chip and placed
+        /// exactly over it, used to edit the local player name.
+        /// </summary>
+        private TMP_InputField BuildRenameInput()
+        {
+            RectTransform chipRt = (RectTransform)PlayerRankChip.transform;
+
+            GameObject go = new("RenameInput", typeof(RectTransform), typeof(Image));
+            RectTransform rt = (RectTransform)go.transform;
+            rt.SetParent(chipRt.parent, false);
+            rt.anchorMin = chipRt.anchorMin;
+            rt.anchorMax = chipRt.anchorMax;
+            rt.pivot = chipRt.pivot;
+            rt.anchoredPosition = chipRt.anchoredPosition;
+            rt.sizeDelta = chipRt.sizeDelta;
+
+            Image bg = go.GetComponent<Image>();
+            Image chipImage = PlayerRankChip.GetComponent<Image>();
+            if (chipImage != null)
+            {
+                bg.sprite = chipImage.sprite;
+                bg.type = chipImage.type;
+            }
+            bg.color = Color.white;
+
+            GameObject area = new("Text Area", typeof(RectTransform), typeof(RectMask2D));
+            RectTransform areaRt = (RectTransform)area.transform;
+            areaRt.SetParent(rt, false);
+            areaRt.anchorMin = Vector2.zero;
+            areaRt.anchorMax = Vector2.one;
+            areaRt.offsetMin = new Vector2(15f, 4f);
+            areaRt.offsetMax = new Vector2(-15f, -4f);
+
+            GameObject textGo = new("Text", typeof(RectTransform));
+            RectTransform textRt = (RectTransform)textGo.transform;
+            textRt.SetParent(areaRt, false);
+            textRt.anchorMin = Vector2.zero;
+            textRt.anchorMax = Vector2.one;
+            textRt.offsetMin = Vector2.zero;
+            textRt.offsetMax = Vector2.zero;
+
+            TextMeshProUGUI text = textGo.AddComponent<TextMeshProUGUI>();
+            text.font = rankChipNameText.font;
+            text.fontSize = rankChipNameText.fontSize;
+            text.color = Color.black;
+            text.alignment = TextAlignmentOptions.MidlineLeft;
+
+            TMP_InputField input = go.AddComponent<TMP_InputField>();
+            input.targetGraphic = bg;
+            input.textViewport = areaRt;
+            input.textComponent = text;
+            input.characterLimit = MaxNameLength;
+            input.onEndEdit.AddListener(ApplyRename);
+
+            go.SetActive(false);
+            return input;
+        }
+
+        #endregion
+    }
+}

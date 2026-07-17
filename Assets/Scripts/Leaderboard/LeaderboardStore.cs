@@ -108,4 +108,33 @@ namespace SumoLeaderboard
             data.Version = LeaderboardData.CurrentVersion;
         }
 
-        private void BackupCorruptFile
+        private void BackupCorruptFile()
+        {
+            try
+            {
+                if (!File.Exists(filePath))
+                    return;
+                string backupPath = Path.Combine(
+                    folderPath,
+                    $"leaderboards.corrupt.{DateTime.UtcNow:yyyyMMddHHmmss}.json");
+                File.Copy(filePath, backupPath, overwrite: true);
+                File.Delete(filePath);
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"[LeaderboardStore] Failed to back up corrupt file: {ex.Message}");
+            }
+        }
+
+        public static string ComputeChecksum(LeaderboardData data)
+        {
+            string payload = JsonConvert.SerializeObject(data, Formatting.None);
+            using SHA256 sha = SHA256.Create();
+            byte[] hash = sha.ComputeHash(Encoding.UTF8.GetBytes(ChecksumSalt + payload));
+            StringBuilder sb = new();
+            foreach (byte b in hash)
+                sb.Append(b.ToString("x2"));
+            return sb.ToString();
+        }
+    }
+}

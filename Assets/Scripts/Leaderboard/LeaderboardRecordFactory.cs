@@ -56,4 +56,10 @@ namespace SumoLeaderboard
                 return (BotProfilePrefix + bot.ID, bot.ID, bot.ID);
 
             if (profile != null)
-                return (
+                return (profile.ID, profile.Name, HumanBotPlaceholder);
+
+            // Should not happen; keep the record well-formed either way.
+            return (null, "Unknown", HumanBotPlaceholder);
+        }
+    }
+}

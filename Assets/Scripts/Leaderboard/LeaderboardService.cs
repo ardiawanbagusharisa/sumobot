@@ -194,4 +194,120 @@ namespace SumoLeaderboard
                 {
                     // The account already played on this board; keep its record.
                     table.Entries.Remove(old);
-                    Logger.Info($"[Leaderboar
+                    Logger.Info($"[LeaderboardService] Dropped anonymous duplicate on {table.GameMode}/{table.Mode}/{table.Control}.");
+                }
+                else
+                {
+                    old.ProfileID = newProfileId;
+                    if (!string.IsNullOrWhiteSpace(newName))
+                        old.PlayerName = newName;
+                }
+                changed = true;
+            }
+
+            if (changed)
+            {
+                store.Save(data);
+                Updated?.Invoke();
+            }
+        }
+
+        /// <summary>
+        /// Renames a profile on every board it appears on (display name only;
+        /// ProfileID stays the ranking key). Saves when anything changed.
+        /// </summary>
+        public void RenameProfile(string profileId, string newName)
+        {
+            if (string.IsNullOrWhiteSpace(newName) || string.IsNullOrEmpty(profileId))
+                return;
+
+            bool changed = false;
+            foreach (LeaderboardTable table in data.Tables)
+                foreach (LeaderboardEntry entry in table.Entries)
+                    if (entry.ProfileID == profileId && entry.PlayerName != newName)
+                    {
+                        entry.PlayerName = newName;
+                        changed = true;
+                    }
+
+            if (changed)
+            {
+                store.Save(data);
+                Updated?.Invoke();
+            }
+        }
+
+        #endregion
+
+        #region Internals
+
+        private static void ApplyOutcome(LeaderboardEntry entry, float score, string name, string bot)
+        {
+            entry.GamesPlayed++;
+            if (score >= EloCalculator.Win)
+            {
+                entry.Wins++;
+                entry.CurrentStreak++;
+                entry.BestStreak = Math.Max(entry.BestStreak, entry.CurrentStreak);
+            }
+            else if (score <= EloCalculator.Loss)
+            {
+                entry.Losses++;
+                entry.CurrentStreak = 0;
+            }
+            else
+            {
+                entry.Draws++;
+                entry.CurrentStreak = 0;
+            }
+
+            // Refresh display fields (player may have been renamed).
+            if (!string.IsNullOrEmpty(name)) entry.PlayerName = name;
+            if (!string.IsNullOrEmpty(bot)) entry.BotName = bot;
+            entry.UpdatedAtUtc = DateTime.UtcNow.ToString("o");
+        }
+
+        private LeaderboardTable FindTable(GameMode gameMode, PlayerMode mode, ControlCategory control)
+        {
+            return data.Tables.FirstOrDefault(t => t.GameMode == gameMode && t.Mode == mode && t.Control == control);
+        }
+
+        private LeaderboardEntry GetOrCreateEntry(
+            GameMode gameMode, PlayerMode mode, ControlCategory control, string profileId, string name, string bot)
+        {
+            LeaderboardTable table = FindTable(gameMode, mode, control);
+            if (table == null)
+            {
+                table = new LeaderboardTable { GameMode = gameMode, Mode = mode, Control = control };
+                data.Tables.Add(table);
+            }
+
+            LeaderboardEntry entry = table.Entries.FirstOrDefault(e => e.ProfileID == profileId);
+            if (entry == null)
+            {
+                entry = new LeaderboardEntry
+                {
+                    ProfileID = profileId,
+                    PlayerName = name,
+                    BotName = string.IsNullOrEmpty(bot) ? "-" : bot,
+                };
+                table.Entries.Add(entry);
+            }
+            return entry;
+        }
+
+        /// <summary>Deterministic ranking: rating desc, wins desc, fewer games first, then name.</summary>
+        public static int CompareEntries(LeaderboardEntry a, LeaderboardEntry b)
+        {
+            int byRating = b.Rating.CompareTo(a.Rating);
+            if (byRating != 0) return byRating;
+            int byWins = b.Wins.CompareTo(a.Wins);
+            if (byWins != 0) return byWins;
+            int byGames = a.GamesPlayed.CompareTo(b.GamesPlayed);
+            if (byGames != 0) return byGames;
+            return string.Compare(a.PlayerName, b.PlayerName, StringComparison.OrdinalIgnoreCase);
+        }
+
+        #endregion
+    }
+}

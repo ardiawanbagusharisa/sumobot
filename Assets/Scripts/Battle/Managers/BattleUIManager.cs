@@ -640,4 +640,31 @@ Skill			C			M
 
         private void ShowGuide(GuideTab tab)
         {
-            SFXManager.Inst
+            SFXManager.Instance.Play2D("ui_accept");
+            GuideContent.text = guideContentsMap[tab].Trim();
+
+            foreach (var button in guideButtonsMap)
+            {
+                bool isActive = tab == button.Key;
+
+                ColorBlock colors = button.Value.colors;
+                colors.normalColor = isActive ? GuideActiveTabColor : GuideInactiveTabColor;
+                colors.selectedColor = isActive ? GuideActiveTabColor : GuideInactiveTabColor;
+                button.Value.colors = colors;
+
+                if (button.Value.TryGetComponent(out Image tabImg))
+                    tabImg.color = isActive ? GuideActiveTabColor : GuideInactiveTabColor;
+            }
+
+            if (GuideScrollRect != null)
+                StartCoroutine(ResetScrollGuide());
+        }
+
+        private IEnumerator ResetScrollGuide()
+        {
+            yield return null;
+            GuideScrollRect.verticalNormalizedPosition = 1f;
+        }
+        #endregion
+    }
+}
