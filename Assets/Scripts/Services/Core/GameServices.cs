@@ -1,4 +1,5 @@
 using System.Threading.Tasks;
+using SumoLeaderboard;
 
 namespace SumoServices
 {
@@ -8,14 +9,20 @@ namespace SumoServices
     /// swapping the local stubs for Photon / UGS later touches only this file.
     ///
     /// Usage: GameManager calls Initialize() once at startup, then the rest of the game
-    /// reads GameServices.Auth / PlayerData / Leaderboard / Catalog.
+    /// reads GameServices.Auth / PlayerData / Catalog / Leaderboard.
     /// </summary>
     public static class GameServices
     {
         public static IAuthService Auth { get; private set; }
         public static IPlayerDataService PlayerData { get; private set; }
-        public static ILeaderboardService Leaderboard { get; private set; }
         public static ICatalogService Catalog { get; private set; }
+
+        /// <summary>
+        /// Backed by SumoLeaderboard.LeaderboardService.Instance (a MonoBehaviour
+        /// singleton owned by the Leaderboard feature, not constructed here). Exposed
+        /// through GameServices so callers reach it the same way as the other services.
+        /// </summary>
+        public static ILeaderboardService Leaderboard { get; private set; }
 
         public static bool IsInitialized { get; private set; }
 
@@ -30,8 +37,8 @@ namespace SumoServices
             var auth = new LocalAuthService();
             Auth = auth;
             PlayerData = new LocalPlayerDataService();
-            Leaderboard = new LocalLeaderboardService(auth);
             Catalog = new LocalCatalogService();
+            Leaderboard = LeaderboardService.Instance;
 
             IsInitialized = true;
         }
@@ -80,8 +87,8 @@ namespace SumoServices
         {
             Auth = null;
             PlayerData = null;
-            Leaderboard = null;
             Catalog = null;
+            Leaderboard = null;
             IsInitialized = false;
         }
     }

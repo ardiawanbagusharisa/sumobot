@@ -10,7 +10,7 @@ namespace SumoLeaderboard
     /// Runtime facade over the leaderboard data. Lazy singleton (same pattern
     /// as GameManager) so no scene needs to pre-place it.
     /// </summary>
-    public class LeaderboardService : MonoBehaviour
+    public class LeaderboardService : MonoBehaviour, ILeaderboardService
     {
         private static LeaderboardService instance;
 
