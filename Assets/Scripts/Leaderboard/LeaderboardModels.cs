@@ -110,4 +110,34 @@ namespace SumoLeaderboard
 
     /// <summary>
     /// What RecordBattle did to the ratings — used by the post-battle screen
-    /// to show "+16 / -16" next
+    /// to show "+16 / -16" next to the final scores.
+    /// </summary>
+    public struct LeaderboardOutcome
+    {
+        public int LeftRating;
+        public int RightRating;
+        public int LeftDelta;
+        public int RightDelta;
+    }
+
+    /// <summary>
+    /// Snapshot of one finished battle, handed from BattleManager to the LeaderboardService.
+    /// </summary>
+    public struct BattleResultRecord
+    {
+        public GameMode GameMode;
+        public PlayerMode Mode;
+        public ControlCategory LeftControl;
+        public ControlCategory RightControl;
+        public string LeftProfileID;
+        public string RightProfileID;
+        public string LeftName;
+        public string RightName;
+        public string LeftBot;   // "-" when not script-driven
+        public string RightBot;
+        public BattleWinner Winner;
+        public RoundSystem RoundSystem;
+        public int LeftRoundWins;
+        public int RightRoundWins;
+    }
+}
