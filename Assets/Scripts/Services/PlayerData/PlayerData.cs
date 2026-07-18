@@ -17,7 +17,7 @@ namespace SumoServices
     {
         // TODO(economy): placeholder starting balance so the Market is testable. Replace
         // with a real earning model (match rewards, daily grant, etc.) once the PM defines it.
-        private const int StartingCoins = 500;
+        private const int StartingCoins = 5000;
 
         /// <summary>Owning account id. Ties this save to a PlayerAccount.</summary>
         public string PlayerId;
