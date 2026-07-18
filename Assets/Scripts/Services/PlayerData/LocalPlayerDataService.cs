@@ -17,6 +17,9 @@ namespace SumoServices
     {
         public PlayerData Current { get; private set; }
 
+        public event Action CoinsChanged;
+        public event Action InventoryChanged;
+
         private static string Dir => Path.Combine(Application.persistentDataPath, "PlayerData");
 
         private static string PathFor(string playerId) => Path.Combine(Dir, $"{playerId}.json");
@@ -43,6 +46,11 @@ namespace SumoServices
                 Current.PlayerId = playerId;
                 Current.OwnedItemIds ??= new();
                 Current.EquippedBySlot ??= new();
+
+                // A freshly loaded save is a full state change: let any already-live view
+                // (a coin counter, the inventory list) refresh to the loaded values.
+                CoinsChanged?.Invoke();
+                InventoryChanged?.Invoke();
 
                 return Task.FromResult(ServiceResult<PlayerData>.Ok(Current));
             }
@@ -77,10 +85,14 @@ namespace SumoServices
             if (Current == null) return ServiceResult.Fail("Nothing loaded.");
             if (string.IsNullOrEmpty(itemId)) return ServiceResult.Fail("itemId is required.");
 
-            if (!Current.OwnedItemIds.Contains(itemId))
-                Current.OwnedItemIds.Add(itemId);
+            if (Current.OwnedItemIds.Contains(itemId))
+                return ServiceResult.Ok(); // already owned — no change, no event
 
-            return await SaveAsync();
+            Current.OwnedItemIds.Add(itemId);
+
+            var save = await SaveAsync();
+            if (save.Success) InventoryChanged?.Invoke();
+            return save;
         }
 
         public async Task<ServiceResult> RevokeItemAsync(string itemId)
@@ -88,7 +100,7 @@ namespace SumoServices
             if (Current == null) return ServiceResult.Fail("Nothing loaded.");
             if (string.IsNullOrEmpty(itemId)) return ServiceResult.Fail("itemId is required.");
 
-            Current.OwnedItemIds.Remove(itemId);
+            bool removed = Current.OwnedItemIds.Remove(itemId);
 
             // Drop any equip slot that pointed at the now-unowned item so the save stays consistent.
             var slots = new List<string>(Current.EquippedBySlot.Keys);
@@ -98,16 +110,24 @@ namespace SumoServices
                     Current.EquippedBySlot.Remove(slot);
             }
 
-            return await SaveAsync();
+            if (!removed) return ServiceResult.Ok(); // not owned — no change, no event
+
+            var save = await SaveAsync();
+            if (save.Success) InventoryChanged?.Invoke();
+            return save;
         }
 
         public async Task<ServiceResult> AddCoinsAsync(int amount)
         {
             if (Current == null) return ServiceResult.Fail("Nothing loaded.");
             if (amount < 0) return ServiceResult.Fail("amount must be non-negative.");
+            if (amount == 0) return ServiceResult.Ok(); // no change, no event
 
             Current.Coins += amount;
-            return await SaveAsync();
+
+            var save = await SaveAsync();
+            if (save.Success) CoinsChanged?.Invoke();
+            return save;
         }
 
         public async Task<ServiceResult> TrySpendCoinsAsync(int amount)
@@ -115,9 +135,13 @@ namespace SumoServices
             if (Current == null) return ServiceResult.Fail("Nothing loaded.");
             if (amount < 0) return ServiceResult.Fail("amount must be non-negative.");
             if (Current.Coins < amount) return ServiceResult.Fail("Insufficient coins.");
+            if (amount == 0) return ServiceResult.Ok(); // no change, no event
 
             Current.Coins -= amount;
-            return await SaveAsync();
+
+            var save = await SaveAsync();
+            if (save.Success) CoinsChanged?.Invoke();
+            return save;
         }
 
         public async Task<ServiceResult> EquipAsync(string slot, string itemId)
