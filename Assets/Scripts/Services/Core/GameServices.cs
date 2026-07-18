@@ -13,6 +13,15 @@ namespace SumoServices
     /// </summary>
     public static class GameServices
     {
+        /// <summary>
+        /// Guarantees the services are wired before any scene's Awake/Start runs, no
+        /// matter which scene the game (or the Editor) starts from. This removes the
+        /// old ordering hazard where callers had to touch GameManager.Instance first
+        /// to trigger initialization. Runs once per play session.
+        /// </summary>
+        [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.BeforeSceneLoad)]
+        private static void Bootstrap() => Initialize();
+
         public static IAuthService Auth { get; private set; }
         public static IPlayerDataService PlayerData { get; private set; }
         public static ICatalogService Catalog { get; private set; }
