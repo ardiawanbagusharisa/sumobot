@@ -22,6 +22,15 @@ namespace SumoServices
         /// <summary>Add an item to the inventory and persist. No-op if already owned.</summary>
         Task<ServiceResult> GrantItemAsync(string itemId);
 
+        /// <summary>Remove an item from the inventory (and unequip it) and persist. No-op if not owned.</summary>
+        Task<ServiceResult> RevokeItemAsync(string itemId);
+
+        /// <summary>Add coins to the balance and persist. Amount must be non-negative.</summary>
+        Task<ServiceResult> AddCoinsAsync(int amount);
+
+        /// <summary>Deduct coins and persist. Fails without spending if the balance is insufficient.</summary>
+        Task<ServiceResult> TrySpendCoinsAsync(int amount);
+
         /// <summary>Equip an owned item into a slot and persist. Fails if not owned.</summary>
         Task<ServiceResult> EquipAsync(string slot, string itemId);
     }

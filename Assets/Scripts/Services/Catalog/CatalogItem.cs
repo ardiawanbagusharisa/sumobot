@@ -20,12 +20,23 @@ namespace SumoServices
 
         /// <summary>
         /// True for items every player owns from the start (the current default parts).
-        /// Kept as a neutral flag on purpose: the game has no economy yet, so there is no
-        /// price/acquisition model here. Add that when the PM defines how items are earned.
+        /// Default items are granted for free at session start regardless of Price.
         /// </summary>
         public bool IsDefault;
 
+        /// <summary>
+        /// Coin cost in the Market. Sell refunds the same amount (full refund) for now.
+        /// Ignored for IsDefault items. Zero means free.
+        /// </summary>
+        public int Price;
+
         /// <summary>Resources path to the item's sprite/icon, loaded on demand by the UI.</summary>
         public string IconResourcePath;
+
+        /// <summary>
+        /// Optional tint applied to the icon (e.g. "#FF00BD"), for items that reuse one base
+        /// sprite in multiple colors (Skin - Body / Skin - Accessory). Empty = no tint (white).
+        /// </summary>
+        public string IconColor;
     }
 }

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
@@ -79,6 +80,43 @@ namespace SumoServices
             if (!Current.OwnedItemIds.Contains(itemId))
                 Current.OwnedItemIds.Add(itemId);
 
+            return await SaveAsync();
+        }
+
+        public async Task<ServiceResult> RevokeItemAsync(string itemId)
+        {
+            if (Current == null) return ServiceResult.Fail("Nothing loaded.");
+            if (string.IsNullOrEmpty(itemId)) return ServiceResult.Fail("itemId is required.");
+
+            Current.OwnedItemIds.Remove(itemId);
+
+            // Drop any equip slot that pointed at the now-unowned item so the save stays consistent.
+            var slots = new List<string>(Current.EquippedBySlot.Keys);
+            foreach (var slot in slots)
+            {
+                if (Current.EquippedBySlot[slot] == itemId)
+                    Current.EquippedBySlot.Remove(slot);
+            }
+
+            return await SaveAsync();
+        }
+
+        public async Task<ServiceResult> AddCoinsAsync(int amount)
+        {
+            if (Current == null) return ServiceResult.Fail("Nothing loaded.");
+            if (amount < 0) return ServiceResult.Fail("amount must be non-negative.");
+
+            Current.Coins += amount;
+            return await SaveAsync();
+        }
+
+        public async Task<ServiceResult> TrySpendCoinsAsync(int amount)
+        {
+            if (Current == null) return ServiceResult.Fail("Nothing loaded.");
+            if (amount < 0) return ServiceResult.Fail("amount must be non-negative.");
+            if (Current.Coins < amount) return ServiceResult.Fail("Insufficient coins.");
+
+            Current.Coins -= amount;
             return await SaveAsync();
         }
 
