@@ -8,7 +8,7 @@ using UnityEngine;
 public class MarketListController : MonoBehaviour
 {
     [SerializeField] private ItemCellView itemCellPrefab;
-    [SerializeField] private MarketManager marketManager;
+    [SerializeField] private ItemDetailController itemDetail;
     [SerializeField] private RectTransform content;
 
     void OnEnable()
@@ -25,8 +25,8 @@ public class MarketListController : MonoBehaviour
         {
             ItemCellView cell = Instantiate(itemCellPrefab, content);
             cell.Bind(item);
-            if (marketManager != null)
-                cell.Clicked += marketManager.ShowItemDetail;
+            if (itemDetail != null)
+                cell.Clicked += itemDetail.Show;
         }
     }
 }
