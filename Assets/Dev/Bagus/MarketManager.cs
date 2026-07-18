@@ -1,8 +1,13 @@
-using SumoServices;
-using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
+// Owns the Market screen's PANEL VISIBILITY only: the chat/inventory toggles and the
+// item-detail panel's show/hide (plus its exit button and SFX). It is still bound to many
+// legacy scene onClicks that call the no-arg ShowItemDetail(), so that entry point stays.
+//
+// The item-detail CONTENT + purchase behaviour lives in ItemDetailController, which calls
+// ShowItemDetail() to open the panel. Keeping the two apart stops this class from growing
+// into a god object as buy/sell features land.
 public class MarketManager : MonoBehaviour
 {
     public GameObject PanelItemDetail;
@@ -10,11 +15,6 @@ public class MarketManager : MonoBehaviour
     public GameObject PanelInventory;
     public GameObject buttonUnfoldChat;
     public GameObject buttonUnfoldInventory;
-
-    [Header("Item Detail (populated by ShowItemDetail(CatalogItem))")]
-    public TMP_Text DetailNameText;
-    public TMP_Text DetailPriceText;
-    public Image DetailIconImage;
 
     [Header("Item Detail buttons (wired here, not via Editor OnClick — see HideItemDetail)")]
     public Button DetailExitButton;
@@ -38,23 +38,12 @@ public class MarketManager : MonoBehaviour
 		buttonUnfoldInventory.SetActive(isActive);
 	}
 
+	// Opens the detail panel. Bound to many legacy scene onClicks and reused by
+	// ItemDetailController.Show(CatalogItem) after it fills the per-item content.
 	public void ShowItemDetail() {
 		SFXManager.Instance.Play2D("ui_accept");
 		PanelItemDetail.SetActive(true);
     }
-
-	// Used by the dynamically generated Market list (MarketListController /
-	// ItemCellView), which knows which CatalogItem was clicked. Only fills the fields
-	// backed by CatalogItem's schema (name/price/icon) — Creator/Win-rate/Description
-	// in PopUpDetail are hand-authored flavor text with no per-item data source yet.
-	public void ShowItemDetail(CatalogItem item) {
-		SFXManager.Instance.Play2D("ui_accept");
-		DetailNameText.text = item.DisplayName;
-		DetailPriceText.text = $"SG {item.Price}";
-		if (!string.IsNullOrEmpty(item.IconResourcePath))
-			DetailIconImage.sprite = Resources.Load<Sprite>(item.IconResourcePath);
-		PanelItemDetail.SetActive(true);
-	}
 
 	public void HideItemDetail() {
 		SFXManager.Instance.Play2D("ui_accept");
