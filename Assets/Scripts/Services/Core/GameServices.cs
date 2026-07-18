@@ -26,6 +26,9 @@ namespace SumoServices
         public static IPlayerDataService PlayerData { get; private set; }
         public static ICatalogService Catalog { get; private set; }
 
+        /// <summary>Market buy/sell, composed over Catalog (prices) and PlayerData (balance + inventory).</summary>
+        public static ITradeService Trade { get; private set; }
+
         /// <summary>
         /// Backed by SumoLeaderboard.LeaderboardService.Instance (a MonoBehaviour
         /// singleton owned by the Leaderboard feature, not constructed here). Exposed
@@ -47,6 +50,7 @@ namespace SumoServices
             Auth = auth;
             PlayerData = new LocalPlayerDataService();
             Catalog = new LocalCatalogService();
+            Trade = new LocalTradeService(Catalog, PlayerData);
             Leaderboard = LeaderboardService.Instance;
 
             IsInitialized = true;
@@ -97,6 +101,7 @@ namespace SumoServices
             Auth = null;
             PlayerData = null;
             Catalog = null;
+            Trade = null;
             Leaderboard = null;
             IsInitialized = false;
         }

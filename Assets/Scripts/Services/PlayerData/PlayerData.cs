@@ -15,8 +15,15 @@ namespace SumoServices
     [Serializable]
     public class PlayerData
     {
+        // TODO(economy): placeholder starting balance so the Market is testable. Replace
+        // with a real earning model (match rewards, daily grant, etc.) once the PM defines it.
+        private const int StartingCoins = 500;
+
         /// <summary>Owning account id. Ties this save to a PlayerAccount.</summary>
         public string PlayerId;
+
+        /// <summary>Soft-currency balance. Spent in the Market, granted by earning flows.</summary>
+        public int Coins;
 
         /// <summary>Ids of items the player owns — the backing set for the Inventory UI.</summary>
         public List<string> OwnedItemIds = new();
@@ -31,6 +38,7 @@ namespace SumoServices
             return new PlayerData
             {
                 PlayerId = playerId,
+                Coins = StartingCoins,
                 OwnedItemIds = new List<string>(),
                 EquippedBySlot = new Dictionary<string, string>()
             };
