@@ -36,10 +36,8 @@ public class LoginController : MonoBehaviour
 
     void Start()
     {
-        _ = GameManager.Instance; // ensure GameServices is initialized before touching it
-
-        // Session already established earlier this run (e.g. returning to MainMenu
-        // after a battle) — skip straight through, don't make the player log in again.
+        // GameServices is ready before this scene loads.
+        // Skip login if a session already exists.
         if (GameServices.Auth.Current != null)
         {
             mainMenu.ShowMainMenu();

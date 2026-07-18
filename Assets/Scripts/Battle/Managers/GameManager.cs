@@ -46,8 +46,6 @@ public class GameManager : MonoBehaviour
 
         instance = this;
         DontDestroyOnLoad(gameObject);
-
-        GameServices.Initialize();
     }
 
     // Kept off Awake so scene startup never blocks on (future) network I/O.
