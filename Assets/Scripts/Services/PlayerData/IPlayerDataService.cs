@@ -1,3 +1,4 @@
+using System;
 using System.Threading.Tasks;
 
 namespace SumoServices
@@ -12,6 +13,18 @@ namespace SumoServices
     {
         /// <summary>The loaded save for the signed-in player, or null before Load.</summary>
         PlayerData Current { get; }
+
+        /// <summary>
+        /// Raised after the coin balance changes and persists (spend/earn) or a new save
+        /// loads. Lets UI (e.g. CoinBalanceView) refresh without callers pushing updates.
+        /// </summary>
+        event Action CoinsChanged;
+
+        /// <summary>
+        /// Raised after the owned-item set changes and persists (grant/revoke) or a new
+        /// save loads. Lets the Inventory UI rebuild itself instead of being told to.
+        /// </summary>
+        event Action InventoryChanged;
 
         /// <summary>Load (or create) the save for the given player id.</summary>
         Task<ServiceResult<PlayerData>> LoadAsync(string playerId);
