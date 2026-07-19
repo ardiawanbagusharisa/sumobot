@@ -36,7 +36,7 @@ public class ItemCellView : MonoBehaviour
     {
         Item = item;
         nameText.text = item.DisplayName;
-        priceText.text = $"SG {item.Price}";
+        priceText.text = $"{item.Price}";
 
         if (!string.IsNullOrEmpty(item.IconResourcePath))
             iconImage.sprite = Resources.Load<Sprite>(item.IconResourcePath);

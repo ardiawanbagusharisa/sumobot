@@ -11,7 +11,8 @@ using UnityEngine.UI;
 //
 // After a successful buy, the coin balance and inventory refresh themselves via the
 // IPlayerDataService events (see CoinBalanceView / InventoryController); this controller
-// only updates its own Buy button to reflect the now-owned state.
+// only updates its own Buy button to reflect the now-owned state. The Market is buy-only:
+// there is no sell path in the UI.
 public class ItemDetailController : MonoBehaviour
 {
     [SerializeField] private MarketManager marketManager;
@@ -40,7 +41,7 @@ public class ItemDetailController : MonoBehaviour
         current = item;
 
         if (nameText != null) nameText.text = item.DisplayName;
-        if (priceText != null) priceText.text = $"SG {item.Price}";
+        if (priceText != null) priceText.text = $"{item.Price}";
         if (iconImage != null && !string.IsNullOrEmpty(item.IconResourcePath))
         {
             iconImage.sprite = Resources.Load<Sprite>(item.IconResourcePath);
