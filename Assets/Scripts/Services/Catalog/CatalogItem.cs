@@ -10,6 +10,13 @@ namespace SumoServices
     [Serializable]
     public class CatalogItem
     {
+        /// <summary>
+        /// Discriminator used by CatalogItemConverter to pick the concrete type when
+        /// deserializing items.json (e.g. "BotScript" -> BotScriptItem). Empty/unknown
+        /// values deserialize as the base CatalogItem.
+        /// </summary>
+        public string Type;
+
         /// <summary>Stable id stored in PlayerData.OwnedItemIds. Must be unique across the catalog.</summary>
         public string Id;
 
@@ -38,5 +45,18 @@ namespace SumoServices
         /// sprite in multiple colors (Skin - Body / Skin - Accessory). Empty = no tint (white).
         /// </summary>
         public string IconColor;
+
+        /// <summary>
+        /// Optional author/creator handle shown in the detail panel (also what the "Ask"
+        /// button targets). Common to every category — a skin, a module or a bot script can
+        /// all credit a creator. Empty = the Creator line and Ask button are hidden.
+        /// </summary>
+        public string Creator;
+
+        /// <summary>
+        /// Optional long description shown in the detail panel. Common to every category.
+        /// Empty = the description section is hidden.
+        /// </summary>
+        public string Description;
     }
 }

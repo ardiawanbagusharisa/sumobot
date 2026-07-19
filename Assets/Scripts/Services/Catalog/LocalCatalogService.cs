@@ -52,7 +52,7 @@ namespace SumoServices
 
             try
             {
-                return JsonConvert.DeserializeObject<List<CatalogItem>>(textAsset.text);
+                return JsonConvert.DeserializeObject<List<CatalogItem>>(textAsset.text, new CatalogItemConverter());
             }
             catch (System.Exception e)
             {
