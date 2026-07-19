@@ -10,6 +10,7 @@ public class InventoryController : MonoBehaviour
 {
     [SerializeField] private ItemCellView itemCellPrefab;
     [SerializeField] private RectTransform content;
+    [SerializeField] private ItemDetailController itemDetail; // click an owned item -> shared detail panel
 
     private IPlayerDataService subscribed;
 
@@ -47,6 +48,8 @@ public class InventoryController : MonoBehaviour
 
             ItemCellView cell = Instantiate(itemCellPrefab, content);
             cell.Bind(item);
+            if (itemDetail != null)
+                cell.Clicked += itemDetail.Show;
         }
     }
 }

@@ -3,39 +3,42 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-// Owns the CONTENT and PURCHASE behaviour of the Market's item-detail panel: it fills the
-// name/price/icon for the clicked CatalogItem and runs the Buy through GameServices.Trade.
-// Panel visibility (show/hide, SFX, the exit button) stays with MarketManager, which owns
-// the panel GameObject and is still bound to legacy scene onClicks — this controller only
-// borrows its Show call so there is a single open path.
+// Sole owner of the Market's item-detail panel: its visibility (show/hide + exit button),
+// its content (name/price/icon for the clicked CatalogItem), and the purchase (Trade.BuyAsync).
+// The same panel serves both the Market listing and the Inventory — MarketListController and
+// InventoryController just call Show(item); neither this class nor they depend on MarketManager
+// anymore (which is now purely chat/inventory panel toggles).
 //
 // After a successful buy, the coin balance and inventory refresh themselves via the
-// IPlayerDataService events (see CoinBalanceView / InventoryController); this controller
-// only updates its own Buy button to reflect the now-owned state. The Market is buy-only:
-// there is no sell path in the UI.
+// IPlayerDataService events (see CoinBalanceView / InventoryController); this controller only
+// updates its own Buy button. The Market is buy-only: there is no sell path.
 public class ItemDetailController : MonoBehaviour
 {
-    [SerializeField] private MarketManager marketManager;
+    [SerializeField] private GameObject panel; // PanelItemDetail — this controller owns its visibility
 
-    [Header("Detail fields (moved here from MarketManager)")]
+    [Header("Detail fields")]
     [SerializeField] private TMP_Text nameText;
     [SerializeField] private TMP_Text priceText;
     [SerializeField] private Image iconImage;
 
-    [Header("Purchase")]
+    [Header("Buttons")]
     [SerializeField] private Button buyButton;
     [SerializeField] private TMP_Text buyButtonLabel; // optional: flips to "Owned" when owned
+    [SerializeField] private Button exitButton;       // closes the panel
 
     private CatalogItem current;
     private bool purchasing;
 
     void Awake()
     {
-        if (buyButton != null)
-            buyButton.onClick.AddListener(OnBuyClicked);
+        if (buyButton != null) buyButton.onClick.AddListener(OnBuyClicked);
+        if (exitButton != null) exitButton.onClick.AddListener(Hide);
     }
 
-    /// <summary>Show the detail panel for a catalog item (wired from MarketListController).</summary>
+    /// <summary>
+    /// Open the detail panel for a catalog item. Wired from MarketListController (buy) and
+    /// InventoryController (view an owned item — Buy shows as "Owned").
+    /// </summary>
     public void Show(CatalogItem item)
     {
         current = item;
@@ -55,9 +58,20 @@ public class ItemDetailController : MonoBehaviour
 
         RefreshBuyState();
 
-        // Reuse MarketManager's single show path (plays SFX, activates the panel).
-        if (marketManager != null)
-            marketManager.ShowItemDetail();
+        if (panel != null)
+        {
+            SFXManager.Instance.Play2D("ui_accept");
+            // Draw on top of whatever opened it (Market list or the Inventory panel).
+            panel.transform.SetAsLastSibling();
+            panel.SetActive(true);
+        }
+    }
+
+    public void Hide()
+    {
+        if (panel == null) return;
+        SFXManager.Instance.Play2D("ui_accept");
+        panel.SetActive(false);
     }
 
     // Buttons need a void handler; guard against re-entrancy so a double-tap can't double-buy.
