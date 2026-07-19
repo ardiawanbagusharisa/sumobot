@@ -21,6 +21,13 @@ public class ItemDetailController : MonoBehaviour
     [SerializeField] private TMP_Text priceText;
     [SerializeField] private Image iconImage;
 
+    [Header("Metadata fields (optional per item)")]
+    [SerializeField] private TMP_Text creatorText;        // any item may credit a Creator
+    [SerializeField] private GameObject descriptionGroup; // the "Description" section (title + content); hidden when empty
+    [SerializeField] private TMP_Text descriptionText;    // the Content body text inside descriptionGroup
+    [SerializeField] private Button askButton;            // ask the creator — always shown
+    [SerializeField] private TMP_Text winRateText;        // BotScriptItem only
+
     [Header("Buttons")]
     [SerializeField] private Button buyButton;
     [SerializeField] private TMP_Text buyButtonLabel; // optional: flips to "Owned" when owned
@@ -33,6 +40,7 @@ public class ItemDetailController : MonoBehaviour
     {
         if (buyButton != null) buyButton.onClick.AddListener(OnBuyClicked);
         if (exitButton != null) exitButton.onClick.AddListener(Hide);
+        if (askButton != null) askButton.onClick.AddListener(OnAskClicked);
     }
 
     /// <summary>
@@ -56,6 +64,7 @@ public class ItemDetailController : MonoBehaviour
                 : Color.white;
         }
 
+        RefreshMetadataFields(item);
         RefreshBuyState();
 
         if (panel != null)
@@ -93,6 +102,41 @@ public class ItemDetailController : MonoBehaviour
             purchasing = false;
             RefreshBuyState(); // re-enables the button unless the item is now owned
         }
+    }
+
+    // Creator/Description are common to every category; each element shows only when the
+    // item actually provides a value (so a bare skin hides them). WinRate is bot-script
+    // only. Per-field toggles — no single wrapping group — so the panel's core fields
+    // (name/price/icon/Buy) always stay visible regardless of item type.
+    private void RefreshMetadataFields(CatalogItem item)
+    {
+        if (creatorText != null)
+        {
+            creatorText.text = $"Creator: {item.Creator}";
+            creatorText.gameObject.SetActive(!string.IsNullOrEmpty(item.Creator));
+        }
+        // Ask is always available (any item, any type); it does not depend on Creator.
+
+        bool hasDescription = !string.IsNullOrEmpty(item.Description);
+        if (descriptionText != null) descriptionText.text = item.Description;
+        // Toggle the whole section (title + content) when assigned; otherwise fall back to
+        // just the content text so a missing group reference still hides something sensible.
+        if (descriptionGroup != null) descriptionGroup.SetActive(hasDescription);
+        else if (descriptionText != null) descriptionText.gameObject.SetActive(hasDescription);
+
+        var botScript = item as BotScriptItem;
+        if (winRateText != null)
+        {
+            if (botScript != null) winRateText.text = $"Win-rate: {botScript.WinRate:0.00}";
+            winRateText.gameObject.SetActive(botScript != null);
+        }
+    }
+
+    // TODO: no design yet for what "Ask" does (contact the creator? open a chat thread?).
+    // Wired up so the button is functional once that's decided; for now it's a no-op.
+    private void OnAskClicked()
+    {
+        Logger.Warning("[Market] Ask is not implemented yet.");
     }
 
     // A player can't buy what they already own (LocalTradeService rejects it too); reflect

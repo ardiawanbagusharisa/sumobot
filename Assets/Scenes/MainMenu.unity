@@ -9680,6 +9680,7 @@ RectTransform:
   - {fileID: 1644957527}
   - {fileID: 802823757}
   - {fileID: 349467394}
+  - {fileID: 2053737835}
   m_Father: {fileID: 916570477}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
@@ -17929,7 +17930,7 @@ GameObject:
   - component: {fileID: 386720636}
   - component: {fileID: 386720635}
   m_Layer: 5
-  m_Name: Text (TMP) (2)
+  m_Name: Content
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -17952,7 +17953,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 1}
   m_AnchorMax: {x: 0.5, y: 1}
   m_AnchoredPosition: {x: 0, y: -30}
-  m_SizeDelta: {x: 700, y: 100}
+  m_SizeDelta: {x: 700, y: 107.799}
   m_Pivot: {x: 0.5, y: 1}
 --- !u!114 &386720635
 MonoBehaviour:
@@ -18006,9 +18007,9 @@ MonoBehaviour:
   m_fontSize: 32
   m_fontSizeBase: 32
   m_fontWeight: 400
-  m_enableAutoSizing: 0
+  m_enableAutoSizing: 1
   m_fontSizeMin: 18
-  m_fontSizeMax: 72
+  m_fontSizeMax: 32
   m_fontStyle: 0
   m_HorizontalAlignment: 8
   m_VerticalAlignment: 256
@@ -77764,6 +77765,11 @@ MonoBehaviour:
   nameText: {fileID: 416825191}
   priceText: {fileID: 1010629952}
   iconImage: {fileID: 1759230034}
+  creatorText: {fileID: 1289476345}
+  descriptionGroup: {fileID: 2063806520}
+  descriptionText: {fileID: 386720635}
+  askButton: {fileID: 802823758}
+  winRateText: {fileID: 2037905075}
   buyButton: {fileID: 1644957528}
   buyButtonLabel: {fileID: 1433875076}
   exitButton: {fileID: 349467395}
@@ -99507,6 +99513,41 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2053426907}
   m_CullTransparentMesh: 1
+--- !u!1 &2053737834
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2053737835}
+  m_Layer: 5
+  m_Name: BotScriptGroup
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &2053737835
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2053737834}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 181817578}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 100, y: 100}
+  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &2055866179
 GameObject:
   m_ObjectHideFlags: 0
@@ -99868,7 +99909,7 @@ GameObject:
   - component: {fileID: 2063806523}
   - component: {fileID: 2063806522}
   m_Layer: 5
-  m_Name: Description
+  m_Name: DescriptionGroup
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -99891,8 +99932,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: -90}
-  m_SizeDelta: {x: 700, y: 50}
+  m_AnchoredPosition: {x: 0, y: -89}
+  m_SizeDelta: {x: 700, y: 26.6031}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &2063806522
 MonoBehaviour:
@@ -99914,7 +99955,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Description
+  m_text: 'Description:'
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 10ac1c21952d26a4898ff51ce9902697, type: 2}
   m_sharedMaterial: {fileID: -164135801627090007, guid: 10ac1c21952d26a4898ff51ce9902697, type: 2}
