@@ -44,6 +44,7 @@ namespace SumoManager
         public GameObject LeftCrown;
         public TMP_Text LeftScore;
         public TMP_Text LeftFinalScore;
+        [HideInInspector] public TMP_Text LeftEloChange;
         public CooldownUIGroupSet LeftSkillUI;
         public CooldownUIGroupSet LeftDashUI;
 
@@ -60,6 +61,7 @@ namespace SumoManager
         public GameObject RightCrown;
         public TMP_Text RightScore;
         public TMP_Text RightFinalScore;
+        [HideInInspector] public TMP_Text RightEloChange;
         public CooldownUIGroupSet RightSkillUI;
         public CooldownUIGroupSet RightDashUI;
 
@@ -162,7 +164,10 @@ Skill			C			M
                 return;
             }
             Instance = this;
-
+            // Campaign scenes serialize dedicated Elo labels. Keep this fallback
+            // only for older scenes that have not yet been migrated.
+            LeftEloChange ??= CreateEloChangeText(LeftFinalScore, "LeftEloChange");
+            RightEloChange ??= CreateEloChangeText(RightFinalScore, "RightEloChange");
         }
 
         private void OnEnable()
@@ -274,6 +279,8 @@ Skill			C			M
                     RightSkill.value = (int)rightPlayer.Skill.Type;
                     LeftFinalScore.SetText("");
                     RightFinalScore.SetText("");
+                    LeftEloChange?.SetText("");
+                    RightEloChange?.SetText("");
 
                     if (LeftBotName != null) LeftBotName.text = BattleManager.Instance.LeftInputType == InputType.Script && BattleManager.Instance.BotManager.Left != null ? BattleManager.Instance.BotManager.Left.ID : defaultLeftName;
                     if (RightBotName != null) RightBotName.text = BattleManager.Instance.RightInputType == InputType.Script && BattleManager.Instance.BotManager.Right != null ? BattleManager.Instance.BotManager.Right.ID : defaultRightName;
@@ -353,16 +360,18 @@ Skill			C			M
                     BattlePanels.Find((o) => o.CompareTag("BattleState/Ongoing")).SetActive(false);
                     BattlePanels.Find((o) => o.CompareTag("BattleState/Pre")).SetActive(false);
 
-                    // Final round score, plus the Elo change when this match was ranked.
+                    // Keep the round score and Elo change in separate text objects.
+                    LeftFinalScore.SetText(battle.LeftWinCount.ToString());
+                    RightFinalScore.SetText(battle.RightWinCount.ToString());
                     if (BattleManager.Instance.LastLeaderboardOutcome is SumoLeaderboard.LeaderboardOutcome ratingOutcome)
                     {
-                        LeftFinalScore.SetText($"{battle.LeftWinCount}{FormatRatingDelta(ratingOutcome.LeftDelta)}");
-                        RightFinalScore.SetText($"{battle.RightWinCount}{FormatRatingDelta(ratingOutcome.RightDelta)}");
+                        LeftEloChange?.SetText(FormatRatingDelta(ratingOutcome.LeftDelta));
+                        RightEloChange?.SetText(FormatRatingDelta(ratingOutcome.RightDelta));
                     }
                     else
                     {
-                        LeftFinalScore.SetText(battle.LeftWinCount.ToString());
-                        RightFinalScore.SetText(battle.RightWinCount.ToString());
+                        LeftEloChange?.SetText("");
+                        RightEloChange?.SetText("");
                     }
                     break;
             }
@@ -378,12 +387,26 @@ Skill			C			M
             UpdateScore(battle);
         }
 
-        // "+16" green, "-16" red, "+0" grey — rendered small under the final score.
+        private static TMP_Text CreateEloChangeText(TMP_Text scoreText, string objectName)
+        {
+            if (scoreText == null)
+                return null;
+
+            TMP_Text eloText = Instantiate(scoreText, scoreText.transform.parent);
+            eloText.name = objectName;
+            eloText.text = string.Empty;
+            RectTransform rect = eloText.rectTransform;
+            rect.anchoredPosition += new Vector2(0f, -42f);
+            rect.SetAsLastSibling();
+            return eloText;
+        }
+
+        // "+16" green, "-16" red, "+0" grey — shown in its own text object.
         private static string FormatRatingDelta(int delta)
         {
             string color = delta > 0 ? "#3FA34D" : delta < 0 ? "#C0392B" : "#7F8C8D";
             string sign = delta >= 0 ? "+" : string.Empty;
-            return $" <size=55%><color={color}>{sign}{delta}</color></size>";
+            return $"<size=55%><color={color}>{sign}{delta}</color></size>";
         }
 
         private void OnCountdownChanged(EventParameter param)
