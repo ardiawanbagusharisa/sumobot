@@ -21,7 +21,7 @@
   { "Type": "Skin", "Id": "skin_accessory_3", "DisplayName": "Skin - Accessory", "Slot": "Accessory", "IsDefault": false, "Price": 40, "IconResourcePath": "Sprites/MarketIcons/Accessory_2", "IconColor": "#006EFF" },
   { "Type": "Skin", "Id": "skin_accessory_4", "DisplayName": "Skin - Accessory", "Slot": "Accessory", "IsDefault": false, "Price": 100, "IconResourcePath": "Sprites/MarketIcons/Accessory_3", "IconColor": "#C72009" },
   { "Type": "Skin", "Id": "skin_accessory_5", "DisplayName": "Skin - Accessory", "Slot": "Accessory", "IsDefault": false, "Price": 100, "IconResourcePath": "Sprites/MarketIcons/Accessory_3", "IconColor": "#00FF5C" },
-  { "Type": "Skin", "Id": "skin_wheel_1", "DisplayName": "Skin - Wheel", "Slot": "Wheel", "IsDefault": false, "Price": 120, "IconResourcePath": "Sprites/MarketIcons/Wheel_2", "IconColor": "" },
-  { "Type": "Skin", "Id": "skin_wheel_2", "DisplayName": "Skin - Wheel", "Slot": "Wheel", "IsDefault": false, "Price": 120, "IconResourcePath": "Sprites/MarketIcons/Wheel_3", "IconColor": "" },
-  { "Type": "Skin", "Id": "skin_wheel_3", "DisplayName": "Skin - Wheel", "Slot": "Wheel", "IsDefault": false, "Price": 20, "IconResourcePath": "Sprites/MarketIcons/Wheel_1", "IconColor": "" }
+  { "Type": "Skin", "Id": "skin_wheel_1", "DisplayName": "Skin - Wheel", "Slot": "Wheel", "IsDefault": false, "Price": 0, "IconResourcePath": "Sprites/MarketIcons/Wheel_2", "IconColor": "" },
+  { "Type": "Skin", "Id": "skin_wheel_2", "DisplayName": "Skin - Wheel", "Slot": "Wheel", "IsDefault": false, "Price": 0, "IconResourcePath": "Sprites/MarketIcons/Wheel_3", "IconColor": "" },
+  { "Type": "Skin", "Id": "skin_wheel_3", "DisplayName": "Skin - Wheel", "Slot": "Wheel", "IsDefault": false, "Price": 0, "IconResourcePath": "Sprites/MarketIcons/Wheel_1", "IconColor": "" }
 ]

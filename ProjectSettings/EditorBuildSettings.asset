@@ -5,7 +5,7 @@ EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
   m_Scenes:
-  - enabled: 0
+  - enabled: 1
     path: Assets/Scenes/MainMenu.unity
     guid: 62cd8b43762687d488ff1da7439c6957
   - enabled: 1
@@ -17,6 +17,15 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/Replay.unity
     guid: a6f2094aaddd24d4e81c2ff71ec5eda5
+  - enabled: 1
+    path: Assets/Scenes/Campaign_1_1.unity
+    guid: a1111111111111111111111111111111
+  - enabled: 1
+    path: Assets/Scenes/Campaign_2_1.unity
+    guid: a2222222222222222222222222222222
+  - enabled: 1
+    path: Assets/Scenes/Campaign_3_1.unity
+    guid: a3333333333333333333333333333333
   - enabled: 0
     path: Assets/Dev/Bagus/BotModulesCreator.unity
     guid: ca2a956710238dc4cadd9eed4f6dadb0
