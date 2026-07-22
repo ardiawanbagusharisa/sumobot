@@ -4398,6 +4398,7 @@ GameObject:
   - component: {fileID: 123609855}
   - component: {fileID: 123609854}
   - component: {fileID: 123609853}
+  - component: {fileID: 900000003}
   m_Layer: 5
   m_Name: ButtonCampaign (3)
   m_TagString: Untagged
@@ -4466,7 +4467,7 @@ MonoBehaviour:
     m_PressedTrigger: Pressed
     m_SelectedTrigger: Selected
     m_DisabledTrigger: Disabled
-  m_Interactable: 0
+  m_Interactable: 1
   m_TargetGraphic: {fileID: 123609854}
   m_OnClick:
     m_PersistentCalls:
@@ -37536,6 +37537,7 @@ GameObject:
   - component: {fileID: 1269357173}
   - component: {fileID: 1269357172}
   - component: {fileID: 1269357171}
+  - component: {fileID: 900000001}
   m_Layer: 5
   m_Name: ButtonCampaign (1)
   m_TagString: Untagged
@@ -37604,7 +37606,7 @@ MonoBehaviour:
     m_PressedTrigger: Pressed
     m_SelectedTrigger: Selected
     m_DisabledTrigger: Disabled
-  m_Interactable: 0
+  m_Interactable: 1
   m_TargetGraphic: {fileID: 1269357172}
   m_OnClick:
     m_PersistentCalls:
@@ -48245,6 +48247,7 @@ GameObject:
   - component: {fileID: 1569148100}
   - component: {fileID: 1569148099}
   - component: {fileID: 1569148098}
+  - component: {fileID: 900000002}
   m_Layer: 5
   m_Name: ButtonCampaign (2)
   m_TagString: Untagged
@@ -48313,7 +48316,7 @@ MonoBehaviour:
     m_PressedTrigger: Pressed
     m_SelectedTrigger: Selected
     m_DisabledTrigger: Disabled
-  m_Interactable: 0
+  m_Interactable: 1
   m_TargetGraphic: {fileID: 1569148099}
   m_OnClick:
     m_PersistentCalls:
@@ -67743,3 +67746,42 @@ SceneRoots:
   - {fileID: 1980104117}
   - {fileID: 1198878979}
   - {fileID: 1772143615}
+--- !u!114 &900000001
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1269357169}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 851143e7a38a4ed9832f51ad4e75a003, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  sceneName: Campaign_1_1
+--- !u!114 &900000002
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1569148096}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 851143e7a38a4ed9832f51ad4e75a003, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  sceneName: Campaign_2_1
+--- !u!114 &900000003
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 123609851}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 851143e7a38a4ed9832f51ad4e75a003, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  sceneName: Campaign_3_1

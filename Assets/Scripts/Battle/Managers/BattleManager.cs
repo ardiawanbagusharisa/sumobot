@@ -56,6 +56,8 @@ namespace SumoManager
         public GameObject RightPlayerObject;
         public GameObject Arena;
         public float ArenaRadius;
+        [HideInInspector] public bool RequireExternalStartConfirmation;
+        [HideInInspector] public bool CampaignStartConfirmed;
         #endregion
 
         #region Runtime (readonly) properties 
@@ -171,6 +173,9 @@ namespace SumoManager
         #region API methods
         public void Battle_Start()
         {
+            if (RequireExternalStartConfirmation && !CampaignStartConfirmed)
+                return;
+
             if (CurrentState == BattleState.Battle_Preparing ||
                 CurrentState == BattleState.Battle_Countdown ||
                 CurrentState == BattleState.Battle_Ongoing)
@@ -181,6 +186,13 @@ namespace SumoManager
             if (Battle.LeftPlayer == null && Battle.RightPlayer == null)
                 return;
             TransitionToState(BattleState.Battle_Preparing);
+        }
+
+        /// <summary>Used by campaign instruction popups to release the start gate.</summary>
+        public void ConfirmCampaignStart()
+        {
+            CampaignStartConfirmed = true;
+            Battle_Start();
         }
         #endregion
 
