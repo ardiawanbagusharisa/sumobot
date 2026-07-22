@@ -26894,6 +26894,45 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 894793701}
   m_CullTransparentMesh: 1
+--- !u!114 &900000001
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1269357169}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 851143e7a38a4ed9832f51ad4e75a003, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  sceneName: Campaign_1_1
+--- !u!114 &900000002
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1569148096}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 851143e7a38a4ed9832f51ad4e75a003, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  sceneName: Campaign_2_1
+--- !u!114 &900000003
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 123609851}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 851143e7a38a4ed9832f51ad4e75a003, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  sceneName: Campaign_3_1
 --- !u!1 &905058546
 GameObject:
   m_ObjectHideFlags: 0
@@ -40899,8 +40938,8 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 1938977558}
   m_HandleRect: {fileID: 1938977557}
   m_Direction: 2
-  m_Value: 1.0000018
-  m_Size: 0.9042856
+  m_Value: 1.000001
+  m_Size: 0.9042857
   m_NumberOfSteps: 0
   m_OnValueChanged:
     m_PersistentCalls:
@@ -49244,6 +49283,10 @@ PrefabInstance:
       propertyPath: m_Layer
       value: 10
       objectReference: {fileID: 0}
+    - target: {fileID: 5583292103176566768, guid: e48db3198e16346af866a9419a1964cc, type: 3}
+      propertyPath: m_Enabled
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 5663374721984123598, guid: e48db3198e16346af866a9419a1964cc, type: 3}
       propertyPath: m_Layer
       value: 10
@@ -49256,7 +49299,8 @@ PrefabInstance:
       propertyPath: m_Layer
       value: 10
       objectReference: {fileID: 0}
-    m_RemovedComponents: []
+    m_RemovedComponents:
+    - {fileID: 5583292103176566768, guid: e48db3198e16346af866a9419a1964cc, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents: []
@@ -62431,7 +62475,7 @@ MonoBehaviour:
     locked: 0
   - toggle: {fileID: 1310132005}
     slot: Eye
-    locked: 1
+    locked: 0
   inventory: {fileID: 2008008001}
 --- !u!1 &2011277003
 GameObject:
@@ -67746,42 +67790,3 @@ SceneRoots:
   - {fileID: 1980104117}
   - {fileID: 1198878979}
   - {fileID: 1772143615}
---- !u!114 &900000001
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1269357169}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 851143e7a38a4ed9832f51ad4e75a003, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  sceneName: Campaign_1_1
---- !u!114 &900000002
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1569148096}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 851143e7a38a4ed9832f51ad4e75a003, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  sceneName: Campaign_2_1
---- !u!114 &900000003
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 123609851}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 851143e7a38a4ed9832f51ad4e75a003, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  sceneName: Campaign_3_1
