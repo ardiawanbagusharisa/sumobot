@@ -17,9 +17,13 @@ namespace SumoServices
             JObject obj = JObject.Load(reader);
             string type = obj["Type"]?.Value<string>();
 
-            CatalogItem item = string.Equals(type, "BotScript", StringComparison.OrdinalIgnoreCase)
-                ? new BotScriptItem()
-                : new CatalogItem();
+            CatalogItem item;
+            if (string.Equals(type, "BotScript", StringComparison.OrdinalIgnoreCase))
+                item = new BotScriptItem();
+            else if (string.Equals(type, "Skin", StringComparison.OrdinalIgnoreCase))
+                item = new SkinItem();
+            else
+                item = new CatalogItem();
 
             serializer.Populate(obj.CreateReader(), item);
             return item;

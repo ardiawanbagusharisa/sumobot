@@ -26,8 +26,11 @@ namespace SumoServices
         public static IPlayerDataService PlayerData { get; private set; }
         public static ICatalogService Catalog { get; private set; }
 
-        /// <summary>Market buy/sell, composed over Catalog (prices) and PlayerData (balance + inventory).</summary>
+        /// <summary>Shop buy, composed over Catalog (prices) and PlayerData (balance + inventory).</summary>
         public static ITradeService Trade { get; private set; }
+
+        /// <summary>Player-to-player Market (Community tab): browse/list/unlist/reprice/buy listings.</summary>
+        public static IMarketService Market { get; private set; }
 
         /// <summary>
         /// Backed by SumoLeaderboard.LeaderboardService.Instance (a MonoBehaviour
@@ -51,6 +54,7 @@ namespace SumoServices
             PlayerData = new LocalPlayerDataService();
             Catalog = new LocalCatalogService();
             Trade = new LocalTradeService(Catalog, PlayerData);
+            Market = new LocalMarketService(Catalog, PlayerData);
             Leaderboard = LeaderboardService.Instance;
 
             IsInitialized = true;
@@ -78,6 +82,10 @@ namespace SumoServices
             if (!load.Success)
                 return ServiceResult<PlayerAccount>.Fail(load.Error);
 
+            var market = await Market.LoadAsync();
+            if (!market.Success)
+                return ServiceResult<PlayerAccount>.Fail(market.Error);
+
             await GrantDefaultItemsAsync();
 
             return ServiceResult<PlayerAccount>.Ok(signIn.Value);
@@ -102,6 +110,7 @@ namespace SumoServices
             PlayerData = null;
             Catalog = null;
             Trade = null;
+            Market = null;
             Leaderboard = null;
             IsInitialized = false;
         }

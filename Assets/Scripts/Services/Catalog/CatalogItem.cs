@@ -58,5 +58,23 @@ namespace SumoServices
         /// Empty = the description section is hidden.
         /// </summary>
         public string Description;
+
+        /// <summary>
+        /// Where this item comes from: "Official" (items.json, Shop, buy-only) or "Player"
+        /// (player-authored, Market/Community, buy + list). Empty/unrecognized is treated as
+        /// Official for backward compatibility with existing rows.
+        /// </summary>
+        public string Source;
+
+        /// <summary>
+        /// PlayerId of the item's author/owner-of-record, used for Market sell-eligibility
+        /// (a player may list an item iff Author == their own playerId). Empty for Official
+        /// items, which are never sellable. Distinct from <see cref="Creator"/>: Creator is a
+        /// free-text display label (may be blank, may name a studio) used by the UI's credit
+        /// line and Ask button; Author is a strict, never-blank-for-Player-items id used only
+        /// for authorization. An item a player bought (Author != self) is a use-only copy and
+        /// cannot be relisted.
+        /// </summary>
+        public string Author;
     }
 }

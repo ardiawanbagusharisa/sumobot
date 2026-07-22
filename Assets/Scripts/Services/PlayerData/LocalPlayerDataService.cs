@@ -19,6 +19,7 @@ namespace SumoServices
 
         public event Action CoinsChanged;
         public event Action InventoryChanged;
+        public event Action EquipmentChanged;
 
         private static string Dir => Path.Combine(Application.persistentDataPath, "PlayerData");
 
@@ -51,6 +52,7 @@ namespace SumoServices
                 // (a coin counter, the inventory list) refresh to the loaded values.
                 CoinsChanged?.Invoke();
                 InventoryChanged?.Invoke();
+                EquipmentChanged?.Invoke();
 
                 return Task.FromResult(ServiceResult<PlayerData>.Ok(Current));
             }
@@ -103,17 +105,25 @@ namespace SumoServices
             bool removed = Current.OwnedItemIds.Remove(itemId);
 
             // Drop any equip slot that pointed at the now-unowned item so the save stays consistent.
+            bool unequipped = false;
             var slots = new List<string>(Current.EquippedBySlot.Keys);
             foreach (var slot in slots)
             {
                 if (Current.EquippedBySlot[slot] == itemId)
+                {
                     Current.EquippedBySlot.Remove(slot);
+                    unequipped = true;
+                }
             }
 
             if (!removed) return ServiceResult.Ok(); // not owned — no change, no event
 
             var save = await SaveAsync();
-            if (save.Success) InventoryChanged?.Invoke();
+            if (save.Success)
+            {
+                InventoryChanged?.Invoke();
+                if (unequipped) EquipmentChanged?.Invoke();
+            }
             return save;
         }
 
@@ -150,8 +160,57 @@ namespace SumoServices
             if (string.IsNullOrEmpty(slot)) return ServiceResult.Fail("slot is required.");
             if (!Current.Owns(itemId)) return ServiceResult.Fail("Cannot equip an item the player does not own.");
 
+            if (Current.EquippedBySlot.TryGetValue(slot, out var existing) && existing == itemId)
+                return ServiceResult.Ok(); // already equipped — no change, no event
+
             Current.EquippedBySlot[slot] = itemId;
-            return await SaveAsync();
+            var save = await SaveAsync();
+            if (save.Success) EquipmentChanged?.Invoke();
+            return save;
+        }
+
+        public async Task<ServiceResult> UnequipAsync(string slot)
+        {
+            if (Current == null) return ServiceResult.Fail("Nothing loaded.");
+            if (string.IsNullOrEmpty(slot)) return ServiceResult.Fail("slot is required.");
+
+            if (!Current.EquippedBySlot.Remove(slot))
+                return ServiceResult.Ok(); // slot already empty — no change, no event
+
+            var save = await SaveAsync();
+            if (save.Success) EquipmentChanged?.Invoke();
+            return save;
+        }
+
+        public Task<ServiceResult> AddCoinsToPlayerAsync(string playerId, int amount)
+        {
+            if (string.IsNullOrEmpty(playerId)) return Task.FromResult(ServiceResult.Fail("playerId is required."));
+            if (amount < 0) return Task.FromResult(ServiceResult.Fail("amount must be non-negative."));
+            if (amount == 0) return Task.FromResult(ServiceResult.Ok()); // no change, no event
+
+            // Crediting the signed-in player themselves stays in memory and fires the
+            // normal CoinsChanged event, same as AddCoinsAsync.
+            if (Current != null && Current.PlayerId == playerId)
+                return AddCoinsAsync(amount);
+
+            try
+            {
+                string path = PathFor(playerId);
+                var target = File.Exists(path)
+                    ? JsonConvert.DeserializeObject<PlayerData>(File.ReadAllText(path)) ?? PlayerData.CreateDefault(playerId)
+                    : PlayerData.CreateDefault(playerId);
+                target.PlayerId = playerId;
+                target.Coins += amount;
+
+                Directory.CreateDirectory(Dir);
+                File.WriteAllText(path, JsonConvert.SerializeObject(target, Formatting.Indented));
+                return Task.FromResult(ServiceResult.Ok());
+            }
+            catch (Exception e)
+            {
+                Logger.Error($"[PlayerData] AddCoinsToPlayerAsync({playerId}) failed: {e.Message}");
+                return Task.FromResult(ServiceResult.Fail(e.Message));
+            }
         }
     }
 }

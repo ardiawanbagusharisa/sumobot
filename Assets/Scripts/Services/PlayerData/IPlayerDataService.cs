@@ -26,6 +26,12 @@ namespace SumoServices
         /// </summary>
         event Action InventoryChanged;
 
+        /// <summary>
+        /// Raised after the equipped-costume set changes and persists (equip), or a new save
+        /// loads. Lets the equip UI / bot preview refresh without callers pushing updates.
+        /// </summary>
+        event Action EquipmentChanged;
+
         /// <summary>Load (or create) the save for the given player id.</summary>
         Task<ServiceResult<PlayerData>> LoadAsync(string playerId);
 
@@ -46,5 +52,16 @@ namespace SumoServices
 
         /// <summary>Equip an owned item into a slot and persist. Fails if not owned.</summary>
         Task<ServiceResult> EquipAsync(string slot, string itemId);
+
+        /// <summary>Clear a slot's equipped item and persist. No-op if the slot is already empty.</summary>
+        Task<ServiceResult> UnequipAsync(string slot);
+
+        /// <summary>
+        /// Add coins to a specific player's save by id and persist it, without touching
+        /// Current. Local-only convenience for crediting a Market seller who isn't the
+        /// signed-in player; a networked implementation would do this server-side instead.
+        /// Amount must be non-negative.
+        /// </summary>
+        Task<ServiceResult> AddCoinsToPlayerAsync(string playerId, int amount);
     }
 }
