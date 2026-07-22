@@ -10,8 +10,9 @@ public class MainMenuController : MonoBehaviour
 		MultiplayerLocal,
 		Leaderboards,
 		Settings,
-		Market,
-		Login
+		Store, // renamed from Market — ordinal unchanged, MenuMapping[] in the scene serializes by int
+		Login,
+		Garage
 	}
 
 	private MenuState currentState = MenuState.MainMenu;
@@ -49,7 +50,8 @@ public class MainMenuController : MonoBehaviour
 	public void ShowMultiplayerLocal() => SwitchMenu(MenuState.MultiplayerLocal);
 	public void ShowLeaderboards() => SwitchMenu(MenuState.Leaderboards);
 	public void ShowSettings() => SwitchMenu(MenuState.Settings);
-	public void ShowMarket() => SwitchMenu(MenuState.Market);
+	public void ShowStore() => SwitchMenu(MenuState.Store);
+	public void ShowGarage() => SwitchMenu(MenuState.Garage);
 	public void QuitGame() => Application.Quit();
 
 	// Load Battle scene 
