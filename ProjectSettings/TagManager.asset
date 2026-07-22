@@ -20,6 +20,7 @@ TagManager:
   - Robot/Eye
   - Robot/Accessory
   - Robot/FaceSide
+  - Robot/Triangle
   layers:
   - Default
   - TransparentFX
@@ -31,7 +32,7 @@ TagManager:
   - 
   - 
   - 
-  - 
+  - Robot
   - 
   - 
   - 

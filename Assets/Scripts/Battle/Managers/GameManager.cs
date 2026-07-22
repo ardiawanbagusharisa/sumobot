@@ -137,6 +137,21 @@ public class PlayerProfile
             {SumoPart.Wheel, null},
             {SumoPart.Eye, null},
             {SumoPart.Accessory, null},
+            {SumoPart.Body, null},
+        };
+
+    /// <summary>
+    /// Per-part tint applied alongside <see cref="Parts"/>. Lets a color variant that shares
+    /// one base sprite (e.g. Accessory color skins) render correctly. White = no tint.
+    /// FaceSide is intentionally absent — its color is owned by SumoCostume.UpdateSideColor
+    /// (red/green side marker) and must not be overwritten by a skin.
+    /// </summary>
+    public Dictionary<SumoPart, Color> PartTints = new()
+        {
+            {SumoPart.Wheel, Color.white},
+            {SumoPart.Eye, Color.white},
+            {SumoPart.Accessory, Color.white},
+            {SumoPart.Body, Color.white},
         };
 
     public SumoCostume CurrentCostume;
@@ -194,16 +209,40 @@ public class PlayerProfile
 
     public void SetCostume(SumoCostume objectCostume)
     {
+        ApplyEquippedForLocalPlayer();
         CurrentCostume = objectCostume;
         CurrentCostume.UpdateSideColor();
-        CurrentCostume.AttachObject(Parts);
+        CurrentCostume.AttachObject(Parts, PartTints);
+    }
+
+    /// <summary>
+    /// Overlays the logged-in player's equipped Catalog skins (PlayerData.EquippedBySlot)
+    /// onto <see cref="Parts"/>/<see cref="PartTints"/> for the equippable slots. The bridge
+    /// from a Catalog skin id to a costume sprite is <see cref="SkinItem.PartSprite"/>.
+    ///
+    /// Scope guard: this only applies to the profile whose ID matches the loaded PlayerData
+    /// (i.e. the local logged-in player — see GameManager.ApplyAccount). For the opponent, an
+    /// anonymous session, or when services aren't ready, it no-ops and the legacy default
+    /// parts (PrepareParts / PartSwitcher) stand — so the two costume systems coexist untouched.
+    /// Equippable slots: Wheel, Accessory, Body. FaceSide is never equipped (side marker).
+    /// </summary>
+    private void ApplyEquippedForLocalPlayer()
+    {
+        var data = GameServices.PlayerData?.Current;
+        if (data == null || data.PlayerId != ID)
+            return; // battle-scoped guard: only the local player's profile gets this treatment
+
+        EquippedCostumeResolver.ApplyEquipped(Parts, PartTints);
     }
 
     public void PrepareParts()
     {
         Parts.ToList().ForEach((e) =>
         {
-            Parts[e.Key] = LoadSprite($"{e.Key}_1");
+            // Default sprites are numbered (Wheel_1, Eye_1, Accessory_1), but the body ships
+            // as a single un-numbered Body.png — variety comes from IconColor tint, not extra sprites.
+            string spriteName = e.Key == SumoPart.Body ? "Body" : $"{e.Key}_1";
+            Parts[e.Key] = LoadSprite(spriteName);
         });
     }
 
