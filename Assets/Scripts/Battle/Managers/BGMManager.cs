@@ -56,6 +56,7 @@ public class BGMManager : MonoBehaviour
 
     void Start()
     {
+        volume = GameSettings.EffectiveMusicVolume; // honor the persisted Music setting from launch
         if (playOnStart && tracks.Count > 0) Play();
     }
 
@@ -124,8 +125,12 @@ public class BGMManager : MonoBehaviour
     public void SetVolume(float v)
     {
         volume = Mathf.Clamp01(v);
-        // Apply target volume to currently active/next fades
-        // (fade coroutines will use 'volume' as their target max)
+
+        // Poke the live source directly: in-flight fades captured the old target, so without
+        // this a Settings change (incl. mute -> 0) wouldn't be heard until the next fade/track.
+        var active = GetActive();
+        if (active != null && active.isPlaying) active.volume = volume;
+
         for (int i = 0; i < sources.Length; i++)
             if (sources[i] && !sources[i].isPlaying) sources[i].volume = 0f;
     }

@@ -33,6 +33,9 @@ public class SFXManager : MonoBehaviour
     [SerializeField, Range(1, 32)] private int poolSize = 12;
     [SerializeField] private bool dontDestroyOnLoad = true;
 
+    // Master multiplier for the whole SFX bus, applied on top of each bank's volume.
+    private float masterVolume = 1f;
+
     // Internals
     private readonly Dictionary<string, SFXBank> bankMap = new Dictionary<string, SFXBank>();
     private readonly List<AudioSource> pool = new List<AudioSource>();
@@ -65,6 +68,8 @@ public class SFXManager : MonoBehaviour
         for (int i = 0; i < poolSize; i++)
             pool.Add(Create2DSource());
         nextIdx = 0;
+
+        masterVolume = GameSettings.EffectiveSfxVolume; // honor the persisted SFX setting from launch
     }
 
     void OnApplicationQuit() => isQuitting = true;
@@ -132,6 +137,9 @@ public class SFXManager : MonoBehaviour
         Destroy(go, clip.length / Mathf.Max(0.01f, src.pitch) + 0.1f);
     }
 
+    /// <summary>Set the master volume for the whole SFX bus (0..1). Applied on top of per-bank volume.</summary>
+    public void SetMasterVolume(float v) => masterVolume = Mathf.Clamp01(v);
+
     /// <summary>Manually add/replace a bank at runtime.</summary>
     public void SetBank(SFXBank bank)
     {
@@ -152,7 +160,7 @@ public class SFXManager : MonoBehaviour
         }
         var clip = bank.clips[Random.Range(0, bank.clips.Count)];
         var pitch = Random.Range(bank.pitchRange.x, bank.pitchRange.y);
-        var vol = Mathf.Clamp01(bank.volume);
+        var vol = Mathf.Clamp01(bank.volume) * masterVolume;
         return (clip, vol, pitch);
     }
 

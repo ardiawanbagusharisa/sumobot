@@ -45,6 +45,13 @@ namespace SumoServices
         /// <summary>Persist the current save.</summary>
         Task<ServiceResult> SaveAsync();
 
+        /// <summary>
+        /// Wipe the current player's save back to a fresh default and persist it. Fires
+        /// CoinsChanged / InventoryChanged / EquipmentChanged. Does not re-grant default items —
+        /// GameServices.ResetPlayerProgressAsync layers that on top.
+        /// </summary>
+        Task<ServiceResult> ResetAsync();
+
         /// <summary>Add an item to the inventory and persist. No-op if already owned.</summary>
         Task<ServiceResult> GrantItemAsync(string itemId);
 

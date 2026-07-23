@@ -91,6 +91,22 @@ namespace SumoServices
             return ServiceResult<PlayerAccount>.Ok(signIn.Value);
         }
 
+        /// <summary>
+        /// Reset the signed-in player's progress: wipe the save, then re-grant default items
+        /// so they own exactly what a first-time player does (the granting half of
+        /// <see cref="StartSessionAsync"/>). Backs the Settings "Reset progress" action.
+        /// </summary>
+        public static async Task<ServiceResult> ResetPlayerProgressAsync()
+        {
+            if (!IsInitialized) return ServiceResult.Fail("Services not initialized.");
+
+            var reset = await PlayerData.ResetAsync();
+            if (!reset.Success) return reset;
+
+            await GrantDefaultItemsAsync();
+            return ServiceResult.Ok();
+        }
+
         // Ensures the player owns every default catalog item (the parts the game ships
         // with). No purchase/currency flow exists yet — add one here only when the PM
         // defines how non-default items are acquired.

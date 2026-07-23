@@ -101,6 +101,25 @@ namespace SumoServices
             }
         }
 
+        public async Task<ServiceResult> ResetAsync()
+        {
+            if (Current == null) return ServiceResult.Fail("Nothing loaded.");
+
+            string playerId = Current.PlayerId;
+            Current = PlayerData.CreateDefault(playerId);
+            // Re-point the edited loadout at the fresh save's Left side, same as Load does.
+            activeLoadoutId = Current.GetLoadoutForSide(PlayerData.SideLeft)?.Id ?? Current.Loadouts[0].Id;
+
+            var save = await SaveAsync();
+            if (save.Success)
+            {
+                CoinsChanged?.Invoke();
+                InventoryChanged?.Invoke();
+                EquipmentChanged?.Invoke();
+            }
+            return save;
+        }
+
         public async Task<ServiceResult> GrantItemAsync(string itemId)
         {
             if (Current == null) return ServiceResult.Fail("Nothing loaded.");
