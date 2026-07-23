@@ -17,6 +17,20 @@ namespace SumoServices
     {
         public PlayerData Current { get; private set; }
 
+        // The loadout equip/unequip act on. Set to the Left side's loadout on Load; editors
+        // repoint it with SelectLoadout (e.g. BotCreator selects the side it opened for).
+        private string activeLoadoutId;
+
+        public Loadout ActiveLoadout
+        {
+            get
+            {
+                if (Current == null) return null;
+                return Current.GetLoadout(activeLoadoutId)
+                       ?? (Current.Loadouts != null && Current.Loadouts.Count > 0 ? Current.Loadouts[0] : null);
+            }
+        }
+
         public event Action CoinsChanged;
         public event Action InventoryChanged;
         public event Action EquipmentChanged;
@@ -46,7 +60,12 @@ namespace SumoServices
                 // Guard against partially-written / hand-edited files.
                 Current.PlayerId = playerId;
                 Current.OwnedItemIds ??= new();
-                Current.EquippedBySlot ??= new();
+
+                // Bring pre-loadout saves up to the decision-5 model (idempotent), then edit
+                // the Left side's loadout by default.
+                Current.MigrateToLoadouts();
+                activeLoadoutId = Current.GetLoadoutForSide(PlayerData.SideLeft)?.Id
+                                  ?? Current.Loadouts[0].Id;
 
                 // A freshly loaded save is a full state change: let any already-live view
                 // (a coin counter, the inventory list) refresh to the loaded values.
@@ -104,15 +123,20 @@ namespace SumoServices
 
             bool removed = Current.OwnedItemIds.Remove(itemId);
 
-            // Drop any equip slot that pointed at the now-unowned item so the save stays consistent.
+            // Ownership is account-wide, so drop the now-unowned item from EVERY loadout that
+            // equipped it (not just the active one) — otherwise a loadout could reference an
+            // item the account no longer owns.
             bool unequipped = false;
-            var slots = new List<string>(Current.EquippedBySlot.Keys);
-            foreach (var slot in slots)
+            foreach (var loadout in Current.Loadouts)
             {
-                if (Current.EquippedBySlot[slot] == itemId)
+                var slots = new List<string>(loadout.EquippedBySlot.Keys);
+                foreach (var slot in slots)
                 {
-                    Current.EquippedBySlot.Remove(slot);
-                    unequipped = true;
+                    if (loadout.EquippedBySlot[slot] == itemId)
+                    {
+                        loadout.EquippedBySlot.Remove(slot);
+                        unequipped = true;
+                    }
                 }
             }
 
@@ -154,16 +178,31 @@ namespace SumoServices
             return save;
         }
 
+        public void SelectLoadout(string loadoutId)
+        {
+            if (Current == null || string.IsNullOrEmpty(loadoutId)) return;
+            if (loadoutId == activeLoadoutId) return;          // already active — no event
+            if (Current.GetLoadout(loadoutId) == null) return; // unknown id — ignore
+
+            activeLoadoutId = loadoutId;
+            // Switching the edited loadout is a full costume state change from every live view's
+            // point of view; reuse EquipmentChanged so preview/tabs/marks rebuild themselves.
+            EquipmentChanged?.Invoke();
+        }
+
         public async Task<ServiceResult> EquipAsync(string slot, string itemId)
         {
             if (Current == null) return ServiceResult.Fail("Nothing loaded.");
             if (string.IsNullOrEmpty(slot)) return ServiceResult.Fail("slot is required.");
             if (!Current.Owns(itemId)) return ServiceResult.Fail("Cannot equip an item the player does not own.");
 
-            if (Current.EquippedBySlot.TryGetValue(slot, out var existing) && existing == itemId)
+            var loadout = ActiveLoadout;
+            if (loadout == null) return ServiceResult.Fail("No active loadout.");
+
+            if (loadout.EquippedBySlot.TryGetValue(slot, out var existing) && existing == itemId)
                 return ServiceResult.Ok(); // already equipped — no change, no event
 
-            Current.EquippedBySlot[slot] = itemId;
+            loadout.EquippedBySlot[slot] = itemId;
             var save = await SaveAsync();
             if (save.Success) EquipmentChanged?.Invoke();
             return save;
@@ -174,7 +213,10 @@ namespace SumoServices
             if (Current == null) return ServiceResult.Fail("Nothing loaded.");
             if (string.IsNullOrEmpty(slot)) return ServiceResult.Fail("slot is required.");
 
-            if (!Current.EquippedBySlot.Remove(slot))
+            var loadout = ActiveLoadout;
+            if (loadout == null) return ServiceResult.Fail("No active loadout.");
+
+            if (!loadout.EquippedBySlot.Remove(slot))
                 return ServiceResult.Ok(); // slot already empty — no change, no event
 
             var save = await SaveAsync();

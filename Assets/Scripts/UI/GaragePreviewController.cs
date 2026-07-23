@@ -89,7 +89,9 @@ public class GaragePreviewController : MonoBehaviour
             { SumoPart.Body, Color.white },
         };
 
-        EquippedCostumeResolver.ApplyEquipped(parts, tints);
+        // Preview the loadout currently being edited (the service's active loadout).
+        var equipped = GameServices.PlayerData?.ActiveLoadout?.EquippedBySlot;
+        EquippedCostumeResolver.ApplyEquipped(parts, tints, equipped);
         previewCostume.AttachObject(parts, tints);
 
         // Bounce the parts whose sprite actually changed (skip the first build so opening the

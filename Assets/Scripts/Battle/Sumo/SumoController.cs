@@ -197,6 +197,7 @@ namespace SumoCore
             StartPosition = startPosition.position;
             StartRotation = startPosition.rotation;
             Profile = profile;
+            Profile.Side = side; // whoever sits in this seat wears this side's loadout (decision-5)
             Profile.SetCostume(GetComponent<SumoCostume>());
 
             if (Skill == null)

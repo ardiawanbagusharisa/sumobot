@@ -6,32 +6,38 @@ using UnityEngine;
 namespace SumoCore
 {
     /// <summary>
-    /// Overlays the signed-in player's equipped Catalog skins (PlayerData.EquippedBySlot)
-    /// onto a base Parts/PartTints pair for the equippable slots. The bridge from a
-    /// Catalog skin id to a costume sprite is <see cref="SkinItem.PartSprite"/>.
+    /// Overlays a loadout's equipped Catalog skins onto a base Parts/PartTints pair for the
+    /// equippable slots. The bridge from a Catalog skin id to a costume sprite is
+    /// <see cref="SkinItem.PartSprite"/>.
     ///
-    /// Shared by GameManager.PlayerProfile (battle-start costume, scoped to the local
-    /// player) and the menu's Garage bot preview (always "the local signed-in player" —
-    /// no opponent/ID-matching concept needed there). Equippable slots: Wheel, Accessory,
-    /// Body. FaceSide is never equipped — it is the red/green side marker (UpdateSideColor).
+    /// The caller supplies *which* loadout to apply — that is deliberate (decision-5): a local
+    /// match resolves each seat from its own side's loadout, so the resolver must not read a
+    /// single "signed-in equipped set" implicitly. Callers: GameManager.PlayerProfile (battle,
+    /// this side's loadout) and the Garage bot preview (the loadout being edited).
+    ///
+    /// Equippable slots: Wheel, Accessory, Body. FaceSide is never equipped — it is the
+    /// red/green side marker (UpdateSideColor).
     /// </summary>
     public static class EquippedCostumeResolver
     {
         /// <summary>
-        /// Mutates <paramref name="parts"/>/<paramref name="tints"/> in place. No-ops if
-        /// PlayerData or Catalog aren't ready yet.
+        /// Mutates <paramref name="parts"/>/<paramref name="tints"/> in place, applying the
+        /// slot -> item-id map in <paramref name="equippedBySlot"/>. No-ops if that map is null/empty
+        /// or the Catalog isn't ready yet, leaving the base (default) parts untouched.
         /// </summary>
-        public static void ApplyEquipped(Dictionary<SumoPart, Sprite> parts, Dictionary<SumoPart, Color> tints)
+        public static void ApplyEquipped(
+            Dictionary<SumoPart, Sprite> parts,
+            Dictionary<SumoPart, Color> tints,
+            IReadOnlyDictionary<string, string> equippedBySlot)
         {
-            var data = GameServices.PlayerData?.Current;
-            if (data == null)
+            if (equippedBySlot == null || equippedBySlot.Count == 0)
                 return;
 
             var catalog = GameServices.Catalog;
             if (catalog == null)
                 return;
 
-            foreach (var pair in data.EquippedBySlot)
+            foreach (var pair in equippedBySlot)
             {
                 if (!Enum.TryParse(pair.Key, out SumoPart part) || !parts.ContainsKey(part))
                     continue; // slot name doesn't map to an equippable SumoPart — skip

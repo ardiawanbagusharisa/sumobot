@@ -10,7 +10,7 @@ using UnityEngine;
 // the list is just the "Default" cell (already the equipped state) — no separate empty panel.
 //
 // All three views of equipped state (this list's mark, the preview, the tabs) derive from
-// PlayerData.EquippedBySlot and refresh via EquipmentChanged — no cached copy here.
+// the active loadout's EquippedBySlot and refresh via EquipmentChanged — no cached copy here.
 public class GarageInventoryController : MonoBehaviour
 {
     [Tooltip("Row prefab spawned once per owned skin. Assets/Prefabs/ItemCell.")]
@@ -69,7 +69,8 @@ public class GarageInventoryController : MonoBehaviour
 
         var owned = CollectOwnedSkinsForSlot(data, catalog);
 
-        string equippedId = data.EquippedBySlot.TryGetValue(currentSlot, out var eq) ? eq : null;
+        var equipped = GameServices.PlayerData?.ActiveLoadout?.EquippedBySlot;
+        string equippedId = equipped != null && equipped.TryGetValue(currentSlot, out var eq) ? eq : null;
 
         // Fixed first cell: None / Unequip. Always present (even with zero owned skins) so the
         // player can always clear the slot back to the default part. Shows the slot's base

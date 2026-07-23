@@ -15,6 +15,13 @@ namespace SumoServices
         PlayerData Current { get; }
 
         /// <summary>
+        /// The loadout currently being edited (equip/unequip act on this one). Defaults to
+        /// the Left side's loadout after Load; change it with <see cref="SelectLoadout"/>.
+        /// Null before Load. See decision-5.
+        /// </summary>
+        Loadout ActiveLoadout { get; }
+
+        /// <summary>
         /// Raised after the coin balance changes and persists (spend/earn) or a new save
         /// loads. Lets UI (e.g. CoinBalanceView) refresh without callers pushing updates.
         /// </summary>
@@ -50,10 +57,18 @@ namespace SumoServices
         /// <summary>Deduct coins and persist. Fails without spending if the balance is insufficient.</summary>
         Task<ServiceResult> TrySpendCoinsAsync(int amount);
 
-        /// <summary>Equip an owned item into a slot and persist. Fails if not owned.</summary>
+        /// <summary>
+        /// Choose which loadout <see cref="EquipAsync"/>/<see cref="UnequipAsync"/> act on and
+        /// which <see cref="ActiveLoadout"/> returns. Fires EquipmentChanged when the selection
+        /// changes so live views (preview, tabs, equipped marks) refresh through their existing
+        /// subscription. No-op if the id is unknown or already active.
+        /// </summary>
+        void SelectLoadout(string loadoutId);
+
+        /// <summary>Equip an owned item into a slot of the active loadout and persist. Fails if not owned.</summary>
         Task<ServiceResult> EquipAsync(string slot, string itemId);
 
-        /// <summary>Clear a slot's equipped item and persist. No-op if the slot is already empty.</summary>
+        /// <summary>Clear a slot's equipped item on the active loadout and persist. No-op if already empty.</summary>
         Task<ServiceResult> UnequipAsync(string slot);
 
         /// <summary>

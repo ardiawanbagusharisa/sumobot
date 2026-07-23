@@ -84,7 +84,7 @@ public class GarageLoadoutController : MonoBehaviour
     /// </summary>
     private void RefreshIcons()
     {
-        var data = GameServices.PlayerData?.Current;
+        var equippedBySlot = GameServices.PlayerData?.ActiveLoadout?.EquippedBySlot;
         var catalog = GameServices.Catalog;
 
         foreach (var tab in tabs)
@@ -94,8 +94,8 @@ public class GarageLoadoutController : MonoBehaviour
             if (icon == null) continue;
 
             SkinItem equipped = null;
-            if (data != null && catalog != null
-                && data.EquippedBySlot.TryGetValue(tab.slot, out var itemId)
+            if (equippedBySlot != null && catalog != null
+                && equippedBySlot.TryGetValue(tab.slot, out var itemId)
                 && catalog.GetById(itemId) is SkinItem skin)
                 equipped = skin;
 

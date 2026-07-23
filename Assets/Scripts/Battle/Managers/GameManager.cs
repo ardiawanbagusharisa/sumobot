@@ -62,6 +62,12 @@ public class GameManager : MonoBehaviour
         // Persistent local profiles so leaderboard identity survives restarts.
         Left = PlayerProfile.LoadOrCreate("Sumobot.Profile.Left", "Player1");
         Right = PlayerProfile.LoadOrCreate("Sumobot.Profile.Right", "Player2");
+
+        // Seats drive which costume loadout each profile wears (decision-5). SumoController
+        // reasserts this per spawn, but set it here too so editors (BotCreator/Garage) that
+        // run before any battle already know each profile's side.
+        Left.Side = PlayerSide.Left;
+        Right.Side = PlayerSide.Right;
     }
 
     /// <summary>
@@ -132,6 +138,14 @@ public class PlayerProfile
 {
     public string ID;
     public string Name;
+
+    /// <summary>
+    /// The local seat this profile occupies. Chosen by SumoController.Initialize when the bot
+    /// spawns, and used to pick which costume loadout to wear (decision-5: side is a seat, so
+    /// whoever sits in the Left seat wears the Left loadout). Local play only.
+    /// </summary>
+    public PlayerSide Side = PlayerSide.Left;
+
     public Dictionary<SumoPart, Sprite> Parts = new()
         {
             {SumoPart.Wheel, null},
@@ -216,23 +230,31 @@ public class PlayerProfile
     }
 
     /// <summary>
-    /// Overlays the logged-in player's equipped Catalog skins (PlayerData.EquippedBySlot)
-    /// onto <see cref="Parts"/>/<see cref="PartTints"/> for the equippable slots. The bridge
-    /// from a Catalog skin id to a costume sprite is <see cref="SkinItem.PartSprite"/>.
+    /// Overlays this seat's equipped Catalog skins onto <see cref="Parts"/>/<see cref="PartTints"/>
+    /// for the equippable slots. The bridge from a Catalog skin id to a costume sprite is
+    /// <see cref="SkinItem.PartSprite"/>.
     ///
-    /// Scope guard: this only applies to the profile whose ID matches the loaded PlayerData
-    /// (i.e. the local logged-in player — see GameManager.ApplyAccount). For the opponent, an
-    /// anonymous session, or when services aren't ready, it no-ops and the legacy default
-    /// parts (PrepareParts / PartSwitcher) stand — so the two costume systems coexist untouched.
+    /// decision-5: one account per device, and each local seat wears its own loadout, so the
+    /// costume is resolved from the loadout mapped to this profile's <see cref="Side"/> — NOT
+    /// from an ID match against the signed-in save (that old guard permanently excluded the
+    /// Right seat). If services aren't ready or the side has no loadout, it no-ops and the
+    /// legacy default parts (PrepareParts / PartSwitcher) stand.
+    ///
+    /// LOCAL PLAY ONLY: the side -> loadout mapping means "the local seat", not "an identity".
+    /// A networked opponent must be resolved from their own account, never from this mapping.
     /// Equippable slots: Wheel, Accessory, Body. FaceSide is never equipped (side marker).
     /// </summary>
     private void ApplyEquippedForLocalPlayer()
     {
         var data = GameServices.PlayerData?.Current;
-        if (data == null || data.PlayerId != ID)
-            return; // battle-scoped guard: only the local player's profile gets this treatment
+        if (data == null)
+            return; // services not ready / no save — legacy default parts stand
 
-        EquippedCostumeResolver.ApplyEquipped(Parts, PartTints);
+        var loadout = data.GetLoadoutForSide(Side.ToString());
+        if (loadout == null)
+            return;
+
+        EquippedCostumeResolver.ApplyEquipped(Parts, PartTints, loadout.EquippedBySlot);
     }
 
     public void PrepareParts()

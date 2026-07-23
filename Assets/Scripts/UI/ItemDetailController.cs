@@ -214,7 +214,7 @@ public class ItemDetailController : MonoBehaviour
 
     // Equip an owned skin into its slot. Buttons need a void handler; guard re-entrancy so a
     // double-tap can't fire two equips. The costume applies on the next bot spawn (SetCostume
-    // reads PlayerData.EquippedBySlot); persistence is handled by EquipAsync -> SaveAsync.
+    // reads the seat's loadout); persistence is handled by EquipAsync -> SaveAsync.
     private async void OnEquipClicked()
     {
         if (current == null || equipping || !IsEquippable(current)) return;
@@ -249,8 +249,9 @@ public class ItemDetailController : MonoBehaviour
         if (equipButton != null) equipButton.gameObject.SetActive(canEquip);
         if (!canEquip) return;
 
-        bool equipped = GameServices.PlayerData.Current.EquippedBySlot
-            .TryGetValue(current.Slot, out var eq) && eq == current.Id;
+        var equippedBySlot = GameServices.PlayerData.ActiveLoadout?.EquippedBySlot;
+        bool equipped = equippedBySlot != null
+            && equippedBySlot.TryGetValue(current.Slot, out var eq) && eq == current.Id;
         if (equipButton != null) equipButton.interactable = !equipped;
         if (equipButtonLabel != null) equipButtonLabel.text = equipped ? "Equipped" : "Equip";
     }
