@@ -33,12 +33,14 @@ Shader "Custom/DoodleDistort"
             {
                 float4 vertex : POSITION;
                 float2 uv : TEXCOORD0;
+                fixed4 color : COLOR;
             };
 
             struct v2f
             {
                 float2 uv : TEXCOORD0;
                 float4 vertex : SV_POSITION;
+                fixed4 color : COLOR;
             };
 
             float2 distortUV(float2 uv, float time)
@@ -54,6 +56,7 @@ Shader "Custom/DoodleDistort"
                 v2f o;
                 o.vertex = UnityObjectToClipPos(v.vertex);
                 o.uv = TRANSFORM_TEX(v.uv, _MainTex);
+                o.color = v.color;
                 return o;
             }
 
@@ -69,6 +72,7 @@ Shader "Custom/DoodleDistort"
                 
                 float2 uv = distortUV(i.uv, time);
                 fixed4 col = tex2D(_MainTex, uv);
+                col *= i.color; // SpriteRenderer.color (per-instance tint) — previously ignored entirely
 
                 return col;
             }

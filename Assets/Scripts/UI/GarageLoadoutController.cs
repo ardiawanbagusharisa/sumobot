@@ -30,6 +30,16 @@ public class GarageLoadoutController : MonoBehaviour
 
     void OnEnable()
     {
+        // Garage always edits the signed-in player's own gear, i.e. the Left seat
+        // (GameManager.ApplyAccount only ever assigns the account id to Left). Re-assert this
+        // on every open: BotCreator's PartSwitcher can repoint the service's shared
+        // ActiveLoadout at the Right side while editing P2's bot, and that selection would
+        // otherwise leak into Garage, silently equipping skins into the wrong loadout.
+        var data = GameServices.PlayerData;
+        var loadoutId = data?.Current?.GetLoadoutForSide(PlayerData.SideLeft)?.Id;
+        if (!string.IsNullOrEmpty(loadoutId))
+            data.SelectLoadout(loadoutId);
+
         string firstSelectable = null;
 
         foreach (var tab in tabs)

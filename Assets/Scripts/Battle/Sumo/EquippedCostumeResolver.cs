@@ -53,10 +53,11 @@ namespace SumoCore
                 }
 
                 parts[part] = sprite;
-                tints[part] = !string.IsNullOrEmpty(skin.IconColor)
+                var resolvedTint = !string.IsNullOrEmpty(skin.IconColor)
                     && ColorUtility.TryParseHtmlString(skin.IconColor, out var tint)
                     ? tint
                     : Color.white;
+                tints[part] = resolvedTint;
             }
         }
     }

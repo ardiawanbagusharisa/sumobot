@@ -131,7 +131,7 @@ namespace SumoCore
             SpriteRenderers.ToList().ForEach((part) =>
             {
                 sprites.TryGetValue(part.Key, out var sprite);
-                if (sprite != null)
+                if (sprite != null && SpriteRenderers[part.Key] != null)
                 {
                     SpriteRenderers[part.Key].sprite = sprite;
                 }
