@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using SumoBot.Graph;
 using SumoCore;
 using SumoInput;
 using SumoManager;
@@ -158,6 +159,21 @@ namespace SumoBot
                 else
                     Init(rightPlayer, skillType);
             }
+        }
+
+        /// <summary>
+        /// Run a battle with a player-authored module graph on the given side (decision-8 E2).
+        /// Wraps the graph in a GraphBot and routes it through the normal Assign path, so it lives
+        /// and ticks exactly like any other bot — no change to the index-based dev bot list. This
+        /// is how a published graph creation (E5) enters a battle.
+        /// </summary>
+        public void AssignGraphBot(BotGraph graph, string id, PlayerSide side, SkillType? skillType = null)
+        {
+            GraphBot template = ScriptableObject.CreateInstance<GraphBot>();
+            template.Configure(graph, id);
+            Assign(template, side, skillType);
+            // Assign clones the template via Instantiate; drop the template we created.
+            Destroy(template);
         }
 
         public void Init(SumoController controller, SkillType? skillType = null)
