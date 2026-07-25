@@ -32,6 +32,9 @@ namespace SumoServices
         /// <summary>Player-to-player Market (Community tab): browse/list/unlist/reprice/buy listings.</summary>
         public static IMarketService Market { get; private set; }
 
+        /// <summary>Turns a player's creation into an owned, Source=Player catalog item they can then list.</summary>
+        public static IPublishService Publish { get; private set; }
+
         /// <summary>
         /// Backed by SumoLeaderboard.LeaderboardService.Instance (a MonoBehaviour
         /// singleton owned by the Leaderboard feature, not constructed here). Exposed
@@ -52,9 +55,13 @@ namespace SumoServices
             var auth = new LocalAuthService();
             Auth = auth;
             PlayerData = new LocalPlayerDataService();
-            Catalog = new LocalCatalogService();
+            // Keep the concrete catalog: it is both the read surface (ICatalogService) and the
+            // publish write seam (IPlayerCatalogWriter) the Publish service composes.
+            var catalog = new LocalCatalogService();
+            Catalog = catalog;
             Trade = new LocalTradeService(Catalog, PlayerData);
             Market = new LocalMarketService(Catalog, PlayerData);
+            Publish = new LocalPublishService(catalog, PlayerData);
             Leaderboard = LeaderboardService.Instance;
 
             IsInitialized = true;
@@ -127,6 +134,7 @@ namespace SumoServices
             Catalog = null;
             Trade = null;
             Market = null;
+            Publish = null;
             Leaderboard = null;
             IsInitialized = false;
         }
