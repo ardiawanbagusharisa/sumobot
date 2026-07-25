@@ -1,25 +1,23 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
-using UnityEngine;
 
 namespace SumoServices
 {
     /// <summary>
-    /// Local JSON-file implementation of IMarketService. Listings are global marketplace
-    /// state (every player's offers), not per-player like PlayerData, so they live in one
-    /// shared file rather than one-file-per-player. Composes the catalog (to validate
+    /// Local implementation of IMarketService. Listings are global marketplace state (every
+    /// player's offers), not per-player like PlayerData. Composes the catalog (to validate
     /// authorship and resolve items) and the player-data service (balance + inventory +
-    /// cross-player crediting); all persistence beyond the listings file itself happens
-    /// through the latter, so this class stays orchestration + the listings store.
+    /// cross-player crediting); listing persistence is delegated to an injected
+    /// <see cref="IMarketStore"/> (FileMarketStore by default), so this class is pure
+    /// orchestration and is unit-testable against an in-memory store.
     /// </summary>
     public class LocalMarketService : IMarketService
     {
         private readonly ICatalogService catalog;
         private readonly IPlayerDataService playerData;
+        private readonly IMarketStore store;
 
         private List<MarketListing> listings = new();
 
@@ -27,26 +25,29 @@ namespace SumoServices
 
         public event Action ListingsChanged;
 
-        private static string Dir => Path.Combine(Application.persistentDataPath, "Market");
-        private static string ListingsPath => Path.Combine(Dir, "listings.json");
-
-        public LocalMarketService(ICatalogService catalog, IPlayerDataService playerData)
+        // store defaults to the file-backed implementation so runtime wiring in GameServices
+        // (new LocalMarketService(Catalog, PlayerData)) is unchanged; tests inject an in-memory
+        // store to exercise list/buy/unlist without touching disk.
+        public LocalMarketService(ICatalogService catalog, IPlayerDataService playerData, IMarketStore store = null)
         {
             this.catalog = catalog;
             this.playerData = playerData;
+            this.store = store ?? new FileMarketStore();
         }
 
         public Task<ServiceResult> LoadAsync()
         {
             try
             {
-                if (File.Exists(ListingsPath))
+                var loaded = store.Load();
+                if (loaded != null)
                 {
-                    string json = File.ReadAllText(ListingsPath);
-                    listings = JsonConvert.DeserializeObject<List<MarketListing>>(json) ?? new List<MarketListing>();
+                    listings = loaded;
                 }
                 else
                 {
+                    // First run (nothing ever persisted): seed and save so the flow is testable
+                    // end-to-end. A persisted-but-empty store is left empty (no re-seeding).
                     listings = BuildSeedListings();
                     Persist();
                 }
@@ -170,8 +171,7 @@ namespace SumoServices
         {
             try
             {
-                Directory.CreateDirectory(Dir);
-                File.WriteAllText(ListingsPath, JsonConvert.SerializeObject(listings, Formatting.Indented));
+                store.Save(listings);
                 return ServiceResult.Ok();
             }
             catch (Exception e)
