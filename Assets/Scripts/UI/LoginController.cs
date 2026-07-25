@@ -64,7 +64,11 @@ public class LoginController : MonoBehaviour
                 accountInfoText.text = $"{account.PlayerId}";
             if (displayNameInput != null)
                 displayNameInput.text = account.DisplayName;
-            SetState(State.Ready);
+            // Anonymous sign-in has nothing for the player to confirm, and naming now lives on
+            // the Account page — so skip the Ready/Continue gate and go straight to the menu.
+            // The Ready panel + OnContinueAsync stay wired for a future interactive or
+            // first-run onboarding flow.
+            mainMenu.ShowMainMenu();
         }
         else
         {
