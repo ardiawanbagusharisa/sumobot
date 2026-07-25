@@ -91,5 +91,63 @@ namespace SumoServices.Tests
             Assert.AreEqual(50, player.Current.Coins);
             Assert.IsFalse(player.Current.Owns(ItemId));
         }
+
+        [Test]
+        public async Task UnlistAsync_BySeller_RemovesFromActive_AndBlocksBuy()
+        {
+            var (market, player) = NewMarket();
+            var listingId = await ListAsSeller(market, player, 100);
+
+            var unlist = await market.UnlistAsync(listingId);
+            Assert.IsTrue(unlist.Success, unlist.Error);
+            Assert.IsFalse(market.ActiveListings.Any(l => l.ListingId == listingId));
+
+            await player.LoadAsync(Buyer);
+            player.Current.Coins = 500;
+            var buy = await market.BuyAsync(listingId);
+            Assert.IsFalse(buy.Success); // unlisted listings are not buyable
+        }
+
+        [Test]
+        public async Task UnlistAsync_ByNonSeller_Fails()
+        {
+            var (market, player) = NewMarket();
+            var listingId = await ListAsSeller(market, player, 100);
+
+            await player.LoadAsync(Buyer);
+            var result = await market.UnlistAsync(listingId);
+
+            Assert.IsFalse(result.Success);
+            Assert.IsTrue(market.ActiveListings.Any(l => l.ListingId == listingId)); // still active
+        }
+
+        [Test]
+        public async Task RepriceAsync_BySeller_ChangesBuyPrice()
+        {
+            var (market, player) = NewMarket();
+            var listingId = await ListAsSeller(market, player, 100);
+
+            var reprice = await market.RepriceAsync(listingId, 200);
+            Assert.IsTrue(reprice.Success, reprice.Error);
+
+            await player.LoadAsync(Buyer);
+            player.Current.Coins = 500;
+            var buy = await market.BuyAsync(listingId);
+
+            Assert.IsTrue(buy.Success, buy.Error);
+            Assert.AreEqual(300, player.Current.Coins); // charged the repriced 200, not the original 100
+        }
+
+        [Test]
+        public async Task RepriceAsync_ByNonSeller_Fails()
+        {
+            var (market, player) = NewMarket();
+            var listingId = await ListAsSeller(market, player, 100);
+
+            await player.LoadAsync(Buyer);
+            var result = await market.RepriceAsync(listingId, 200);
+
+            Assert.IsFalse(result.Success);
+        }
     }
 }
