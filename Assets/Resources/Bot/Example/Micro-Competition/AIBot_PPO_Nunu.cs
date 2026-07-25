@@ -78,9 +78,10 @@ public class AIBot_PPO_Nunu : Bot
         api = botAPI;
 
 #if UNITY_EDITOR
-        if (NunuPpoTrainingConfig.MaxEpisodesOverride > 0)
+        int episodesOverride = NunuPpoTrainingConfig.MaxEpisodesOverride;
+        if (episodesOverride > 0)
         {
-            maxTotalEpisodes = NunuPpoTrainingConfig.MaxEpisodesOverride;
+            maxTotalEpisodes = episodesOverride;
             Logger.Info($"[Bot_nunu] maxTotalEpisodes overridden to {maxTotalEpisodes}");
         }
 #endif

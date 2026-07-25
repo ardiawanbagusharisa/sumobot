@@ -469,7 +469,7 @@ namespace SumoLeaderboard
             statsPopupText.color = rankChipNameText.color;
             statsPopupText.alignment = TextAlignmentOptions.Center;
             statsPopupText.richText = true;
-            statsPopupText.enableWordWrapping = false; // keep it exactly two lines
+            statsPopupText.textWrappingMode = TextWrappingModes.NoWrap; // keep it exactly two lines
 
             // Clicking the box dismisses it.
             Button closeButton = go.AddComponent<Button>();

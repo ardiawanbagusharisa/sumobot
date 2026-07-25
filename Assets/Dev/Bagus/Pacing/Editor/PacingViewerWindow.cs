@@ -946,8 +946,6 @@ namespace PacingFramework
 				return result;
 			}
 
-			return source.Take(targetCount).ToList();
-
 			for (int i = 0; i < targetCount; i++)
 			{
 				float t = i / (float)(targetCount - 1);

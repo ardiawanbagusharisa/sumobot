@@ -61,21 +61,21 @@ namespace SumoServices
             }
         }
 
-        public async Task<ServiceResult> ListAsync(string itemId, int price)
+        public Task<ServiceResult> ListAsync(string itemId, int price)
         {
-            if (playerData.Current == null) return ServiceResult.Fail("No player loaded.");
-            if (price < 0) return ServiceResult.Fail("price must be non-negative.");
+            if (playerData.Current == null) return Task.FromResult(ServiceResult.Fail("No player loaded."));
+            if (price < 0) return Task.FromResult(ServiceResult.Fail("price must be non-negative."));
 
             var item = catalog.GetById(itemId);
-            if (item == null) return ServiceResult.Fail($"Unknown item '{itemId}'.");
-            if (!playerData.Current.Owns(itemId)) return ServiceResult.Fail("Cannot list an item you do not own.");
+            if (item == null) return Task.FromResult(ServiceResult.Fail($"Unknown item '{itemId}'."));
+            if (!playerData.Current.Owns(itemId)) return Task.FromResult(ServiceResult.Fail("Cannot list an item you do not own."));
 
             string playerId = playerData.Current.PlayerId;
             if (string.IsNullOrEmpty(item.Author) || item.Author != playerId)
-                return ServiceResult.Fail("Only the item's author can list it for sale.");
+                return Task.FromResult(ServiceResult.Fail("Only the item's author can list it for sale."));
 
             if (listings.Any(l => l.IsActive && l.ItemId == itemId && l.SellerId == playerId))
-                return ServiceResult.Fail("Already listed — use RepriceAsync to change the price.");
+                return Task.FromResult(ServiceResult.Fail("Already listed — use RepriceAsync to change the price."));
 
             listings.Add(new MarketListing
             {
@@ -86,7 +86,7 @@ namespace SumoServices
                 IsActive = true
             });
 
-            return Finish();
+            return Task.FromResult(Finish());
         }
 
         public Task<ServiceResult> UnlistAsync(string listingId)

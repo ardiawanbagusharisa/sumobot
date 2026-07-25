@@ -61,7 +61,7 @@ public class SettingsController : MonoBehaviour
     {
         if (bound) return;
 
-        if (mainMenu == null) mainMenu = FindObjectOfType<MainMenuController>(true);
+        if (mainMenu == null) mainMenu = FindFirstObjectByType<MainMenuController>(FindObjectsInactive.Include);
         root = ResolveRoot();
 
         // Scope each lookup to its row: "Slider"/"Value"/"ButtonMuted" repeat across both rows.
