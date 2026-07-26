@@ -17,7 +17,8 @@ public class MainMenuController : MonoBehaviour
 		Store, // renamed from Market — ordinal unchanged, MenuMapping[] in the scene serializes by int
 		Login,
 		Garage,
-		Account // keep last — MenuMapping serializes by int ordinal; appending avoids shifting existing entries
+		Account,
+		Workshop // keep last — MenuMapping serializes by int ordinal; appending avoids shifting existing entries
 	}
 
 	private MenuState currentState = MenuState.MainMenu;
@@ -108,6 +109,7 @@ public class MainMenuController : MonoBehaviour
 	public void ShowStore() => SwitchMenu(MenuState.Store);
 	public void ShowGarage() => SwitchMenu(MenuState.Garage);
 	public void ShowAccount() => SwitchMenu(MenuState.Account);
+	public void ShowWorkshop() => SwitchMenu(MenuState.Workshop);
 	public void QuitGame() => Application.Quit();
 
 	// Load Battle scene 
