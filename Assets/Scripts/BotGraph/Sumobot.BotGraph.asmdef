@@ -2,6 +2,7 @@
     "name": "Sumobot.BotGraph",
     "rootNamespace": "SumoBot.Graph",
     "references": [
+        "Sumobot.Logging",
         "Unity.Nuget.Newtonsoft-Json"
     ],
     "includePlatforms": [],
