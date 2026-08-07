@@ -28,8 +28,9 @@ namespace SumoManager
 		public float LeftSegmentDuration = 2f;
 		[Tooltip("Time-based collision window duration in seconds (e.g., 3 seconds lookback)")]
 		public float LeftCollisionWindowDuration = 3f;
-		public bool LeftActionFiltering = false;
-		public bool LeftNNCandidates = false;
+		public bool LeftActionFiltering = true;
+		public bool LeftNNCandidates = true;
+		public bool LeftMCTSCandidates = true;
 
 
 		[Header("Right Player Pacing Configuration")]
@@ -39,8 +40,21 @@ namespace SumoManager
 		[Tooltip("Time-based collision window duration in seconds (e.g., 3 seconds lookback)")]
 		public float RightCollisionWindowDuration = 3f;
 
-		public bool RightActionFiltering = false;
-		public bool RightNNCandidates = false;
+		public bool RightActionFiltering = true;
+		public bool RightNNCandidates = true;
+		public bool RightMCTSCandidates = true;
+
+		#endregion
+
+		#region Pacing Simulation Overrides (set programmatically by BattleSimulator)
+
+		// When both Left*SimPath fields are non-empty, Initialize() builds the Left handler's
+		// PacingTarget from these two files (merged) instead of LeftFileName. Cleared automatically
+		// when Pacing Simulation is not active. Not meant to be hand-edited in the inspector.
+		[HideInInspector] public string LeftSimTargetPath;
+		[HideInInspector] public string LeftSimConstraintPath;
+		[HideInInspector] public string RightSimTargetPath;
+		[HideInInspector] public string RightSimConstraintPath;
 
 		#endregion
 
@@ -146,7 +160,10 @@ namespace SumoManager
 					MinPacing,
 					MaxPacing,
 					leftPacingBrainHeuristic,  // Pass persistent heuristic brain (may be null)
-					LeftNNCandidates
+					LeftNNCandidates,
+					LeftMCTSCandidates,
+					LeftSimTargetPath,
+					LeftSimConstraintPath
 				);
 
 				// Set the direct reference on controller for action filtering
@@ -184,7 +201,10 @@ namespace SumoManager
 					MinPacing,
 					MaxPacing,
 					rightPacingBrainHeuristic,  // Pass persistent heuristic brain (may be null)
-					RightNNCandidates
+					RightNNCandidates,
+					RightMCTSCandidates,
+					RightSimTargetPath,
+					RightSimConstraintPath
 				);
 
 				// Set the direct reference on controller for action filtering

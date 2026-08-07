@@ -49,6 +49,22 @@ namespace SumoManager
             public int SimulationAmount;
             public int SimulationAISwapInterval;
             public float SimulationTimeScale;
+
+            // Pacing sweep identity (Resources file names, empty when PacingSimulation is
+            // disabled). The folder name only carries a short hash of this pair (see
+            // BattleSimulator.GetFolderStructure), so this is the only place the actual Target/
+            // Constraint file names survive - ReplayPicker reads them from here to fill in
+            // ReplayDetail. Nothing else records the identity: ConstraintConfig (logged per round
+            // in RoundLog.LeftGlobalConstraints/RightGlobalConstraints) only holds the numeric
+            // bounds, not a name, so it can't stand in for this.
+            public string PacingSide;
+            public string PacingTargetFileName;
+            public string PacingConstraintFileName;
+            public int PacingSegmentDuration;
+            public int PacingCollisionWindow;
+            public float PacingMin;
+            public float PacingMax;
+
             public Dictionary<string, float> ArenaCenter = new();
             public float ArenaRadius;
             public PlayerStats LeftPlayerStats = new();
@@ -80,6 +96,12 @@ namespace SumoManager
             public List<EventLog> StateEvents = new();
             public Dictionary<int, PacingLog> LeftPacingSegment = new();
             public Dictionary<int, PacingLog> RightPacingSegment = new();
+
+            // Static for the whole round (set once when each side's PacingHandler loads its
+            // config) - mirrors the "Global Constraints" section in PacingViewerWindow. Null
+            // when pacing wasn't enabled for that side this round.
+            public ConstraintConfig LeftGlobalConstraints;
+            public ConstraintConfig RightGlobalConstraints;
         }
 
         [Serializable]
@@ -97,6 +119,18 @@ namespace SumoManager
 
             // Normalized pacing scores (0-1)
             public float OverallPacingNormalized;
+
+            // Per-factor breakdown (FactorType name -> evaluated value), mirrors the
+            // "Threat/Tempo Factors" sections in PacingViewerWindow's per-segment details.
+            public Dictionary<string, float> ThreatFactors = new();
+            public Dictionary<string, float> TempoFactors = new();
+
+            // Target/evaluation data (only populated when an evaluation is available for this
+            // segment), mirrors PacingViewerWindow's "Per Segment Evaluation" section.
+            public float TargetThreat;
+            public float TargetTempo;
+            public float ThreatDelta;
+            public float TempoDelta;
         }
 
         [Serializable]
@@ -269,13 +303,20 @@ namespace SumoManager
 
             Log = new()
             {
+                CreatedAt = (int)DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
                 BattleID = battleManager.Battle.BattleID.ToString(),
                 CountdownTime = battleManager.CountdownTime,
                 BattleTime = battleManager.BattleTime,
                 RoundType = (int)battleManager.RoundSystem,
                 SimulationAmount = simConfig?.Iteration ?? 0,
                 SimulationTimeScale = simConfig?.TimeScale ?? 0,
-                CreatedAt = (int)DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+                PacingSide = simConfig?.PacingSide ?? "",
+                PacingTargetFileName = simConfig?.PacingTargetFileName ?? "",
+                PacingConstraintFileName = simConfig?.PacingConstraintFileName ?? "",
+                PacingSegmentDuration = simConfig?.PacingSegmentDuration ?? -1,
+                PacingCollisionWindow = simConfig?.PacingCollisionWindow ?? -1,
+                PacingMax = simConfig?.PacingMax ?? 1,
+                PacingMin = simConfig?.PacingMin ?? 0,
             };
 
             SaveBattle();
@@ -462,11 +503,29 @@ namespace SumoManager
             }
         }
 
+        /// <summary>
+        /// Records the constraint set a side's PacingHandler is currently using. Called once per
+        /// round (when the handler loads its config), not per segment - constraints don't change
+        /// mid-round.
+        /// </summary>
+        public static void SetGlobalConstraints(PlayerSide side, ConstraintConfig constraints)
+        {
+            RoundLog roundLog = GetCurrentRound();
+            if (roundLog == null)
+                return;
+
+            if (side == PlayerSide.Left)
+                roundLog.LeftGlobalConstraints = constraints;
+            else
+                roundLog.RightGlobalConstraints = constraints;
+        }
+
         public static void LogPacing(
             SegmentData data,
             SegmentPacing pacing,
             int index,
-            PlayerSide side
+            PlayerSide side,
+            PacingEvaluation evaluation = null
         )
         {
             RoundLog roundLog = GetCurrentRound();
@@ -492,6 +551,20 @@ namespace SumoManager
                 Mathf.Clamp(((pacing.Tempo.Value - minPacing) / (maxPacing - minPacing)) * 100f, 0f, 100f);
             pace.ThreatPercentile = (Mathf.Approximately(maxPacing, minPacing)) ? 50f :
                 Mathf.Clamp(((pacing.Threat.Value - minPacing) / (maxPacing - minPacing)) * 100f, 0f, 100f);
+
+            // Per-factor breakdown, same source as PacingViewerWindow's Threat/Tempo Factors sections
+            foreach (var (_, factor, value, _) in pacing.Threat.GetFactorsInfo())
+                pace.ThreatFactors[factor.ToString()] = value;
+            foreach (var (_, factor, value, _) in pacing.Tempo.GetFactorsInfo())
+                pace.TempoFactors[factor.ToString()] = value;
+
+            if (evaluation != null)
+            {
+                pace.TargetThreat = evaluation.TargetThreat;
+                pace.TargetTempo = evaluation.TargetTempo;
+                pace.ThreatDelta = evaluation.ThreatDelta;
+                pace.TempoDelta = evaluation.TempoDelta;
+            }
 
             if (side == PlayerSide.Left)
                 roundLog.LeftPacingSegment.Add(index, pace);

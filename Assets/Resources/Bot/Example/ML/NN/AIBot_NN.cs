@@ -183,8 +183,7 @@ public class AIBot_NN : Bot
 
     private void LogNNLearning(float[] inputs, float[] outputs, float[] targets, float loss)
     {
-        string csvPath = "ML/Models/NN/" + csvLogFileName;
-        string path = Path.Combine(Application.streamingAssetsPath, csvPath);
+        string path = "Assets/Resources/ML/Models/NN/" + csvLogFileName;
         bool writeHeader = !File.Exists(path);
         using (StreamWriter sw = new StreamWriter(path, true))
         {

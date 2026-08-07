@@ -51,10 +51,16 @@ public class MainMenuController : MonoBehaviour
 	public void ShowMarket() => SwitchMenu(MenuState.Market);
 	public void QuitGame() => Application.Quit();
 
-	// Load Battle scene 
+	// Load Battle scene
 	public void GoToBattle(){
-		SFXManager.Instance.Play2D("ui_accept"); 
+		SFXManager.Instance.Play2D("ui_accept");
 		UnityEngine.SceneManagement.SceneManager.LoadScene("Battle");
+	}
+
+	// Load Replay scene (GameManager.ShowReplay is false here, so ReplayPicker shows the replay list)
+	public void GoToReplay(){
+		SFXManager.Instance.Play2D("ui_accept");
+		UnityEngine.SceneManagement.SceneManager.LoadScene("Replay");
 	}
 
 }

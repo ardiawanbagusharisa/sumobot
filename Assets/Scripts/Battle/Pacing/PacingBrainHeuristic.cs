@@ -30,9 +30,6 @@ namespace PacingFramework
 		public float CirclingAccelBonus = 1.3f;          // Score multiplier for accel when circling
 		public float CirclingAggressionPenalty = 0.5f;   // Score multiplier for dash/skills when circling
 
-		// No-action threshold for passive behavior
-		public float NoActionThreshold = 0.3f;          // Above this avg delta = return null (no actions)
-
 		// Action base scores (before considerations)
 		public float BaseScoreAccelerate = 1f;
 		public float BaseScoreTurn = 1f;
@@ -40,10 +37,10 @@ namespace PacingFramework
 		public float BaseScoreSkill = 1f;
 
 		// Action type preferences based on pacing needs
-		public MinMax AccelerateMultiplier = new(0.5f, 1f);
-		public MinMax DashMultiplier = new(0.5f, 1f);
-		public MinMax SkillMultiplier = new(0.5f, 1f);
-		public MinMax TurnMultiplier = new(0.3f, 1.5f);
+		public MinMax AccelerateMultiplier = new(0.1f, 1f);
+		public MinMax DashMultiplier = new(0.1f, 1f);
+		public MinMax SkillMultiplier = new(0.1f, 1f);
+		public MinMax TurnMultiplier = new(0.1f, 1f);
 		#endregion
 
 		private SumoController controller;
@@ -98,9 +95,10 @@ namespace PacingFramework
 
 			// Check if we're exceeding targets (positive delta) - if so, return null for passive behavior
 			float avgDelta = (currentPacing.ThreatDelta + currentPacing.TempoDelta) / 2f;
+
 			// Dynamic threshold scales with targets: high targets = higher threshold (more permissive)
 			float avgTarget = (currentPacing.TargetThreat + currentPacing.TargetTempo) / 2f;
-			float dynamicThreshold = Mathf.Lerp(0.3f, 0.5f, avgTarget);
+			float dynamicThreshold = Mathf.Lerp(0.1f, 0.5f, avgTarget);
 
 			if (avgDelta > dynamicThreshold)
 			{
@@ -209,7 +207,7 @@ namespace PacingFramework
 		/// Uses target value (0-1) to interpolate multiplier.
 		/// High target (1.0) = favor max multiplier, Low target (0.0) = favor min multiplier
 		/// </summary>
-		private float GetMultiplierFromTarget(float target, MinMax multiplierRange, bool inverse = false)
+		private float GetMultiplierFromTarget(float target, MinMax multiplierRange)
 		{
 			// Target is already normalized 0-1
 			float t = Mathf.Clamp01(target);
@@ -308,7 +306,7 @@ namespace PacingFramework
 					case ActionType.TurnLeft:
 					case ActionType.TurnRight:
 						// don't turn if on edge but facing enemy
-						float turnBonus = ctx.IsFacingEnemy ? 0.1f : (ctx.FacingToOutside ? 1f : 0.5f);
+						float turnBonus = ctx.IsFacingEnemy ? 1f : (ctx.FacingToOutside ? -1f : 0.5f);
 						score *= turnBonus; // Strongly favor turning to reposition safely
 						break;
 				}

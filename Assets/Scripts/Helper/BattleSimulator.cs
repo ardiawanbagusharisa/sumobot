@@ -7,6 +7,8 @@ using System.Linq;
 using SumoCore;
 using System;
 using System.IO;
+using System.Security.Cryptography;
+using System.Text;
 using Unity.VisualScripting;
 using Newtonsoft.Json;
 
@@ -35,6 +37,20 @@ namespace SumoHelper
 
         public int RoundCountdown = 3;
         public SimulationSetting Setting;
+
+        [Header("Pacing Simulation")]
+        [Tooltip("When enabled, generates Top-vs-Rest matchups swept across every Sim Targets x Sim Constraints combination, applying pacing (action filtering) only to the top bot side. Replaces the default full round-robin matchup generation.")]
+        public bool PacingSimulation = false;
+        [Tooltip("Bot IDs (from Setting.SelectedAgents) explicitly marked as 'top' bots, set via the Top Bot Selection checkboxes in the inspector. Everyone else in SelectedAgents is 'rest'.")]
+        [HideInInspector] public string[] TopBotIDs = new string[] { };
+        [Tooltip("Resources-relative folder of pacing TARGET curves to sweep (only ThreatTargets/TempoTargets are used from these files).")]
+        public string SimTargetsFolder = "Pacing/Sim_Targets/60s";
+        [Tooltip("Resources-relative folder of pacing CONSTRAINT sets to sweep (only GlobalConstraints is used from these files).")]
+        public string SimConstraintsFolder = "Pacing/Sim_Constraints";
+        public int PacingSegmentDuration = 1;
+        public int PacingCollisionWindow = 3;
+        public float PacingMin = 0f;
+        public float PacingMax = 0.474f;
 
         [Header("Bot Exclusion (Performance Optimization)")]
         [Tooltip("Exclude heavy ML bots from simulation. Uncheck to include all bots.")]
@@ -391,6 +407,8 @@ namespace SumoHelper
             BattleManager.Instance.BattleTime = cfg.Timer;
             BattleManager.Instance.ActionInterval = cfg.ActionInterval;
 
+            ApplyPacingSimulationConfig(cfg);
+
             var folder = GetFolderStructure(cfg);
 
             LogManager.UnregisterAction();
@@ -406,6 +424,49 @@ namespace SumoHelper
             BattleManager.Instance.Battle = newBattle;
         }
 
+        /// <summary>
+        /// Pushes this match's pacing setup onto PacingManager before Battle_Preparing fires
+        /// (InputManager.InitializeInput reads these fields when it constructs each side's
+        /// PacingHandler). Only the Top bot's side gets the swept target/constraint files and
+        /// action filtering enabled; the other side keeps PacingManager's normal fallback config
+        /// with filtering off. Clears the overrides when Pacing Simulation is disabled so stale
+        /// values from a previous run can't leak into a manual/non-sim session.
+        /// </summary>
+        private void ApplyPacingSimulationConfig(BattleConfig cfg)
+        {
+            var pacingManager = PacingManager.Instance;
+            if (pacingManager == null)
+                return;
+
+            if (!PacingSimulation)
+            {
+                pacingManager.LeftSimTargetPath = null;
+                pacingManager.LeftSimConstraintPath = null;
+                pacingManager.RightSimTargetPath = null;
+                pacingManager.RightSimConstraintPath = null;
+                return;
+            }
+
+            pacingManager.MinPacing = PacingMin;
+            pacingManager.MaxPacing = PacingMax;
+
+            string targetPath = $"{SimTargetsFolder}/{cfg.PacingTargetFileName}";
+            string constraintPath = $"{SimConstraintsFolder}/{cfg.PacingConstraintFileName}";
+            bool topIsLeft = cfg.PacingSide == "Left";
+
+            pacingManager.LeftSimTargetPath = topIsLeft ? targetPath : null;
+            pacingManager.LeftSimConstraintPath = topIsLeft ? constraintPath : null;
+            pacingManager.LeftActionFiltering = topIsLeft;
+            pacingManager.LeftSegmentDuration = cfg.PacingSegmentDuration;
+            pacingManager.LeftCollisionWindowDuration = cfg.PacingCollisionWindow;
+
+            pacingManager.RightSimTargetPath = topIsLeft ? null : targetPath;
+            pacingManager.RightSimConstraintPath = topIsLeft ? null : constraintPath;
+            pacingManager.RightActionFiltering = !topIsLeft;
+            pacingManager.RightSegmentDuration = cfg.PacingSegmentDuration;
+            pacingManager.RightCollisionWindowDuration = cfg.PacingCollisionWindow;
+        }
+
         private void SetBot(BattleConfig cfg)
         {
             BattleManager.Instance.BotManager.Assign(cfg.AgentLeft, PlayerSide.Left, cfg.SkillSetLeft, false);
@@ -414,6 +475,9 @@ namespace SumoHelper
 
         private List<BattleConfig> GenerateConfigs(List<Bot> agents)
         {
+            if (PacingSimulation)
+                return GeneratePacingSimulationConfigs(agents);
+
             var configs = new List<BattleConfig>();
 
             for (int i = 0; i < agents.Count; i++)
@@ -472,6 +536,132 @@ namespace SumoHelper
             Logger.Info($"Generated configs: {configs.Count}", true);
             Logger.Info($"Game will run {configs.Aggregate(0, (sum, cfg) => sum + cfg.Iteration)} matches in total.", true);
             return configs;
+        }
+
+        /// <summary>
+        /// Generates Top-vs-Rest matchups (both sides mirrored) swept across every
+        /// Sim_Targets x Sim_Constraints combination. "Top" bots are whichever of
+        /// Setting.SelectedAgents are also listed in TopBotIDs (set via the Top Bot
+        /// Selection checkboxes); "Rest" is everyone else in SelectedAgents.
+        /// Only the Top bot's side is marked (via BattleConfig.TopSide) to receive pacing;
+        /// ApplyConfig() applies that to PacingManager before each match starts.
+        /// </summary>
+        private List<BattleConfig> GeneratePacingSimulationConfigs(List<Bot> agents)
+        {
+            var configs = new List<BattleConfig>();
+
+            var topSet = new HashSet<string>(TopBotIDs ?? new string[0]);
+            var topAgents = agents.Where(a => topSet.Contains(a.ID)).ToList();
+            var restAgents = agents.Where(a => !topSet.Contains(a.ID)).ToList();
+
+            if (topAgents.Count == 0 || restAgents.Count == 0)
+            {
+                Logger.Error($"[Simulation][PacingSimulation] Requires at least 1 top agent and 1 rest agent (Top={topAgents.Count}, Rest={restAgents.Count}). Check Top Bot Selection in the inspector.");
+                return configs;
+            }
+
+            var targetAssets = Resources.LoadAll<TextAsset>(SimTargetsFolder).OrderBy(a => a.name).ToList();
+            var constraintAssets = Resources.LoadAll<TextAsset>(SimConstraintsFolder).OrderBy(a => a.name).ToList();
+
+            if (targetAssets.Count == 0)
+            {
+                Logger.Error($"[Simulation][PacingSimulation] No pacing target files found under Resources/{SimTargetsFolder}.");
+                return configs;
+            }
+            if (constraintAssets.Count == 0)
+            {
+                Logger.Error($"[Simulation][PacingSimulation] No pacing constraint files found under Resources/{SimConstraintsFolder}.");
+                return configs;
+            }
+
+            foreach (var topBot in topAgents)
+            {
+                foreach (var restBot in restAgents)
+                {
+                    // Both directions: top bot as Left, and top bot as Right.
+                    var pairings = new (Bot left, Bot right, PlayerSide topSide)[]
+                    {
+                        (topBot, restBot, PlayerSide.Left),
+                        (restBot, topBot, PlayerSide.Right),
+                    };
+
+                    foreach (var (leftBot, rightBot, topSide) in pairings)
+                    {
+                        foreach (var roundSystem in Setting.RoundSystem)
+                        {
+                            foreach (var timer in Setting.Timers)
+                            {
+                                foreach (var interval in Setting.ActionIntervals)
+                                {
+                                    foreach (var targetAsset in targetAssets)
+                                    {
+                                        foreach (var constraintAsset in constraintAssets)
+                                        {
+                                            AddPacingSimulationConfigs(configs, leftBot, rightBot, topSide, roundSystem, timer, interval, targetAsset.name, constraintAsset.name);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            Logger.Info($"[Simulation][PacingSimulation] Generated configs: {configs.Count} (Top={topAgents.Count}, Rest={restAgents.Count}, Targets={targetAssets.Count}, Constraints={constraintAssets.Count})", true);
+            Logger.Info($"Game will run {configs.Aggregate(0, (sum, cfg) => sum + cfg.Iteration)} matches in total.", true);
+            return configs;
+        }
+
+        private void AddPacingSimulationConfigs(List<BattleConfig> configs, Bot leftBot, Bot rightBot, PlayerSide topSide, RoundSystem roundSystem, int timer, float interval, string targetFileName, string constraintFileName)
+        {
+            if (Setting.Skills.Length > 0)
+            {
+                for (int leftSkillI = 0; leftSkillI < Setting.Skills.Length; leftSkillI++)
+                {
+                    for (int rightSkillI = 0; rightSkillI < Setting.Skills.Length; rightSkillI++)
+                    {
+                        configs.Add(new BattleConfig
+                        {
+                            AgentLeft = leftBot,
+                            AgentRight = rightBot,
+                            Timer = timer,
+                            ActionInterval = interval,
+                            SkillSetLeft = Setting.Skills[leftSkillI],
+                            SkillSetRight = Setting.Skills[rightSkillI],
+                            Iteration = Setting.Iteration,
+                            TimeScale = DefaultTimeScale,
+                            RoundSystem = roundSystem,
+                            PacingTargetFileName = targetFileName,
+                            PacingConstraintFileName = constraintFileName,
+                            PacingSide = topSide.ToString(),
+                            PacingSegmentDuration = PacingSegmentDuration,
+                            PacingCollisionWindow = PacingCollisionWindow,
+                            PacingMax = PacingMax,
+                            PacingMin = PacingMin
+                        });
+                    }
+                }
+            }
+            else
+            {
+                configs.Add(new BattleConfig
+                {
+                    AgentLeft = leftBot,
+                    AgentRight = rightBot,
+                    Timer = timer,
+                    ActionInterval = interval,
+                    Iteration = Setting.Iteration,
+                    TimeScale = DefaultTimeScale,
+                    RoundSystem = roundSystem,
+                    PacingTargetFileName = targetFileName,
+                    PacingConstraintFileName = constraintFileName,
+                    PacingSide = topSide.ToString(),
+                    PacingSegmentDuration = PacingSegmentDuration,
+                    PacingCollisionWindow = PacingCollisionWindow,
+                    PacingMax = PacingMax,
+                    PacingMin = PacingMin
+                });
+            }
         }
 
         private void GenerateConfigIndexMapping(List<BattleConfig> configs, List<Bot> agents)
@@ -726,10 +916,15 @@ namespace SumoHelper
 
         private string[] GetFolderStructure(BattleConfig cfg)
         {
+            string configFolder = $"Timer_{cfg.Timer}__ActInterval_{cfg.ActionInterval}__Round_{cfg.RoundSystem}__SkillLeft_{cfg.SkillSetLeft}__SkillRight_{cfg.SkillSetRight}";
+
+            if (PacingSimulation)
+                configFolder += $"__Pacing_{$"{cfg.PacingTargetFileName}|{cfg.PacingConstraintFileName}"}";
+
             return new string[]{
                 checkpoint.ID,
                 $"{cfg.AgentLeft.ID}_vs_{cfg.AgentRight.ID}",
-                $"Timer_{cfg.Timer}__ActInterval_{cfg.ActionInterval}__Round_{cfg.RoundSystem}__SkillLeft_{cfg.SkillSetLeft}__SkillRight_{cfg.SkillSetRight}",
+                configFolder,
             };
         }
 
@@ -752,6 +947,17 @@ namespace SumoHelper
         public int LeftSide;
         public int Iteration;
         public float TimeScale;
+
+        // Pacing Simulation only (null/empty when PacingSimulation is disabled).
+        // File names only (no folder prefix) - used for both Resources.Load path
+        // construction and log folder naming.
+        public string PacingTargetFileName;
+        public string PacingConstraintFileName;
+        public int PacingSegmentDuration;
+        public int PacingCollisionWindow;
+        public string PacingSide;
+        public float PacingMin;
+        public float PacingMax;
     }
 
     [Serializable]

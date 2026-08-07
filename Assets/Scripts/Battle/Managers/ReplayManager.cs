@@ -10,6 +10,8 @@ using System;
 using System.Collections;
 using UnityEngine.UI;
 using SumoCore;
+using UnityEngine.SceneManagement;
+
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -147,6 +149,13 @@ public class ReplayManager : MonoBehaviour
             LoadGameFromBattle(Log);
             return;
         }
+
+        if (ReplayPicker.Instance != null)
+        {
+            ReplayPicker.Instance.Show(LoadGameFromFolder);
+            return;
+        }
+
 #if UNITY_EDITOR
         if (LoadFromPath)
             LoadGameFromPath();
@@ -312,6 +321,7 @@ public class ReplayManager : MonoBehaviour
         ShowEventChart("Action");
         ShowEventChart("Collision");
         ShowMostActionChart();
+        ShowPacingChart();
     }
     #endregion
 
@@ -475,6 +485,12 @@ public class ReplayManager : MonoBehaviour
 
         if (string.IsNullOrEmpty(folder)) return;
 
+        LoadGameFromFolder(folder);
+    }
+#endif
+
+    public void LoadGameFromFolder(string folder)
+    {
         string[] files = Directory.GetFiles(folder, "game_*.json");
         if (files.Count() == 0)
         {
@@ -500,7 +516,6 @@ public class ReplayManager : MonoBehaviour
 
         Init();
     }
-#endif
 
     public void LoadGameFromBattle(BattleLog battleLog)
     {
@@ -914,6 +929,69 @@ public class ReplayManager : MonoBehaviour
         Chart.DrawChart();
     }
 
+    /// <summary>
+    /// Draws Threat/Tempo/Overall pacing curves for the current round, sourced from
+    /// RoundLog.LeftPacingSegment/RightPacingSegment (populated by LogManager.LogPacing during
+    /// the recorded battle, empty if pacing wasn't enabled). Mirrors what
+    /// Assets/Dev/Bagus/Pacing/Editor/PacingViewerWindow.cs shows live in Play mode, but reading
+    /// from the saved log instead of a live PacingHandler.
+    /// </summary>
+    private void ShowPacingChart()
+    {
+        if (currentGameIndex >= gameLogs.Count)
+            return;
+
+        var rounds = gameLogs[currentGameIndex].Rounds;
+        if (currentRoundIndex >= rounds.Count)
+            return;
+
+        RoundLog round = rounds[currentRoundIndex];
+        if (round.LeftPacingSegment.Count == 0 && round.RightPacingSegment.Count == 0)
+            return;
+
+        AddPacingSeries("Threat", round, p => p.Threat, Color.red, new Color(1f, 0.6f, 0.6f));
+        AddPacingSeries("Tempo", round, p => p.Tempo, Color.cyan, new Color(0.6f, 1f, 1f));
+        AddPacingSeries("Overall Pacing", round, p => p.OverallPacing, Color.green, new Color(0.6f, 1f, 0.6f));
+
+        Chart.DrawChart();
+    }
+
+    private void AddPacingSeries(string metricName, RoundLog round, Func<PacingLog, float> selector, Color leftColor, Color rightColor)
+    {
+        ChartSeries chartLeft = ChartSeries.Create($"{metricName} (Left)", ChartSeries.ChartType.Line, leftColor);
+        ChartSeries chartRight = ChartSeries.Create($"{metricName} (Right)", ChartSeries.ChartType.Line, rightColor);
+
+        if (chartVisibilityMap.TryGetValue(chartLeft.Name, out var isLVisible))
+            chartLeft.IsVisible = isLVisible;
+        else
+            chartVisibilityMap.Add(chartLeft.Name, chartLeft.IsVisible);
+
+        if (chartVisibilityMap.TryGetValue(chartRight.Name, out var isRVisible))
+            chartRight.IsVisible = isRVisible;
+        else
+            chartVisibilityMap.Add(chartRight.Name, chartRight.IsVisible);
+
+        if (chartLeft.IsVisible)
+            chartLeft.Data = round.LeftPacingSegment.OrderBy(kv => kv.Key).Select(kv => selector(kv.Value)).ToArray();
+
+        if (chartRight.IsVisible)
+            chartRight.Data = round.RightPacingSegment.OrderBy(kv => kv.Key).Select(kv => selector(kv.Value)).ToArray();
+
+        chartLeft.OnVisible = (isOn) =>
+        {
+            chartVisibilityMap[chartLeft.Name] = isOn;
+            return null;
+        };
+        chartRight.OnVisible = (isOn) =>
+        {
+            chartVisibilityMap[chartRight.Name] = isOn;
+            return null;
+        };
+
+        Chart.AddChartSeries(chartLeft, true);
+        Chart.AddChartSeries(chartRight, true);
+    }
+
     private void ShowMostActionChart()
     {
         var topActions = 3;
@@ -1027,7 +1105,11 @@ public class ReplayManager : MonoBehaviour
     public void BackToBattle()
     {
         SFXManager.Instance?.Play2D("ui_accept");
-        GameManager.Instance?.Replay_BackToBattle();
+
+        if (GameManager.Instance != null && GameManager.Instance.ShowReplay)
+            GameManager.Instance.Replay_BackToBattle();
+        else
+            SceneManager.LoadScene("MainMenu");
     }
 
     public void ToggleDetails()

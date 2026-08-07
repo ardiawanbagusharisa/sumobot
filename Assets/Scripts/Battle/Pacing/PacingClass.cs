@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Newtonsoft.Json;
 using SumoCore;
 using SumoManager;
 using Unity.VisualScripting;
@@ -188,6 +189,7 @@ public class CollisionWindowData
 	public List<CollisionType> WindowCollisions = new();
 
 	// Window size used for calculation (for debugging/transparency)
+	[JsonIgnore]
 	public int WindowSize = 0;
 
 	public CollisionWindowData() { }

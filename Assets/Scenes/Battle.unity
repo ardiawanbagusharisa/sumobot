@@ -2845,6 +2845,43 @@ MonoBehaviour:
   m_ChildScaleWidth: 0
   m_ChildScaleHeight: 1
   m_ReverseArrangement: 0
+--- !u!84 &264945620
+RenderTexture:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: 
+  m_ImageContentsHash:
+    serializedVersion: 2
+    Hash: 00000000000000000000000000000000
+  m_IsAlphaChannelOptional: 0
+  serializedVersion: 6
+  m_Width: 1920
+  m_Height: 1080
+  m_AntiAliasing: 1
+  m_MipCount: -1
+  m_DepthStencilFormat: 0
+  m_ColorFormat: 4
+  m_MipMap: 0
+  m_GenerateMips: 0
+  m_SRGB: 1
+  m_UseDynamicScale: 0
+  m_UseDynamicScaleExplicit: 0
+  m_BindMS: 0
+  m_EnableCompatibleFormat: 1
+  m_EnableRandomWrite: 1
+  m_TextureSettings:
+    serializedVersion: 2
+    m_FilterMode: 0
+    m_Aniso: 1
+    m_MipBias: 0
+    m_WrapU: 1
+    m_WrapV: 1
+    m_WrapW: 1
+  m_Dimension: 2
+  m_VolumeDepth: 1
+  m_ShadowSamplingMode: 2
 --- !u!1 &266661978
 GameObject:
   m_ObjectHideFlags: 0
@@ -23122,7 +23159,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Texture: {fileID: 2018344951}
+  m_Texture: {fileID: 264945620}
   m_UVRect:
     serializedVersion: 2
     x: 0
@@ -24615,43 +24652,6 @@ MonoBehaviour:
   crossfade: 1
   fadeInDuration: 1
   fadeOutDuration: 1
---- !u!84 &2018344951
-RenderTexture:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_Name: 
-  m_ImageContentsHash:
-    serializedVersion: 2
-    Hash: 00000000000000000000000000000000
-  m_IsAlphaChannelOptional: 0
-  serializedVersion: 6
-  m_Width: 1920
-  m_Height: 1080
-  m_AntiAliasing: 1
-  m_MipCount: -1
-  m_DepthStencilFormat: 0
-  m_ColorFormat: 4
-  m_MipMap: 0
-  m_GenerateMips: 0
-  m_SRGB: 1
-  m_UseDynamicScale: 0
-  m_UseDynamicScaleExplicit: 0
-  m_BindMS: 0
-  m_EnableCompatibleFormat: 1
-  m_EnableRandomWrite: 1
-  m_TextureSettings:
-    serializedVersion: 2
-    m_FilterMode: 0
-    m_Aniso: 1
-    m_MipBias: 0
-    m_WrapU: 1
-    m_WrapV: 1
-    m_WrapW: 1
-  m_Dimension: 2
-  m_VolumeDepth: 1
-  m_ShadowSamplingMode: 2
 --- !u!1 &2019896878
 GameObject:
   m_ObjectHideFlags: 0
@@ -26799,7 +26799,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b33ce51748b63457ebe9b59f80ac599c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  Mode: 0
+  Mode: 1
   TotalSimulations: 25
   SimpleTimeScale: 3
   SwapAIInterval: 0
@@ -26808,14 +26808,26 @@ MonoBehaviour:
   SimulationOnStart: 1
   RoundCountdown: 1
   Setting:
-    Iteration: 25
+    Iteration: 5
     Timers: 3c000000
     ActionIntervals:
     - 0.1
-    RoundSystem: 05000000
-    Skills: 0000000001000000
+    RoundSystem: 03000000
+    Skills: 00000000
     SelectedAgents:
-    - PPO
+    - BT
+    - GA
+    - MCTS
+    - NN
+    - FSM
+  PacingSimulation: 1
+  TopBotIDs:
+  - DAPPO_Cimin
+  - DQN
+  - MCTS
+  - NN
+  SimTargetsFolder: Pacing/Sim_Targets/Experiments
+  SimConstraintsFolder: Pacing/Sim_Constraints
   ExcludeHeavyMLBots: 1
 --- !u!114 &2130233545
 MonoBehaviour:
@@ -26834,7 +26846,7 @@ MonoBehaviour:
   RightEnabled: 1
   Right: {fileID: 0}
   leftBotIndex: 8
-  rightBotIndex: 3
+  rightBotIndex: 8
 --- !u!114 &2130233546
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -26848,18 +26860,22 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SumoManager.PacingManager
   MinPacing: 0
-  MaxPacing: 0.4
+  MaxPacing: 0.474
   RandomTarget: 0
   LeftFileName: Default_Target_Low
   LeftSegmentDuration: 1
   LeftCollisionWindowDuration: 3
-  LeftActionFiltering: 0
-  LeftNNCandidates: 0
+  LeftActionFiltering: 1
+  LeftNNCandidates: 1
   RightFileName: Default_Target_High
   RightSegmentDuration: 1
   RightCollisionWindowDuration: 3
-  RightActionFiltering: 0
-  RightNNCandidates: 0
+  RightActionFiltering: 1
+  RightNNCandidates: 1
+  LeftSimTargetPath: 
+  LeftSimConstraintPath: 
+  RightSimTargetPath: 
+  RightSimConstraintPath: 
 --- !u!1 &2132169806
 GameObject:
   m_ObjectHideFlags: 0

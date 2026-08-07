@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework.Internal;
 using SumoBot;
+using SumoBot.EA.MCTS;
 using SumoCore;
 using SumoInput;
 using SumoManager;
@@ -34,6 +35,12 @@ namespace PacingFramework
 		// Enable/disable action filtering (toggleable for testing)
 		public bool EnableActionFiltering = true;
 
+		// When both set, LoadPacingConfig merges ThreatTargets/TempoTargets from simTargetPath
+		// with GlobalConstraints from simConstraintPath instead of loading a single Constraints file.
+		// Paths are full Resources-relative paths (e.g. "Pacing/Sim_Targets/60s/linear_increase_0_to_1_60s").
+		private readonly string simTargetPath;
+		private readonly string simConstraintPath;
+
 		private int tickCount;
 
 		// Time tracking for collision storage
@@ -64,14 +71,11 @@ namespace PacingFramework
 		public bool useNNCandidates = false; // Enable NN-based candidate generation
 		public string NNModelPath = "ML/Models/NN/NN_Model";
 
-		// Fixed action pool (inspired by MCTS approach for reliable candidate actions)
-		// Balanced pool: more acceleration options to prevent excessive turning
-		private static readonly List<ISumoAction> BaseActionPool = new()
-        {
-			new AccelerateAction(InputType.Script, 0.1f),
-			new DashAction(InputType.Script),
-			new SkillAction(InputType.Script),
-		};
+		// MCTS-based candidate generation (search-driven, tactically-aware action selection)
+		public bool useMCTSCandidates = false; // Enable MCTS-based candidate generation
+		public int mctsIterations = 30;
+		public float mctsUCBConstant = 1.41f;
+		public int mctsCandidateCount = 5; // How many top-scoring root actions to surface as candidates
 
 		// Progressive improvement tracking
 		private List<float> improvementHistory = new();
@@ -87,7 +91,7 @@ namespace PacingFramework
 		// ================================
 		// Constructor
 		// ================================
-		public PacingHandler(SumoController controller, string pacingFileName, float segmentDuration, float collisionWindowDuration, GamePacing sharedPacingHistory, float minPacing, float maxPacing, PacingBrainHeuristic sharedPacingBrainHeuristic = null, bool useNNCandidates = false)
+		public PacingHandler(SumoController controller, string pacingFileName, float segmentDuration, float collisionWindowDuration, GamePacing sharedPacingHistory, float minPacing, float maxPacing, PacingBrainHeuristic sharedPacingBrainHeuristic = null, bool useNNCandidates = false, bool useMCTSCandidates = false, string simTargetPath = null, string simConstraintPath = null)
 		{
 			this.controller = controller;
 			this.segmentDuration = segmentDuration;
@@ -97,6 +101,9 @@ namespace PacingFramework
 			this.MinPacing = minPacing;
 			this.MaxPacing = maxPacing;
 			this.useNNCandidates = useNNCandidates;
+			this.useMCTSCandidates = useMCTSCandidates;
+			this.simTargetPath = simTargetPath;
+			this.simConstraintPath = simConstraintPath;
 			pacingBrainHeuristic = sharedPacingBrainHeuristic;
 
 			// Subscribe to events
@@ -120,6 +127,12 @@ namespace PacingFramework
 		// ================================
 		private void LoadPacingConfig()
 		{
+			if (!string.IsNullOrEmpty(simTargetPath) && !string.IsNullOrEmpty(simConstraintPath))
+			{
+				LoadSimPacingConfig();
+				return;
+			}
+
 			string pacingConfigPath = $"Pacing/Constraints/{PacingFileName}";
 			TextAsset pacingConfigAsset = Resources.Load<TextAsset>(pacingConfigPath);
 			if (pacingConfigAsset == null)
@@ -130,6 +143,43 @@ namespace PacingFramework
 
 			PacingTarget = JsonUtility.FromJson<PacingTargetConfig>(pacingConfigAsset.text);
 			Debug.Log($"[{controller.Side}] PacingConfig {PacingFileName} loaded: ThreatTargets={PacingTarget.ThreatTargets.Count}, Angle Min={PacingTarget.GlobalConstraints.Angle.Min}, Max={PacingTarget.GlobalConstraints.Angle.Max}");
+			LogManager.SetGlobalConstraints(controller.Side, PacingTarget.GlobalConstraints);
+		}
+
+		/// <summary>
+		/// Loads ThreatTargets/TempoTargets from simTargetPath and GlobalConstraints from
+		/// simConstraintPath, merging them into a single PacingTargetConfig. Used for
+		/// Pacing Simulation sweeps (BattleSimulator), which vary the target curve and the
+		/// constraint set independently.
+		/// </summary>
+		private void LoadSimPacingConfig()
+		{
+			TextAsset targetAsset = Resources.Load<TextAsset>(simTargetPath);
+			if (targetAsset == null)
+			{
+				Logger.Error($"[{controller.Side}] Sim pacing target '{simTargetPath}' JSON not found in Resources!");
+				return;
+			}
+
+			TextAsset constraintAsset = Resources.Load<TextAsset>(simConstraintPath);
+			if (constraintAsset == null)
+			{
+				Logger.Error($"[{controller.Side}] Sim pacing constraint '{simConstraintPath}' JSON not found in Resources!");
+				return;
+			}
+
+			var targetConfig = JsonUtility.FromJson<PacingTargetConfig>(targetAsset.text);
+			var constraintConfig = JsonUtility.FromJson<PacingTargetConfig>(constraintAsset.text);
+
+			PacingTarget = new PacingTargetConfig
+			{
+				ThreatTargets = targetConfig.ThreatTargets,
+				TempoTargets = targetConfig.TempoTargets,
+				GlobalConstraints = constraintConfig.GlobalConstraints
+			};
+
+			Debug.Log($"[{controller.Side}] Sim PacingConfig loaded: Target='{simTargetPath}' ({PacingTarget.ThreatTargets.Count} pts), Constraint='{simConstraintPath}', Angle Min={PacingTarget.GlobalConstraints.Angle.Min}, Max={PacingTarget.GlobalConstraints.Angle.Max}");
+			LogManager.SetGlobalConstraints(controller.Side, PacingTarget.GlobalConstraints);
 		}
 
 		public void Dispose()
@@ -382,8 +432,9 @@ namespace PacingFramework
 			// Store calculated pacing
 			currentRound.SegmentPacings.Add(currentSegmentPacing);
 
-			// Log for external viewers/debugging
-			LogManager.LogPacing(segmentCopy, currentSegmentPacing, segmentIndex, controller.Side);
+			// Log for external viewers/debugging (includes target/delta for the segment just finalized)
+			PacingEvaluation segmentEvaluation = EvaluatePacing();
+			LogManager.LogPacing(segmentCopy, currentSegmentPacing, segmentIndex, controller.Side, segmentEvaluation);
 
 			// Debug output
 			DebugPacing(currentSegmentPacing);
@@ -629,7 +680,7 @@ namespace PacingFramework
 				ISumoAction bestAction = originalAction;
 
 				// Generate candidates dynamically based on current state and pacing needs
-				var candidateActions = GenerateCandidateActions(evaluation, simulatedActions, currentThreatDelta, currentTempoDelta);
+				var candidateActions = GenerateCandidateActions(simulatedActions);
 
 				// If no candidates available, stop generating actions
 				if (candidateActions.Count == 0)
@@ -705,154 +756,34 @@ namespace PacingFramework
 		}
 
 		/// <summary>
-		/// Generates a set of candidate actions from base pool with only safety validation.
-		/// Neural network will handle all scoring and selection - no heuristic filtering!
+		/// Generates a set of candidate actions from MCTS search and/or the original bot NN.
+		/// Both sources handle their own scoring internally - no heuristic filtering here!
 		/// </summary>
-		private List<ISumoAction> GenerateCandidateActions(PacingEvaluation evaluation, List<ISumoAction> previousActions, float currentThreatDelta, float currentTempoDelta)
+		private List<ISumoAction> GenerateCandidateActions(List<ISumoAction> previousActions)
 		{
 			var candidates = new List<ISumoAction>();
-			SumoAPI api = controller.InputProvider.API;
 
-			// Get current simulated state
-			var (currentPos, currentRot) = previousActions.Count > 0
-				? api.Simulate(previousActions)
-				: (api.MyRobot.Position, api.MyRobot.Rotation);
-
-			float angleToEnemy = api.Angle(currentPos, currentRot, api.EnemyRobot.Position, normalized: true);
-			bool needHigherThreat = currentThreatDelta < 0;
-			bool needHigherTempo = currentTempoDelta < 0;
-
-			foreach (var action in BaseActionPool)
+			// MCTS-based candidates (search-driven, tactically-aware action selection)
+			if (useMCTSCandidates)
 			{
-				bool shouldInclude = true;
+				var mctsCandidates = GetMCTSCandidateActions(previousActions);
 
-				// CRITICAL: Validate that action doesn't go out of bounds (hard constraint)
-				var testActions = new List<ISumoAction>(previousActions) { action };
-				var (testPos, testRot) = api.Simulate(testActions);
-				Vector2 distanceFromArena = api.Distance(targetPos: api.BattleInfo.ArenaPosition, oriPos: testPos);
-				if (distanceFromArena.magnitude >= api.BattleInfo.ArenaRadius)
+				foreach (var mctsAction in mctsCandidates)
 				{
-					// HARD REJECT: This action would take us out of bounds
-					continue; // Skip this action entirely
+					// Avoid duplicates (check by action type and approximate duration)
+					bool isDuplicate = candidates.Any(c =>
+						c.Type == mctsAction.Type && (Mathf.Abs(c.Duration - mctsAction.Duration) < 0.5f));
+
+					if (!isDuplicate)
+						candidates.Add(mctsAction);
 				}
-
-				// Validate skills - only include if executable
-				if (action.Type == ActionType.SkillBoost || action.Type == ActionType.SkillStone)
-				{
-					if (!api.CanExecute(action))
-					{
-						shouldInclude = false;
-					}
-					else
-					{
-						// Only include boost/dash for aggressive play
-						if (action.Type == ActionType.SkillBoost && !needHigherThreat && !needHigherTempo)
-							shouldInclude = false;
-						// Only include stone for defensive play
-						if (action.Type == ActionType.SkillStone && (needHigherThreat || needHigherTempo))
-							shouldInclude = false;
-					}
-				}
-
-				// Validate dash - skip if on cooldown or unsafe
-				if (action.Type == ActionType.Dash)
-				{
-					if (api.MyRobot.IsDashOnCooldown)
-					{
-						shouldInclude = false;
-					}
-					else
-					{
-						// Check if dashing in current direction leads toward arena edge
-						float angleToCenter = api.Angle(currentPos, currentRot, api.BattleInfo.ArenaPosition, normalized: true);
-						Vector2 distFromCenter = api.Distance(targetPos: api.BattleInfo.ArenaPosition, oriPos: currentPos);
-						float normalizedDist = distFromCenter.magnitude / api.BattleInfo.ArenaRadius;
-						bool nearEdge = normalizedDist > 0.6f; // Dash is more aggressive, use tighter threshold
-						bool facingAwayFromCenter = angleToCenter < 0.5f; // > 60 degrees off from center
-
-						if (nearEdge && facingAwayFromCenter)
-						{
-							// Skip dash when near edge and facing away from center (very dangerous)
-							shouldInclude = false;
-						}
-						else if (!needHigherThreat && !needHigherTempo)
-						{
-							// Only include dash for aggressive play
-							shouldInclude = false;
-						}
-					}
-				}
-
-				// Filter turns based on threat needs and arena safety
-				// if (action is TurnAction turn)
-				// {
-				// 	// Determine if this turn helps or hurts angle alignment
-				// 	bool turnTowardsEnemy = angleToEnemy > 0.75f;
-
-				// 	// Check if turning makes us face away from arena center
-				// 	// Higher angle value = better alignment with center = safer
-				// 	float angleToCenter = api.Angle(currentPos, currentRot, api.BattleInfo.ArenaPosition, normalized: true);
-				// 	float angleAfterTurn = api.Angle(testPos, testRot, api.BattleInfo.ArenaPosition, normalized: true);
-				// 	bool turningAwayFromCenter = angleAfterTurn < angleToCenter; // Lower alignment = facing more toward edge
-
-				// 	if (needHigherThreat && !turnTowardsEnemy)
-				// 	{
-				// 		// Skip turns that worsen angle when we need threat
-				// 		shouldInclude = false;
-				// 	}
-				// 	else if (!needHigherThreat && turnTowardsEnemy)
-				// 	{
-				// 		// Skip turns toward enemy when we don't need threat
-				// 		shouldInclude = false;
-				// 	}
-				// 	else if (!needHigherThreat && !turnTowardsEnemy && turningAwayFromCenter)
-				// 	{
-				// 		// When lowering threat by turning away from enemy,
-				// 		// reject if this turn makes us face away from arena center (toward edge)
-				// 		shouldInclude = false;
-				// 	}
-				// }
-
-				// Filter accelerate actions based on tempo needs and arena safety
-				if (action is AccelerateAction accel)
-				{
-					// Check if accelerating in current direction leads toward arena edge
-					float angleToCenter = api.Angle(currentPos, currentRot, api.BattleInfo.ArenaPosition, normalized: true);
-
-					// If facing away from center (angle < 0.5 means > 60 degrees away from center)
-					// and we're already close to edge, skip acceleration
-					Vector2 distFromCenter = api.Distance(targetPos: api.BattleInfo.ArenaPosition, oriPos: currentPos);
-					float normalizedDist = distFromCenter.magnitude / api.BattleInfo.ArenaRadius;
-					bool nearEdge = normalizedDist > 0.7f; // Within 30% of arena radius from edge
-					bool facingAwayFromCenter = angleToCenter < 0.5f; // > 60 degrees off from center
-
-					if (nearEdge && facingAwayFromCenter)
-					{
-						// Skip acceleration when near edge and facing away from center
-						shouldInclude = false;
-					}
-					else if (accel.Duration >= 0.3f && !needHigherTempo)
-					{
-						// Skip long accelerates when we don't need tempo
-						shouldInclude = false;
-					}
-				}
-
-				// Avoid duplicates (check by action type and approximate duration)
-				bool isDuplicate = candidates.Any(c =>
-					c.Type == action.Type && (Mathf.Abs(c.Duration - action.Duration) < 0.5f));
-
-				if (!isDuplicate && shouldInclude)
-					candidates.Add(action);
 			}
 
 			// Merge with NN-based candidates for richer action pool
 			if (useNNCandidates && originalBotNN != null)
 			{
 				var nnCandidates = GetNNCandidateActions(previousActions);
-				Debug.Log($"[PacingHandler] Candidate pool: {candidates.Count} total (heuristic + NN)\nNN: {string.Join(", ", nnCandidates)}\nHeuristic: {string.Join(", ", candidates)}");
-
-				// candidates.Clear();
+				Debug.Log($"[PacingHandler] Candidate pool: {candidates.Count} total (MCTS + NN)\nNN: {string.Join(", ", nnCandidates)}\nMCTS: {string.Join(", ", candidates)}");
 
 				foreach (var nnAction in nnCandidates)
 				{
@@ -861,12 +792,75 @@ namespace PacingFramework
 						c.Type == nnAction.Type && (Mathf.Abs(c.Duration - nnAction.Duration) < 0.5f));
 
 					if (!isDuplicate)
-					{
 						candidates.Add(nnAction);
-					}
-					// candidates.Add(nnAction);
 				}
+			}
 
+			return candidates;
+		}
+
+		/// <summary>
+		/// Generates candidate actions via a lightweight Monte Carlo Tree Search.
+		/// Reuses the action pool and node/search logic from AIBot_EA_MCTS so the pacing
+		/// filter samples tactically-aware, bot-like moves rather than a fixed action list.
+		/// Returns the top-scoring first-ply actions (by average reward) as candidates.
+		/// </summary>
+		private List<ISumoAction> GetMCTSCandidateActions(List<ISumoAction> previousActions)
+		{
+			var candidates = new List<ISumoAction>();
+
+			if (!useMCTSCandidates)
+				return candidates;
+
+			SumoAPI api = controller.InputProvider.API;
+
+			var config = new AI_MCTS_Config
+			{
+				Iterations = mctsIterations,
+				UCBConstant = mctsUCBConstant
+			};
+
+			var allNodes = new Dictionary<string, EA_MCTS_Node>();
+			var root = new EA_MCTS_Node(null, new List<ISumoAction>(AIBot_EA_MCTS.PossibleActions))
+			{
+				ID = "Root"
+			};
+			root.Init(allNodes);
+
+			for (int i = 0; i < config.Iterations; i++)
+			{
+				EA_MCTS_Node selected = root.Select(config);
+				var expanded = selected.Expand(allNodes);
+				if (expanded != null)
+				{
+					var result = expanded.Simulate(api, config);
+					expanded.Backpropagate(result);
+				}
+			}
+
+			// Take the best-scoring first-ply actions (root's direct children) as candidates,
+			// rather than drilling into a single best sequence - we want a diverse pool.
+			var topChildren = root.children
+				.OrderByDescending(child => child.visits == 0 ? double.MinValue : child.totalReward / child.visits)
+				.Take(mctsCandidateCount);
+
+			foreach (var child in topChildren)
+			{
+				if (child.actions.Count == 0)
+					continue;
+
+				ISumoAction candidateAction = child.actions[0];
+
+				// Hard safety check against the actions already queued this pass -
+				// MCTS scores against the live robot state, not previousActions, so
+				// reject anything that would take the chained sequence out of bounds.
+				var testActions = new List<ISumoAction>(previousActions) { candidateAction };
+				var (testPos, _) = api.Simulate(testActions);
+				Vector2 distanceFromArena = api.Distance(targetPos: api.BattleInfo.ArenaPosition, oriPos: testPos);
+				if (distanceFromArena.magnitude >= api.BattleInfo.ArenaRadius)
+					continue;
+
+				candidates.Add(candidateAction);
 			}
 
 			return candidates;
