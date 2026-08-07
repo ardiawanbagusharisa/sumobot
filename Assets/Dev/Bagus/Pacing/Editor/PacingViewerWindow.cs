@@ -29,6 +29,13 @@ namespace PacingFramework
 		private const float padding = 50f;
 		private const float pointRadius = 4f;
 
+		// Chart Y-axis range (set from PacingManager.MinPacing/MaxPacing each OnGUI pass).
+		// The underlying data values are unaffected by this - only where they land on the
+		// 0-1 chart height changes, so the achievable band fills the whole chart instead of
+		// being squashed into its bottom fraction.
+		private float chartMinPacing = 0f;
+		private float chartMaxPacing = 1f;
+
 		private bool overlayTarget = true;
 
 		// Tab selection
@@ -128,6 +135,23 @@ namespace PacingFramework
 			List<float> tempo = ExtractTempo(selectedPacingItem);
 			List<float> overall = ExtractOverall(selectedPacingItem);
 
+			// Actual/observed pacing is capped to the achievable [MinPacing, MaxPacing] range -
+			// this matches what the runtime filter treats as "reachable" and guards the chart
+			// against any point that slips past the ceiling.
+			var pacingManagerForCap = PacingManager.Instance;
+			float capMin = pacingManagerForCap != null ? pacingManagerForCap.MinPacing : 0f;
+			float capMax = pacingManagerForCap != null ? pacingManagerForCap.MaxPacing : 1f;
+
+			// Stretch the chart's Y axis to the achievable range so it reaches 1.0 at capMax,
+			// instead of the achievable band being squashed into the bottom of a raw 0-1 axis.
+			// Values themselves (threat/tempo/overall below, and the target curve) are unchanged.
+			chartMinPacing = capMin;
+			chartMaxPacing = capMax;
+
+			threat = threat.Select(v => Mathf.Clamp(v, capMin, capMax)).ToList();
+			tempo = tempo.Select(v => Mathf.Clamp(v, capMin, capMax)).ToList();
+			overall = overall.Select(v => Mathf.Clamp(v, capMin, capMax)).ToList();
+
 			Rect rect = GUILayoutUtility.GetRect(position.width - 20, 400);
 			EditorGUI.DrawRect(rect, new Color(0.12f, 0.12f, 0.12f));
 
@@ -145,22 +169,34 @@ namespace PacingFramework
 					? targetConfig
 					: handler.PacingTarget;
 
+				// The authored target curve is rescaled (not capped) into the achievable range,
+				// so its full shape stays visible - just compressed - instead of flattening into
+				// a plateau above the ceiling. This is display-only: the runtime filter itself
+				// hard-caps targets (see PacingClass.PercentileToRaw) to avoid chasing pacing the
+				// bot can never reach; here we want to still see where the design curve was headed.
+				PacingTargetConfig displayConfig = new PacingTargetConfig
+				{
+					ThreatTargets = RescaleTargets(activeConfig.ThreatTargets, capMin, capMax),
+					TempoTargets = RescaleTargets(activeConfig.TempoTargets, capMin, capMax),
+					GlobalConstraints = activeConfig.GlobalConstraints
+				};
+
 				// Resample targets to match actual data count
-				var resampledThreat = ResampleCurve(activeConfig.ThreatTargets, threat.Count);
-				var resampledTempo = ResampleCurve(activeConfig.TempoTargets, tempo.Count);
+				var resampledThreat = ResampleCurve(displayConfig.ThreatTargets, threat.Count);
+				var resampledTempo = ResampleCurve(displayConfig.TempoTargets, tempo.Count);
 
 				// Draw target overlay (dashed lines)
-				DrawTargetOverlay(rect, activeConfig, threat.Count);
+				DrawTargetOverlay(rect, displayConfig, threat.Count);
 
 				// Draw delta bars showing deviation from target
 				DrawDeltaBars(rect, threat, resampledThreat, Color.red);
 				DrawDeltaBars(rect, tempo, resampledTempo, Color.cyan);
 
 				// Draw enhanced legend with stats
-				DrawEnhancedLegend(rect, threat, tempo, overall, activeConfig);
+				DrawEnhancedLegend(rect, threat, tempo, overall, displayConfig);
 
-				DrawEvaluation(threat, tempo, activeConfig);
-				DrawSegmentEvaluation(threat, tempo, activeConfig);
+				DrawEvaluation(threat, tempo, displayConfig);
+				DrawSegmentEvaluation(threat, tempo, displayConfig);
 			}
 			else
 			{
@@ -350,8 +386,8 @@ namespace PacingFramework
 			var pacingManager = PacingManager.Instance;
 			if (pacingManager != null)
 			{
-				EditorGUILayout.LabelField($"✓ Percentile Range: [{pacingManager.MinPacing:F3}, {pacingManager.MaxPacing:F3}]");
-				EditorGUILayout.HelpBox("Targets (0-1) are linearly mapped to raw pacing using the percentile range.\nExample: 0.90 → Lerp(MinPacing, MaxPacing, 0.90)\nAdjust MinPacing and MaxPacing in PacingManager inspector.", MessageType.Info);
+				EditorGUILayout.LabelField($"✓ Achievable Range: [{pacingManager.MinPacing:F3}, {pacingManager.MaxPacing:F3}]");
+				EditorGUILayout.HelpBox("Chart only - target curve (dashed) is rescaled into the achievable range so its full authored shape stays visible. Actual/observed data (solid) is capped to the same range.\nNote: the runtime filter itself hard-caps targets (see PacingClass.PercentileToRaw) rather than rescaling them - this chart's rescale is for readability only.\nAdjust MinPacing and MaxPacing in PacingManager inspector.", MessageType.Info);
 			}
 			else
 			{
@@ -448,6 +484,18 @@ namespace PacingFramework
 			Handles.EndGUI();
 		}
 
+		/// <summary>
+		/// Maps a pacing value onto the 0-1 chart height using [chartMinPacing, chartMaxPacing]
+		/// as the axis range, so the achievable band fills the whole chart. Purely a plotting
+		/// coordinate - never changes the underlying value.
+		/// </summary>
+		private float NormalizeForChart(float value)
+		{
+			if (Mathf.Approximately(chartMaxPacing, chartMinPacing))
+				return 0.5f;
+			return Mathf.Clamp01((value - chartMinPacing) / (chartMaxPacing - chartMinPacing));
+		}
+
 		private void DrawCurve(Rect rect, List<float> list, Color color)
 		{
 			if (list.Count < 2)
@@ -467,7 +515,7 @@ namespace PacingFramework
 			Vector2 GetPoint(int i)
 			{
 				float x = left + i / (float)(list.Count - 1) * width;
-				float y = bottom - Mathf.Clamp01(list[i]) * height;
+				float y = bottom - NormalizeForChart(list[i]) * height;
 				return new Vector2(x, y);
 			}
 
@@ -510,7 +558,7 @@ namespace PacingFramework
 			Vector2 GetPoint(int i)
 			{
 				float x = left + i / (float)(list.Count - 1) * width;
-				float y = bottom - Mathf.Clamp01(list[i]) * height;
+				float y = bottom - NormalizeForChart(list[i]) * height;
 				return new Vector2(x, y);
 			}
 
@@ -545,8 +593,8 @@ namespace PacingFramework
 			for (int i = 0; i < count; i++)
 			{
 				float x = left + i / (float)(actual.Count - 1) * width;
-				float actualY = bottom - Mathf.Clamp01(actual[i]) * height;
-				float targetY = bottom - Mathf.Clamp01(target[i]) * height;
+				float actualY = bottom - NormalizeForChart(actual[i]) * height;
+				float targetY = bottom - NormalizeForChart(target[i]) * height;
 
 				// Calculate delta magnitude for color coding
 				float delta = Mathf.Abs(actual[i] - target[i]);
@@ -606,10 +654,11 @@ namespace PacingFramework
 
 			EditorGUI.DrawRect(legendRect, new Color(0f, 0f, 0f, 0.6f));
 
-			// Calculate averages
-			float threatAvg = threat.Count > 0 ? threat.Average() : 0f;
-			float tempoAvg = tempo.Count > 0 ? tempo.Average() : 0f;
-			float overallAvg = overall.Count > 0 ? overall.Average() : 0f;
+			// Calculate averages, normalized against [chartMinPacing, chartMaxPacing] so these
+			// numbers match the same 0-1 scale the chart itself is plotted on.
+			float threatAvg = threat.Count > 0 ? NormalizeForChart(threat.Average()) : 0f;
+			float tempoAvg = tempo.Count > 0 ? NormalizeForChart(tempo.Average()) : 0f;
+			float overallAvg = overall.Count > 0 ? NormalizeForChart(overall.Average()) : 0f;
 
 			// Get target averages if available
 			float threatTarget = 0f;
@@ -618,8 +667,8 @@ namespace PacingFramework
 			{
 				var resampledThreat = ResampleCurve(targetConfig.ThreatTargets, threat.Count);
 				var resampledTempo = ResampleCurve(targetConfig.TempoTargets, tempo.Count);
-				threatTarget = resampledThreat.Count > 0 ? resampledThreat.Average() : 0f;
-				tempoTarget = resampledTempo.Count > 0 ? resampledTempo.Average() : 0f;
+				threatTarget = resampledThreat.Count > 0 ? NormalizeForChart(resampledThreat.Average()) : 0f;
+				tempoTarget = resampledTempo.Count > 0 ? NormalizeForChart(resampledTempo.Average()) : 0f;
 			}
 
 			// Calculate deltas
@@ -880,8 +929,12 @@ namespace PacingFramework
 
 			EditorGUILayout.BeginVertical("box");
 
-			var alignedThreat = ResampleCurve(config.ThreatTargets, actualThreat.Count);
-			var alignedTempo = ResampleCurve(config.TempoTargets, actualTempo.Count);
+			// Normalize both sides against [chartMinPacing, chartMaxPacing] so these diffs match
+			// the same 0-1 scale the chart itself is plotted on.
+			var alignedThreat = ResampleCurve(config.ThreatTargets, actualThreat.Count).Select(NormalizeForChart).ToList();
+			var alignedTempo = ResampleCurve(config.TempoTargets, actualTempo.Count).Select(NormalizeForChart).ToList();
+			var normActualThreat = actualThreat.Select(NormalizeForChart).ToList();
+			var normActualTempo = actualTempo.Select(NormalizeForChart).ToList();
 
 			// Safety check: ensure resampled lists match actual lists
 			if (alignedThreat.Count != actualThreat.Count || alignedTempo.Count != actualTempo.Count)
@@ -898,8 +951,8 @@ namespace PacingFramework
 
 			for (int i = 0; i < actualThreat.Count; i++)
 			{
-				float threatDiff = actualThreat[i] - alignedThreat[i];
-				float tempoDiff = actualTempo[i] - alignedTempo[i];
+				float threatDiff = normActualThreat[i] - alignedThreat[i];
+				float tempoDiff = normActualTempo[i] - alignedTempo[i];
 
 				float mse = (threatDiff * threatDiff + tempoDiff * tempoDiff) / 2f;
 
@@ -921,10 +974,17 @@ namespace PacingFramework
 		{
 			if (config == null) return;
 
-			float threatError = CalculateMSE(threat, config.ThreatTargets);
-			float tempoError = CalculateMSE(tempo, config.TempoTargets);
-			float threatAvg = threat.Sum() / threat.Count;
-			float tempoAvg = tempo.Sum() / tempo.Count;
+			// Normalize against [chartMinPacing, chartMaxPacing] so these numbers match the same
+			// 0-1 scale the chart itself is plotted on.
+			var normThreat = threat.Select(NormalizeForChart).ToList();
+			var normTempo = tempo.Select(NormalizeForChart).ToList();
+			var normThreatTargets = config.ThreatTargets.Select(NormalizeForChart).ToList();
+			var normTempoTargets = config.TempoTargets.Select(NormalizeForChart).ToList();
+
+			float threatError = CalculateMSE(normThreat, normThreatTargets);
+			float tempoError = CalculateMSE(normTempo, normTempoTargets);
+			float threatAvg = normThreat.Sum() / normThreat.Count;
+			float tempoAvg = normTempo.Sum() / normTempo.Count;
 			float overall = (threatAvg + tempoAvg) / 2;
 
 			EditorGUILayout.Space();
@@ -951,6 +1011,19 @@ namespace PacingFramework
 			}
 
 			return error / count;
+		}
+
+		/// <summary>
+		/// Display-only rescale of an authored target curve (0-1) into [minPacing, maxPacing],
+		/// preserving its full shape (unlike the runtime filter's hard cap in
+		/// PacingClass.PercentileToRaw, which flattens anything above maxPacing).
+		/// </summary>
+		private List<float> RescaleTargets(List<float> source, float minPacing, float maxPacing)
+		{
+			if (source == null)
+				return new List<float>();
+
+			return source.Select(t => Mathf.Lerp(minPacing, maxPacing, Mathf.Clamp01(t))).ToList();
 		}
 
 		private List<float> ResampleCurve(List<float> source, int targetCount)

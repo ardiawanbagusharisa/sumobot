@@ -37,10 +37,10 @@ namespace PacingFramework
 		public float BaseScoreSkill = 1f;
 
 		// Action type preferences based on pacing needs
-		public MinMax AccelerateMultiplier = new(0.1f, 1f);
-		public MinMax DashMultiplier = new(0.1f, 1f);
-		public MinMax SkillMultiplier = new(0.1f, 1f);
-		public MinMax TurnMultiplier = new(0.1f, 1f);
+		public MinMax AccelerateMultiplier = new(0.5f, 1f);
+		public MinMax DashMultiplier = new(0.5f, 1f);
+		public MinMax SkillMultiplier = new(0.5f, 1f);
+		public MinMax TurnMultiplier = new(0.3f, 1.5f);
 		#endregion
 
 		private SumoController controller;
@@ -65,10 +65,10 @@ namespace PacingFramework
 		/// Evaluates a candidate action using utility-based heuristics.
 		/// Higher score = better for achieving pacing balance.
 		/// </summary>
-		public float EvaluateAction(ISumoAction action, PacingEvaluation currentPacing, SumoAPI api, List<ISumoAction> previousActions)
+		public float EvaluateAction(ISumoAction action, PacingEvaluation currentPacing, SumoAPI api, Vector2 currentPos, float currentRot)
 		{
 			// Build context for evaluation
-			var context = BuildContext(currentPacing, api, previousActions);
+			var context = BuildContext(currentPacing, api, currentPos, currentRot);
 
 			// Calculate base score for action type
 			float baseScore = GetBaseScore(action);
@@ -88,7 +88,7 @@ namespace PacingFramework
 		/// Selects the best action from candidates based on heuristic evaluation.
 		/// Returns null if targets are very low (passive behavior).
 		/// </summary>
-		public ISumoAction SelectBestAction(List<ISumoAction> candidates, PacingEvaluation currentPacing, SumoAPI api, List<ISumoAction> previousActions)
+		public ISumoAction SelectBestAction(List<ISumoAction> candidates, PacingEvaluation currentPacing, SumoAPI api, Vector2 currentPos, float currentRot)
 		{
 			if (candidates.Count == 0)
 				return null;
@@ -98,7 +98,7 @@ namespace PacingFramework
 
 			// Dynamic threshold scales with targets: high targets = higher threshold (more permissive)
 			float avgTarget = (currentPacing.TargetThreat + currentPacing.TargetTempo) / 2f;
-			float dynamicThreshold = Mathf.Lerp(0.1f, 0.5f, avgTarget);
+			float dynamicThreshold = Mathf.Lerp(0.15f, 0.5f, avgTarget);
 
 			if (avgDelta > dynamicThreshold)
 			{
@@ -110,7 +110,7 @@ namespace PacingFramework
 
 			foreach (var action in candidates)
 			{
-				float score = EvaluateAction(action, currentPacing, api, previousActions);
+				float score = EvaluateAction(action, currentPacing, api, currentPos, currentRot);
 
 				if (score > bestScore)
 				{
@@ -140,12 +140,8 @@ namespace PacingFramework
 			public bool ShouldCircle;           // Low targets + safe from enemy = circle
 		}
 
-		private EvaluationContext BuildContext(PacingEvaluation pacing, SumoAPI api, List<ISumoAction> previousActions)
+		private EvaluationContext BuildContext(PacingEvaluation pacing, SumoAPI api, Vector2 currentPos, float currentRot)
 		{
-			var (currentPos, currentRot) = previousActions.Count > 0
-				? api.Simulate(previousActions)
-				: (api.MyRobot.Position, api.MyRobot.Rotation);
-
 			float distFromCenter = currentPos.magnitude / api.BattleInfo.ArenaRadius;
 			float distToEnemy = api.DistanceNormalized(currentPos, api.EnemyRobot.Position);
 			float avgTarget = (pacing.TargetThreat + pacing.TargetTempo) / 2f;
@@ -278,7 +274,7 @@ namespace PacingFramework
 
 			// Average threat and tempo multipliers for combined score
 			float combinedScore = (threatMultiplier + tempoMultiplier) / 2f;
-			return Mathf.Max(combinedScore, 5);
+			return combinedScore;
 		}
 
 		/// <summary>

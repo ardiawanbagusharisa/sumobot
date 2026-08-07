@@ -35,6 +35,11 @@ namespace PacingFramework
 		// Enable/disable action filtering (toggleable for testing)
 		public bool EnableActionFiltering = true;
 
+		// Enable/disable the per-tick original-vs-filtered pacing comparison log in RunEval().
+		// It's pure diagnostics (nothing it computes is read outside its own log line) but it runs
+		// on every Tick() - opt in only when actively debugging the filter.
+		public bool EnableRunEvalDiagnostics = true;
+
 		// When both set, LoadPacingConfig merges ThreatTargets/TempoTargets from simTargetPath
 		// with GlobalConstraints from simConstraintPath instead of loading a single Constraints file.
 		// Paths are full Resources-relative paths (e.g. "Pacing/Sim_Targets/60s/linear_increase_0_to_1_60s").
@@ -70,6 +75,16 @@ namespace PacingFramework
 		private NeuralNetwork originalBotNN;
 		public bool useNNCandidates = false; // Enable NN-based candidate generation
 		public string NNModelPath = "ML/Models/NN/NN_Model";
+
+		// Fixed action pool (heuristically filtered, always considered alongside MCTS/NN candidates)
+		// Balanced pool: more acceleration options to prevent excessive turning
+		public bool useBaseActionPool = true;
+		private static readonly List<ISumoAction> BaseActionPool = new()
+        {
+			new AccelerateAction(InputType.Script, 0.1f),
+			new DashAction(InputType.Script),
+			new SkillAction(InputType.Script),
+		};
 
 		// MCTS-based candidate generation (search-driven, tactically-aware action selection)
 		public bool useMCTSCandidates = false; // Enable MCTS-based candidate generation
@@ -272,6 +287,8 @@ namespace PacingFramework
 
 		private void RunEval()
 		{
+			if (!EnableRunEvalDiagnostics) return;
+
 			PacingEvaluation eval = EvaluatePacing();
 			if (eval == null) return;
 
@@ -362,12 +379,17 @@ namespace PacingFramework
 			// Collision detection constants (approximate bot radius + buffer)
 			const float COLLISION_THRESHOLD = 2.0f;
 
+			// Advance simulated state incrementally (O(n) total) instead of re-simulating the
+			// whole action prefix from scratch on every iteration (O(n^2)).
+			Vector2 runningPos = api.MyRobot.Position;
+			float runningRot = api.MyRobot.Rotation;
+			float runningMoveSpeed = api.MyRobot.MoveSpeed;
+			float runningDashSpeed = api.MyRobot.DashSpeed;
+
 			for (int i = 0; i < actions.Count; i++)
 			{
-				var previousActions = actions.GetRange(0, i);
-				var (predictedPos, predictedRot) = previousActions.Count > 0
-					? api.Simulate(previousActions)
-					: (api.MyRobot.Position, api.MyRobot.Rotation);
+				Vector2 predictedPos = runningPos;
+				float predictedRot = runningRot;
 
 				var factors = PredictPacingFactors(predictedPos, predictedRot, actions[i]);
 
@@ -401,6 +423,10 @@ namespace PacingFramework
 				predictedSegmentData.RegisterAction(actions[i]);
 
 				predictedSegmentData.RegisterVelocity(predictedVelocity);
+
+				// Advance running state by this action for the next iteration
+				(runningPos, runningRot, runningMoveSpeed, runningDashSpeed) =
+					api.SimulateStep(runningPos, runningRot, runningMoveSpeed, runningDashSpeed, actions[i]);
 			}
 
 			// Calculate predicted pacing
@@ -669,6 +695,16 @@ namespace PacingFramework
 			// Track simulated state as we build the action sequence
 			var simulatedActions = new List<ISumoAction>();
 
+			SumoAPI api = controller.InputProvider.API;
+
+			// Running simulated state (position/rotation/speeds), advanced incrementally in O(1)
+			// per accepted action instead of every candidate/scoring call re-simulating
+			// `simulatedActions` from scratch.
+			Vector2 stepPos = api.MyRobot.Position;
+			float stepRot = api.MyRobot.Rotation;
+			float stepMoveSpeed = api.MyRobot.MoveSpeed;
+			float stepDashSpeed = api.MyRobot.DashSpeed;
+
 			// Generate action sequence independently of original count
 			// Allow flexible sequence length (1-5 actions typical for most bots)
 			int maxActions = Mathf.Max(originalActions.Count, 3); // At least 3 actions for flexibility
@@ -680,7 +716,7 @@ namespace PacingFramework
 				ISumoAction bestAction = originalAction;
 
 				// Generate candidates dynamically based on current state and pacing needs
-				var candidateActions = GenerateCandidateActions(simulatedActions);
+				var candidateActions = GenerateCandidateActions(stepPos, stepRot, stepMoveSpeed, stepDashSpeed, currentThreatDelta, currentTempoDelta);
 
 				// If no candidates available, stop generating actions
 				if (candidateActions.Count == 0)
@@ -691,13 +727,7 @@ namespace PacingFramework
 					if (originalAction != null)
 						candidateActions.Add(originalAction);
 
-					if (pacingBrainHeuristic != null)
-					{
-						bestAction = pacingBrainHeuristic.SelectBestAction(candidateActions, evaluation, controller.InputProvider.API, simulatedActions);
-					}
-					else
-						// Fallback to original if available, otherwise use first candidate
-						bestAction ??= originalAction ?? candidateActions[0];
+					bestAction = pacingBrainHeuristic.SelectBestAction(candidateActions, evaluation, api, stepPos, stepRot);
 				}
 				else
 				{
@@ -707,7 +737,7 @@ namespace PacingFramework
 					// Evaluate original action if available
 					if (originalAction != null)
 					{
-						float originalScore = ScoreAction(originalAction, simulatedActions, evaluation, currentThreatDelta, currentTempoDelta);
+						float originalScore = ScoreAction(originalAction, stepPos, stepRot, stepMoveSpeed, stepDashSpeed, evaluation, currentThreatDelta, currentTempoDelta);
 						bestScore = originalScore;
 						bestAction = originalAction;
 					}
@@ -715,7 +745,7 @@ namespace PacingFramework
 					// Try alternative actions
 					foreach (var candidateAction in candidateActions)
 					{
-						float score = ScoreAction(candidateAction, simulatedActions, evaluation, currentThreatDelta, currentTempoDelta);
+						float score = ScoreAction(candidateAction, stepPos, stepRot, stepMoveSpeed, stepDashSpeed, evaluation, currentThreatDelta, currentTempoDelta);
 
 						if (score < bestScore)
 						{
@@ -739,6 +769,10 @@ namespace PacingFramework
 				pacedActions.Add(bestAction);
 				simulatedActions.Add(bestAction);
 
+				// Advance the running simulated state by the chosen action (O(1)) instead of
+				// re-simulating the whole `simulatedActions` history from scratch.
+				(stepPos, stepRot, stepMoveSpeed, stepDashSpeed) = api.SimulateStep(stepPos, stepRot, stepMoveSpeed, stepDashSpeed, bestAction);
+
 				// Recalculate deltas for next iteration based on current progress
 				var (currentThreat, currentTempo) = CalculatePredictedPacing(simulatedActions, evaluation);
 				currentThreatDelta = currentThreat - evaluation.TargetThreat;
@@ -756,17 +790,117 @@ namespace PacingFramework
 		}
 
 		/// <summary>
-		/// Generates a set of candidate actions from MCTS search and/or the original bot NN.
-		/// Both sources handle their own scoring internally - no heuristic filtering here!
+		/// Generates a set of candidate actions from the fixed BaseActionPool (heuristically
+		/// filtered), MCTS search, and/or the original bot NN.
 		/// </summary>
-		private List<ISumoAction> GenerateCandidateActions(List<ISumoAction> previousActions)
+		private List<ISumoAction> GenerateCandidateActions(Vector2 currentPos, float currentRot, float currentMoveSpeed, float currentDashSpeed, float currentThreatDelta, float currentTempoDelta)
 		{
 			var candidates = new List<ISumoAction>();
+			SumoAPI api = controller.InputProvider.API;
+
+			bool needHigherThreat = currentThreatDelta < 0;
+			bool needHigherTempo = currentTempoDelta < 0;
+
+			if (useBaseActionPool)
+			{
+				foreach (var action in BaseActionPool)
+				{
+					bool shouldInclude = true;
+
+					// CRITICAL: Validate that action doesn't go out of bounds (hard constraint)
+					var (testPos, _, _, _) = api.SimulateStep(currentPos, currentRot, currentMoveSpeed, currentDashSpeed, action);
+					Vector2 distanceFromArena = api.Distance(targetPos: api.BattleInfo.ArenaPosition, oriPos: testPos);
+					if (distanceFromArena.magnitude >= api.BattleInfo.ArenaRadius)
+					{
+						// HARD REJECT: This action would take us out of bounds
+						continue; // Skip this action entirely
+					}
+
+					// Validate skills - only include if executable
+					if (action.Type == ActionType.SkillBoost || action.Type == ActionType.SkillStone)
+					{
+						if (!api.CanExecute(action))
+						{
+							shouldInclude = false;
+						}
+						else
+						{
+							// Only include boost/dash for aggressive play
+							if (action.Type == ActionType.SkillBoost && !needHigherThreat && !needHigherTempo)
+								shouldInclude = false;
+							// Only include stone for defensive play
+							if (action.Type == ActionType.SkillStone && (needHigherThreat || needHigherTempo))
+								shouldInclude = false;
+						}
+					}
+
+					// Validate dash - skip if on cooldown or unsafe
+					if (action.Type == ActionType.Dash)
+					{
+						if (api.MyRobot.IsDashOnCooldown)
+						{
+							shouldInclude = false;
+						}
+						else
+						{
+							// Check if dashing in current direction leads toward arena edge
+							float angleToCenter = api.Angle(currentPos, currentRot, api.BattleInfo.ArenaPosition, normalized: true);
+							Vector2 distFromCenter = api.Distance(targetPos: api.BattleInfo.ArenaPosition, oriPos: currentPos);
+							float normalizedDist = distFromCenter.magnitude / api.BattleInfo.ArenaRadius;
+							bool nearEdge = normalizedDist > 0.6f; // Dash is more aggressive, use tighter threshold
+							bool facingAwayFromCenter = angleToCenter < 0.5f; // > 60 degrees off from center
+
+							if (nearEdge && facingAwayFromCenter)
+							{
+								// Skip dash when near edge and facing away from center (very dangerous)
+								shouldInclude = false;
+							}
+							else if (!needHigherThreat && !needHigherTempo)
+							{
+								// Only include dash for aggressive play
+								shouldInclude = false;
+							}
+						}
+					}
+
+					// Filter accelerate actions based on tempo needs and arena safety
+					if (action is AccelerateAction accel)
+					{
+						// Check if accelerating in current direction leads toward arena edge
+						float angleToCenter = api.Angle(currentPos, currentRot, api.BattleInfo.ArenaPosition, normalized: true);
+
+						// If facing away from center (angle < 0.5 means > 60 degrees away from center)
+						// and we're already close to edge, skip acceleration
+						Vector2 distFromCenter = api.Distance(targetPos: api.BattleInfo.ArenaPosition, oriPos: currentPos);
+						float normalizedDist = distFromCenter.magnitude / api.BattleInfo.ArenaRadius;
+						bool nearEdge = normalizedDist > 0.7f; // Within 30% of arena radius from edge
+						bool facingAwayFromCenter = angleToCenter < 0.5f; // > 60 degrees off from center
+
+						if (nearEdge && facingAwayFromCenter)
+						{
+							// Skip acceleration when near edge and facing away from center
+							shouldInclude = false;
+						}
+						else if (accel.Duration >= 0.3f && !needHigherTempo)
+						{
+							// Skip long accelerates when we don't need tempo
+							shouldInclude = false;
+						}
+					}
+
+					// Avoid duplicates (check by action type and approximate duration)
+					bool isDuplicate = candidates.Any(c =>
+						c.Type == action.Type && (Mathf.Abs(c.Duration - action.Duration) < 0.5f));
+
+					if (!isDuplicate && shouldInclude)
+						candidates.Add(action);
+				}
+			}
 
 			// MCTS-based candidates (search-driven, tactically-aware action selection)
 			if (useMCTSCandidates)
 			{
-				var mctsCandidates = GetMCTSCandidateActions(previousActions);
+				var mctsCandidates = GetMCTSCandidateActions(currentPos, currentRot, currentMoveSpeed, currentDashSpeed);
 
 				foreach (var mctsAction in mctsCandidates)
 				{
@@ -782,8 +916,8 @@ namespace PacingFramework
 			// Merge with NN-based candidates for richer action pool
 			if (useNNCandidates && originalBotNN != null)
 			{
-				var nnCandidates = GetNNCandidateActions(previousActions);
-				Debug.Log($"[PacingHandler] Candidate pool: {candidates.Count} total (MCTS + NN)\nNN: {string.Join(", ", nnCandidates)}\nMCTS: {string.Join(", ", candidates)}");
+				var nnCandidates = GetNNCandidateActions(currentPos);
+				Debug.Log($"[PacingHandler] Candidate pool: {candidates.Count} total (BaseActionPool + MCTS + NN)\nNN: {string.Join(", ", nnCandidates)}\nBaseActionPool+MCTS: {string.Join(", ", candidates)}");
 
 				foreach (var nnAction in nnCandidates)
 				{
@@ -805,7 +939,7 @@ namespace PacingFramework
 		/// filter samples tactically-aware, bot-like moves rather than a fixed action list.
 		/// Returns the top-scoring first-ply actions (by average reward) as candidates.
 		/// </summary>
-		private List<ISumoAction> GetMCTSCandidateActions(List<ISumoAction> previousActions)
+		private List<ISumoAction> GetMCTSCandidateActions(Vector2 currentPos, float currentRot, float currentMoveSpeed, float currentDashSpeed)
 		{
 			var candidates = new List<ISumoAction>();
 
@@ -852,10 +986,9 @@ namespace PacingFramework
 				ISumoAction candidateAction = child.actions[0];
 
 				// Hard safety check against the actions already queued this pass -
-				// MCTS scores against the live robot state, not previousActions, so
+				// MCTS scores against the live robot state, not the queued actions, so
 				// reject anything that would take the chained sequence out of bounds.
-				var testActions = new List<ISumoAction>(previousActions) { candidateAction };
-				var (testPos, _) = api.Simulate(testActions);
+				var (testPos, _, _, _) = api.SimulateStep(currentPos, currentRot, currentMoveSpeed, currentDashSpeed, candidateAction);
 				Vector2 distanceFromArena = api.Distance(targetPos: api.BattleInfo.ArenaPosition, oriPos: testPos);
 				if (distanceFromArena.magnitude >= api.BattleInfo.ArenaRadius)
 					continue;
@@ -870,7 +1003,7 @@ namespace PacingFramework
 		/// Generates candidate actions from the original bot NN model.
 		/// Uses the NN's learned behavior to provide diverse, bot-style action candidates.
 		/// </summary>
-		private List<ISumoAction> GetNNCandidateActions(List<ISumoAction> previousActions)
+		private List<ISumoAction> GetNNCandidateActions(Vector2 currentPos)
 		{
 			var candidates = new List<ISumoAction>();
 
@@ -878,11 +1011,6 @@ namespace PacingFramework
 				return candidates;
 
 			SumoAPI api = controller.InputProvider.API;
-
-			// Get current simulated state
-			var (currentPos, currentRot) = previousActions.Count > 0
-				? api.Simulate(previousActions)
-				: (api.MyRobot.Position, api.MyRobot.Rotation);
 
 			// Prepare NN inputs (matching AIBot_NN.cs format)
 			float posX = currentPos.x / api.BattleInfo.ArenaRadius;
@@ -949,18 +1077,20 @@ namespace PacingFramework
 		/// Lower score is better (closer to target).
 		/// </summary>
 		/// <param name="action">The action to evaluate</param>
-		/// <param name="previousActions">Actions that have been simulated so far</param>
+		/// <param name="currentPos">Simulated position before this action</param>
+		/// <param name="currentRot">Simulated rotation before this action</param>
+		/// <param name="currentMoveSpeed">Simulated move speed before this action (carries SkillStone/Boost state)</param>
+		/// <param name="currentDashSpeed">Simulated dash speed before this action (carries SkillStone/Boost state)</param>
 		/// <param name="evaluation">Current pacing evaluation with deltas</param>
 		/// <param name="currentThreatDelta">Current predicted threat delta (not past)</param>
 		/// <param name="currentTempoDelta">Current predicted tempo delta (not past)</param>
 		/// <returns>Score where lower is better</returns>
-		private float ScoreAction(ISumoAction action, List<ISumoAction> previousActions, PacingEvaluation evaluation, float currentThreatDelta, float currentTempoDelta)
+		private float ScoreAction(ISumoAction action, Vector2 currentPos, float currentRot, float currentMoveSpeed, float currentDashSpeed, PacingEvaluation evaluation, float currentThreatDelta, float currentTempoDelta)
 		{
 			SumoAPI api = controller.InputProvider.API;
 
 			// Simulate the action to get predicted position/rotation
-			var testActions = new List<ISumoAction>(previousActions) { action };
-			var (predictedPos, predictedRot) = api.Simulate(testActions);
+			var (predictedPos, predictedRot, _, _) = api.SimulateStep(currentPos, currentRot, currentMoveSpeed, currentDashSpeed, action);
 
 			// Calculate predicted pacing factors
 			var predictedFactors = PredictPacingFactors(predictedPos, predictedRot, action);

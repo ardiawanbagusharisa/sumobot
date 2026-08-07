@@ -397,15 +397,15 @@ public class PacingTargetConfig
 	}
 
 	/// <summary>
-	/// Inverse percentile lookup: normalized percentile (0-1) → raw pacing (0-1).
-	/// Uses linear interpolation: Lerp(minPacing, maxPacing, normalizedPercentile).
-	/// Example: 0.90 with range [0.2, 0.8] → Lerp(0.2, 0.8, 0.90) = 0.74
+	/// Caps an authored target (already in raw pacing units, 0-1) to the achievable
+	/// [minPacing, maxPacing] envelope. Targets within range pass through unchanged;
+	/// targets above maxPacing flatten at the ceiling instead of asking the filter to
+	/// chase pacing the bot can never reach.
+	/// Example: target 0.2 with ceiling 0.43 → 0.2 (unchanged). Target 0.9 → 0.43 (capped).
 	/// </summary>
-	private float PercentileToRaw(float normalizedPercentile, float minPacing, float maxPacing)
+	private float PercentileToRaw(float target, float minPacing, float maxPacing)
 	{
-		// Simple linear interpolation between min and max
-		float t = Mathf.Clamp01(normalizedPercentile);
-		return Mathf.Lerp(minPacing, maxPacing, t);
+		return Mathf.Clamp(target, minPacing, maxPacing);
 	}
 
 	/// <summary>

@@ -123,60 +123,81 @@ namespace SumoBot
             bool isEnemy = false)
         {
             SumoBotAPI robot = isEnemy ? EnemyRobot : MyRobot;
-            float moveSpeed = robot.MoveSpeed;
-            float dashSpeed = robot.DashSpeed;
             Vector2 position = robot.Position;
             float rotation = robot.Rotation % 360;
             if (rotation < 0) rotation += 360f;
+            float moveSpeed = robot.MoveSpeed;
+            float dashSpeed = robot.DashSpeed;
 
             foreach (ISumoAction action in actions)
+                (position, rotation, moveSpeed, dashSpeed) = SimulateStep(position, rotation, moveSpeed, dashSpeed, action, isEnemy);
+
+            return new(position, rotation);
+        }
+
+        /// <summary>
+        /// Advances one action from an arbitrary (position, rotation, moveSpeed, dashSpeed) state.
+        /// Lets callers build up a multi-action prediction incrementally in O(n) total instead of
+        /// re-simulating the whole action list from scratch (via <see cref="Simulate"/>) for every
+        /// prefix length, which is the O(n^2) pattern that shows up when predicting step-by-step.
+        /// </summary>
+        public (Vector2 position, float rotation, float moveSpeed, float dashSpeed) SimulateStep(
+            Vector2 position,
+            float rotation,
+            float moveSpeed,
+            float dashSpeed,
+            ISumoAction action,
+            bool isEnemy = false)
+        {
+            SumoBotAPI robot = isEnemy ? EnemyRobot : MyRobot;
+
+            bool isMultiplierActive = false;
+
+            if (action is SkillAction)
             {
-                if (action is SkillAction)
+                if (action.Type == ActionType.SkillBoost)
                 {
-                    if (action.Type == ActionType.SkillBoost)
-                    {
-                        moveSpeed *= robot.Skill.BoostMultiplier;
-                        dashSpeed *= robot.Skill.BoostMultiplier;
-                    }
-                    if (action.Type == ActionType.SkillStone)
-                    {
-                        moveSpeed = 0;
-                        dashSpeed = 0;
-                    }
+                    isMultiplierActive = true;
                 }
-
-                if (action is TurnAction)
+                if (action.Type == ActionType.SkillStone)
                 {
-                    float delta = robot.RotateSpeed * action.Duration;
-
-                    if (action.Type == ActionType.TurnRight)
-                        delta = -delta;
-
-                    rotation += delta;
-                }
-
-                if (moveSpeed == 0 && dashSpeed == 0)
-                    continue;
-
-                Vector2 direction = Quaternion.Euler(0, 0, rotation) * Vector2.up;
-
-                if (action is AccelerateAction)
-                {
-                    float effectiveSpeed = robot.MoveSpeed;
-
-                    float distance = effectiveSpeed * action.Duration;
-                    position += direction.normalized * distance;
-                }
-                else if (action is DashAction)
-                {
-                    float effectiveSpeed = robot.DashSpeed;
-
-                    float dashDistance = effectiveSpeed * robot.DashDuration;
-                    position += direction.normalized * dashDistance;
-                    position += direction.normalized * (robot.StopDelay * effectiveSpeed);
+                    moveSpeed = 0;
+                    dashSpeed = 0;
                 }
             }
-            return new(position, rotation);
+
+            if (action is TurnAction)
+            {
+                float delta = robot.RotateSpeed * action.Duration;
+
+                if (action.Type == ActionType.TurnRight)
+                    delta = -delta;
+
+                rotation += delta;
+            }
+
+            if (moveSpeed == 0 && dashSpeed == 0)
+                return (position, rotation, moveSpeed, dashSpeed);
+
+            Vector2 direction = Quaternion.Euler(0, 0, rotation) * Vector2.up;
+
+            if (action is AccelerateAction)
+            {
+                float effectiveSpeed = isMultiplierActive ? (robot.MoveSpeed * robot.Skill.BoostMultiplier) : robot.MoveSpeed;
+
+                float distance = effectiveSpeed * action.Duration;
+                position += direction.normalized * distance;
+            }
+            else if (action is DashAction)
+            {
+                float effectiveSpeed = isMultiplierActive ? (robot.DashSpeed * robot.Skill.BoostMultiplier) : robot.DashSpeed;
+
+                float dashDistance = effectiveSpeed * robot.DashDuration;
+                position += direction.normalized * dashDistance;
+                position += direction.normalized * (robot.StopDelay * effectiveSpeed);
+            }
+
+            return (position, rotation, moveSpeed, dashSpeed);
         }
 
         public override string ToString()
