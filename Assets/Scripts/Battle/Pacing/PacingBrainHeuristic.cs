@@ -32,7 +32,7 @@ namespace PacingFramework
 
 		// Action base scores (before considerations)
 		public float BaseScoreAccelerate = 1f;
-		public float BaseScoreTurn = 1f;
+		public float BaseScoreTurn = 0.8f;
 		public float BaseScoreDash = 1f;
 		public float BaseScoreSkill = 1f;
 
@@ -98,7 +98,7 @@ namespace PacingFramework
 
 			// Dynamic threshold scales with targets: high targets = higher threshold (more permissive)
 			float avgTarget = (currentPacing.TargetThreat + currentPacing.TargetTempo) / 2f;
-			float dynamicThreshold = Mathf.Lerp(0.15f, 0.5f, avgTarget);
+			float dynamicThreshold = Mathf.Lerp(0.2f, 0.5f, avgTarget);
 
 			if (avgDelta > dynamicThreshold)
 			{
@@ -290,14 +290,14 @@ namespace PacingFramework
 				switch (action.Type)
 				{
 					case ActionType.Dash:
-						score *= ctx.IsFacingEnemy ? 1f : (ctx.FacingToOutside ? -1f : 0.5f); // Risky when near edge
+						score *= ctx.IsFacingEnemy ? 1f : (ctx.FacingToOutside ? -100f : 0.5f); // Risky when near edge
 						break;
 					case ActionType.SkillBoost:
 					case ActionType.SkillStone:
 						score *= 0.5f; // Skills can push us out
 						break;
 					case ActionType.Accelerate:
-						score *= ctx.IsFacingEnemy ? 1f : (ctx.FacingToOutside ? -1f : 0.5f); // Stronger penalty to prevent aggressive forward movement near edge
+						score *= ctx.IsFacingEnemy ? 1f : (ctx.FacingToOutside ? -100f : 0.5f); // Stronger penalty to prevent aggressive forward movement near edge
 						break;
 					case ActionType.TurnLeft:
 					case ActionType.TurnRight:

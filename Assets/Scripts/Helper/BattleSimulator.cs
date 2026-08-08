@@ -32,6 +32,7 @@ namespace SumoHelper
         public bool QuitAfterDone = true;
 
         [Header("Advanced Mode Settings")]
+        public bool IgnoreResume = false;
         public float DefaultTimeScale = 2f;
         public bool SimulationOnStart = false;
 
@@ -214,7 +215,7 @@ namespace SumoHelper
 
         private void RunAdvancedSimulations()
         {
-            checkpoint = LoadCheckpoint();
+            checkpoint = LoadCheckpoint(IgnoreResume);
 
             if (Setting.Timers.Length == 0)
                 throw new Exception("Timers can't be empty");
@@ -434,9 +435,18 @@ namespace SumoHelper
         /// </summary>
         private void ApplyPacingSimulationConfig(BattleConfig cfg)
         {
-            var pacingManager = PacingManager.Instance;
+            // Use BattleManager's own reference instead of PacingManager.Instance: this method
+            // runs synchronously inside BattleManager.OnEnable() (via PrepareSimulation()) on the
+            // very first battle, and PacingManager sits after BattleManager in that GameObject's
+            // component list - its own Awake() (which sets Instance) hasn't necessarily run yet
+            // at this point, even though GetComponent<PacingManager>() (which BattleManager.OnEnable
+            // already called into its own PacingManager field) works regardless of Awake timing.
+            var pacingManager = BattleManager.Instance.PacingManager;
             if (pacingManager == null)
+            {
+                Logger.Warning("[BattleSimulator] PacingManager component not found on BattleManager's GameObject - pacing simulation config not applied.");
                 return;
+            }
 
             if (!PacingSimulation)
             {
@@ -454,15 +464,21 @@ namespace SumoHelper
             string constraintPath = $"{SimConstraintsFolder}/{cfg.PacingConstraintFileName}";
             bool topIsLeft = cfg.PacingSide == "Left";
 
+            Logger.Info($"[BattleSimulator] Applying pacing sim config: target={targetPath}, constraint={constraintPath}");
+
             pacingManager.LeftSimTargetPath = topIsLeft ? targetPath : null;
             pacingManager.LeftSimConstraintPath = topIsLeft ? constraintPath : null;
             pacingManager.LeftActionFiltering = topIsLeft;
+            pacingManager.LeftNNCandidates = topIsLeft;
+            pacingManager.LeftMCTSCandidates = false;
             pacingManager.LeftSegmentDuration = cfg.PacingSegmentDuration;
             pacingManager.LeftCollisionWindowDuration = cfg.PacingCollisionWindow;
 
             pacingManager.RightSimTargetPath = topIsLeft ? null : targetPath;
             pacingManager.RightSimConstraintPath = topIsLeft ? null : constraintPath;
             pacingManager.RightActionFiltering = !topIsLeft;
+            pacingManager.RightNNCandidates = !topIsLeft;
+            pacingManager.RightMCTSCandidates = false;
             pacingManager.RightSegmentDuration = cfg.PacingSegmentDuration;
             pacingManager.RightCollisionWindowDuration = cfg.PacingCollisionWindow;
         }
@@ -760,7 +776,7 @@ namespace SumoHelper
             File.WriteAllText(path, json);
         }
 
-        private SimulationCheckpoint LoadCheckpoint()
+        private SimulationCheckpoint LoadCheckpoint(bool forceCreate = false)
         {
             string folder = Path.Combine(Application.persistentDataPath, "Settings");
             Directory.CreateDirectory(folder);
@@ -805,21 +821,26 @@ namespace SumoHelper
                 // Check if the configuration has changed
                 bool configurationChanged = !Setting.IsConfigurationEqual(checkpoint.Setting);
 
-                if (configurationChanged)
+                if (forceCreate || configurationChanged)
                 {
-                    Logger.Info("[Checkpoint] Configuration has changed. Resetting checkpoint.", true);
-                    Logger.Info($"[Checkpoint] Old Config: Agents={checkpoint.Setting.SelectedAgents?.Length ?? 0}, " +
-                              $"Timers={checkpoint.Setting.Timers?.Length ?? 0}, " +
-                              $"Intervals={checkpoint.Setting.ActionIntervals?.Length ?? 0}, " +
-                              $"Rounds={checkpoint.Setting.RoundSystem?.Length ?? 0}, " +
-                              $"Skills={checkpoint.Setting.Skills?.Length ?? 0}, " +
-                              $"Iteration={checkpoint.Setting.Iteration}", true);
-                    Logger.Info($"[Checkpoint] New Config: Agents={Setting.SelectedAgents?.Length ?? 0}, " +
-                              $"Timers={Setting.Timers?.Length ?? 0}, " +
-                              $"Intervals={Setting.ActionIntervals?.Length ?? 0}, " +
-                              $"Rounds={Setting.RoundSystem?.Length ?? 0}, " +
-                              $"Skills={Setting.Skills?.Length ?? 0}, " +
-                              $"Iteration={Setting.Iteration}", true);
+                    if (configurationChanged == true && forceCreate)
+                        Logger.Info("[Checkpoint] Found resumable batch simulation but forceCreate=true, creating a new batch.", true);
+                    else
+                    {
+                        Logger.Info("[Checkpoint] Configuration has changed. Resetting checkpoint.", true);
+                        Logger.Info($"[Checkpoint] Old Config: Agents={checkpoint.Setting.SelectedAgents?.Length ?? 0}, " +
+                                  $"Timers={checkpoint.Setting.Timers?.Length ?? 0}, " +
+                                  $"Intervals={checkpoint.Setting.ActionIntervals?.Length ?? 0}, " +
+                                  $"Rounds={checkpoint.Setting.RoundSystem?.Length ?? 0}, " +
+                                  $"Skills={checkpoint.Setting.Skills?.Length ?? 0}, " +
+                                  $"Iteration={checkpoint.Setting.Iteration}", true);
+                        Logger.Info($"[Checkpoint] New Config: Agents={Setting.SelectedAgents?.Length ?? 0}, " +
+                                  $"Timers={Setting.Timers?.Length ?? 0}, " +
+                                  $"Intervals={Setting.ActionIntervals?.Length ?? 0}, " +
+                                  $"Rounds={Setting.RoundSystem?.Length ?? 0}, " +
+                                  $"Skills={Setting.Skills?.Length ?? 0}, " +
+                                  $"Iteration={Setting.Iteration}", true);
+                    }
 
                     // Generate new ID and timestamp for reset checkpoint
                     string newID = DateTime.Now.ToString("yyyyMMdd_HHmmss") + "_batch";

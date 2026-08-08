@@ -55,6 +55,7 @@ public class BattleSimulatorEditor : Editor
                 EditorGUI.indentLevel++;
                 EditorGUILayout.HelpBox("Advanced mode runs batch simulations with various configurations.", MessageType.Info);
 
+                simulator.IgnoreResume = EditorGUILayout.Toggle("Ignore Resume", simulator.IgnoreResume);
                 simulator.DefaultTimeScale = EditorGUILayout.FloatField("Default Time Scale", simulator.DefaultTimeScale);
                 simulator.SimulationOnStart = EditorGUILayout.Toggle("Simulation On Start", simulator.SimulationOnStart);
                 simulator.RoundCountdown = EditorGUILayout.IntField("Round Countdown", simulator.RoundCountdown);
@@ -80,6 +81,8 @@ public class BattleSimulatorEditor : Editor
                     simulator.SimConstraintsFolder = EditorGUILayout.TextField("Pacing Constraints Folder", simulator.SimConstraintsFolder);
                     simulator.PacingSegmentDuration = EditorGUILayout.IntField("Pacing Segment Duration", simulator.PacingSegmentDuration);
                     simulator.PacingCollisionWindow = EditorGUILayout.IntField("Pacing Collision Window", simulator.PacingCollisionWindow);
+                    simulator.PacingMax = EditorGUILayout.FloatField("Pacing Max", simulator.PacingMax);
+                    simulator.PacingMin = EditorGUILayout.FloatField("Pacing Min", simulator.PacingMin);
 
                     EditorGUILayout.Space(5);
                     DrawTopBotSelection(simulator);

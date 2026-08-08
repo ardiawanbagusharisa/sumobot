@@ -594,6 +594,12 @@ namespace PacingFramework
 			if (parameter.ActionList != null && parameter.ActionList.Count > 0)
 			{
 				originalUnfilteredActions = new List<ISumoAction>(parameter.ActionList);
+
+				// Accumulate into the current segment (parallel to Actions/RegisterAction, which -
+				// via SumoController.FlushInput's OnAction relay - captures the POST-filter/queued
+				// actions) so LogManager.LogPacing can log what the bot originally submitted too.
+				foreach (var action in originalUnfilteredActions)
+					currentGameplayData.RegisterOriginalAction(action);
 			}
 
 			filteredActions = FilterActions();

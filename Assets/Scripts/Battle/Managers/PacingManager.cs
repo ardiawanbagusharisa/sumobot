@@ -30,7 +30,7 @@ namespace SumoManager
 		public float LeftCollisionWindowDuration = 3f;
 		public bool LeftActionFiltering = true;
 		public bool LeftNNCandidates = true;
-		public bool LeftMCTSCandidates = true;
+		public bool LeftMCTSCandidates = false;
 
 
 		[Header("Right Player Pacing Configuration")]
@@ -42,7 +42,7 @@ namespace SumoManager
 
 		public bool RightActionFiltering = true;
 		public bool RightNNCandidates = true;
-		public bool RightMCTSCandidates = true;
+		public bool RightMCTSCandidates = false;
 
 		#endregion
 
@@ -172,7 +172,7 @@ namespace SumoManager
 				// Initialize
 				LeftPacingHandler.Init();
 
-				Debug.Log($"[PacingManager] Left handler initialized with PacingFile='{finalPacingFileName}', SegmentDuration={LeftSegmentDuration}s, WindowDuration={LeftCollisionWindowDuration}s");
+				Debug.Log($"[PacingManager] Left handler initialized with PacingFile='{LeftSimTargetPath ?? finalPacingFileName}', SegmentDuration={LeftSegmentDuration}s, WindowDuration={LeftCollisionWindowDuration}s");
 			}
 			else
 			{
@@ -213,7 +213,7 @@ namespace SumoManager
 				// Initialize
 				RightPacingHandler.Init();
 
-				Debug.Log($"[PacingManager] Right handler initialized with PacingFile='{finalPacingFileName}', SegmentDuration={RightSegmentDuration}s, WindowDuration={RightCollisionWindowDuration}s");
+				Debug.Log($"[PacingManager] Right handler initialized with PacingFile='{RightSimTargetPath ?? finalPacingFileName}', SegmentDuration={RightSegmentDuration}s, WindowDuration={RightCollisionWindowDuration}s");
 			}
 		}
 

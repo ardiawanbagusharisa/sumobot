@@ -287,6 +287,11 @@ public class SegmentData
 	public List<float> BotsDistances = new();
 	public List<float> Velocities = new();
 
+	// Actions as originally submitted, before the pacing filter ran (parallel to Actions, which
+	// - via SumoController.FlushInput's OnAction relay - actually holds the POST-filter/queued
+	// actions). Lets logs compare what the bot wanted vs what shipped.
+	public List<ISumoAction> OriginalActions = new();
+
 	public SegmentData() { }
 
 	public SegmentData(SegmentData other)
@@ -297,6 +302,7 @@ public class SegmentData
 		Actions = new(other.Actions);
 		BotsDistances = new(other.BotsDistances);
 		Velocities = new(other.Velocities);
+		OriginalActions = new(other.OriginalActions);
 	}
 
 	public void Reset()
@@ -309,12 +315,14 @@ public class SegmentData
 		Actions.Clear();
 		BotsDistances.Clear();
 		Velocities.Clear();
+		OriginalActions.Clear();
 	}
 
 	public void RegisterCollision(CollisionType type) => CollisionData.AddCollision(type);
 	public void RegisterAngle(float angle) => Angles.Add(angle);
 	public void RegisterSafeDistance(float d) => SafeDistances.Add(d);
 	public void RegisterAction(ISumoAction action) => Actions.Add(action);
+	public void RegisterOriginalAction(ISumoAction action) => OriginalActions.Add(action);
 	public void RegisterBotsDistance(float d) => BotsDistances.Add(d);
 	public void RegisterVelocity(float v) => Velocities.Add(v);
 
