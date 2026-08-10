@@ -1134,7 +1134,7 @@ namespace SumoHelper
             string configFolder = $"Timer_{cfg.Timer}__ActInterval_{cfg.ActionInterval}__Round_{cfg.RoundSystem}__SkillLeft_{cfg.SkillSetLeft}__SkillRight_{cfg.SkillSetRight}";
 
             if (PacingSimulation)
-                configFolder += $"__Pacing_{$"{cfg.PacingTargetFileName}|{cfg.PacingConstraintFileName}"}";
+                configFolder += $"__Pacing_{cfg.PacingTargetFileName}_constraint_{cfg.PacingConstraintFileName}";
 
             return new string[]{
                 checkpoint.ID,
