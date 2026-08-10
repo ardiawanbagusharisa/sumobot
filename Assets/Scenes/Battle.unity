@@ -4108,43 +4108,6 @@ SpriteRenderer:
   m_SpriteTileMode: 0
   m_WasSpriteAssigned: 1
   m_SpriteSortPoint: 0
---- !u!84 &359126092
-RenderTexture:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_Name: 
-  m_ImageContentsHash:
-    serializedVersion: 2
-    Hash: 00000000000000000000000000000000
-  m_IsAlphaChannelOptional: 0
-  serializedVersion: 6
-  m_Width: 640
-  m_Height: 480
-  m_AntiAliasing: 1
-  m_MipCount: -1
-  m_DepthStencilFormat: 0
-  m_ColorFormat: 4
-  m_MipMap: 0
-  m_GenerateMips: 0
-  m_SRGB: 1
-  m_UseDynamicScale: 0
-  m_UseDynamicScaleExplicit: 0
-  m_BindMS: 0
-  m_EnableCompatibleFormat: 1
-  m_EnableRandomWrite: 1
-  m_TextureSettings:
-    serializedVersion: 2
-    m_FilterMode: 0
-    m_Aniso: 1
-    m_MipBias: 0
-    m_WrapU: 1
-    m_WrapV: 1
-    m_WrapW: 1
-  m_Dimension: 2
-  m_VolumeDepth: 1
-  m_ShadowSamplingMode: 2
 --- !u!1 &360035875
 GameObject:
   m_ObjectHideFlags: 0
@@ -11152,6 +11115,43 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: -20, y: -20}
   m_Pivot: {x: 0.5, y: 0.5}
+--- !u!84 &977495838
+RenderTexture:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: 
+  m_ImageContentsHash:
+    serializedVersion: 2
+    Hash: 00000000000000000000000000000000
+  m_IsAlphaChannelOptional: 0
+  serializedVersion: 6
+  m_Width: 1920
+  m_Height: 1080
+  m_AntiAliasing: 1
+  m_MipCount: -1
+  m_DepthStencilFormat: 0
+  m_ColorFormat: 4
+  m_MipMap: 0
+  m_GenerateMips: 0
+  m_SRGB: 1
+  m_UseDynamicScale: 0
+  m_UseDynamicScaleExplicit: 0
+  m_BindMS: 0
+  m_EnableCompatibleFormat: 1
+  m_EnableRandomWrite: 1
+  m_TextureSettings:
+    serializedVersion: 2
+    m_FilterMode: 0
+    m_Aniso: 1
+    m_MipBias: 0
+    m_WrapU: 1
+    m_WrapV: 1
+    m_WrapW: 1
+  m_Dimension: 2
+  m_VolumeDepth: 1
+  m_ShadowSamplingMode: 2
 --- !u!1 &985197287
 GameObject:
   m_ObjectHideFlags: 0
@@ -23159,7 +23159,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Texture: {fileID: 359126092}
+  m_Texture: {fileID: 977495838}
   m_UVRect:
     serializedVersion: 2
     x: 0
@@ -26801,11 +26801,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   Mode: 1
   TotalSimulations: 1000
-  SimpleTimeScale: 3
+  SimpleTimeScale: 5
   SwapAIInterval: 0
   QuitAfterDone: 0
-  IgnoreResume: 1
-  DefaultTimeScale: 10
+  IgnoreResume: 0
+  DefaultTimeScale: 5
   SimulationOnStart: 1
   RoundCountdown: 1
   Setting:
@@ -26816,25 +26816,24 @@ MonoBehaviour:
     RoundSystem: 03000000
     Skills: 00000000
     SelectedAgents:
-    - BT
-    - DQN
-    - GA
-    - MCTS
-    - LLM
-    - MLP
-    - NN
-    - PPO
-    - Primitive
-    - FuzzyLogic
-    - Utility
-    - SLM
-    - FSM
+    - Bot_BT
+    - Bot_DQN
+    - Bot_GA
+    - Bot_MCTS
+    - Bot_LLM_ActionGPT
+    - Bot_ML_Classification
+    - Bot_NN
+    - Bot_PPO
+    - Bot_Primitive
+    - Bot_FuzzyLogic
+    - Bot_UtilityAI
+    - Bot_SLM_ActionGPT
+    - Bot_FSM
   PacingSimulation: 1
   FocusBotIDs:
-  - DAPPO_Cimin
-  - NN
-  - MLP
-  - MCTS
+  - Bot_ML_Classification
+  - Bot_NN
+  - Bot_MCTS
   IncludeFocusMatchups: 1
   SimTargetsFolder: Pacing/Sim_Targets/Experiments_real
   SimConstraintsFolder: Pacing/Sim_Constraints
@@ -26859,7 +26858,7 @@ MonoBehaviour:
   Left: {fileID: 0}
   RightEnabled: 0
   Right: {fileID: 0}
-  leftBotIndex: 8
+  leftBotIndex: 7
   rightBotIndex: 0
 --- !u!114 &2130233546
 MonoBehaviour:
@@ -26880,8 +26879,8 @@ MonoBehaviour:
   LeftFileName: default_target_high
   LeftSegmentDuration: 1
   LeftCollisionWindowDuration: 3
-  LeftActionFiltering: 1
-  LeftNNCandidates: 1
+  LeftActionFiltering: 0
+  LeftNNCandidates: 0
   LeftMCTSCandidates: 0
   RightFileName: default_target_high
   RightSegmentDuration: 1

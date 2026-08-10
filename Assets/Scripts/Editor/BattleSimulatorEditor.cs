@@ -131,6 +131,13 @@ public class BattleSimulatorEditor : Editor
         var focusSet = new HashSet<string>(simulator.FocusBotIDs ?? new string[0]);
         bool anyChanged = false;
 
+        // Drop any focus IDs that no longer match a currently selected agent (e.g. left
+        // over from a bot ID rename, or a bot that was since deselected) so they don't
+        // linger in FocusBotIDs forever instead of being cleared out.
+        var selectedSet = new HashSet<string>(selectedAgents);
+        if (focusSet.RemoveWhere(id => !selectedSet.Contains(id)) > 0)
+            anyChanged = true;
+
         foreach (var botID in selectedAgents)
         {
             bool oldValue = focusSet.Contains(botID);

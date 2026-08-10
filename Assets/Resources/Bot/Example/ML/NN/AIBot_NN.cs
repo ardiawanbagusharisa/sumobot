@@ -9,7 +9,7 @@ using System;
 public class AIBot_NN : Bot
 {
     #region Bot Template Properties
-    public override string ID => "NN";
+    public override string ID => "Bot_NN";
     public override SkillType DefaultSkillType => SkillType.Boost;
     private SumoAPI api;
     #endregion

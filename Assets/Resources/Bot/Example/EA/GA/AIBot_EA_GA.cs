@@ -15,7 +15,7 @@ namespace SumoBot.EA.GA
         public int GenerationCount = 7;
         public float MutationRate = 0.5f;
         public int ActionsPerInterval = 2;
-        public string Name = "GA";
+        public string Name = "Bot_GA";
         public SkillType DefaultSkillType = SkillType.Boost;
     }
 
