@@ -22,7 +22,7 @@ services:
       -initial-cluster etcd=http://etcd:2380
       -data-dir /etcd
     volumes:
-      - ./.volumes/etcd:/etcd
+      - etcd_data:/etcd
     networks:
       - milvus
     restart: unless-stopped
@@ -36,7 +36,7 @@ services:
       - MINIO_SECRET_KEY=minioadmin
     command: server /minio_data
     volumes:
-      - ./.volumes/minio:/minio_data
+      - minio_data:/minio_data
     networks:
       - milvus
     restart: unless-stopped
@@ -50,7 +50,7 @@ services:
       - ETCD_ENDPOINTS=etcd:2379
       - MINIO_ADDRESS=minio:9000
     volumes:
-      - ./.volumes/milvus:/var/lib/milvus
+      - milvus_data:/var/lib/milvus
     ports:
       - "19530:19530"
       - "9091:9091"
@@ -115,3 +115,8 @@ services:
 networks:
   milvus:
     driver: bridge
+
+volumes:
+  etcd_data:
+  minio_data:
+  milvus_data:
