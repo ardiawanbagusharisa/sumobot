@@ -169,15 +169,13 @@ namespace PacingFramework
 					? targetConfig
 					: handler.PacingTarget;
 
-				// The authored target curve is rescaled (not capped) into the achievable range,
-				// so its full shape stays visible - just compressed - instead of flattening into
-				// a plateau above the ceiling. This is display-only: the runtime filter itself
-				// hard-caps targets (see PacingClass.PercentileToRaw) to avoid chasing pacing the
-				// bot can never reach; here we want to still see where the design curve was headed.
+				// Rescale the authored target curve (0-1 percentile) into the achievable range,
+				// same calibration the runtime filter applies (PacingClass.PercentileToRaw), so
+				// the chart shows exactly what the bot is actually targeting.
 				PacingTargetConfig displayConfig = new PacingTargetConfig
 				{
-					ThreatTargets = RescaleTargets(activeConfig.ThreatTargets, capMin, capMax),
-					TempoTargets = RescaleTargets(activeConfig.TempoTargets, capMin, capMax),
+					ThreatTargets = activeConfig.GetCalibratedThreatTargets(capMin, capMax),
+					TempoTargets = activeConfig.GetCalibratedTempoTargets(capMin, capMax),
 					GlobalConstraints = activeConfig.GlobalConstraints
 				};
 
@@ -387,7 +385,7 @@ namespace PacingFramework
 			if (pacingManager != null)
 			{
 				EditorGUILayout.LabelField($"✓ Achievable Range: [{pacingManager.MinPacing:F3}, {pacingManager.MaxPacing:F3}]");
-				EditorGUILayout.HelpBox("Chart only - target curve (dashed) is rescaled into the achievable range so its full authored shape stays visible. Actual/observed data (solid) is capped to the same range.\nNote: the runtime filter itself hard-caps targets (see PacingClass.PercentileToRaw) rather than rescaling them - this chart's rescale is for readability only.\nAdjust MinPacing and MaxPacing in PacingManager inspector.", MessageType.Info);
+				EditorGUILayout.HelpBox("Target curve (dashed) is rescaled into the achievable range (same calibration the runtime filter applies, see PacingClass.PercentileToRaw), so its full authored shape stays visible - just compressed. Actual/observed data (solid) is capped to the same range as a display safeguard.\nAdjust MinPacing and MaxPacing in PacingManager inspector.", MessageType.Info);
 			}
 			else
 			{
@@ -1011,19 +1009,6 @@ namespace PacingFramework
 			}
 
 			return error / count;
-		}
-
-		/// <summary>
-		/// Display-only rescale of an authored target curve (0-1) into [minPacing, maxPacing],
-		/// preserving its full shape (unlike the runtime filter's hard cap in
-		/// PacingClass.PercentileToRaw, which flattens anything above maxPacing).
-		/// </summary>
-		private List<float> RescaleTargets(List<float> source, float minPacing, float maxPacing)
-		{
-			if (source == null)
-				return new List<float>();
-
-			return source.Select(t => Mathf.Lerp(minPacing, maxPacing, Mathf.Clamp01(t))).ToList();
 		}
 
 		private List<float> ResampleCurve(List<float> source, int targetCount)

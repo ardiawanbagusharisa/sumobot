@@ -32,7 +32,7 @@ namespace PacingFramework
 
 		// Action base scores (before considerations)
 		public float BaseScoreAccelerate = 1f;
-		public float BaseScoreTurn = 0.8f;
+		public float BaseScoreTurn = 0.7f;
 		public float BaseScoreDash = 1f;
 		public float BaseScoreSkill = 1f;
 
@@ -98,7 +98,7 @@ namespace PacingFramework
 
 			// Dynamic threshold scales with targets: high targets = higher threshold (more permissive)
 			float avgTarget = (currentPacing.TargetThreat + currentPacing.TargetTempo) / 2f;
-			float dynamicThreshold = Mathf.Lerp(0.2f, 0.5f, avgTarget);
+			float dynamicThreshold = Mathf.Lerp(0.15f, 0.3f, avgTarget);
 
 			if (avgDelta > dynamicThreshold)
 			{
@@ -172,7 +172,7 @@ namespace PacingFramework
 				DistanceToEnemy = distToEnemy,
 				AngleToEnemy = angleToEnemy,
 				FacingToOutside = facingToOutside > 0.5f,
-				IsInDangerZone = distFromCenter > 0.5f,
+				IsInDangerZone = distFromCenter > 0.55f,
 				IsFacingEnemy = isFacingEnemy,
 				ShouldCircle = shouldCircle,
 			};
@@ -231,7 +231,7 @@ namespace PacingFramework
 			// t = 0 (delta = -0.5, desperately need more) → use max multiplier
 			// t = 1 (delta = +0.5, way too much) → use min multiplier
 			// Lerp from max to min as t goes from 0 to 1
-			return Mathf.Lerp(multiplierRange.min, multiplierRange.max, t);
+			return Mathf.Lerp(multiplierRange.max, multiplierRange.min, t);
 		}
 
 		/// <summary>
@@ -254,8 +254,8 @@ namespace PacingFramework
 				case ActionType.TurnLeft:
 				case ActionType.TurnRight:
 					// Turning reduces threat (defensive repositioning), inverse = true
-					threatMultiplier = GetMultiplierFromDelta(ctx.ThreatDelta, TurnMultiplier);
-					tempoMultiplier = GetMultiplierFromDelta(ctx.TempoDelta, TurnMultiplier);
+					threatMultiplier = GetMultiplierFromDelta(ctx.ThreatDelta, TurnMultiplier, inverse: true);
+					tempoMultiplier = GetMultiplierFromDelta(ctx.TempoDelta, TurnMultiplier, inverse: true);
 					break;
 
 				case ActionType.Dash:
@@ -290,19 +290,19 @@ namespace PacingFramework
 				switch (action.Type)
 				{
 					case ActionType.Dash:
-						score *= ctx.IsFacingEnemy ? 1f : (ctx.FacingToOutside ? -100f : 0.5f); // Risky when near edge
+						score *= ctx.IsFacingEnemy ? 100f : (ctx.FacingToOutside ? -100f : 0.5f); // Risky when near edge
 						break;
 					case ActionType.SkillBoost:
 					case ActionType.SkillStone:
-						score *= 0.5f; // Skills can push us out
+						score *= 1f; // Skills can push us out
 						break;
 					case ActionType.Accelerate:
-						score *= ctx.IsFacingEnemy ? 1f : (ctx.FacingToOutside ? -100f : 0.5f); // Stronger penalty to prevent aggressive forward movement near edge
+						score *= ctx.IsFacingEnemy ? 100f : (ctx.FacingToOutside ? -100f : 0.5f); // Stronger penalty to prevent aggressive forward movement near edge
 						break;
 					case ActionType.TurnLeft:
 					case ActionType.TurnRight:
 						// don't turn if on edge but facing enemy
-						float turnBonus = ctx.IsFacingEnemy ? 1f : (ctx.FacingToOutside ? -1f : 0.5f);
+						float turnBonus = ctx.IsFacingEnemy ? -1f : (ctx.FacingToOutside ? -100f : 0.5f);
 						score *= turnBonus; // Strongly favor turning to reposition safely
 						break;
 				}

@@ -405,15 +405,14 @@ public class PacingTargetConfig
 	}
 
 	/// <summary>
-	/// Caps an authored target (already in raw pacing units, 0-1) to the achievable
-	/// [minPacing, maxPacing] envelope. Targets within range pass through unchanged;
-	/// targets above maxPacing flatten at the ceiling instead of asking the filter to
-	/// chase pacing the bot can never reach.
-	/// Example: target 0.2 with ceiling 0.43 → 0.2 (unchanged). Target 0.9 → 0.43 (capped).
+	/// Converts an authored target (0-1 percentile of the achievable range) into a raw
+	/// pacing value by rescaling it into [minPacing, maxPacing], preserving the full
+	/// authored shape instead of flattening anything outside the envelope into a plateau.
+	/// Example: target 0.0 with range [0.1, 0.6] → 0.1. Target 1.0 → 0.6. Target 0.5 → 0.35.
 	/// </summary>
 	private float PercentileToRaw(float target, float minPacing, float maxPacing)
 	{
-		return Mathf.Clamp(target, minPacing, maxPacing);
+		return Mathf.Lerp(minPacing, maxPacing, Mathf.Clamp01(target));
 	}
 
 	/// <summary>

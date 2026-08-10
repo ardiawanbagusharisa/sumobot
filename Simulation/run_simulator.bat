@@ -2,8 +2,23 @@
 REM Sumobot Simulator Runner for Windows
 REM
 REM Usage:
-REM   Range Mode:  run_simulator.bat "C:\path\to\Sumobot.exe" 0 100 20 [timeScale]
-REM   Single Mode: run_simulator.bat "C:\path\to\Sumobot.exe" 993 single single [timeScale]
+REM   Range Mode:  run_simulator.bat "C:\path\to\Sumobot.exe" 0 100 20 [timeScale] [pacing flags...]
+REM   Single Mode: run_simulator.bat "C:\path\to\Sumobot.exe" 993 single single [timeScale] [pacing flags...]
+REM
+REM Pacing Simulation flags (all optional; omitted ones keep whatever is baked into the
+REM build's scene - see BattleSimulator.ApplyPacingCommandLineOverrides()):
+REM   --pacingSimulation=true|false     : Enable/disable Pacing Simulation matchup generation
+REM   --simTargetsFolder=<path>         : Resources-relative folder of pacing TARGET curves
+REM   --simConstraintsFolder=<path>     : Resources-relative folder of pacing CONSTRAINT sets
+REM   --pacingSegmentDuration=<int>     : Pacing segment duration
+REM   --pacingCollisionWindow=<int>     : Pacing collision window duration
+REM   --pacingMin=<float>               : Minimum pacing value
+REM   --pacingMax=<float>               : Maximum pacing value
+REM   --focusBotIDs=<id1,id2,...>       : Comma-separated bot IDs to mark as Focus bots
+REM   --includeFocusMatchups=true|false : Also sweep Focus bots against each other
+REM
+REM Example:
+REM   run_simulator.bat "C:\Sumobot\Sumobot.exe" 0 100 20 5.0 --pacingSimulation=true --simTargetsFolder=Pacing/Sim_Targets/60s --pacingMin=0 --pacingMax=0.474 --focusBotIDs=MCTS,NN
 
 setlocal enabledelayedexpansion
 
@@ -33,6 +48,38 @@ if not "!TIME_SCALE!"=="" (
     set "TIME_SCALE_ARG=--configTimeScale=!TIME_SCALE!"
 )
 
+REM Parse optional Pacing Simulation flags (args after position 5), forwarded verbatim to the
+REM executable (BattleSimulator.ApplyPacingCommandLineOverrides() reads these on launch).
+set "PACING_ARGS="
+set "PACING_SUMMARY="
+shift
+shift
+shift
+shift
+shift
+
+:pacing_loop
+if "%~1"=="" goto pacing_done
+set "PARG=%~1"
+set "PKEY="
+for /f "tokens=1* delims==" %%A in ("!PARG!") do set "PKEY=%%A"
+
+set "PACING_KNOWN=0"
+for %%K in (--pacingSimulation --simTargetsFolder --simConstraintsFolder --pacingSegmentDuration --pacingCollisionWindow --pacingMin --pacingMax --focusBotIDs --includeFocusMatchups) do (
+    if /I "!PKEY!"=="%%K" set "PACING_KNOWN=1"
+)
+if "!PACING_KNOWN!"=="0" (
+    echo Error: Unknown argument "!PARG!"
+    exit /b 1
+)
+
+set "PACING_ARGS=!PACING_ARGS! !PARG!"
+set "PACING_SUMMARY=!PACING_SUMMARY! !PARG!"
+shift
+goto pacing_loop
+
+:pacing_done
+
 REM Get script directory
 set "SCRIPT_DIR=%~dp0"
 set "SCRIPT_DIR=%SCRIPT_DIR:~0,-1%"
@@ -54,10 +101,13 @@ if /I "!SINGLE_MODE!"=="true" (
         echo Time scale: !TIME_SCALE!x
     )
     echo Log directory: !SCRIPT_DIR!
+    if not "!PACING_SUMMARY!"=="" (
+        echo Pacing overrides:!PACING_SUMMARY!
+    )
     echo.
 
     echo Launching config !CONFIG_INDEX! (log: log_config_!CONFIG_INDEX!.txt)
-    start "SumobotSim" "!UNITY_PATH!" !COMMON_ARGS! --configIndex=!CONFIG_INDEX! !TIME_SCALE_ARG! --batchLogFile="log_config_!CONFIG_INDEX!.txt"
+    start "SumobotSim" "!UNITY_PATH!" !COMMON_ARGS! --configIndex=!CONFIG_INDEX! !TIME_SCALE_ARG! !PACING_ARGS! --batchLogFile="log_config_!CONFIG_INDEX!.txt"
 
     echo.
     echo Simulation launched successfully!
@@ -75,6 +125,9 @@ if not "!TIME_SCALE!"=="" (
     echo Time scale: !TIME_SCALE!x
 )
 echo Log directory: !SCRIPT_DIR!
+if not "!PACING_SUMMARY!"=="" (
+    echo Pacing overrides:!PACING_SUMMARY!
+)
 echo.
 
 set current=!CONFIG_START!
@@ -89,7 +142,7 @@ if !next! GTR !CONFIG_END! set next=!CONFIG_END!
 set /a batch_count+=1
 
 echo [Batch !batch_count!] Launching configs !current! to !next! (log: log_!current!-!next!.txt)
-start "Sumobot" "!UNITY_PATH!" !COMMON_ARGS! --configStart=!current! --configEnd=!next! !TIME_SCALE_ARG! --batchLogFile="log_!current!-!next!.txt"
+start "Sumobot" "!UNITY_PATH!" !COMMON_ARGS! --configStart=!current! --configEnd=!next! !TIME_SCALE_ARG! !PACING_ARGS! --batchLogFile="log_!current!-!next!.txt"
 
 set current=!next!
 goto loop

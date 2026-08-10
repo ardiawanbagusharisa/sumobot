@@ -1,19 +1,20 @@
 #!/bin/bash
 # Sumobot Simulator Runner for macOS/Linux
 #
-# Usage: ./run_simulator.sh "/path/to/Sumobot" 0 100 20 [timeScale]
+# Usage: ./run_simulator.sh "/path/to/Sumobot" 0 100 20 [timeScale] [pacing flags...]
 #   $1 = exe path (or .app path on macOS)
 #   $2 = configStart OR configIndex (if $3 is empty)
 #   $3 = configEnd (optional, if empty then $2 is treated as configIndex)
 #   $4 = batch size (required when using range mode)
 #   $5 = timeScale (optional)
+#   $6+ = optional Pacing Simulation overrides, as --key=value flags (see below)
 
 # Function to display usage
 usage() {
     cat << EOF
 Usage:
-  Range Mode:  $0 <sumobot_path> <config_start> <config_end> <batch_size> [time_scale]
-  Single Mode: $0 <sumobot_path> <config_index> "" "" [time_scale]
+  Range Mode:  $0 <sumobot_path> <config_start> <config_end> <batch_size> [time_scale] [pacing flags...]
+  Single Mode: $0 <sumobot_path> <config_index> "" "" [time_scale] [pacing flags...]
 
 Examples:
   # Range mode - Process configs 0-99 with batch size 20
@@ -28,6 +29,14 @@ Examples:
   # Single mode with 10x time scale
   ./run_simulator.sh "/Applications/Sumobot.app" 933 "" "" 10.0
 
+  # Range mode with a Pacing Simulation sweep
+  ./run_simulator.sh "/Applications/Sumobot.app" 0 100 20 5.0 \\
+      --pacingSimulation=true \\
+      --simTargetsFolder="Pacing/Sim_Targets/60s" \\
+      --simConstraintsFolder="Pacing/Sim_Constraints" \\
+      --pacingMin=0 --pacingMax=0.474 \\
+      --focusBotIDs="MCTS,NN" --includeFocusMatchups=false
+
 Arguments:
   sumobot_path  : Path to Sumobot executable or .app bundle (macOS)
   config_start  : Starting configuration index (range mode)
@@ -35,6 +44,18 @@ Arguments:
   config_end    : Ending configuration index (range mode, empty for single mode)
   batch_size    : Number of configs to run per instance (range mode only)
   time_scale    : Optional time scale multiplier (e.g., 5.0 for 5x speed)
+
+Pacing Simulation flags (all optional; omitted ones keep whatever is baked into
+the build's scene - see BattleSimulator.ApplyPacingCommandLineOverrides()):
+  --pacingSimulation=true|false     : Enable/disable Pacing Simulation matchup generation
+  --simTargetsFolder=<path>         : Resources-relative folder of pacing TARGET curves
+  --simConstraintsFolder=<path>     : Resources-relative folder of pacing CONSTRAINT sets
+  --pacingSegmentDuration=<int>     : Pacing segment duration
+  --pacingCollisionWindow=<int>     : Pacing collision window duration
+  --pacingMin=<float>               : Minimum pacing value
+  --pacingMax=<float>               : Maximum pacing value
+  --focusBotIDs=<id1,id2,...>       : Comma-separated bot IDs to mark as Focus bots
+  --includeFocusMatchups=true|false : Also sweep Focus bots against each other
 
 The script will launch multiple instances of the simulator, each processing
 a batch of configurations in parallel.
@@ -158,6 +179,46 @@ if [[ -n "$TIME_SCALE" ]]; then
     fi
 fi
 
+# Parse optional Pacing Simulation flags ($6 onward) into PACING_ARGS, forwarded verbatim to
+# the executable (BattleSimulator.ApplyPacingCommandLineOverrides() reads these on launch).
+PACING_ARGS=()
+PACING_SUMMARY=""
+if [[ $# -ge 6 ]]; then
+    for arg in "${@:6}"; do
+        case "$arg" in
+            --pacingSimulation=*|--includeFocusMatchups=*)
+                val="${arg#*=}"
+                if [[ "$val" != "true" && "$val" != "false" ]]; then
+                    echo "Error: ${arg%%=*} must be true or false"
+                    exit 1
+                fi
+                ;;
+            --pacingSegmentDuration=*|--pacingCollisionWindow=*)
+                val="${arg#*=}"
+                if ! [[ "$val" =~ ^[0-9]+$ ]]; then
+                    echo "Error: ${arg%%=*} must be an integer"
+                    exit 1
+                fi
+                ;;
+            --pacingMin=*|--pacingMax=*)
+                val="${arg#*=}"
+                if ! [[ "$val" =~ ^[0-9]+\.?[0-9]*$ ]]; then
+                    echo "Error: ${arg%%=*} must be a positive number"
+                    exit 1
+                fi
+                ;;
+            --simTargetsFolder=*|--simConstraintsFolder=*|--focusBotIDs=*)
+                ;;
+            *)
+                echo "Error: Unknown argument '$arg'"
+                usage
+                ;;
+        esac
+        PACING_ARGS+=("$arg")
+        PACING_SUMMARY="$PACING_SUMMARY $arg"
+    done
+fi
+
 COMMON_ARGS="-batchmode"
 
 # Build time scale argument if provided
@@ -183,12 +244,15 @@ if [[ "$SINGLE_MODE" = true ]]; then
     fi
     echo "Platform: $(uname -s)"
     echo "Log directory: $SCRIPT_DIR"
+    if [[ -n "$PACING_SUMMARY" ]]; then
+        echo "Pacing overrides:$PACING_SUMMARY"
+    fi
     echo ""
 
     echo "Launching config $CONFIG_INDEX (log: log_config_${CONFIG_INDEX}.txt)"
 
     # Launch in background
-    "$UNITY_PATH" $COMMON_ARGS --configIndex=$CONFIG_INDEX $TIME_SCALE_ARG --batchLogFile="log_config_${CONFIG_INDEX}.txt" &
+    "$UNITY_PATH" $COMMON_ARGS --configIndex=$CONFIG_INDEX $TIME_SCALE_ARG "${PACING_ARGS[@]}" --batchLogFile="log_config_${CONFIG_INDEX}.txt" &
 
     echo ""
     echo "========================================"
@@ -207,6 +271,9 @@ else
     fi
     echo "Platform: $(uname -s)"
     echo "Log directory: $SCRIPT_DIR"
+    if [[ -n "$PACING_SUMMARY" ]]; then
+        echo "Pacing overrides:$PACING_SUMMARY"
+    fi
     echo ""
 
     current=$CONFIG_START
@@ -223,7 +290,7 @@ else
         echo "[Batch $batch_count] Launching configs $current to $next (log: log_${current}-${next}.txt)"
 
         # Launch in background
-        "$UNITY_PATH" $COMMON_ARGS --configStart=$current --configEnd=$next $TIME_SCALE_ARG --batchLogFile="log_${current}-${next}.txt" &
+        "$UNITY_PATH" $COMMON_ARGS --configStart=$current --configEnd=$next $TIME_SCALE_ARG "${PACING_ARGS[@]}" --batchLogFile="log_${current}-${next}.txt" &
 
         current=$next
     done

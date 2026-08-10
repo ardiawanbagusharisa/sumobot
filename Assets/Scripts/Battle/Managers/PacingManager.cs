@@ -21,6 +21,7 @@ namespace SumoManager
 		public float MaxPacing = 0.43f;
 
 		public bool RandomTarget = false;
+		public bool EnableRunEvalDiagnostics = true;
 
 		[Header("Left Player Pacing Configuration")]
 		[Tooltip("Fallback pacing filename for left player (human). Can be overridden by Bot.PacingFileName")]
@@ -46,17 +47,16 @@ namespace SumoManager
 
 		#endregion
 
-		#region Pacing Simulation Overrides (set programmatically by BattleSimulator)
-
+		[Header("Pacing Simulation Overrides (set programmatically by BattleSimulator)")]
 		// When both Left*SimPath fields are non-empty, Initialize() builds the Left handler's
 		// PacingTarget from these two files (merged) instead of LeftFileName. Cleared automatically
-		// when Pacing Simulation is not active. Not meant to be hand-edited in the inspector.
-		[HideInInspector] public string LeftSimTargetPath;
-		[HideInInspector] public string LeftSimConstraintPath;
-		[HideInInspector] public string RightSimTargetPath;
-		[HideInInspector] public string RightSimConstraintPath;
-
-		#endregion
+		// when Pacing Simulation is not active. Shown here (not hand-edited) so the currently
+		// swept target/constraint pair is visible in the inspector while a sim is running -
+		// BattleSimulator.ApplyPacingSimulationConfig overwrites these every config.
+		[ReadOnly] public string LeftSimTargetPath;
+		[ReadOnly] public string LeftSimConstraintPath;
+		[ReadOnly] public string RightSimTargetPath;
+		[ReadOnly] public string RightSimConstraintPath;
 
 		#region Runtime Properties
 
@@ -163,7 +163,8 @@ namespace SumoManager
 					LeftNNCandidates,
 					LeftMCTSCandidates,
 					LeftSimTargetPath,
-					LeftSimConstraintPath
+					LeftSimConstraintPath,
+					EnableRunEvalDiagnostics
 				);
 
 				// Set the direct reference on controller for action filtering
@@ -204,7 +205,8 @@ namespace SumoManager
 					RightNNCandidates,
 					RightMCTSCandidates,
 					RightSimTargetPath,
-					RightSimConstraintPath
+					RightSimConstraintPath,
+					EnableRunEvalDiagnostics
 				);
 
 				// Set the direct reference on controller for action filtering

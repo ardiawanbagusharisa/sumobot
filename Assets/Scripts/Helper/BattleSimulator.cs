@@ -11,6 +11,7 @@ using System.Security.Cryptography;
 using System.Text;
 using Unity.VisualScripting;
 using Newtonsoft.Json;
+using UnityEngine.Serialization;
 
 namespace SumoHelper
 {
@@ -40,10 +41,13 @@ namespace SumoHelper
         public SimulationSetting Setting;
 
         [Header("Pacing Simulation")]
-        [Tooltip("When enabled, generates Top-vs-Rest matchups swept across every Sim Targets x Sim Constraints combination, applying pacing (action filtering) only to the top bot side. Replaces the default full round-robin matchup generation.")]
+        [Tooltip("When enabled, generates Focus-vs-Rest matchups swept across every Sim Targets x Sim Constraints combination, applying pacing (action filtering) only to the focus bot side. Replaces the default full round-robin matchup generation.")]
         public bool PacingSimulation = false;
-        [Tooltip("Bot IDs (from Setting.SelectedAgents) explicitly marked as 'top' bots, set via the Top Bot Selection checkboxes in the inspector. Everyone else in SelectedAgents is 'rest'.")]
-        [HideInInspector] public string[] TopBotIDs = new string[] { };
+        [Tooltip("Bot IDs (from Setting.SelectedAgents) explicitly marked as 'focus' bots, set via the Focus Bot Selection checkboxes in the inspector. Everyone else in SelectedAgents is 'rest'.")]
+        [FormerlySerializedAs("TopBotIDs")]
+        [HideInInspector] public string[] FocusBotIDs = new string[] { };
+        [Tooltip("When enabled, also generates matchups between two Focus bots (in addition to Focus-vs-Rest), each one taking a turn as the pacing-filtered side against the other. Requires at least 2 Focus bots selected.")]
+        public bool IncludeFocusMatchups = false;
         [Tooltip("Resources-relative folder of pacing TARGET curves to sweep (only ThreatTargets/TempoTargets are used from these files).")]
         public string SimTargetsFolder = "Pacing/Sim_Targets/60s";
         [Tooltip("Resources-relative folder of pacing CONSTRAINT sets to sweep (only GlobalConstraints is used from these files).")]
@@ -78,6 +82,20 @@ namespace SumoHelper
         private static int ConfigIndex = -1;
         private static float ConfigTimeScale = -1f;
         private static bool Batched = false;
+
+        // Pacing Simulation overrides (unset unless passed on the command line - batch-mode
+        // builds have no Inspector to set these through, since BattleSimulatorEditor only
+        // renders in-editor). Applied onto the instance fields in RunAdvancedSimulations(),
+        // before the checkpoint is loaded, so resume validity checks see the overridden values.
+        private static bool? OverridePacingSimulation = null;
+        private static string OverrideSimTargetsFolder = null;
+        private static string OverrideSimConstraintsFolder = null;
+        private static int? OverridePacingSegmentDuration = null;
+        private static int? OverridePacingCollisionWindow = null;
+        private static float? OverridePacingMin = null;
+        private static float? OverridePacingMax = null;
+        private static string[] OverrideFocusBotIDs = null;
+        private static bool? OverrideIncludeFocusMatchups = null;
         #endregion
 
         void OnDisable()
@@ -176,6 +194,60 @@ namespace SumoHelper
                         Logger.BatchLogPath = Path.Combine(Application.persistentDataPath, value);
                 }
 
+                if (arg.StartsWith("--pacingSimulation="))
+                {
+                    string value = arg.Substring("--pacingSimulation=".Length);
+                    if (bool.TryParse(value, out bool pacingSimulation))
+                        OverridePacingSimulation = pacingSimulation;
+                }
+
+                if (arg.StartsWith("--simTargetsFolder="))
+                    OverrideSimTargetsFolder = arg.Substring("--simTargetsFolder=".Length);
+
+                if (arg.StartsWith("--simConstraintsFolder="))
+                    OverrideSimConstraintsFolder = arg.Substring("--simConstraintsFolder=".Length);
+
+                if (arg.StartsWith("--pacingSegmentDuration="))
+                {
+                    string value = arg.Substring("--pacingSegmentDuration=".Length);
+                    if (int.TryParse(value, out int segmentDuration))
+                        OverridePacingSegmentDuration = segmentDuration;
+                }
+
+                if (arg.StartsWith("--pacingCollisionWindow="))
+                {
+                    string value = arg.Substring("--pacingCollisionWindow=".Length);
+                    if (int.TryParse(value, out int collisionWindow))
+                        OverridePacingCollisionWindow = collisionWindow;
+                }
+
+                if (arg.StartsWith("--pacingMin="))
+                {
+                    string value = arg.Substring("--pacingMin=".Length);
+                    if (float.TryParse(value, out float pacingMin))
+                        OverridePacingMin = pacingMin;
+                }
+
+                if (arg.StartsWith("--pacingMax="))
+                {
+                    string value = arg.Substring("--pacingMax=".Length);
+                    if (float.TryParse(value, out float pacingMax))
+                        OverridePacingMax = pacingMax;
+                }
+
+                if (arg.StartsWith("--focusBotIDs="))
+                {
+                    string value = arg.Substring("--focusBotIDs=".Length);
+                    OverrideFocusBotIDs = value.Split(',').Select(s => s.Trim()).Where(s => s.Length > 0).ToArray();
+                }
+
+                if (arg.StartsWith("--includeFocusMatchups="))
+                {
+                    string value = arg.Substring("--includeFocusMatchups=".Length);
+                    if (bool.TryParse(value, out bool includeFocusMatchups))
+                        OverrideIncludeFocusMatchups = includeFocusMatchups;
+                }
+
                 if (ConfigStart > -1 && ConfigEnd > -1 && Application.isBatchMode)
                 {
                     Batched = true;
@@ -215,6 +287,8 @@ namespace SumoHelper
 
         private void RunAdvancedSimulations()
         {
+            ApplyPacingCommandLineOverrides();
+
             checkpoint = LoadCheckpoint(IgnoreResume);
 
             if (Setting.Timers.Length == 0)
@@ -270,6 +344,42 @@ namespace SumoHelper
             ApplyConfig(_configs[currentConfigIndex]);
 
             BattleManager.Instance.Events[BattleManager.OnBattleChanged].Subscribe(OnBattleStateChanged);
+        }
+
+        /// <summary>
+        /// Applies any --pacing*/--simTargetsFolder/--simConstraintsFolder/--focusBotIDs/
+        /// --includeFocusMatchups command-line arguments onto the instance's Pacing Simulation
+        /// fields, so headless batch-mode builds can override them per-launch instead of being
+        /// stuck with whatever was serialized into the scene at build time. Only fields whose
+        /// override was actually passed are touched; everything else keeps its Inspector value.
+        /// Must run before LoadCheckpoint() so the resume-validity check compares against the
+        /// overridden values, not the stale ones baked into the scene.
+        /// </summary>
+        private void ApplyPacingCommandLineOverrides()
+        {
+            bool anyOverride = OverridePacingSimulation.HasValue || OverrideSimTargetsFolder != null ||
+                OverrideSimConstraintsFolder != null || OverridePacingSegmentDuration.HasValue ||
+                OverridePacingCollisionWindow.HasValue || OverridePacingMin.HasValue || OverridePacingMax.HasValue ||
+                OverrideFocusBotIDs != null || OverrideIncludeFocusMatchups.HasValue;
+
+            if (!anyOverride)
+                return;
+
+            if (OverridePacingSimulation.HasValue) PacingSimulation = OverridePacingSimulation.Value;
+            if (OverrideSimTargetsFolder != null) SimTargetsFolder = OverrideSimTargetsFolder;
+            if (OverrideSimConstraintsFolder != null) SimConstraintsFolder = OverrideSimConstraintsFolder;
+            if (OverridePacingSegmentDuration.HasValue) PacingSegmentDuration = OverridePacingSegmentDuration.Value;
+            if (OverridePacingCollisionWindow.HasValue) PacingCollisionWindow = OverridePacingCollisionWindow.Value;
+            if (OverridePacingMin.HasValue) PacingMin = OverridePacingMin.Value;
+            if (OverridePacingMax.HasValue) PacingMax = OverridePacingMax.Value;
+            if (OverrideFocusBotIDs != null) FocusBotIDs = OverrideFocusBotIDs;
+            if (OverrideIncludeFocusMatchups.HasValue) IncludeFocusMatchups = OverrideIncludeFocusMatchups.Value;
+
+            Logger.Info($"[BattleSimulator] Applied pacing command-line overrides: PacingSimulation={PacingSimulation}, " +
+                $"SimTargetsFolder={SimTargetsFolder}, SimConstraintsFolder={SimConstraintsFolder}, " +
+                $"PacingSegmentDuration={PacingSegmentDuration}, PacingCollisionWindow={PacingCollisionWindow}, " +
+                $"PacingMin={PacingMin}, PacingMax={PacingMax}, FocusBotIDs=[{string.Join(",", FocusBotIDs ?? new string[0])}], " +
+                $"IncludeFocusMatchups={IncludeFocusMatchups}", true);
         }
 
         private void OnBattleStateChanged(EventParameter param)
@@ -428,10 +538,13 @@ namespace SumoHelper
         /// <summary>
         /// Pushes this match's pacing setup onto PacingManager before Battle_Preparing fires
         /// (InputManager.InitializeInput reads these fields when it constructs each side's
-        /// PacingHandler). Only the Top bot's side gets the swept target/constraint files and
-        /// action filtering enabled; the other side keeps PacingManager's normal fallback config
-        /// with filtering off. Clears the overrides when Pacing Simulation is disabled so stale
-        /// values from a previous run can't leak into a manual/non-sim session.
+        /// PacingHandler). Both sides load the same swept target/constraint files - only the
+        /// focus bot's side gets action filtering and NN candidates enabled, the other side loads
+        /// the same PacingTarget purely for measurement/logging with filtering off. This avoids
+        /// depending on PacingManager's normal fallback config (Left/RightFileName from
+        /// Resources/Pacing/Constraints), which isn't guaranteed to exist during pacing sweeps.
+        /// Clears the overrides when Pacing Simulation is disabled so stale values from a
+        /// previous run can't leak into a manual/non-sim session.
         /// </summary>
         private void ApplyPacingSimulationConfig(BattleConfig cfg)
         {
@@ -462,22 +575,22 @@ namespace SumoHelper
 
             string targetPath = $"{SimTargetsFolder}/{cfg.PacingTargetFileName}";
             string constraintPath = $"{SimConstraintsFolder}/{cfg.PacingConstraintFileName}";
-            bool topIsLeft = cfg.PacingSide == "Left";
+            bool focusIsLeft = cfg.PacingSide == "Left";
 
             Logger.Info($"[BattleSimulator] Applying pacing sim config: target={targetPath}, constraint={constraintPath}");
 
-            pacingManager.LeftSimTargetPath = topIsLeft ? targetPath : null;
-            pacingManager.LeftSimConstraintPath = topIsLeft ? constraintPath : null;
-            pacingManager.LeftActionFiltering = topIsLeft;
-            pacingManager.LeftNNCandidates = topIsLeft;
+            pacingManager.LeftSimTargetPath = targetPath;
+            pacingManager.LeftSimConstraintPath = constraintPath;
+            pacingManager.LeftActionFiltering = focusIsLeft;
+            pacingManager.LeftNNCandidates = focusIsLeft;
             pacingManager.LeftMCTSCandidates = false;
             pacingManager.LeftSegmentDuration = cfg.PacingSegmentDuration;
             pacingManager.LeftCollisionWindowDuration = cfg.PacingCollisionWindow;
 
-            pacingManager.RightSimTargetPath = topIsLeft ? null : targetPath;
-            pacingManager.RightSimConstraintPath = topIsLeft ? null : constraintPath;
-            pacingManager.RightActionFiltering = !topIsLeft;
-            pacingManager.RightNNCandidates = !topIsLeft;
+            pacingManager.RightSimTargetPath = targetPath;
+            pacingManager.RightSimConstraintPath = constraintPath;
+            pacingManager.RightActionFiltering = !focusIsLeft;
+            pacingManager.RightNNCandidates = !focusIsLeft;
             pacingManager.RightMCTSCandidates = false;
             pacingManager.RightSegmentDuration = cfg.PacingSegmentDuration;
             pacingManager.RightCollisionWindowDuration = cfg.PacingCollisionWindow;
@@ -555,25 +668,33 @@ namespace SumoHelper
         }
 
         /// <summary>
-        /// Generates Top-vs-Rest matchups (both sides mirrored) swept across every
-        /// Sim_Targets x Sim_Constraints combination. "Top" bots are whichever of
-        /// Setting.SelectedAgents are also listed in TopBotIDs (set via the Top Bot
-        /// Selection checkboxes); "Rest" is everyone else in SelectedAgents.
-        /// Only the Top bot's side is marked (via BattleConfig.TopSide) to receive pacing;
-        /// ApplyConfig() applies that to PacingManager before each match starts.
+        /// Generates Focus-vs-Rest matchups (both sides mirrored) swept across every
+        /// Sim_Targets x Sim_Constraints combination. "Focus" bots are whichever of
+        /// Setting.SelectedAgents are also listed in FocusBotIDs (set via the Focus Bot
+        /// Selection checkboxes); "Rest" is everyone else in SelectedAgents. When
+        /// IncludeFocusMatchups is also enabled, Focus bots are additionally swept against
+        /// each other (Focus-vs-Focus), each one taking a turn as the pacing side.
+        /// Only the focused bot's side is marked (via BattleConfig.PacingSide) to receive
+        /// pacing; ApplyPacingSimulationConfig() applies that to PacingManager before each
+        /// match starts.
         /// </summary>
         private List<BattleConfig> GeneratePacingSimulationConfigs(List<Bot> agents)
         {
             var configs = new List<BattleConfig>();
 
-            var topSet = new HashSet<string>(TopBotIDs ?? new string[0]);
-            var topAgents = agents.Where(a => topSet.Contains(a.ID)).ToList();
-            var restAgents = agents.Where(a => !topSet.Contains(a.ID)).ToList();
+            var focusSet = new HashSet<string>(FocusBotIDs ?? new string[0]);
+            var focusAgents = agents.Where(a => focusSet.Contains(a.ID)).ToList();
+            var restAgents = agents.Where(a => !focusSet.Contains(a.ID)).ToList();
 
-            if (topAgents.Count == 0 || restAgents.Count == 0)
+            if (focusAgents.Count == 0 || restAgents.Count == 0)
             {
-                Logger.Error($"[Simulation][PacingSimulation] Requires at least 1 top agent and 1 rest agent (Top={topAgents.Count}, Rest={restAgents.Count}). Check Top Bot Selection in the inspector.");
+                Logger.Error($"[Simulation][PacingSimulation] Requires at least 1 focus agent and 1 rest agent (Focus={focusAgents.Count}, Rest={restAgents.Count}). Check Focus Bot Selection in the inspector.");
                 return configs;
+            }
+
+            if (IncludeFocusMatchups && focusAgents.Count < 2)
+            {
+                Logger.Warning($"[Simulation][PacingSimulation] Include Focus Matchups is enabled but only {focusAgents.Count} focus bot(s) selected - need at least 2 to generate Focus-vs-Focus matchups.");
             }
 
             var targetAssets = Resources.LoadAll<TextAsset>(SimTargetsFolder).OrderBy(a => a.name).ToList();
@@ -590,45 +711,65 @@ namespace SumoHelper
                 return configs;
             }
 
-            foreach (var topBot in topAgents)
-            {
+            // Focus vs Rest: every focus bot swept against every non-focus bot, both directions.
+            foreach (var focusBot in focusAgents)
                 foreach (var restBot in restAgents)
-                {
-                    // Both directions: top bot as Left, and top bot as Right.
-                    var pairings = new (Bot left, Bot right, PlayerSide topSide)[]
-                    {
-                        (topBot, restBot, PlayerSide.Left),
-                        (restBot, topBot, PlayerSide.Right),
-                    };
+                    AddMatchupConfigs(configs, focusBot, restBot, targetAssets, constraintAssets);
 
-                    foreach (var (leftBot, rightBot, topSide) in pairings)
+            // Focus vs Focus (optional): sweep focus bots against each other too. Iterating every
+            // ordered pair (A,B) and (B,A) - each contributing "A focused" and "B focused" configs
+            // respectively - covers both bots as the focused side without generating duplicates.
+            if (IncludeFocusMatchups)
+            {
+                foreach (var focusBotA in focusAgents)
+                    foreach (var focusBotB in focusAgents)
                     {
-                        foreach (var roundSystem in Setting.RoundSystem)
+                        if (focusBotA == focusBotB) continue;
+                        AddMatchupConfigs(configs, focusBotA, focusBotB, targetAssets, constraintAssets);
+                    }
+            }
+
+            Logger.Info($"[Simulation][PacingSimulation] Generated configs: {configs.Count} (Focus={focusAgents.Count}, Rest={restAgents.Count}, IncludeFocusMatchups={IncludeFocusMatchups}, Targets={targetAssets.Count}, Constraints={constraintAssets.Count})", true);
+            Logger.Info($"Game will run {configs.Aggregate(0, (sum, cfg) => sum + cfg.Iteration)} matches in total.", true);
+            return configs;
+        }
+
+        /// <summary>
+        /// Generates both directional configs for a pacing-focused bot against an opponent -
+        /// focusBot as Left (focused) vs opponent as Right, and focusBot as Right (focused) vs
+        /// opponent as Left - swept across every round system / timer / action interval / target
+        /// / constraint combination. Shared by the Focus-vs-Rest and Focus-vs-Focus sweeps.
+        /// </summary>
+        private void AddMatchupConfigs(List<BattleConfig> configs, Bot focusBot, Bot opponentBot, List<TextAsset> targetAssets, List<TextAsset> constraintAssets)
+        {
+            var pairings = new (Bot left, Bot right, PlayerSide focusSide)[]
+            {
+                (focusBot, opponentBot, PlayerSide.Left),
+                (opponentBot, focusBot, PlayerSide.Right),
+            };
+
+            foreach (var (leftBot, rightBot, focusSide) in pairings)
+            {
+                foreach (var roundSystem in Setting.RoundSystem)
+                {
+                    foreach (var timer in Setting.Timers)
+                    {
+                        foreach (var interval in Setting.ActionIntervals)
                         {
-                            foreach (var timer in Setting.Timers)
+                            foreach (var targetAsset in targetAssets)
                             {
-                                foreach (var interval in Setting.ActionIntervals)
+                                foreach (var constraintAsset in constraintAssets)
                                 {
-                                    foreach (var targetAsset in targetAssets)
-                                    {
-                                        foreach (var constraintAsset in constraintAssets)
-                                        {
-                                            AddPacingSimulationConfigs(configs, leftBot, rightBot, topSide, roundSystem, timer, interval, targetAsset.name, constraintAsset.name);
-                                        }
-                                    }
+                                    AddPacingSimulationConfigs(configs, leftBot, rightBot, focusSide, roundSystem, timer, interval, targetAsset.name, constraintAsset.name);
                                 }
                             }
                         }
                     }
                 }
             }
-
-            Logger.Info($"[Simulation][PacingSimulation] Generated configs: {configs.Count} (Top={topAgents.Count}, Rest={restAgents.Count}, Targets={targetAssets.Count}, Constraints={constraintAssets.Count})", true);
-            Logger.Info($"Game will run {configs.Aggregate(0, (sum, cfg) => sum + cfg.Iteration)} matches in total.", true);
-            return configs;
         }
 
-        private void AddPacingSimulationConfigs(List<BattleConfig> configs, Bot leftBot, Bot rightBot, PlayerSide topSide, RoundSystem roundSystem, int timer, float interval, string targetFileName, string constraintFileName)
+        private void AddPacingSimulationConfigs(List<BattleConfig> configs, Bot leftBot, Bot rightBot, PlayerSide focusSide, RoundSystem roundSystem, int timer, float interval, string targetFileName, string constraintFileName)
         {
             if (Setting.Skills.Length > 0)
             {
@@ -649,7 +790,7 @@ namespace SumoHelper
                             RoundSystem = roundSystem,
                             PacingTargetFileName = targetFileName,
                             PacingConstraintFileName = constraintFileName,
-                            PacingSide = topSide.ToString(),
+                            PacingSide = focusSide.ToString(),
                             PacingSegmentDuration = PacingSegmentDuration,
                             PacingCollisionWindow = PacingCollisionWindow,
                             PacingMax = PacingMax,
@@ -671,7 +812,7 @@ namespace SumoHelper
                     RoundSystem = roundSystem,
                     PacingTargetFileName = targetFileName,
                     PacingConstraintFileName = constraintFileName,
-                    PacingSide = topSide.ToString(),
+                    PacingSide = focusSide.ToString(),
                     PacingSegmentDuration = PacingSegmentDuration,
                     PacingCollisionWindow = PacingCollisionWindow,
                     PacingMax = PacingMax,
@@ -768,6 +909,48 @@ namespace SumoHelper
 
 
 
+        /// <summary>
+        /// Snapshots this simulator's current Pacing Simulation fields onto the checkpoint, so a
+        /// later resume attempt can detect whether they've changed since the checkpoint was written.
+        /// </summary>
+        private void CapturePacingConfig(SimulationCheckpoint checkpoint)
+        {
+            checkpoint.PacingSimulation = PacingSimulation;
+            checkpoint.FocusBotIDs = FocusBotIDs;
+            checkpoint.IncludeFocusMatchups = IncludeFocusMatchups;
+            checkpoint.SimTargetsFolder = SimTargetsFolder;
+            checkpoint.SimConstraintsFolder = SimConstraintsFolder;
+            checkpoint.PacingSegmentDuration = PacingSegmentDuration;
+            checkpoint.PacingCollisionWindow = PacingCollisionWindow;
+            checkpoint.PacingMin = PacingMin;
+            checkpoint.PacingMax = PacingMax;
+        }
+
+        /// <summary>
+        /// Compares this simulator's current Pacing Simulation fields against the checkpoint's
+        /// snapshot of them (see CapturePacingConfig). GeneratePacingSimulationConfigs()/
+        /// AddMatchupConfigs() derive _configs' count/order directly from these fields, so any
+        /// mismatch means resuming from checkpoint.ConfigIndex would silently run the wrong config.
+        /// </summary>
+        private bool IsPacingConfigEqual(SimulationCheckpoint other)
+        {
+            if (other == null) return false;
+            if (PacingSimulation != other.PacingSimulation) return false;
+            if (IncludeFocusMatchups != other.IncludeFocusMatchups) return false;
+            if (SimTargetsFolder != other.SimTargetsFolder) return false;
+            if (SimConstraintsFolder != other.SimConstraintsFolder) return false;
+            if (PacingSegmentDuration != other.PacingSegmentDuration) return false;
+            if (PacingCollisionWindow != other.PacingCollisionWindow) return false;
+            if (!Mathf.Approximately(PacingMin, other.PacingMin)) return false;
+            if (!Mathf.Approximately(PacingMax, other.PacingMax)) return false;
+
+            var mine = new HashSet<string>(FocusBotIDs ?? new string[0]);
+            var theirs = new HashSet<string>(other.FocusBotIDs ?? new string[0]);
+            if (!mine.SetEquals(theirs)) return false;
+
+            return true;
+        }
+
         private void SaveCheckpoint(SimulationCheckpoint checkpoint)
         {
             string folder = Path.Combine(Application.persistentDataPath, "Settings");
@@ -813,13 +996,17 @@ namespace SumoHelper
                     Iteration = 0,
                     ConfigIndex = 0,
                 };
+                CapturePacingConfig(checkpoint);
 
                 Logger.Info($"[Checkpoint] Created checkpoint ID: {checkpoint.ID} at {checkpoint.CreatedAt}", true);
             }
             else
             {
-                // Check if the configuration has changed
-                bool configurationChanged = !Setting.IsConfigurationEqual(checkpoint.Setting);
+                // Check if the configuration has changed. Pacing fields are compared too since
+                // GeneratePacingSimulationConfigs() derives _configs' count/order directly from
+                // them - a mismatch there means checkpoint.ConfigIndex would silently point into
+                // a differently-shaped config list on resume.
+                bool configurationChanged = !Setting.IsConfigurationEqual(checkpoint.Setting) || !IsPacingConfigEqual(checkpoint);
 
                 if (forceCreate || configurationChanged)
                 {
@@ -833,13 +1020,19 @@ namespace SumoHelper
                                   $"Intervals={checkpoint.Setting.ActionIntervals?.Length ?? 0}, " +
                                   $"Rounds={checkpoint.Setting.RoundSystem?.Length ?? 0}, " +
                                   $"Skills={checkpoint.Setting.Skills?.Length ?? 0}, " +
-                                  $"Iteration={checkpoint.Setting.Iteration}", true);
+                                  $"Iteration={checkpoint.Setting.Iteration}, " +
+                                  $"PacingSimulation={checkpoint.PacingSimulation}, SimTargetsFolder={checkpoint.SimTargetsFolder}, " +
+                                  $"SimConstraintsFolder={checkpoint.SimConstraintsFolder}, FocusBotIDs=[{string.Join(",", checkpoint.FocusBotIDs ?? new string[0])}], " +
+                                  $"IncludeFocusMatchups={checkpoint.IncludeFocusMatchups}, PacingMin={checkpoint.PacingMin}, PacingMax={checkpoint.PacingMax}", true);
                         Logger.Info($"[Checkpoint] New Config: Agents={Setting.SelectedAgents?.Length ?? 0}, " +
                                   $"Timers={Setting.Timers?.Length ?? 0}, " +
                                   $"Intervals={Setting.ActionIntervals?.Length ?? 0}, " +
                                   $"Rounds={Setting.RoundSystem?.Length ?? 0}, " +
                                   $"Skills={Setting.Skills?.Length ?? 0}, " +
-                                  $"Iteration={Setting.Iteration}", true);
+                                  $"Iteration={Setting.Iteration}, " +
+                                  $"PacingSimulation={PacingSimulation}, SimTargetsFolder={SimTargetsFolder}, " +
+                                  $"SimConstraintsFolder={SimConstraintsFolder}, FocusBotIDs=[{string.Join(",", FocusBotIDs ?? new string[0])}], " +
+                                  $"IncludeFocusMatchups={IncludeFocusMatchups}, PacingMin={PacingMin}, PacingMax={PacingMax}", true);
                     }
 
                     // Generate new ID and timestamp for reset checkpoint
@@ -855,6 +1048,7 @@ namespace SumoHelper
                         Iteration = 0,
                         ConfigIndex = 0,
                     };
+                    CapturePacingConfig(checkpoint);
 
                     Logger.Info($"[Checkpoint] Created new checkpoint ID: {checkpoint.ID} at {checkpoint.CreatedAt}", true);
                 }
@@ -1081,6 +1275,18 @@ namespace SumoHelper
         public int TotalConfigs;
         public int ConfigIndex;
         public int Iteration;
+
+        // Pacing Simulation snapshot, used by IsPacingConfigEqual() to detect config changes
+        // that should invalidate a resume (see CapturePacingConfig).
+        public bool PacingSimulation;
+        public string[] FocusBotIDs;
+        public bool IncludeFocusMatchups;
+        public string SimTargetsFolder;
+        public string SimConstraintsFolder;
+        public int PacingSegmentDuration;
+        public int PacingCollisionWindow;
+        public float PacingMin;
+        public float PacingMax;
     }
 }
 

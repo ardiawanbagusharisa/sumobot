@@ -38,7 +38,7 @@ namespace PacingFramework
 		// Enable/disable the per-tick original-vs-filtered pacing comparison log in RunEval().
 		// It's pure diagnostics (nothing it computes is read outside its own log line) but it runs
 		// on every Tick() - opt in only when actively debugging the filter.
-		public bool EnableRunEvalDiagnostics = true;
+		public bool EnableRunEvalDiagnostics = false;
 
 		// When both set, LoadPacingConfig merges ThreatTargets/TempoTargets from simTargetPath
 		// with GlobalConstraints from simConstraintPath instead of loading a single Constraints file.
@@ -81,8 +81,8 @@ namespace PacingFramework
 		public bool useBaseActionPool = true;
 		private static readonly List<ISumoAction> BaseActionPool = new()
         {
-			new AccelerateAction(InputType.Script, 0.1f),
-			new DashAction(InputType.Script),
+			// new AccelerateAction(InputType.Script, 0.1f),
+			// new DashAction(InputType.Script),
 			new SkillAction(InputType.Script),
 		};
 
@@ -106,7 +106,7 @@ namespace PacingFramework
 		// ================================
 		// Constructor
 		// ================================
-		public PacingHandler(SumoController controller, string pacingFileName, float segmentDuration, float collisionWindowDuration, GamePacing sharedPacingHistory, float minPacing, float maxPacing, PacingBrainHeuristic sharedPacingBrainHeuristic = null, bool useNNCandidates = false, bool useMCTSCandidates = false, string simTargetPath = null, string simConstraintPath = null)
+		public PacingHandler(SumoController controller, string pacingFileName, float segmentDuration, float collisionWindowDuration, GamePacing sharedPacingHistory, float minPacing, float maxPacing, PacingBrainHeuristic sharedPacingBrainHeuristic = null, bool useNNCandidates = false, bool useMCTSCandidates = false, string simTargetPath = null, string simConstraintPath = null, bool runDebugEval = false)
 		{
 			this.controller = controller;
 			this.segmentDuration = segmentDuration;
@@ -120,6 +120,7 @@ namespace PacingFramework
 			this.simTargetPath = simTargetPath;
 			this.simConstraintPath = simConstraintPath;
 			pacingBrainHeuristic = sharedPacingBrainHeuristic;
+			EnableRunEvalDiagnostics = runDebugEval;
 
 			// Subscribe to events
 			controller.Events[SumoController.OnBounce].Subscribe(OnBounce);
