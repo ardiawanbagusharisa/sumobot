@@ -65,9 +65,9 @@ namespace SumoHelper
         // Comment out any bot ID below to re-enable it in simulations
         private readonly string[] HeavyMLBotIDs = new string[]
         {
-            "SLM",   // Bot_SLM_ActionGPT - Small Language Model
-            "LLM",   // Bot_LLM_ActionGPT - Large Language Model
-            "MLP"    // Bot_ML_Classification - Multi-Layer Perceptron
+            "Bot_SLM",   // Bot_SLM_ActionGPT - Small Language Model
+            "Bot_LLM",   // Bot_LLM_ActionGPT - Large Language Model
+            "Bot_MLP"    // Bot_ML_Classification - Multi-Layer Perceptron
         };
 
         private List<Bot> Agents = new();

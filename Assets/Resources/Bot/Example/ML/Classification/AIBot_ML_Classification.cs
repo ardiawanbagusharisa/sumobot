@@ -10,7 +10,7 @@ using UnityEngine;
 
 class AIBot_ML_Classification : Bot
 {
-    public override string ID => "Bot_ML_Classification";
+    public override string ID => "Bot_MLP";
     public override SkillType DefaultSkillType => SkillType.Boost;
 
     public Model runtimeModel;

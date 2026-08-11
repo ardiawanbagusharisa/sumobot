@@ -11115,43 +11115,6 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: -20, y: -20}
   m_Pivot: {x: 0.5, y: 0.5}
---- !u!84 &977495838
-RenderTexture:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_Name: 
-  m_ImageContentsHash:
-    serializedVersion: 2
-    Hash: 00000000000000000000000000000000
-  m_IsAlphaChannelOptional: 0
-  serializedVersion: 6
-  m_Width: 1920
-  m_Height: 1080
-  m_AntiAliasing: 1
-  m_MipCount: -1
-  m_DepthStencilFormat: 0
-  m_ColorFormat: 4
-  m_MipMap: 0
-  m_GenerateMips: 0
-  m_SRGB: 1
-  m_UseDynamicScale: 0
-  m_UseDynamicScaleExplicit: 0
-  m_BindMS: 0
-  m_EnableCompatibleFormat: 1
-  m_EnableRandomWrite: 1
-  m_TextureSettings:
-    serializedVersion: 2
-    m_FilterMode: 0
-    m_Aniso: 1
-    m_MipBias: 0
-    m_WrapU: 1
-    m_WrapV: 1
-    m_WrapW: 1
-  m_Dimension: 2
-  m_VolumeDepth: 1
-  m_ShadowSamplingMode: 2
 --- !u!1 &985197287
 GameObject:
   m_ObjectHideFlags: 0
@@ -19157,6 +19120,43 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1666118608}
   m_CullTransparentMesh: 1
+--- !u!84 &1667400888
+RenderTexture:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: 
+  m_ImageContentsHash:
+    serializedVersion: 2
+    Hash: 00000000000000000000000000000000
+  m_IsAlphaChannelOptional: 0
+  serializedVersion: 6
+  m_Width: 1920
+  m_Height: 1080
+  m_AntiAliasing: 1
+  m_MipCount: -1
+  m_DepthStencilFormat: 0
+  m_ColorFormat: 4
+  m_MipMap: 0
+  m_GenerateMips: 0
+  m_SRGB: 1
+  m_UseDynamicScale: 0
+  m_UseDynamicScaleExplicit: 0
+  m_BindMS: 0
+  m_EnableCompatibleFormat: 1
+  m_EnableRandomWrite: 1
+  m_TextureSettings:
+    serializedVersion: 2
+    m_FilterMode: 0
+    m_Aniso: 1
+    m_MipBias: 0
+    m_WrapU: 1
+    m_WrapV: 1
+    m_WrapW: 1
+  m_Dimension: 2
+  m_VolumeDepth: 1
+  m_ShadowSamplingMode: 2
 --- !u!1 &1676308038
 GameObject:
   m_ObjectHideFlags: 0
@@ -23159,7 +23159,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Texture: {fileID: 977495838}
+  m_Texture: {fileID: 1667400888}
   m_UVRect:
     serializedVersion: 2
     x: 0
@@ -26820,20 +26820,20 @@ MonoBehaviour:
     - Bot_DQN
     - Bot_GA
     - Bot_MCTS
-    - Bot_LLM_ActionGPT
-    - Bot_ML_Classification
+    - Bot_LLM
+    - Bot_MLP
     - Bot_NN
     - Bot_PPO
     - Bot_Primitive
-    - Bot_FuzzyLogic
-    - Bot_UtilityAI
-    - Bot_SLM_ActionGPT
+    - Bot_Fuzzy
+    - Bot_Utility
+    - Bot_SLM
     - Bot_FSM
   PacingSimulation: 1
   FocusBotIDs:
-  - Bot_ML_Classification
   - Bot_NN
   - Bot_MCTS
+  - Bot_LLM
   IncludeFocusMatchups: 1
   SimTargetsFolder: Pacing/Sim_Targets/Experiments_real
   SimConstraintsFolder: Pacing/Sim_Constraints
@@ -26875,12 +26875,12 @@ MonoBehaviour:
   MinPacing: 0
   MaxPacing: 1
   RandomTarget: 0
-  EnableRunEvalDiagnostics: 1
+  EnableRunEvalDiagnostics: 0
   LeftFileName: default_target_high
   LeftSegmentDuration: 1
   LeftCollisionWindowDuration: 3
-  LeftActionFiltering: 0
-  LeftNNCandidates: 0
+  LeftActionFiltering: 1
+  LeftNNCandidates: 1
   LeftMCTSCandidates: 0
   RightFileName: default_target_high
   RightSegmentDuration: 1
