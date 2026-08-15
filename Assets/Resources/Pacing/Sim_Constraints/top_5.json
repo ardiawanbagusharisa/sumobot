@@ -1,0 +1,52 @@
+{
+    "GlobalConstraints": {
+        "CollisionRatio": {
+            "Min": 0.01,
+            "Max": 0.99,
+            "MinLimit": 0.01,
+            "MaxLimit": 0.99
+        },
+        "AbilityRatio": {
+            "Min": 0.0,
+            "Max": 0.71,
+            "MinLimit": 0.0,
+            "MaxLimit": 0.71
+        },
+        "Angle": {
+            "Min": 0.07,
+            "Max": 0.99,
+            "MinLimit": 0.07,
+            "MaxLimit": 0.99
+        },
+        "SafeDistance": {
+            "Min": -0.20,
+            "Max": 0.82,
+            "MinLimit": -0.20,
+            "MaxLimit": 0.82
+        },
+        "ActionIntensity": {
+            "Min": 0.42,
+            "Max": 30.92,
+            "MinLimit": 0.42,
+            "MaxLimit": 30.92
+        },
+        "ActionDensity": {
+            "Min": 0.0,
+            "Max": 2.01,
+            "MinLimit": 0.0,
+            "MaxLimit": 2.01
+        },
+        "BotsDistance": {
+            "Min": 0.14,
+            "Max": 0.47,
+            "MinLimit": 0.14,
+            "MaxLimit": 0.47
+        },
+        "Velocity": {
+            "Min": 0.01,
+            "Max": 5.16,
+            "MinLimit": 0.01,
+            "MaxLimit": 5.16
+        }
+    }
+}
