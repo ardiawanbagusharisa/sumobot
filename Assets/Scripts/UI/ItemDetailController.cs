@@ -33,6 +33,7 @@ public class ItemDetailController : MonoBehaviour
     [Header("Buttons")]
     [SerializeField] private Button buyButton;
     [SerializeField] private TMP_Text buyButtonLabel; // optional: flips to "Owned" when owned
+    [SerializeField] private Button sellButton;       // list an owned + self-authored item that isn't listed yet (ListAsync)
     [SerializeField] private Button equipButton;      // equip an owned skin (hidden for non-skins)
     [SerializeField] private TMP_Text equipButtonLabel; // optional: flips to "Equipped"
     [SerializeField] private Button exitButton;       // closes the panel
@@ -45,6 +46,11 @@ public class ItemDetailController : MonoBehaviour
 
     private const int RepriceStep = 10;
 
+    // Opening price when an item is first listed via Sell. The item's own catalog Price is
+    // used when it carries one (>0); otherwise this floor keeps the listing from starting free.
+    // The seller can adjust it right after via the Reprice controls.
+    private const int DefaultListPrice = 50;
+
     private CatalogItem current;
     private MarketListing currentListing; // set only when opened from the Community tab
     private bool purchasing;
@@ -54,6 +60,7 @@ public class ItemDetailController : MonoBehaviour
     void Awake()
     {
         if (buyButton != null) buyButton.onClick.AddListener(OnBuyClicked);
+        if (sellButton != null) sellButton.onClick.AddListener(OnSellClicked);
         if (equipButton != null) equipButton.onClick.AddListener(OnEquipClicked);
         if (exitButton != null) exitButton.onClick.AddListener(Hide);
         if (askButton != null) askButton.onClick.AddListener(OnAskClicked);
@@ -184,6 +191,51 @@ public class ItemDetailController : MonoBehaviour
         }
     }
 
+    // List an owned, self-authored item that has no active listing yet. On success the item
+    // is now the player's own listing, so re-open the panel in listing mode (Show(item,
+    // listing)) — that swaps the Sell button for the Unlist/Reprice controls, and the
+    // opening price can be tuned from there. Guarded against re-entrancy like Buy/Reprice.
+    private async void OnSellClicked()
+    {
+        if (current == null || listingBusy) return;
+
+        listingBusy = true;
+        if (sellButton != null) sellButton.interactable = false;
+
+        try
+        {
+            int price = current.Price > 0 ? current.Price : DefaultListPrice;
+            var result = await GameServices.Market.ListAsync(current.Id, price);
+            if (!result.Success)
+            {
+                Logger.Warning($"[Market] List '{current.Id}' failed: {result.Error}");
+                return;
+            }
+
+            var listing = FindOwnActiveListing(current.Id);
+            if (listing != null) Show(current, listing); // flip to Unlist/Reprice on the new listing
+        }
+        finally
+        {
+            listingBusy = false;
+            if (sellButton != null) sellButton.interactable = true;
+        }
+    }
+
+    // The current player's active listing for an item, or null. Used both to decide whether
+    // Sell is offered (none yet) and to re-open the panel on the freshly-created listing.
+    private static MarketListing FindOwnActiveListing(string itemId)
+    {
+        var market = GameServices.Market;
+        string selfId = GameServices.PlayerData?.Current?.PlayerId;
+        if (market == null || string.IsNullOrEmpty(selfId)) return null;
+
+        foreach (var listing in market.ActiveListings)
+            if (listing.ItemId == itemId && listing.SellerId == selfId)
+                return listing;
+        return null;
+    }
+
     // Creator/Description are common to every category; each element shows only when the
     // item actually provides a value (so a bare skin hides them). WinRate is bot-script
     // only. Per-field toggles — no single wrapping group — so the panel's core fields
@@ -264,19 +316,33 @@ public class ItemDetailController : MonoBehaviour
     }
 
     // A player can't buy what they already own (LocalTradeService/LocalMarketService reject
-    // it too); reflect that in the button so the affordance matches the rule. For a
-    // Community listing that belongs to the current player, show Unlist/Reprice controls
-    // instead of Buy — you can't buy your own listing either.
+    // it too); reflect that in the button so the affordance matches the rule. Three mutually
+    // exclusive modes drive which control shows:
+    //   - own listing (Community tab, your own row) -> Unlist/Reprice, no Buy;
+    //   - owned + self-authored + not yet listed    -> Sell (ListAsync), no Buy;
+    //   - everything else                            -> Buy (disabled/"Owned" when owned).
     private void RefreshBuyState()
     {
-        bool isOwnListing = currentListing != null
-            && currentListing.SellerId == (GameServices.PlayerData?.Current?.PlayerId);
+        string selfId = GameServices.PlayerData?.Current?.PlayerId;
+        bool owned = current != null && (GameServices.PlayerData?.Current?.Owns(current.Id) ?? false);
+
+        bool isOwnListing = currentListing != null && currentListing.SellerId == selfId;
+
+        // Sell only when viewing the item outside the Community tab (no listing carried in),
+        // it's ours to sell (owned + Author == self), and it isn't already listed.
+        bool canSell = !isOwnListing
+            && currentListing == null
+            && owned
+            && current != null
+            && !string.IsNullOrEmpty(selfId)
+            && current.Author == selfId
+            && FindOwnActiveListing(current.Id) == null;
 
         if (sellerControls != null) sellerControls.SetActive(isOwnListing);
-        if (buyButton != null) buyButton.gameObject.SetActive(!isOwnListing);
-        if (isOwnListing) return;
+        if (sellButton != null) sellButton.gameObject.SetActive(canSell);
+        if (buyButton != null) buyButton.gameObject.SetActive(!isOwnListing && !canSell);
+        if (isOwnListing || canSell) return;
 
-        bool owned = current != null && (GameServices.PlayerData?.Current?.Owns(current.Id) ?? false);
         if (buyButton != null) buyButton.interactable = !owned;
         if (buyButtonLabel != null) buyButtonLabel.text = owned ? "Owned" : "Buy";
     }

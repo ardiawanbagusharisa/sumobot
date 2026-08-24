@@ -33,7 +33,9 @@ public class MainMenuController : MonoBehaviour
 	public MenuMapping[] menus;
 
 	public void Start() {
-		SwitchMenu(MenuState.Login);
+		// Returning from the node editor (E3.2) lands back on the Workshop panel; a normal boot
+		// still starts at Login. The flag is consume-once so it never leaks into a later boot.
+		SwitchMenu(WorkshopRouting.ConsumeReturnToWorkshop() ? MenuState.Workshop : MenuState.Login);
 	}
 
 	private void BuildCampaignButtons() {

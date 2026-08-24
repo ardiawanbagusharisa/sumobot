@@ -56,5 +56,6 @@
         "temp/": true,
         "Temp/": true
     },
-    "dotnet.defaultSolution": "sumobot.slnx"
+    "dotnet.defaultSolution": "sumobot.slnx",
+    "snyk.advanced.autoSelectOrganization": true
 }

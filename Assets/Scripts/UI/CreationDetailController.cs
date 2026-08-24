@@ -93,13 +93,11 @@ public class CreationDetailController : MonoBehaviour
         panel.SetActive(false);
     }
 
-    // Open the node editor on this draft. The editor scene (E3.2) is not built yet; the draft id
-    // is what it will take. Left as a logged stub so the button is functional the moment it lands.
+    // Open the node editor (E3.2) on this draft; it returns to the Workshop on Save/Back.
     private void OnEditClicked()
     {
         if (current == null || current.Type != CreationEntry.Kind.Draft) return;
-        Logger.Warning($"[Workshop] Editor scene not built yet (E3.2); would edit draft '{current.Id}'.");
-        // TODO(E3.2): WorkshopRouting.OpenEditor(current.Id);
+        WorkshopRouting.OpenEditor(current.Id);
     }
 
     // Freeze the draft into an owned, sellable bot. This is decision-7 publish (E5,

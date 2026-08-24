@@ -25,6 +25,11 @@ namespace SumoBot.Graph.Authoring
         /// so the NodeId index stays in sync.</summary>
         public BotGraph Graph { get; }
 
+        /// <summary>Raised after a structural change (node or connection added/removed) so the editor
+        /// can re-validate. Not raised for cosmetic moves or parameter edits, which cannot change
+        /// validity.</summary>
+        public event Action Changed;
+
         public GraphDocument(ModuleLibrary library, BotGraph graph = null)
         {
             this.library = library ?? throw new ArgumentNullException(nameof(library));
@@ -64,6 +69,7 @@ namespace SumoBot.Graph.Authoring
 
             Graph.Nodes.Add(node);
             nodesById[node.NodeId] = node;
+            Changed?.Invoke();
             return node;
         }
 
@@ -75,6 +81,7 @@ namespace SumoBot.Graph.Authoring
             nodesById.Remove(nodeId);
             Graph.Nodes.Remove(node);
             Graph.Connections.RemoveAll(c => c != null && (c.FromNodeId == nodeId || c.ToNodeId == nodeId));
+            Changed?.Invoke();
             return true;
         }
 
@@ -113,6 +120,7 @@ namespace SumoBot.Graph.Authoring
                 ToPortId = toPortId,
             };
             Graph.Connections.Add(conn);
+            Changed?.Invoke();
             return conn;
         }
 
@@ -122,6 +130,7 @@ namespace SumoBot.Graph.Authoring
             int removed = Graph.Connections.RemoveAll(c => c != null &&
                 c.FromNodeId == fromNodeId && c.FromPortId == fromPortId &&
                 c.ToNodeId == toNodeId && c.ToPortId == toPortId);
+            if (removed > 0) Changed?.Invoke();
             return removed > 0;
         }
 

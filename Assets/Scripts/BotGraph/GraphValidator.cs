@@ -22,10 +22,15 @@ namespace SumoBot.Graph
         public GraphErrorCode Code;
         public string Message;
 
-        public GraphError(GraphErrorCode code, string message)
+        /// <summary>The node this error is about, when one can be singled out (empty for graph- or
+        /// connection-level problems like a cycle). The editor uses it to highlight the culprit.</summary>
+        public string NodeId;
+
+        public GraphError(GraphErrorCode code, string message, string nodeId = null)
         {
             Code = code;
             Message = message;
+            NodeId = nodeId;
         }
 
         public override string ToString() => $"{Code}: {Message}";
@@ -54,13 +59,13 @@ namespace SumoBot.Graph
                 if (string.IsNullOrEmpty(node.NodeId) || nodesById.ContainsKey(node.NodeId))
                 {
                     errors.Add(new GraphError(GraphErrorCode.DuplicateNodeId,
-                        $"Duplicate or missing node id '{node.NodeId}'."));
+                        $"Duplicate or missing node id '{node.NodeId}'.", node.NodeId));
                     continue;
                 }
                 nodesById[node.NodeId] = node;
                 if (!library.Contains(node.TypeId))
                     errors.Add(new GraphError(GraphErrorCode.UnknownModuleType,
-                        $"Node '{node.NodeId}' uses unknown module '{node.TypeId}'."));
+                        $"Node '{node.NodeId}' uses unknown module '{node.TypeId}'.", node.NodeId));
             }
 
             // Validate connections; count fan-in per input port (must be at most 1).
@@ -92,23 +97,23 @@ namespace SumoBot.Graph
                         (toPort == null && toDef.FindPort(conn.ToPortId, PortDirection.Out) != null);
                     errors.Add(directionMismatch
                         ? new GraphError(GraphErrorCode.PortDirectionMismatch,
-                            $"Connection must go Out -> In: '{conn.FromNodeId}.{conn.FromPortId}' -> '{conn.ToNodeId}.{conn.ToPortId}'.")
+                            $"Connection must go Out -> In: '{conn.FromNodeId}.{conn.FromPortId}' -> '{conn.ToNodeId}.{conn.ToPortId}'.", conn.ToNodeId)
                         : new GraphError(GraphErrorCode.ConnectionUnknownPort,
-                            $"Connection uses unknown port: '{conn.FromNodeId}.{conn.FromPortId}' -> '{conn.ToNodeId}.{conn.ToPortId}'."));
+                            $"Connection uses unknown port: '{conn.FromNodeId}.{conn.FromPortId}' -> '{conn.ToNodeId}.{conn.ToPortId}'.", conn.ToNodeId));
                     continue;
                 }
 
                 if (fromPort.Type != toPort.Type)
                     errors.Add(new GraphError(GraphErrorCode.PortTypeMismatch,
                         $"Type mismatch: '{conn.FromNodeId}.{conn.FromPortId}' ({fromPort.Type}) -> " +
-                        $"'{conn.ToNodeId}.{conn.ToPortId}' ({toPort.Type})."));
+                        $"'{conn.ToNodeId}.{conn.ToPortId}' ({toPort.Type}).", conn.ToNodeId));
 
                 string inKey = conn.ToNodeId + "/" + conn.ToPortId;
                 inboundCount.TryGetValue(inKey, out int count);
                 inboundCount[inKey] = count + 1;
                 if (count + 1 > 1)
                     errors.Add(new GraphError(GraphErrorCode.InputAlreadyConnected,
-                        $"Input '{conn.ToNodeId}.{conn.ToPortId}' has more than one incoming connection."));
+                        $"Input '{conn.ToNodeId}.{conn.ToPortId}' has more than one incoming connection.", conn.ToNodeId));
             }
 
             // Required inputs must be connected (e.g. an Action whose trigger is never wired).
@@ -121,7 +126,7 @@ namespace SumoBot.Graph
                     if (!port.Required) continue;
                     if (!inboundCount.ContainsKey(node.NodeId + "/" + port.Id))
                         errors.Add(new GraphError(GraphErrorCode.RequiredInputUnconnected,
-                            $"Required input '{node.NodeId}.{port.Id}' is not connected."));
+                            $"Required input '{node.NodeId}.{port.Id}' is not connected.", node.NodeId));
                 }
             }
 

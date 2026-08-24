@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using SumoServices;
-using SumoBot.Graph;
 using SumoBot.Graph.Authoring;
 using UnityEngine;
 using UnityEngine.UI;
@@ -64,14 +63,7 @@ public class MyCreationsListController : MonoBehaviour
         return entries;
     }
 
-    // Create a new draft and show it immediately. Once the editor scene (E3.2) exists this should
-    // instead route into it (which saves on first Save); for now creating + refreshing proves the
-    // draft-store -> list loop end to end.
-    private void OnNewBot()
-    {
-        var draft = GraphDraft.NewDraft(new BotGraph { Name = "New Bot" });
-        DraftStoreProvider.Instance.Save(draft);
-        Refresh();
-        // TODO(E3.2): WorkshopRouting.OpenEditor(draft.Id);
-    }
+    // Open the node editor on a brand-new bot. The draft is persisted only when the author hits
+    // Save in the editor (GraphEditorController), so backing out leaves no empty draft behind.
+    private void OnNewBot() => WorkshopRouting.OpenEditor();
 }
