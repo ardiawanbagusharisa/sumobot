@@ -13,7 +13,7 @@ namespace SumoBot.RuleBased.Fuzzy
         public override string ID => Name;
         public override SkillType DefaultSkillType => SkillType;
 
-        public string Name = "FuzzyLogic";
+        public string Name = "Fuzzy";
         public SkillType SkillType = SkillType.Boost;
 
         public FuzzySugeno Fuzzy = new();
@@ -245,7 +245,7 @@ public static class FuzzySugenoExtension
                     {
                         { "enemy_position", "back_left" },
                     },
-                    Action = new TurnAction(InputType.Script, ActionType.TurnLeft, 065f),
+                    Action = new TurnAction(InputType.Script, ActionType.TurnLeft, 07f),
                     CrispOutput = 0.9f
                 },
                 new() {
