@@ -11161,9 +11161,9 @@ RectTransform:
   m_Father: {fileID: 905058547}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
+  m_AnchorMax: {x: 1, y: 1}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: -17}
   m_Pivot: {x: 0, y: 1}
 --- !u!114 &219083638
 MonoBehaviour:
@@ -39375,7 +39375,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 1, y: 1}
   m_AnchoredPosition: {x: 0, y: -0.000061035156}
-  m_SizeDelta: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 230}
   m_Pivot: {x: 0, y: 1}
 --- !u!114 &829295448
 MonoBehaviour:
@@ -42626,6 +42626,45 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 897168101}
   m_CullTransparentMesh: 1
+--- !u!114 &900000001
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1269357169}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 851143e7a38a4ed9832f51ad4e75a003, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  sceneName: Campaign_1_1
+--- !u!114 &900000002
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1569148096}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 851143e7a38a4ed9832f51ad4e75a003, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  sceneName: Campaign_2_1
+--- !u!114 &900000003
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 123609851}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 851143e7a38a4ed9832f51ad4e75a003, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  sceneName: Campaign_3_1
 --- !u!1 &900276312
 GameObject:
   m_ObjectHideFlags: 0
@@ -51635,9 +51674,9 @@ RectTransform:
   m_Father: {fileID: 905058547}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 1, y: 0}
-  m_AnchorMax: {x: 1, y: 0}
+  m_AnchorMax: {x: 1, y: 1}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 20, y: 0}
+  m_SizeDelta: {x: 20, y: -17}
   m_Pivot: {x: 1, y: 1}
 --- !u!114 &1081167968
 MonoBehaviour:
@@ -51682,7 +51721,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 1558589141}
   m_HandleRect: {fileID: 1558589140}
   m_Direction: 2
-  m_Value: 0
+  m_Value: 1
   m_Size: 1
   m_NumberOfSteps: 0
   m_OnValueChanged:
@@ -51748,7 +51787,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1652518872696547120, guid: 40caebf15cb60f549abee07e0d7e51b4, type: 3}
       propertyPath: m_AnchorMax.y
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 1652518872696547120, guid: 40caebf15cb60f549abee07e0d7e51b4, type: 3}
       propertyPath: m_AnchorMin.x
@@ -51756,7 +51795,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1652518872696547120, guid: 40caebf15cb60f549abee07e0d7e51b4, type: 3}
       propertyPath: m_AnchorMin.y
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 1652518872696547120, guid: 40caebf15cb60f549abee07e0d7e51b4, type: 3}
       propertyPath: m_SizeDelta.x
@@ -51796,11 +51835,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1652518872696547120, guid: 40caebf15cb60f549abee07e0d7e51b4, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: 0
+      value: 616.7
       objectReference: {fileID: 0}
     - target: {fileID: 1652518872696547120, guid: 40caebf15cb60f549abee07e0d7e51b4, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: 0
+      value: -115
       objectReference: {fileID: 0}
     - target: {fileID: 1652518872696547120, guid: 40caebf15cb60f549abee07e0d7e51b4, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -60522,7 +60561,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &1261041749
 RectTransform:
   m_ObjectHideFlags: 0
@@ -71409,7 +71448,7 @@ RectTransform:
   m_Father: {fileID: 1005614746}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
+  m_AnchorMax: {x: 1, y: 1}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 20, y: 20}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -76200,7 +76239,7 @@ RectTransform:
   m_Father: {fileID: 661447029}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
+  m_AnchorMax: {x: 1, y: 1}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 20, y: 20}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -101224,8 +101263,8 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 1452100143}
   m_HandleRect: {fileID: 1452100142}
   m_Direction: 0
-  m_Value: 1
-  m_Size: 1
+  m_Value: 0
+  m_Size: 0.9999999
   m_NumberOfSteps: 0
   m_OnValueChanged:
     m_PersistentCalls:
@@ -105489,42 +105528,3 @@ SceneRoots:
   - {fileID: 1980104117}
   - {fileID: 1198878979}
   - {fileID: 1772143615}
---- !u!114 &900000001
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1269357169}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 851143e7a38a4ed9832f51ad4e75a003, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  sceneName: Campaign_1_1
---- !u!114 &900000002
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1569148096}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 851143e7a38a4ed9832f51ad4e75a003, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  sceneName: Campaign_2_1
---- !u!114 &900000003
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 123609851}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 851143e7a38a4ed9832f51ad4e75a003, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  sceneName: Campaign_3_1

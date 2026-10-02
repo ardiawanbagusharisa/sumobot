@@ -240,7 +240,7 @@ namespace SumoCampaign
             text.fontSize = size;
             text.fontStyle = style;
             text.alignment = TextAlignmentOptions.Center;
-            text.enableWordWrapping = true;
+            text.textWrappingMode = TextWrappingModes.Normal;
             text.color = Color.white;
             LayoutElement element = textObject.GetComponent<LayoutElement>();
             element.flexibleHeight = 1f;
