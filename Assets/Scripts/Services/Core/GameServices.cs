@@ -92,6 +92,12 @@ namespace SumoServices
             {
                 if (item.IsDefault && !PlayerData.Current.Owns(item.Id))
                     await PlayerData.GrantItemAsync(item.Id);
+
+                if (item.IsDefault && !string.IsNullOrEmpty(item.Slot) &&
+                    !PlayerData.Current.EquippedBySlot.ContainsKey(item.Slot))
+                {
+                    await PlayerData.EquipAsync(item.Slot, item.Id);
+                }
             }
         }
 

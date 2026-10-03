@@ -38,7 +38,11 @@ public class ItemDetailController : MonoBehaviour
 
     void Awake()
     {
-        if (buyButton != null) buyButton.onClick.AddListener(OnBuyClicked);
+        if (buyButton != null)
+        {
+            buyButton.onClick = new Button.ButtonClickedEvent();
+            buyButton.onClick.AddListener(OnPrimaryActionClicked);
+        }
         if (exitButton != null) exitButton.onClick.AddListener(Hide);
         if (askButton != null) askButton.onClick.AddListener(OnAskClicked);
     }
@@ -84,7 +88,7 @@ public class ItemDetailController : MonoBehaviour
     }
 
     // Buttons need a void handler; guard against re-entrancy so a double-tap can't double-buy.
-    private async void OnBuyClicked()
+    private async void OnPrimaryActionClicked()
     {
         if (current == null || purchasing) return;
 
@@ -93,9 +97,21 @@ public class ItemDetailController : MonoBehaviour
 
         try
         {
-            var result = await GameServices.Trade.BuyAsync(current.Id);
+            bool owned = GameServices.PlayerData?.Current?.Owns(current.Id) ?? false;
+            ServiceResult result;
+            if (owned && !string.IsNullOrEmpty(current.Slot))
+            {
+                result = await GameServices.PlayerData.EquipAsync(current.Slot, current.Id);
+                if (result.Success)
+                    GameManager.Instance.ApplyCurrentEquipment();
+            }
+            else
+            {
+                result = await GameServices.Trade.BuyAsync(current.Id);
+            }
+
             if (!result.Success)
-                Logger.Warning($"[Market] Buy '{current.Id}' failed: {result.Error}");
+                Logger.Warning($"[Market] Action for '{current.Id}' failed: {result.Error}");
         }
         finally
         {
@@ -132,11 +148,11 @@ public class ItemDetailController : MonoBehaviour
         }
     }
 
-    // TODO: no design yet for what "Ask" does (contact the creator? open a chat thread?).
-    // Wired up so the button is functional once that's decided; for now it's a no-op.
     private void OnAskClicked()
     {
-        Logger.Warning("[Market] Ask is not implemented yet.");
+        if (current == null) return;
+        Hide();
+        MarketManager.OpenChatFor(current);
     }
 
     // A player can't buy what they already own (LocalTradeService rejects it too); reflect
@@ -144,7 +160,19 @@ public class ItemDetailController : MonoBehaviour
     private void RefreshBuyState()
     {
         bool owned = current != null && (GameServices.PlayerData?.Current?.Owns(current.Id) ?? false);
-        if (buyButton != null) buyButton.interactable = !owned;
-        if (buyButtonLabel != null) buyButtonLabel.text = owned ? "Owned" : "Buy";
+        bool equippable = owned && !string.IsNullOrEmpty(current?.Slot);
+        bool equipped = equippable &&
+            GameServices.PlayerData.Current.EquippedBySlot.TryGetValue(current.Slot, out string equippedId) &&
+            equippedId == current.Id;
+
+        if (buyButton != null) buyButton.interactable = !purchasing && (!owned || (equippable && !equipped));
+        if (buyButtonLabel != null)
+        {
+            buyButtonLabel.text = !owned
+                ? "Buy"
+                : equipped
+                    ? "Equipped"
+                    : equippable ? "Equip" : "Owned";
+        }
     }
 }

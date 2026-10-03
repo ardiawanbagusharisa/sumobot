@@ -26,6 +26,9 @@ namespace SumoServices
         /// </summary>
         event Action InventoryChanged;
 
+        /// <summary>Raised after the equipped loadout changes or a save is loaded.</summary>
+        event Action EquipmentChanged;
+
         /// <summary>Load (or create) the save for the given player id.</summary>
         Task<ServiceResult<PlayerData>> LoadAsync(string playerId);
 

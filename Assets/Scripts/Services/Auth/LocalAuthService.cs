@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using SumoMultiplayer;
 using UnityEngine;
 
 namespace SumoServices
@@ -12,23 +13,46 @@ namespace SumoServices
     /// </summary>
     public class LocalAuthService : IAuthService
     {
-        private const string PlayerIdKey = "sumo.auth.playerId";
-        private const string DisplayNameKey = "sumo.auth.displayName";
+        private const string LegacyPlayerIdKey = "sumo.auth.playerId";
+        private const string LegacyDisplayNameKey = "sumo.auth.displayName";
+        private readonly string playerIdKey;
+        private readonly string displayNameKey;
+        private readonly bool migrateLegacyProfile;
+
+        public LocalAuthService(string profileNamespace = null)
+        {
+            string profile = string.IsNullOrWhiteSpace(profileNamespace)
+                ? OnlineBattleSession.ProfileName
+                : profileNamespace.Trim();
+            playerIdKey = $"sumo.auth.{profile}.playerId";
+            displayNameKey = $"sumo.auth.{profile}.displayName";
+            migrateLegacyProfile = string.Equals(profile, "sumobot_default", StringComparison.Ordinal);
+        }
 
         public PlayerAccount Current { get; private set; }
         public bool IsSignedIn => Current != null && Current.IsValid;
 
         public Task<ServiceResult<PlayerAccount>> SignInAnonymouslyAsync()
         {
-            string playerId = PlayerPrefs.GetString(PlayerIdKey, null);
+            string playerId = PlayerPrefs.GetString(playerIdKey, null);
+            if (string.IsNullOrEmpty(playerId) && migrateLegacyProfile)
+                playerId = PlayerPrefs.GetString(LegacyPlayerIdKey, null);
             if (string.IsNullOrEmpty(playerId))
             {
                 playerId = "local_" + Guid.NewGuid().ToString("N");
-                PlayerPrefs.SetString(PlayerIdKey, playerId);
+                PlayerPrefs.SetString(playerIdKey, playerId);
                 PlayerPrefs.Save();
             }
 
-            string displayName = PlayerPrefs.GetString(DisplayNameKey, "Player");
+            string displayName = PlayerPrefs.GetString(
+                displayNameKey,
+                migrateLegacyProfile
+                    ? PlayerPrefs.GetString(LegacyDisplayNameKey, "Player")
+                    : "Player");
+
+            PlayerPrefs.SetString(playerIdKey, playerId);
+            PlayerPrefs.SetString(displayNameKey, displayName);
+            PlayerPrefs.Save();
 
             Current = new PlayerAccount
             {
@@ -50,7 +74,7 @@ namespace SumoServices
                 return Task.FromResult(ServiceResult.Fail("Display name cannot be empty."));
 
             Current.DisplayName = displayName.Trim();
-            PlayerPrefs.SetString(DisplayNameKey, Current.DisplayName);
+            PlayerPrefs.SetString(displayNameKey, Current.DisplayName);
             PlayerPrefs.Save();
             return Task.FromResult(ServiceResult.Ok());
         }

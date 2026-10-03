@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using SumoCore;
 using SumoInput;
 using SumoManager;
+using SumoMultiplayer;
 using UnityEngine;
 
 namespace SumoBot
@@ -36,6 +37,15 @@ namespace SumoBot
 
         private void OnEnable()
         {
+            // Online PvP is human-vs-human. The BattleSimulator/BotManager pair
+            // is an offline AI test harness and must not compete for controls on
+            // either the authoritative host or the snapshot-rendering client.
+            if (OnlineBattleSession.IsActive)
+            {
+                enabled = false;
+                return;
+            }
+
             BattleManager.Instance.Events[BattleManager.OnBattleChanged].Subscribe(OnBattleStateChanged);
         }
 
