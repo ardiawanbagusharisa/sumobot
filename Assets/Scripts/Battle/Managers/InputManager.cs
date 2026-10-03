@@ -42,7 +42,10 @@ namespace SumoManager
         #endregion
 
         #region Input methods
-        public void InitializeInput(SumoController controller, InputType type)
+        public void InitializeInput(
+            SumoController controller,
+            InputType type,
+            bool initializeSimulationSystems = true)
         {
             GameObject liveCommandObject = controller.Side == PlayerSide.Left ? LeftLiveCommand : RightLiveCommand;
             GameObject UIButtonsObject = controller.Side == PlayerSide.Left ? LeftButton : RightButton;
@@ -77,7 +80,23 @@ namespace SumoManager
             inputProvider.API = api;
             controller.InputProvider = inputProvider;
 
-            // Initialize pacing through PacingManager
+            // The authoritative host needs bot/pacing systems. Online clients
+            // only need an input provider for their local controls; initializing
+            // pacing there also assumes host-only battle-log rounds exist.
+            if (!initializeSimulationSystems)
+            {
+                // A remote-view client still needs its own Live Command terminal
+                // initialized so parsed commands can be routed to the host. The
+                // opponent's terminal is hidden and must not accept local input.
+                if (type == InputType.LiveCommand &&
+                    (!SumoMultiplayer.OnlineBattleSession.IsActive ||
+                     controller.Side == SumoMultiplayer.OnlineBattleSession.LocalSide))
+                {
+                    liveCommandObject.GetComponent<CommandSystem>()?.InitCommandSystem(api);
+                }
+                return;
+            }
+
             InitializePacing(controller);
 
             // Additional initialization

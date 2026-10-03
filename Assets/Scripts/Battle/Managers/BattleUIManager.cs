@@ -7,6 +7,7 @@ using UnityEngine.UI;
 using System.Collections;
 using UnityEngine.SceneManagement;
 using SumoInput;
+using SumoMultiplayer;
 
 namespace SumoManager
 {
@@ -376,6 +377,13 @@ Skill			C			M
                     break;
             }
 
+            if (OnlineBattleSession.IsActive)
+            {
+                SetOnlinePlayerNames(
+                    OnlineBattleSession.LeftDisplayName,
+                    OnlineBattleSession.RightDisplayName);
+            }
+
             PlayerHUD.ForEach((costume) =>
                    {
                        if (costume.Side == Placement.Left)
@@ -385,6 +393,37 @@ Skill			C			M
                    });
 
             UpdateScore(battle);
+        }
+
+        public void SetOnlinePlayerNames(string leftName, string rightName)
+        {
+            if (LeftBotName != null)
+                LeftBotName.SetText(string.IsNullOrWhiteSpace(leftName) ? defaultLeftName : leftName);
+            if (RightBotName != null)
+                RightBotName.SetText(string.IsNullOrWhiteSpace(rightName) ? defaultRightName : rightName);
+        }
+
+        /// <summary>
+        /// Shows the input choices agreed in the online room and prevents the
+        /// Battle scene's legacy pre-battle dropdowns from changing them after
+        /// the network handshake.
+        /// </summary>
+        public void ApplyOnlineInputSelection(InputType leftType, InputType rightType)
+        {
+            if (LeftInputType != null)
+            {
+                LeftInputType.SetValueWithoutNotify(leftType.ToBattleInputType());
+                LeftInputType.interactable = false;
+            }
+            if (RightInputType != null)
+            {
+                RightInputType.SetValueWithoutNotify(rightType.ToBattleInputType());
+                RightInputType.interactable = false;
+            }
+            if (LeftScript != null)
+                LeftScript.gameObject.SetActive(false);
+            if (RightScript != null)
+                RightScript.gameObject.SetActive(false);
         }
 
         private static TMP_Text CreateEloChangeText(TMP_Text scoreText, string objectName)
@@ -623,6 +662,10 @@ Skill			C			M
 		public void GoToMainMenu() {
 			SFXManager.Instance.Play2D("ui_accept");
 			Time.timeScale = 1;
+			if (OnlineBattleSession.IsActive) {
+				OnlineBattleSession.LeaveAndReturnToMainMenu();
+				return;
+			}
 			SceneManager.LoadScene("MainMenu");
 		}
 

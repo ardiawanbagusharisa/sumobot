@@ -19,10 +19,16 @@ namespace SumoServices
 
         public event Action CoinsChanged;
         public event Action InventoryChanged;
+        public event Action EquipmentChanged;
 
-        private static string Dir => Path.Combine(Application.persistentDataPath, "PlayerData");
+        private readonly string dir;
 
-        private static string PathFor(string playerId) => Path.Combine(Dir, $"{playerId}.json");
+        public LocalPlayerDataService(string rootPath = null)
+        {
+            dir = Path.Combine(rootPath ?? Application.persistentDataPath, "PlayerData");
+        }
+
+        private string PathFor(string playerId) => Path.Combine(dir, $"{playerId}.json");
 
         public Task<ServiceResult<PlayerData>> LoadAsync(string playerId)
         {
@@ -51,6 +57,7 @@ namespace SumoServices
                 // (a coin counter, the inventory list) refresh to the loaded values.
                 CoinsChanged?.Invoke();
                 InventoryChanged?.Invoke();
+                EquipmentChanged?.Invoke();
 
                 return Task.FromResult(ServiceResult<PlayerData>.Ok(Current));
             }
@@ -68,7 +75,7 @@ namespace SumoServices
 
             try
             {
-                Directory.CreateDirectory(Dir);
+                Directory.CreateDirectory(dir);
                 string json = JsonConvert.SerializeObject(Current, Formatting.Indented);
                 File.WriteAllText(PathFor(Current.PlayerId), json);
                 return Task.FromResult(ServiceResult.Ok());
@@ -101,19 +108,27 @@ namespace SumoServices
             if (string.IsNullOrEmpty(itemId)) return ServiceResult.Fail("itemId is required.");
 
             bool removed = Current.OwnedItemIds.Remove(itemId);
+            bool unequipped = false;
 
             // Drop any equip slot that pointed at the now-unowned item so the save stays consistent.
             var slots = new List<string>(Current.EquippedBySlot.Keys);
             foreach (var slot in slots)
             {
                 if (Current.EquippedBySlot[slot] == itemId)
+                {
                     Current.EquippedBySlot.Remove(slot);
+                    unequipped = true;
+                }
             }
 
-            if (!removed) return ServiceResult.Ok(); // not owned — no change, no event
+            if (!removed && !unequipped) return ServiceResult.Ok(); // no change, no event
 
             var save = await SaveAsync();
-            if (save.Success) InventoryChanged?.Invoke();
+            if (save.Success)
+            {
+                if (removed) InventoryChanged?.Invoke();
+                if (unequipped) EquipmentChanged?.Invoke();
+            }
             return save;
         }
 
@@ -148,10 +163,16 @@ namespace SumoServices
         {
             if (Current == null) return ServiceResult.Fail("Nothing loaded.");
             if (string.IsNullOrEmpty(slot)) return ServiceResult.Fail("slot is required.");
+            if (string.IsNullOrEmpty(itemId)) return ServiceResult.Fail("itemId is required.");
             if (!Current.Owns(itemId)) return ServiceResult.Fail("Cannot equip an item the player does not own.");
 
+            if (Current.EquippedBySlot.TryGetValue(slot, out string equipped) && equipped == itemId)
+                return ServiceResult.Ok();
+
             Current.EquippedBySlot[slot] = itemId;
-            return await SaveAsync();
+            var save = await SaveAsync();
+            if (save.Success) EquipmentChanged?.Invoke();
+            return save;
         }
     }
 }

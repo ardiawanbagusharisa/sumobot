@@ -4,6 +4,7 @@ using SumoHelper;
 using SumoInput;
 using SumoLog;
 using SumoManager;
+using SumoMultiplayer;
 using UnityEngine;
 
 namespace SumoCore
@@ -136,6 +137,16 @@ namespace SumoCore
 
         void Update()
         {
+            if (OnlineBattleSession.IsClient)
+            {
+                if (Side == OnlineBattleSession.LocalSide &&
+                    BattleManager.Instance.CurrentState == BattleState.Battle_Ongoing)
+                {
+                    InputProvider?.ReadKeyboardInput();
+                }
+                return;
+            }
+
             if (BattleManager.Instance.CurrentState == BattleState.Battle_Ongoing)
             {
                 InputProvider?.ReadKeyboardInput();
@@ -157,6 +168,9 @@ namespace SumoCore
 
         void FixedUpdate()
         {
+            if (OnlineBattleSession.IsClient)
+                return;
+
             CachedVelocity = RigidBody.linearVelocity;
             CachedPosition = transform.position;
             CachedRotation = transform.eulerAngles.z;
@@ -176,11 +190,17 @@ namespace SumoCore
 
         void OnCollisionEnter2D(Collision2D collision)
         {
+            if (OnlineBattleSession.IsClient)
+                return;
+
             BounceRule(collision);
         }
 
         void OnTriggerExit2D(Collider2D collision)
         {
+            if (OnlineBattleSession.IsClient)
+                return;
+
             if (collision.CompareTag("Arena/Floor") && !IsOutOfArena)
             {
                 SFXManager.Instance.Play2D("collision_big");

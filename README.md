@@ -22,6 +22,24 @@ Go to [players page](https://github.com/ardiawanbagusharisa/sumobot/wiki/Players
 ## For Developers
 Go to [developers page](https://github.com/ardiawanbagusharisa/sumobot/wiki/Developers-Page) if you are a developer who want to contribute in building the platform. 
 
+## Test online multiplayer on one machine
+
+The Windows test build supports multiple simultaneous instances. In Unity, use `Sumobot > Multiplayer > Build Windows Test Client`; this creates `Builds/Windows/Sumobot.exe` with single-instance locking disabled and background execution enabled. Then run:
+
+```powershell
+.\Tools\LaunchMultiplayerTest.ps1
+```
+
+The launcher opens the same build twice at 960×540 with different Unity Authentication profiles (`sumobot_p1` and `sumobot_p2`) and separate logs. Complete the dummy login in both windows. In player 1, choose **Multiplayer > Online**, choose Buttons/Keyboard or Live Commands, and create a room. In player 2, open the same Online panel, choose an input mode, refresh if necessary, and click player 1's room. Both clients then enter the same battle.
+
+For an unattended connection test:
+
+```powershell
+.\Tools\LaunchMultiplayerTest.ps1 -AutoOnline
+```
+
+You can also double-click `Sumobot.exe` twice, but pass different `-ugs-profile` values if you launch it from a terminal; two clients using the same profile are treated as the same anonymous UGS player. Unity cannot safely open the exact same project in two normal Editor processes because the project is locked. Use one Editor plus a build, two builds, or Unity Multiplayer Play Mode/additional instances instead. See [Docs/Multiplayer.md](Docs/Multiplayer.md) for service setup, protocol details, and troubleshooting.
+
 ---
 
 ## Micro-Competition 

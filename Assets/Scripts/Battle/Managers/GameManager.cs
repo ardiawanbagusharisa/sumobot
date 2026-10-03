@@ -54,6 +54,8 @@ public class GameManager : MonoBehaviour
         var result = await GameServices.StartSessionAsync();
         if (!result.Success)
             Logger.Error($"[GameManager] Session start failed: {result.Error}");
+        else
+            ApplyCurrentEquipment();
         return result;
     }
 
@@ -90,6 +92,65 @@ public class GameManager : MonoBehaviour
 
         if (oldId != accountId)
             GameServices.Leaderboard.ReassignProfile(oldId, accountId, Left.Name);
+    }
+
+    public void ApplyCurrentEquipment()
+    {
+        if (Left == null || GameServices.PlayerData?.Current == null)
+            return;
+
+        ApplyEquipment(Left, GameServices.PlayerData.Current.EquippedBySlot);
+        if (Left.CurrentCostume != null)
+            Left.SetCostume(Left.CurrentCostume);
+    }
+
+    public void ApplyOnlinePlayers(
+        string leftId,
+        string leftName,
+        IReadOnlyDictionary<string, string> leftEquipment,
+        string rightId,
+        string rightName,
+        IReadOnlyDictionary<string, string> rightEquipment)
+    {
+        Left = PlayerProfile.CreateTransient(leftId, leftName);
+        Right = PlayerProfile.CreateTransient(rightId, rightName);
+        ApplyEquipment(Left, leftEquipment);
+        ApplyEquipment(Right, rightEquipment);
+    }
+
+    public void RestoreLocalProfiles()
+    {
+        Left = PlayerProfile.LoadOrCreate("Sumobot.Profile.Left", "Player1");
+        Right = PlayerProfile.LoadOrCreate("Sumobot.Profile.Right", "Player2");
+        ApplyCurrentEquipment();
+    }
+
+    private static void ApplyEquipment(
+        PlayerProfile profile,
+        IReadOnlyDictionary<string, string> equipment)
+    {
+        if (profile == null || equipment == null || GameServices.Catalog == null)
+            return;
+
+        foreach (var pair in equipment)
+        {
+            if (!Enum.TryParse(pair.Key, true, out SumoPart part) || part == SumoPart.FaceSide)
+                continue;
+
+            CatalogItem item = GameServices.Catalog.GetById(pair.Value);
+            if (item == null || string.IsNullOrEmpty(item.IconResourcePath))
+                continue;
+
+            Sprite sprite = Resources.Load<Sprite>(item.IconResourcePath);
+            if (sprite == null)
+                continue;
+
+            profile.Parts[part] = sprite;
+            profile.PartColors[part] = !string.IsNullOrEmpty(item.IconColor) &&
+                ColorUtility.TryParseHtmlString(item.IconColor, out Color tint)
+                    ? tint
+                    : Color.white;
+        }
     }
 
     public void Battle_LoadCostumeScene(string id)
@@ -138,6 +199,12 @@ public class PlayerProfile
             {SumoPart.Eye, null},
             {SumoPart.Accessory, null},
         };
+    public Dictionary<SumoPart, Color> PartColors = new()
+        {
+            {SumoPart.Wheel, Color.white},
+            {SumoPart.Eye, Color.white},
+            {SumoPart.Accessory, Color.white},
+        };
 
     public SumoCostume CurrentCostume;
 
@@ -147,6 +214,17 @@ public class PlayerProfile
         {
             Name = name,
             ID = Guid.NewGuid().ToString()
+        };
+        profile.PrepareParts();
+        return profile;
+    }
+
+    public static PlayerProfile CreateTransient(string id, string name)
+    {
+        PlayerProfile profile = new()
+        {
+            ID = string.IsNullOrWhiteSpace(id) ? Guid.NewGuid().ToString() : id,
+            Name = string.IsNullOrWhiteSpace(name) ? "Player" : name
         };
         profile.PrepareParts();
         return profile;
@@ -197,6 +275,7 @@ public class PlayerProfile
         CurrentCostume = objectCostume;
         CurrentCostume.UpdateSideColor();
         CurrentCostume.AttachObject(Parts);
+        CurrentCostume.AttachColors(PartColors);
     }
 
     public void PrepareParts()

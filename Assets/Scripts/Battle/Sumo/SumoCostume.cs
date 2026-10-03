@@ -122,6 +122,18 @@ namespace SumoCore
                 }
             });
         }
+
+        public void AttachColors(Dictionary<SumoPart, Color> colors)
+        {
+            if (UI || colors == null)
+                return;
+
+            foreach (var part in SpriteRenderers)
+            {
+                if (part.Value != null && colors.TryGetValue(part.Key, out Color color))
+                    part.Value.color = color;
+            }
+        }
     }
 
 

@@ -4,6 +4,7 @@ using System.Linq;
 using SumoBot;
 using SumoCore;
 using SumoManager;
+using SumoMultiplayer;
 using UnityEngine;
 
 namespace SumoInput
@@ -126,6 +127,23 @@ namespace SumoInput
 
         // Applied for Live Command And AI Script
         public void EnqueueCommand(ISumoAction action)
+        {
+            if (OnlineBattleSession.TryRouteLocalInput(this, action))
+                return;
+
+            EnqueueCommandInternal(action);
+        }
+
+        /// <summary>
+        /// Host-only ingress for commands received from the remote player. This
+        /// bypasses local routing so the command is not sent back over the network.
+        /// </summary>
+        public void EnqueueNetworkCommand(ISumoAction action)
+        {
+            EnqueueCommandInternal(action);
+        }
+
+        private void EnqueueCommandInternal(ISumoAction action)
         {
             if (IsValid(action))
             {
