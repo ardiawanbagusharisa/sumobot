@@ -168,6 +168,9 @@ namespace SumoManager
                 return;
             }
 
+            if (!pacingManager.isActiveAndEnabled)
+                return;
+
             pacingManager.Initialize(controller.Side, controller);
         }
         #endregion

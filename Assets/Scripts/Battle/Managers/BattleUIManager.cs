@@ -127,8 +127,10 @@ If you found a bug or vioaltion, report to us to make this game better.
 Forward		W			O
 Turn Left		A			K
 Turn Right		D			;
-Dash			L. Shift			R. Shift 
-Skill			C			M 
+Dash			E			R. Shift
+Skill			Q			M
+
+In online play, each focused game window uses the left-player keys (W/A/D/E/Q).
 
 2. Control - Live Commands
 - Type ""help"" to show all commands. 
@@ -403,27 +405,67 @@ Skill			C			M
                 RightBotName.SetText(string.IsNullOrWhiteSpace(rightName) ? defaultRightName : rightName);
         }
 
-        /// <summary>
-        /// Shows the input choices agreed in the online room and prevents the
-        /// Battle scene's legacy pre-battle dropdowns from changing them after
-        /// the network handshake.
-        /// </summary>
-        public void ApplyOnlineInputSelection(InputType leftType, InputType rightType)
+        public void UpdateOnlineInputSelection(
+            InputType leftType,
+            InputType rightType,
+            PlayerSide localSide,
+            int secondsRemaining)
         {
+            ConfigureOnlineInputOptions(LeftInputType);
+            ConfigureOnlineInputOptions(RightInputType);
             if (LeftInputType != null)
             {
                 LeftInputType.SetValueWithoutNotify(leftType.ToBattleInputType());
-                LeftInputType.interactable = false;
+                LeftInputType.interactable = localSide == PlayerSide.Left;
             }
             if (RightInputType != null)
             {
                 RightInputType.SetValueWithoutNotify(rightType.ToBattleInputType());
-                RightInputType.interactable = false;
+                RightInputType.interactable = localSide == PlayerSide.Right;
             }
             if (LeftScript != null)
                 LeftScript.gameObject.SetActive(false);
             if (RightScript != null)
                 RightScript.gameObject.SetActive(false);
+
+            if (secondsRemaining > 0 && BattleStateUI != null)
+                BattleStateUI.SetText($"Choose control ({secondsRemaining}s)");
+        }
+
+        public void LockOnlineInputSelection(InputType leftType, InputType rightType)
+        {
+            UpdateOnlineInputSelection(leftType, rightType, PlayerSide.Left, -1);
+            if (LeftInputType != null)
+                LeftInputType.interactable = false;
+            if (RightInputType != null)
+                RightInputType.interactable = false;
+            if (BattleStateUI != null)
+                BattleStateUI.SetText("Controls locked. Waiting for host...");
+        }
+
+        public void SetOnlinePreparationCountdown(int secondsRemaining)
+        {
+            if (BattleStateUI != null)
+                BattleStateUI.SetText($"Get ready! Battle starts in {Mathf.Max(0, secondsRemaining)}s");
+        }
+
+        private static void ConfigureOnlineInputOptions(TMP_Dropdown dropdown)
+        {
+            if (dropdown == null)
+                return;
+
+            bool alreadyConfigured = dropdown.options.Count == 2 &&
+                dropdown.options[0].text == "Buttons + WASD" &&
+                dropdown.options[1].text == "Live Commands";
+            if (alreadyConfigured)
+                return;
+
+            dropdown.ClearOptions();
+            dropdown.AddOptions(new List<string>
+            {
+                "Buttons + WASD",
+                "Live Commands"
+            });
         }
 
         private static TMP_Text CreateEloChangeText(TMP_Text scoreText, string objectName)
@@ -523,6 +565,12 @@ Skill			C			M
 
         public void SetInputMode(PlayerSide side, int type)
         {
+            if (OnlineBattleSession.TrySelectOnlineInput(side, type))
+            {
+                SFXManager.Instance.Play2D("ui_accept");
+                return;
+            }
+
             SFXManager.Instance.Play2D("ui_accept");
             InputType changedType;
             switch (type)

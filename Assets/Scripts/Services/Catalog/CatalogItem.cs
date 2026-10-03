@@ -41,6 +41,26 @@ namespace SumoServices
         public string IconResourcePath;
 
         /// <summary>
+        /// Market icons are cropped thumbnails. Character sprites use the same
+        /// item name on an aligned 300x300 canvas so parts line up in the bot
+        /// creator and in battle without per-skin transform adjustments.
+        /// </summary>
+        public string BotSpriteResourcePath
+        {
+            get
+            {
+                if (string.Equals(Slot, "Body", StringComparison.OrdinalIgnoreCase))
+                    return "Sprites/Character/Body";
+
+                const string marketPrefix = "Sprites/MarketIcons/";
+                return IconResourcePath != null &&
+                    IconResourcePath.StartsWith(marketPrefix, StringComparison.Ordinal)
+                        ? "Sprites/Character/" + IconResourcePath.Substring(marketPrefix.Length)
+                        : IconResourcePath;
+            }
+        }
+
+        /// <summary>
         /// Optional tint applied to the icon (e.g. "#FF00BD"), for items that reuse one base
         /// sprite in multiple colors (Skin - Body / Skin - Accessory). Empty = no tint (white).
         /// </summary>

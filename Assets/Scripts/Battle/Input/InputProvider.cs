@@ -63,11 +63,11 @@ namespace SumoInput
                     { KeyCode.Q, new SkillAction(InputType.Keyboard)},
                 }},
                 {PlayerSide.Right, new Dictionary<KeyCode,ISumoAction>(){
-                    { KeyCode.O, new AccelerateAction(InputType.Keyboard)},
-                    { KeyCode.Semicolon, new TurnAction(InputType.Keyboard, ActionType.TurnRight)},
-                    { KeyCode.K, new TurnAction(InputType.Keyboard, ActionType.TurnLeft)},
-                    { KeyCode.RightShift, new DashAction(InputType.Keyboard)},
-                    { KeyCode.M, new SkillAction(InputType.Keyboard)},
+                    { KeyCode.I, new AccelerateAction(InputType.Keyboard)},
+                    { KeyCode.L, new TurnAction(InputType.Keyboard, ActionType.TurnRight)},
+                    { KeyCode.J, new TurnAction(InputType.Keyboard, ActionType.TurnLeft)},
+                    { KeyCode.O, new DashAction(InputType.Keyboard)},
+                    { KeyCode.U, new SkillAction(InputType.Keyboard)},
                 }},
             };
 
@@ -170,7 +170,16 @@ namespace SumoInput
         {
             if (!IncludeKeyboard) return;
 
-            Dictionary<KeyCode, ISumoAction> sideKeyboard = KeyboardBindings[PlayerSide];
+            // In local multiplayer both robots share one keyboard, so each side
+            // needs a different key map. Online multiplayer is different: every
+            // process has its own focused game window. The local player should
+            // therefore always receive the familiar left/WADQE bindings even
+            // when the server assigned that process to the right arena side.
+            PlayerSide keyboardSide = OnlineBattleSession.IsActive &&
+                PlayerSide == OnlineBattleSession.LocalSide
+                    ? PlayerSide.Left
+                    : PlayerSide;
+            Dictionary<KeyCode, ISumoAction> sideKeyboard = KeyboardBindings[keyboardSide];
             foreach (var item in sideKeyboard)
             {
                 if (Input.GetKey(item.Key) && StateKeyboardAction[item.Value.Type])

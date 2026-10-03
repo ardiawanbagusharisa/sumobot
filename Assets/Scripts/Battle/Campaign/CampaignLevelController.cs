@@ -65,6 +65,7 @@ namespace SumoCampaign
                 yield break;
             }
 
+            HideOpponentUi();
             ApplyConfiguration();
             battleManager.Events[BattleManager.OnBattleChanged].Subscribe(OnBattleChanged);
             ShowPreGamePopup();
@@ -104,6 +105,31 @@ namespace SumoCampaign
 
             AssignBot(PlayerBotId, PlayerSide.Left, PlayerInput == InputType.Script);
             AssignBot(OpponentBotId, PlayerSide.Right, true);
+        }
+
+        private void HideOpponentUi()
+        {
+            // These three campaign scenes reuse the two-player Battle canvas.
+            // Keep the right robot and its AI in the arena, but remove the
+            // second player's controls and HUD from the tutorial presentation.
+            GameObject ui = FindSceneObject("UI");
+            if (ui == null)
+                return;
+
+            string[] opponentUiPaths =
+            {
+                "Pre-Battle/Players/PlayerHUD 2",
+                "Ongoing Battle/Footer/RightSide",
+                "Ongoing Battle/Body/Player_Indicators/Right",
+                "Post Battle/Menu/Players/PlayerHUD_Right",
+                "Post Battle/Menu/PlayersFinalScores/Right"
+            };
+            foreach (string path in opponentUiPaths)
+            {
+                Transform opponentUi = ui.transform.Find(path);
+                if (opponentUi != null)
+                    opponentUi.gameObject.SetActive(false);
+            }
         }
 
         private void AssignBot(string botId, PlayerSide side, bool required)

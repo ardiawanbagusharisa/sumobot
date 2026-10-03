@@ -98,17 +98,10 @@ public class ItemDetailController : MonoBehaviour
         try
         {
             bool owned = GameServices.PlayerData?.Current?.Owns(current.Id) ?? false;
-            ServiceResult result;
-            if (owned && !string.IsNullOrEmpty(current.Slot))
-            {
-                result = await GameServices.PlayerData.EquipAsync(current.Slot, current.Id);
-                if (result.Success)
-                    GameManager.Instance.ApplyCurrentEquipment();
-            }
-            else
-            {
-                result = await GameServices.Trade.BuyAsync(current.Id);
-            }
+            if (owned)
+                return;
+
+            ServiceResult result = await GameServices.Trade.BuyAsync(current.Id);
 
             if (!result.Success)
                 Logger.Warning($"[Market] Action for '{current.Id}' failed: {result.Error}");
@@ -160,19 +153,8 @@ public class ItemDetailController : MonoBehaviour
     private void RefreshBuyState()
     {
         bool owned = current != null && (GameServices.PlayerData?.Current?.Owns(current.Id) ?? false);
-        bool equippable = owned && !string.IsNullOrEmpty(current?.Slot);
-        bool equipped = equippable &&
-            GameServices.PlayerData.Current.EquippedBySlot.TryGetValue(current.Slot, out string equippedId) &&
-            equippedId == current.Id;
-
-        if (buyButton != null) buyButton.interactable = !purchasing && (!owned || (equippable && !equipped));
+        if (buyButton != null) buyButton.interactable = !purchasing && !owned;
         if (buyButtonLabel != null)
-        {
-            buyButtonLabel.text = !owned
-                ? "Buy"
-                : equipped
-                    ? "Equipped"
-                    : equippable ? "Equip" : "Owned";
-        }
+            buyButtonLabel.text = owned ? "Owned" : "Buy";
     }
 }

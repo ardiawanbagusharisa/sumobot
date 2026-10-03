@@ -23,6 +23,7 @@ namespace SumoCore
         // Mandatory
 
         FaceSide,
+        Body,
     }
 
     [Serializable]
@@ -35,6 +36,7 @@ namespace SumoCore
             {SumoPart.Eye, null},
             {SumoPart.Accessory, null},
             {SumoPart.FaceSide, null},
+            {SumoPart.Body, null},
         };
 
         public Dictionary<SumoPart, Image> ImagePart { private set; get; } = new()
@@ -43,6 +45,7 @@ namespace SumoCore
             {SumoPart.Eye, null},
             {SumoPart.Accessory, null},
             {SumoPart.FaceSide, null},
+            {SumoPart.Body, null},
         };
 
         public Placement Side;
