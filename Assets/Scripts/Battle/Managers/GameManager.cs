@@ -134,14 +134,14 @@ public class GameManager : MonoBehaviour
 
         foreach (var pair in equipment)
         {
-            if (!Enum.TryParse(pair.Key, true, out SumoPart part) || part == SumoPart.FaceSide)
-                continue;
-
             CatalogItem item = GameServices.Catalog.GetById(pair.Value);
             if (item == null || string.IsNullOrEmpty(item.IconResourcePath))
                 continue;
 
-            Sprite sprite = Resources.Load<Sprite>(item.IconResourcePath);
+            if (!Enum.TryParse(pair.Key, true, out SumoPart part) || part == SumoPart.FaceSide)
+                continue;
+
+            Sprite sprite = Resources.Load<Sprite>(item.BotSpriteResourcePath);
             if (sprite == null)
                 continue;
 
@@ -198,12 +198,14 @@ public class PlayerProfile
             {SumoPart.Wheel, null},
             {SumoPart.Eye, null},
             {SumoPart.Accessory, null},
+            {SumoPart.Body, null},
         };
     public Dictionary<SumoPart, Color> PartColors = new()
         {
             {SumoPart.Wheel, Color.white},
             {SumoPart.Eye, Color.white},
             {SumoPart.Accessory, Color.white},
+            {SumoPart.Body, Color.white},
         };
 
     public SumoCostume CurrentCostume;
@@ -282,7 +284,7 @@ public class PlayerProfile
     {
         Parts.ToList().ForEach((e) =>
         {
-            Parts[e.Key] = LoadSprite($"{e.Key}_1");
+            Parts[e.Key] = LoadSprite(e.Key == SumoPart.Body ? "Body" : $"{e.Key}_1");
         });
     }
 

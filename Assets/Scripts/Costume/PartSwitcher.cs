@@ -24,6 +24,8 @@ public class PartSwitcher : MonoBehaviour
 
     void Start()
     {
+        BotCreatorInventoryController.EnsureCreated();
+
         if (targetImage == null)
             return;
 
@@ -31,30 +33,20 @@ public class PartSwitcher : MonoBehaviour
         if (profile == null)
             return;
 
-        // Always keep the profile's current/default part available. All extra
-        // choices come from the signed-in player's owned inventory.
-        if (profile.Parts.TryGetValue(part, out Sprite currentSprite) && currentSprite != null)
-        {
-            Color currentColor = profile.PartColors.TryGetValue(part, out Color savedColor)
-                ? savedColor
-                : Color.white;
-            availableOptions.Add(new PartOption { Sprite = currentSprite, Color = currentColor });
-        }
-
         var ownedIds = GameServices.PlayerData?.Current?.OwnedItemIds;
         if (ownedIds != null && GameServices.Catalog != null)
         {
-            foreach (string itemId in ownedIds)
+            foreach (CatalogItem item in GameServices.Catalog.AllItems)
             {
-                CatalogItem item = GameServices.Catalog.GetById(itemId);
                 if (item == null ||
+                    !ownedIds.Contains(item.Id) ||
                     !string.Equals(item.Slot, part.ToString(), System.StringComparison.OrdinalIgnoreCase) ||
                     string.IsNullOrWhiteSpace(item.IconResourcePath))
                 {
                     continue;
                 }
 
-                Sprite sprite = Resources.Load<Sprite>(item.IconResourcePath);
+                Sprite sprite = Resources.Load<Sprite>(item.BotSpriteResourcePath);
                 if (sprite == null)
                     continue;
 
@@ -67,6 +59,19 @@ public class PartSwitcher : MonoBehaviour
 
                 availableOptions.Add(new PartOption { Sprite = sprite, Color = color, Item = item });
             }
+        }
+
+        // Keep the scene's original part as a fallback for old/local profiles
+        // that do not own any catalog entry for this slot. Once inventory data
+        // exists, every arrow choice maps to a persistable owned item.
+        if (availableOptions.Count == 0 &&
+            profile.Parts.TryGetValue(part, out Sprite currentSprite) &&
+            currentSprite != null)
+        {
+            Color currentColor = profile.PartColors.TryGetValue(part, out Color savedColor)
+                ? savedColor
+                : Color.white;
+            availableOptions.Add(new PartOption { Sprite = currentSprite, Color = currentColor });
         }
 
         if (availableOptions.Count == 0 && sprites != null)
@@ -88,7 +93,8 @@ public class PartSwitcher : MonoBehaviour
     public void UpdateSprite(int direction)
     {
         SFXManager.Instance.Play2D("ui_accept_small");
-        if (GameManager.Instance.GetProfileById() == null)
+        PlayerProfile profile = GameManager.Instance.GetProfileById();
+        if (profile == null)
             return;
 
         if (availableOptions.Count == 0 || targetImage == null)
@@ -96,11 +102,7 @@ public class PartSwitcher : MonoBehaviour
 
         currentIndex = (currentIndex + direction + availableOptions.Count) % availableOptions.Count;
         PartOption option = availableOptions[currentIndex];
-        ApplyOption(option);
-
-        var profile = GameManager.Instance.GetProfileById();
-        profile.Parts[part] = option.Sprite;
-        profile.PartColors[part] = option.Color;
+        ApplyToProfile(option);
 
         if (option.Item != null &&
             GameServices.PlayerData?.Current?.Owns(option.Item.Id) == true &&
@@ -108,6 +110,35 @@ public class PartSwitcher : MonoBehaviour
         {
             _ = EquipOwnedItemAsync(option.Item);
         }
+    }
+
+    public bool ApplyOwnedItem(CatalogItem item)
+    {
+        if (item == null || !string.Equals(
+                item.Slot,
+                part.ToString(),
+                System.StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        int index = availableOptions.FindIndex(option => option.Item?.Id == item.Id);
+        if (index < 0)
+            return false;
+
+        currentIndex = index;
+        ApplyToProfile(availableOptions[currentIndex]);
+        return true;
+    }
+
+    private void ApplyToProfile(PartOption option)
+    {
+        ApplyOption(option);
+        PlayerProfile profile = GameManager.Instance.GetProfileById();
+        if (profile == null)
+            return;
+        profile.Parts[part] = option.Sprite;
+        profile.PartColors[part] = option.Color;
     }
 
     private void ApplyOption(PartOption option)

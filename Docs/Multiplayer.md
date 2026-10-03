@@ -17,8 +17,9 @@ The game uses the default UGS environment unless `-ugs-environment=<name>` is su
 1. Open `Sumobot > Multiplayer > Build Windows Test Client` in the Unity Editor. The development build is written to `Builds/Windows/Sumobot.exe`.
 2. Run `Tools/LaunchMultiplayerTest.ps1`. It opens the same build twice with isolated UGS profiles `sumobot_p1` and `sumobot_p2`, separate log files, and a shared one-run matchmaking pool. The pool prevents either client from joining a stale session left by an earlier local test.
 3. Complete the local dummy login in each window.
-4. In the first window, open Multiplayer and select Online, choose **Buttons / Keyboard** or **Live Commands**, then select **Create room**.
-5. In the second window, open Multiplayer and select Online, choose its input mode, and select the first player's named room. The list refreshes automatically every five seconds and also has a manual Refresh button.
+4. In the first window, open Multiplayer > Online, choose **Buttons / Keyboard** or **Live Commands**, then select **Create room**.
+5. In the second window, choose its input mode and join the first player's room. The list refreshes automatically every five seconds and also has a manual Refresh button.
+6. Once both players are connected, a host-authoritative 30-second ready timer appears in the room panel. Each player may click **Ready now**; both ready clicks load Battle immediately, or the room loads Battle when the timer expires. The selected input modes are locked on arrival. Both scene peers then see the synchronized 10-second preparation countdown before the host starts the battle. Battle will not start before the joining client's scene and controllers are ready.
 
 The room browser uses UGS session queries filtered to the launcher's one-run match pool. Full rooms are removed from the list. Closing a waiting host room leaves/deletes it; leaving during battle immediately awards the match to the remaining player.
 
@@ -28,7 +29,7 @@ For a named UGS environment:
 .\Tools\LaunchMultiplayerTest.ps1 -EnvironmentName development
 ```
 
-For an unattended connection smoke test, use `-AutoOnline`. The launcher starts player one with `-auto-create-room`, then starts player two with `-auto-join-room`:
+For an unattended connection smoke test, use `-AutoOnline`. The launcher creates and joins the room automatically, and both test clients mark themselves ready so the 30-second room timer can finish early:
 
 ```powershell
 .\Tools\LaunchMultiplayerTest.ps1 -AutoOnline
@@ -36,7 +37,9 @@ For an unattended connection smoke test, use `-AutoOnline`. The launcher starts 
 
 `Force Single Instance` must remain disabled and `Run In Background` enabled. The multiplayer build command applies those settings to the build without permanently changing the project settings.
 
-You may also launch `Sumobot.exe` twice manually. If using a terminal, give each process a unique profile, for example `-ugs-profile=sumobot_p1` and `-ugs-profile=sumobot_p2`. Do not open the same Unity project in two standard Editor processes; use one Editor plus a build, two builds, or Multiplayer Play Mode additional instances.
+Each online window uses the same local keyboard map regardless of arena side: `W` moves forward relative to the bot, `A`/`D` rotate, `E` dashes, and `Q` uses the selected skill. The sumo controls intentionally have no reverse action, so `S` is unused. Only the focused window receives keyboard events; the unfocused process continues networking because Run In Background is enabled. Offline same-keyboard play keeps separate left/right key maps.
+
+You may also launch `Sumobot.exe` twice manually. Without command-line profile arguments, each live build reserves the first available persistent profile slot (`sumobot_local_1`, `sumobot_local_2`, and so on), preventing both windows from authenticating as the same UGS player. If using a terminal, you can still explicitly choose profiles such as `-ugs-profile=sumobot_p1` and `-ugs-profile=sumobot_p2`. Do not open the same Unity project in two standard Editor processes; use one Editor plus a build, two builds, or Multiplayer Play Mode additional instances.
 
 ## Multiplayer Play Mode
 
@@ -55,4 +58,4 @@ The installed Multiplayer Play Mode package can start an additional local instan
 
 ## Local-first Market chat
 
-The Market chat placeholder now sends and displays messages. It stores JSON-lines history under Unity's `Application.persistentDataPath`, and polls it with file sharing enabled. That means the two local build instances can chat with each other immediately without another account or paid backend. The item detail **Ask** button opens chat and pre-fills an item/creator mention. This is intentionally same-machine only; cross-device production chat should be replaced with a moderated service such as Unity Vivox text chat or an authenticated application backend.
+The Market chat placeholder now sends and displays messages. It stores JSON-lines history under Unity's `Application.persistentDataPath`, and polls it with file sharing enabled. New messages move the authored scroll view to the bottom. The left tab lists the local game processes currently online, using short-lived presence heartbeats; a crashed client disappears after about eight seconds. That means the two local build instances can chat and see each other immediately without another account or paid backend. The item detail **Ask** button opens chat and pre-fills an item/creator mention. This is intentionally same-machine only; cross-device production chat and presence should be replaced with a moderated service such as Unity Vivox text chat or an authenticated application backend.

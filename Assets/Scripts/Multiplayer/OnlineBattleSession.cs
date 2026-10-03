@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using SumoCore;
@@ -38,13 +39,20 @@ namespace SumoMultiplayer
         private const string MatchModeProperty = "mode";
         private const string DisplayNameProperty = "displayName";
         private const string ReadyMessage = "sumobot/ready/v1";
+        private const string LobbyReadyMessage = "sumobot/lobby-ready/v1";
+        private const string LobbyStateMessage = "sumobot/lobby-state/v1";
+        private const string BattleReadyMessage = "sumobot/battle-ready/v1";
         private const string MatchInfoMessage = "sumobot/match-info/v1";
+        private const string InputSelectionMessage = "sumobot/input-selection/v1";
         private const string InputMessage = "sumobot/input/v1";
         private const string SnapshotMessage = "sumobot/snapshot/v1";
         private const string RematchRequestMessage = "sumobot/rematch/v1";
         private const float SnapshotInterval = 1f / 20f;
         private const float ContinuousInputInterval = 0.075f;
         private const float RematchWindowSeconds = 15f;
+        private const float LobbyReadySeconds = 30f;
+        private const float BattlePreparationSeconds = 10f;
+        private const int OnlineDisconnectTimeoutMs = 5000;
 
         public static OnlineBattleSession Instance { get; private set; }
         public static bool IsActive => Instance != null && Instance.onlineMatchActive;
@@ -64,6 +72,8 @@ namespace SumoMultiplayer
         private BattleManager boundBattleManager;
         private Button rematchButton;
         private TMP_Text rematchLabel;
+        private Button startBattleButton;
+        private TMP_Text startBattleLabel;
 
         private readonly Dictionary<ActionType, float> lastInputSentAt = new();
         private SnapshotTarget leftTarget;
@@ -81,6 +91,7 @@ namespace SumoMultiplayer
         private string rightEquipment = string.Empty;
         private bool autoCreateRoom;
         private bool autoJoinRoom;
+        private bool autoLobbyReady;
         private bool matchmaking;
         private bool onlineMatchActive;
         private bool messagesRegistered;
@@ -88,6 +99,13 @@ namespace SumoMultiplayer
         private bool battleSceneRequested;
         private bool leaving;
         private bool clientReady;
+        private bool lobbyCountdownActive;
+        private bool leftLobbyReady;
+        private bool rightLobbyReady;
+        private float lobbyDeadline;
+        private float clientLobbyRemaining;
+        private float clientLobbyStateReceivedAt;
+        private float nextLobbyStateAt;
         private float nextSnapshotAt;
         private bool rematchWindowActive;
         private bool leftRematchRequested;
@@ -101,6 +119,19 @@ namespace SumoMultiplayer
         private bool refreshingRooms;
         private float nextRoomRefreshAt;
         private bool connectionLossHandled;
+        private bool inputSelectionOpen;
+        private bool hostBattleReady;
+        private bool clientBattleReady;
+        private bool localBattleReady;
+        private bool localBattleReadySent;
+        private bool startRequested;
+        private bool preparationActive;
+        private bool onlineStartAuthorized;
+        private float preparationDeadline;
+        private float clientPreparationRemaining;
+        private float clientPreparationReceivedAt;
+
+        public static bool IsHostStartAuthorized => IsHost && Instance.onlineStartAuthorized;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         private static void Bootstrap()
@@ -134,9 +165,14 @@ namespace SumoMultiplayer
                 autoCreateRoom = profileName.EndsWith("_p1", StringComparison.OrdinalIgnoreCase);
                 autoJoinRoom = !autoCreateRoom;
             }
+            autoLobbyReady = autoCreateRoom || autoJoinRoom;
             Application.runInBackground = true;
 
             transport = gameObject.AddComponent<UnityTransport>();
+            // UTP defaults to 30 seconds, which leaves the remaining player in a
+            // dead match after a crash or force-close. Five seconds is responsive
+            // enough for a forfeit while still tolerating short internet jitter.
+            transport.DisconnectTimeoutMS = OnlineDisconnectTimeoutMs;
             networkManager = gameObject.AddComponent<NetworkManager>();
             // NetworkConfig is serialized when NetworkManager lives in a scene,
             // but NGO leaves it null when the component is created at runtime.
@@ -148,6 +184,17 @@ namespace SumoMultiplayer
             SceneManager.sceneLoaded += OnSceneLoaded;
             networkManager.OnClientConnectedCallback += OnClientConnected;
             networkManager.OnClientDisconnectCallback += OnClientDisconnected;
+        }
+
+        private void Start()
+        {
+            // RuntimeInitializeOnLoad creates this object before the first scene, but
+            // Unity can complete the initial MainMenu load before the sceneLoaded
+            // subscription observes it on slower client startups. Bind the active
+            // scene as an idempotent fallback so command-line auto create/join flags
+            // and the room browser are never skipped.
+            if (SceneManager.GetActiveScene().name == "MainMenu")
+                BindOnlineButton();
         }
 
         private void OnDestroy()
@@ -185,11 +232,39 @@ namespace SumoMultiplayer
             if (onlineMatchActive)
                 TryCompleteNetworkSetup();
 
+            if (onlineMatchActive && !battleSceneRequested &&
+                SceneManager.GetActiveScene().name == "MainMenu")
+            {
+                if (IsHost && lobbyCountdownActive)
+                {
+                    if (leftLobbyReady && rightLobbyReady || GetLobbyRemaining() <= 0f)
+                        BeginOnlineBattle();
+                    else if (Time.unscaledTime >= nextLobbyStateAt)
+                    {
+                        nextLobbyStateAt = Time.unscaledTime + 1f;
+                        SendLobbyState();
+                    }
+                }
+                RefreshLobbyUI();
+            }
+
             if (!onlineMatchActive || SceneManager.GetActiveScene().name != "Battle")
                 return;
 
             if (IsHost)
             {
+                if (preparationActive)
+                {
+                    if (boundBattleManager == null ||
+                        boundBattleManager.CurrentState != BattleState.PreBatle_Preparing)
+                        preparationActive = false;
+                    else if (GetPreparationRemaining() <= 0f)
+                    {
+                        preparationActive = false;
+                        StartAuthorizedBattle();
+                    }
+                }
+
                 if (rematchWindowActive && GetRematchRemaining() <= 0f)
                     rematchWindowActive = false;
 
@@ -201,8 +276,12 @@ namespace SumoMultiplayer
             }
             else
             {
+                if (localBattleReady && !localBattleReadySent)
+                    SendClientBattleReady();
                 InterpolateClientView();
             }
+
+            RefreshStartBattleUI();
 
             if (boundBattleManager != null &&
                 boundBattleManager.CurrentState == BattleState.PostBattle_ShowResult)
@@ -221,7 +300,11 @@ namespace SumoMultiplayer
             }
 
             if (scene.name == "Battle" && onlineMatchActive)
+            {
+                if (IsClient)
+                    ResetInitialStartState();
                 StartCoroutine(AttachBattleWhenReady());
+            }
         }
 
         private void BindOnlineButton()
@@ -306,6 +389,7 @@ namespace SumoMultiplayer
                 () => _ = CreateRoomAsync(),
                 () => _ = RefreshRoomsAsync(),
                 OnRoomPanelCloseRequested,
+                RequestLobbyReady,
                 roomId => _ = JoinRoomAsync(roomId));
         }
 
@@ -444,7 +528,8 @@ namespace SumoMultiplayer
 
                 ISession joinedSession = await MultiplayerService.Instance.JoinSessionByIdAsync(roomId, options);
                 AdoptSession(joinedSession);
-                roomPanel?.SetStatus("Connected. Preparing battle...");
+                roomPanel?.SetWaiting(true);
+                roomPanel?.SetStatus("Connected. Waiting for the host's ready timer...");
                 SetStatus("Connecting to room...");
                 TryCompleteNetworkSetup();
             }
@@ -465,6 +550,7 @@ namespace SumoMultiplayer
         {
             localReadySent = false;
             connectionLossHandled = false;
+            ResetLobbyState();
             await EnsureNetworkManagerStoppedAsync();
             await InitializeUnityServicesAsync();
             RefreshLocalIdentity();
@@ -535,29 +621,41 @@ namespace SumoMultiplayer
                 return;
             }
 
-            for (int attempt = 0; attempt < 20 && !onlineMatchActive; attempt++)
+            // Session query results can take several seconds to become visible
+            // after the host creates a room. Keep the smoke-test joiner alive
+            // long enough for that propagation instead of silently giving up.
+            for (int attempt = 0; attempt < 60 && !onlineMatchActive; attempt++)
             {
-                await InitializeUnityServicesAsync();
-                QuerySessionsResults results = await MultiplayerService.Instance.QuerySessionsAsync(
-                    new QuerySessionsOptions
-                    {
-                        Count = 1,
-                        FilterOptions = new List<FilterOption>
-                        {
-                            new(FilterField.AvailableSlots, "1", FilterOperation.GreaterOrEqual),
-                            new(FilterField.StringIndex1, matchPool, FilterOperation.Equal)
-                        }
-                    });
-                ISessionInfo room = results.Sessions.FirstOrDefault();
-                if (room != null)
+                try
                 {
-                    await JoinRoomAsync(room.Id);
-                    return;
+                    await InitializeUnityServicesAsync();
+                    QuerySessionsResults results = await MultiplayerService.Instance.QuerySessionsAsync(
+                        new QuerySessionsOptions
+                        {
+                            Count = 1,
+                            FilterOptions = new List<FilterOption>
+                            {
+                                new(FilterField.AvailableSlots, "1", FilterOperation.GreaterOrEqual),
+                                new(FilterField.StringIndex1, matchPool, FilterOperation.Equal)
+                            }
+                        });
+                    ISessionInfo room = results.Sessions.FirstOrDefault();
+                    if (room != null)
+                    {
+                        await JoinRoomAsync(room.Id);
+                        if (onlineMatchActive)
+                            return;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger.Warning($"[Online] Automated room query attempt {attempt + 1} failed: {FriendlyError(ex)}");
                 }
 
                 await Task.Delay(500);
             }
 
+            Logger.Warning($"[Online] Automated test could not find a host room in pool {matchPool}.");
             roomPanel?.SetStatus("Automated test could not find the host room.");
         }
 
@@ -614,7 +712,11 @@ namespace SumoMultiplayer
                 return;
 
             networkManager.CustomMessagingManager.RegisterNamedMessageHandler(ReadyMessage, OnReadyMessage);
+            networkManager.CustomMessagingManager.RegisterNamedMessageHandler(LobbyReadyMessage, OnLobbyReadyMessage);
+            networkManager.CustomMessagingManager.RegisterNamedMessageHandler(LobbyStateMessage, OnLobbyStateMessage);
+            networkManager.CustomMessagingManager.RegisterNamedMessageHandler(BattleReadyMessage, OnBattleReadyMessage);
             networkManager.CustomMessagingManager.RegisterNamedMessageHandler(MatchInfoMessage, OnMatchInfoMessage);
+            networkManager.CustomMessagingManager.RegisterNamedMessageHandler(InputSelectionMessage, OnInputSelectionMessage);
             networkManager.CustomMessagingManager.RegisterNamedMessageHandler(InputMessage, OnInputMessage);
             networkManager.CustomMessagingManager.RegisterNamedMessageHandler(SnapshotMessage, OnSnapshotMessage);
             networkManager.CustomMessagingManager.RegisterNamedMessageHandler(RematchRequestMessage, OnRematchRequestMessage);
@@ -632,7 +734,7 @@ namespace SumoMultiplayer
             if (IsClient && networkManager.IsConnectedClient && messagesRegistered && !localReadySent)
             {
                 localReadySent = true;
-                SetStatus("Connected. Preparing battle...");
+                SetStatus("Connected. Waiting in room...");
                 SendClientReady();
             }
         }
@@ -643,7 +745,11 @@ namespace SumoMultiplayer
                 return;
 
             networkManager.CustomMessagingManager.UnregisterNamedMessageHandler(ReadyMessage);
+            networkManager.CustomMessagingManager.UnregisterNamedMessageHandler(LobbyReadyMessage);
+            networkManager.CustomMessagingManager.UnregisterNamedMessageHandler(LobbyStateMessage);
+            networkManager.CustomMessagingManager.UnregisterNamedMessageHandler(BattleReadyMessage);
             networkManager.CustomMessagingManager.UnregisterNamedMessageHandler(MatchInfoMessage);
+            networkManager.CustomMessagingManager.UnregisterNamedMessageHandler(InputSelectionMessage);
             networkManager.CustomMessagingManager.UnregisterNamedMessageHandler(InputMessage);
             networkManager.CustomMessagingManager.UnregisterNamedMessageHandler(SnapshotMessage);
             networkManager.CustomMessagingManager.UnregisterNamedMessageHandler(RematchRequestMessage);
@@ -693,8 +799,193 @@ namespace SumoMultiplayer
             rightEquipment = clientLoadout.ToString();
             rightInputType = ToSupportedOnlineInput(clientInputMode);
             SendMatchInfo(senderClientId);
-            if (clientReady && session != null && session.PlayerCount >= 2)
+            if (clientReady)
+                BeginLobbyCountdown();
+        }
+
+        private void BeginLobbyCountdown()
+        {
+            if (!IsHost || battleSceneRequested || session == null ||
+                session.PlayerCount < 2 &&
+                !(clientReady && networkManager != null &&
+                  networkManager.ConnectedClientsIds.Count >= 2))
+                return;
+
+            if (lobbyCountdownActive)
+            {
+                if (clientReady)
+                    SendLobbyState();
+                return;
+            }
+
+            lobbyCountdownActive = true;
+            lobbyDeadline = Time.unscaledTime + LobbyReadySeconds;
+            nextLobbyStateAt = Time.unscaledTime + 1f;
+            leftLobbyReady = autoLobbyReady;
+            rightLobbyReady = false;
+            roomPanel?.SetStatus("Opponent joined. Ready up or wait for the timer.");
+            SetStatus("Opponent joined. Ready up in the room.");
+            SendLobbyState();
+            RefreshLobbyUI();
+            Logger.Info($"[Online] Both players are in the room. Ready deadline: {LobbyReadySeconds:0}s.");
+        }
+
+        private void RequestLobbyReady()
+        {
+            if (!onlineMatchActive || !lobbyCountdownActive || battleSceneRequested ||
+                SceneManager.GetActiveScene().name != "MainMenu")
+                return;
+
+            if (IsHost)
+            {
+                if (leftLobbyReady)
+                    return;
+                leftLobbyReady = true;
+                SendLobbyState();
+                if (rightLobbyReady)
+                    BeginOnlineBattle();
+            }
+            else
+            {
+                if (rightLobbyReady || networkManager == null ||
+                    !networkManager.IsConnectedClient || !messagesRegistered)
+                    return;
+
+                rightLobbyReady = true;
+                using var writer = new FastBufferWriter(sizeof(byte), Allocator.Temp);
+                writer.WriteValueSafe((byte)1);
+                networkManager.CustomMessagingManager.SendNamedMessage(
+                    LobbyReadyMessage,
+                    NetworkManager.ServerClientId,
+                    writer,
+                    NetworkDelivery.ReliableSequenced);
+            }
+
+            RefreshLobbyUI();
+        }
+
+        private void OnLobbyReadyMessage(ulong senderClientId, FastBufferReader reader)
+        {
+            if (!IsHost || !lobbyCountdownActive || battleSceneRequested ||
+                senderClientId == networkManager.LocalClientId)
+                return;
+
+            reader.ReadValueSafe(out byte ready);
+            if (ready != 1 || rightLobbyReady)
+                return;
+
+            rightLobbyReady = true;
+            SendLobbyState();
+            RefreshLobbyUI();
+            if (leftLobbyReady)
                 BeginOnlineBattle();
+        }
+
+        private void SendLobbyState()
+        {
+            if (!IsHost || !lobbyCountdownActive || networkManager == null ||
+                !networkManager.IsListening || !messagesRegistered)
+                return;
+
+            using var writer = new FastBufferWriter(16, Allocator.Temp);
+            writer.WriteValueSafe((byte)(leftLobbyReady ? 1 : 0));
+            writer.WriteValueSafe((byte)(rightLobbyReady ? 1 : 0));
+            writer.WriteValueSafe(GetLobbyRemaining());
+            foreach (ulong clientId in networkManager.ConnectedClientsIds)
+            {
+                if (clientId != networkManager.LocalClientId)
+                    networkManager.CustomMessagingManager.SendNamedMessage(
+                        LobbyStateMessage, clientId, writer, NetworkDelivery.ReliableSequenced);
+            }
+        }
+
+        private void OnLobbyStateMessage(ulong senderClientId, FastBufferReader reader)
+        {
+            if (!IsClient || senderClientId != NetworkManager.ServerClientId ||
+                SceneManager.GetActiveScene().name != "MainMenu")
+                return;
+
+            reader.ReadValueSafe(out byte hostReady);
+            reader.ReadValueSafe(out byte guestReady);
+            reader.ReadValueSafe(out float remaining);
+            lobbyCountdownActive = true;
+            leftLobbyReady = hostReady == 1;
+            rightLobbyReady = guestReady == 1;
+            clientLobbyRemaining = Mathf.Clamp(remaining, 0f, LobbyReadySeconds);
+            clientLobbyStateReceivedAt = Time.unscaledTime;
+            roomPanel?.SetStatus("Opponent joined. Ready up or wait for the timer.");
+            if (autoLobbyReady && !rightLobbyReady)
+                RequestLobbyReady();
+            RefreshLobbyUI();
+        }
+
+        private float GetLobbyRemaining()
+        {
+            if (!lobbyCountdownActive)
+                return 0f;
+            return IsHost
+                ? Mathf.Max(0f, lobbyDeadline - Time.unscaledTime)
+                : Mathf.Max(0f, clientLobbyRemaining -
+                    (Time.unscaledTime - clientLobbyStateReceivedAt));
+        }
+
+        private void RefreshLobbyUI()
+        {
+            roomPanel?.SetLobbyState(
+                IsHost ? leftLobbyReady : rightLobbyReady,
+                IsHost ? rightLobbyReady : leftLobbyReady,
+                Mathf.CeilToInt(GetLobbyRemaining()),
+                lobbyCountdownActive);
+        }
+
+        private void ResetLobbyState()
+        {
+            lobbyCountdownActive = false;
+            leftLobbyReady = false;
+            rightLobbyReady = false;
+            lobbyDeadline = 0f;
+            clientLobbyRemaining = 0f;
+            clientLobbyStateReceivedAt = 0f;
+            nextLobbyStateAt = 0f;
+        }
+
+        private void SendClientBattleReady()
+        {
+            if (!IsClient || localBattleReadySent ||
+                !networkManager.IsConnectedClient || !messagesRegistered)
+                return;
+
+            // Sent only after the client's control choice is locked and its
+            // input providers/physics view are ready for host snapshots.
+            using var writer = new FastBufferWriter(2, Allocator.Temp);
+            writer.WriteValueSafe((byte)1);
+            writer.WriteValueSafe((byte)localInputType);
+            networkManager.CustomMessagingManager.SendNamedMessage(
+                BattleReadyMessage,
+                NetworkManager.ServerClientId,
+                writer,
+                NetworkDelivery.ReliableSequenced);
+            localBattleReadySent = true;
+            Logger.Info("[Online] Client is ready for the battle countdown.");
+        }
+
+        private void OnBattleReadyMessage(ulong senderClientId, FastBufferReader reader)
+        {
+            if (!IsHost || senderClientId == networkManager.LocalClientId)
+                return;
+
+            reader.ReadValueSafe(out byte ready);
+            reader.ReadValueSafe(out byte selectedMode);
+            if (ready != 1)
+                return;
+
+            rightInputType = ToSupportedOnlineInput(selectedMode);
+            if (boundBattleManager != null)
+                boundBattleManager.RightInputType = rightInputType;
+            clientBattleReady = true;
+            SendMatchInfoToClients();
+            Logger.Info("[Online] Both scene peers can now prepare for battle.");
+            TryBeginBattlePreparation();
         }
 
         private void SendMatchInfo(ulong clientId)
@@ -720,6 +1011,18 @@ namespace SumoMultiplayer
             ApplyOnlineNames();
         }
 
+        private void SendMatchInfoToClients()
+        {
+            if (!IsHost || networkManager == null || !networkManager.IsListening)
+                return;
+
+            foreach (ulong clientId in networkManager.ConnectedClientsIds)
+            {
+                if (clientId != networkManager.LocalClientId)
+                    SendMatchInfo(clientId);
+            }
+        }
+
         private void OnMatchInfoMessage(ulong senderClientId, FastBufferReader reader)
         {
             if (!IsClient || senderClientId != NetworkManager.ServerClientId)
@@ -743,15 +1046,52 @@ namespace SumoMultiplayer
             rightInputType = ToSupportedOnlineInput(rightInputMode);
             ApplyOnlineProfiles();
             ApplyOnlineNames();
+            if (inputSelectionOpen)
+            {
+                BattleUIManager.Instance?.UpdateOnlineInputSelection(
+                    leftInputType,
+                    rightInputType,
+                    LocalSide,
+                    -1);
+            }
+        }
+
+        private void OnInputSelectionMessage(ulong senderClientId, FastBufferReader reader)
+        {
+            if (!IsHost || !inputSelectionOpen || senderClientId == networkManager.LocalClientId)
+                return;
+
+            reader.ReadValueSafe(out byte requestedMode);
+            rightInputType = ToSupportedOnlineInput(requestedMode);
+            if (boundBattleManager != null)
+                boundBattleManager.RightInputType = rightInputType;
+
+            SendMatchInfoToClients();
+            BattleUIManager.Instance?.UpdateOnlineInputSelection(
+                leftInputType,
+                rightInputType,
+                LocalSide,
+                -1);
         }
 
         private void BeginOnlineBattle()
         {
-            if (!IsHost || battleSceneRequested || !clientReady)
+            if (!IsHost || battleSceneRequested || !clientReady ||
+                !lobbyCountdownActive ||
+                networkManager == null || networkManager.ConnectedClientsIds.Count < 2 ||
+                !(leftLobbyReady && rightLobbyReady || GetLobbyRemaining() <= 0f))
                 return;
 
+            Logger.Info(leftLobbyReady && rightLobbyReady
+                ? "[Online] Both players ready. Loading Battle."
+                : "[Online] Room ready timer expired. Loading Battle.");
+            ResetLobbyState();
+            ResetInitialStartState();
+            // Lobby readiness authorizes the scene transition. Battle starts
+            // automatically after both peers load and the 10-second warning.
+            startRequested = true;
             battleSceneRequested = true;
-            SetStatus("Opponent found. Loading battle...");
+            SetStatus("Room ready. Loading battle...");
             roomPanel?.Hide();
             networkManager.SceneManager.LoadScene("Battle", LoadSceneMode.Single);
         }
@@ -771,11 +1111,18 @@ namespace SumoMultiplayer
             boundBattleManager = battleManager;
             boundBattleManager.LeftInputType = leftInputType;
             boundBattleManager.RightInputType = rightInputType;
-            BattleUIManager.Instance?.ApplyOnlineInputSelection(leftInputType, rightInputType);
             boundBattleManager.Events[BattleManager.OnBattleChanged].Subscribe(OnBattleStateChanged);
             BindRematchButton();
+            BindStartBattleButton();
             ApplyOnlineProfiles();
             ApplyOnlineNames();
+
+            // Both players chose their input mode in the room browser, before
+            // entering Battle. Do not add a second 15-second selection phase.
+            BattleUIManager.Instance?.LockOnlineInputSelection(leftInputType, rightInputType);
+
+            if (boundBattleManager == null)
+                yield break;
 
             if (IsClient)
             {
@@ -786,15 +1133,18 @@ namespace SumoMultiplayer
                     yield break;
 
                 SetClientPhysicsEnabled(false);
+                localBattleReady = true;
+                SendClientBattleReady();
             }
             else
             {
-                yield return null;
-                boundBattleManager.Battle_Start();
+                hostBattleReady = true;
+                TryBeginBattlePreparation();
             }
 
             RefreshBattleInputVisibility();
             RefreshRematchUI();
+            RefreshStartBattleUI();
         }
 
         private void UnbindBattleManager()
@@ -804,6 +1154,122 @@ namespace SumoMultiplayer
             boundBattleManager = null;
             rematchButton = null;
             rematchLabel = null;
+            startBattleButton = null;
+            startBattleLabel = null;
+        }
+
+        private void BindStartBattleButton()
+        {
+            startBattleButton = Resources.FindObjectsOfTypeAll<Button>()
+                .FirstOrDefault(candidate => candidate.name == "BtnStart" &&
+                    candidate.gameObject.scene.name == "Battle");
+            if (startBattleButton == null)
+            {
+                Logger.Warning("[Online] BtnStart was not found in Battle.");
+                return;
+            }
+
+            // The serialized listener calls Battle_Start immediately. Online
+            // play instead requires both scene peers and a ten-second warning.
+            startBattleButton.onClick = new Button.ButtonClickedEvent();
+            startBattleButton.onClick.AddListener(RequestInitialBattleStart);
+            startBattleLabel = startBattleButton.GetComponentInChildren<TMP_Text>(true);
+            RefreshStartBattleUI();
+        }
+
+        public static void RequestStartFromSceneButton()
+        {
+            if (IsHost)
+                Instance.RequestInitialBattleStart();
+        }
+
+        private void RequestInitialBattleStart()
+        {
+            if (!IsHost || boundBattleManager == null ||
+                boundBattleManager.CurrentState != BattleState.PreBatle_Preparing ||
+                startRequested || preparationActive)
+                return;
+
+            startRequested = true;
+            Logger.Info("[Online] Host requested battle start; waiting for both scene peers.");
+            TryBeginBattlePreparation();
+            RefreshStartBattleUI();
+        }
+
+        private void TryBeginBattlePreparation()
+        {
+            if (!IsHost || !startRequested || preparationActive ||
+                !hostBattleReady || !clientBattleReady ||
+                boundBattleManager == null ||
+                boundBattleManager.CurrentState != BattleState.PreBatle_Preparing ||
+                networkManager == null || networkManager.ConnectedClientsIds.Count < 2)
+                return;
+
+            preparationActive = true;
+            preparationDeadline = Time.unscaledTime + BattlePreparationSeconds;
+            Logger.Info($"[Online] Both players ready. Battle begins in {BattlePreparationSeconds:0}s.");
+            SendBattleSnapshot();
+            RefreshStartBattleUI();
+        }
+
+        private void StartAuthorizedBattle()
+        {
+            if (!IsHost || boundBattleManager == null)
+                return;
+
+            onlineStartAuthorized = true;
+            try
+            {
+                boundBattleManager.Battle_Start();
+            }
+            finally
+            {
+                onlineStartAuthorized = false;
+            }
+        }
+
+        private float GetPreparationRemaining()
+        {
+            if (!preparationActive)
+                return 0f;
+
+            return IsHost
+                ? Mathf.Max(0f, preparationDeadline - Time.unscaledTime)
+                : Mathf.Max(0f, clientPreparationRemaining -
+                    (Time.unscaledTime - clientPreparationReceivedAt));
+        }
+
+        private void RefreshStartBattleUI()
+        {
+            if (startBattleButton == null || boundBattleManager == null ||
+                boundBattleManager.CurrentState != BattleState.PreBatle_Preparing)
+                return;
+
+            startBattleButton.interactable = false;
+            if (preparationActive)
+                BattleUIManager.Instance?.SetOnlinePreparationCountdown(
+                    Mathf.CeilToInt(GetPreparationRemaining()));
+            if (startBattleLabel == null)
+                return;
+
+            if (preparationActive)
+                startBattleLabel.SetText($"Starting in {Mathf.CeilToInt(GetPreparationRemaining())}s");
+            else
+                startBattleLabel.SetText("Preparing controllers...");
+        }
+
+        private void ResetInitialStartState()
+        {
+            hostBattleReady = false;
+            clientBattleReady = false;
+            localBattleReady = false;
+            localBattleReadySent = false;
+            startRequested = false;
+            preparationActive = false;
+            onlineStartAuthorized = false;
+            preparationDeadline = 0f;
+            clientPreparationRemaining = 0f;
+            clientPreparationReceivedAt = 0f;
         }
 
         private void OnBattleStateChanged(EventParameter _)
@@ -909,7 +1375,7 @@ namespace SumoMultiplayer
 
             rematchWindowActive = false;
             Logger.Info("[Online] Both players accepted the rematch.");
-            boundBattleManager.Battle_Start();
+            StartAuthorizedBattle();
         }
 
         private void ResetRematchState()
@@ -994,6 +1460,60 @@ namespace SumoMultiplayer
         {
             InputType input = (InputType)value;
             return input == InputType.LiveCommand ? InputType.LiveCommand : InputType.UI;
+        }
+
+        /// <summary>
+        /// Consumes the Battle scene dropdown while an online match is active.
+        /// Only the dropdown for this process's assigned side can change, and
+        /// changes are accepted only during the pre-battle selection window.
+        /// </summary>
+        public static bool TrySelectOnlineInput(PlayerSide side, int dropdownValue)
+        {
+            if (!IsActive || SceneManager.GetActiveScene().name != "Battle")
+                return false;
+
+            if (Instance == null || !Instance.inputSelectionOpen || side != LocalSide)
+                return true;
+
+            InputType selected = ToSupportedOnlineInput(dropdownValue == 1
+                ? (int)InputType.LiveCommand
+                : (int)InputType.UI);
+            Instance.localInputType = selected;
+            if (LocalSide == PlayerSide.Left)
+                Instance.leftInputType = selected;
+            else
+                Instance.rightInputType = selected;
+
+            if (Instance.boundBattleManager != null)
+            {
+                Instance.boundBattleManager.LeftInputType = Instance.leftInputType;
+                Instance.boundBattleManager.RightInputType = Instance.rightInputType;
+            }
+
+            BattleUIManager.Instance?.UpdateOnlineInputSelection(
+                Instance.leftInputType,
+                Instance.rightInputType,
+                LocalSide,
+                -1);
+
+            if (IsHost)
+            {
+                Instance.SendMatchInfoToClients();
+            }
+            else if (Instance.networkManager != null &&
+                Instance.networkManager.IsConnectedClient &&
+                Instance.messagesRegistered)
+            {
+                using var writer = new FastBufferWriter(sizeof(byte), Allocator.Temp);
+                writer.WriteValueSafe((byte)selected);
+                Instance.networkManager.CustomMessagingManager.SendNamedMessage(
+                    InputSelectionMessage,
+                    NetworkManager.ServerClientId,
+                    writer,
+                    NetworkDelivery.ReliableSequenced);
+            }
+
+            return true;
         }
 
         private static string SerializeEquipment(IReadOnlyDictionary<string, string> equipment)
@@ -1171,6 +1691,8 @@ namespace SumoMultiplayer
             writer.WriteValueSafe((byte)(leftRematchRequested ? 1 : 0));
             writer.WriteValueSafe((byte)(rightRematchRequested ? 1 : 0));
             writer.WriteValueSafe(GetRematchRemaining());
+            writer.WriteValueSafe((byte)(preparationActive ? 1 : 0));
+            writer.WriteValueSafe(GetPreparationRemaining());
             WriteControllerSnapshot(writer, left);
             WriteControllerSnapshot(writer, right);
 
@@ -1215,11 +1737,16 @@ namespace SumoMultiplayer
             reader.ReadValueSafe(out byte leftRequested);
             reader.ReadValueSafe(out byte rightRequested);
             reader.ReadValueSafe(out float rematchRemaining);
+            reader.ReadValueSafe(out byte preparing);
+            reader.ReadValueSafe(out float preparationRemaining);
             rematchWindowActive = rematchActive == 1;
             leftRematchRequested = leftRequested == 1;
             rightRematchRequested = rightRequested == 1;
             clientRematchRemaining = Mathf.Max(0f, rematchRemaining);
             rematchSnapshotReceivedAt = Time.unscaledTime;
+            preparationActive = preparing == 1;
+            clientPreparationRemaining = Mathf.Max(0f, preparationRemaining);
+            clientPreparationReceivedAt = Time.unscaledTime;
             leftTarget = ReadControllerSnapshot(reader);
             rightTarget = ReadControllerSnapshot(reader);
 
@@ -1228,6 +1755,11 @@ namespace SumoMultiplayer
             {
                 return;
             }
+
+            // Do not let an early pre-battle snapshot initialize the client's
+            // InputProviders before both players' 15-second choices are final.
+            if (inputSelectionOpen)
+                return;
 
             boundBattleManager?.ApplyRemoteSnapshot(
                 (BattleState)stateValue,
@@ -1302,7 +1834,10 @@ namespace SumoMultiplayer
         {
             Logger.Info($"[Online] Player joined: {playerId}");
             if (IsHost)
+            {
                 SetStatus("Opponent found. Establishing relay...");
+                BeginLobbyCountdown();
+            }
         }
 
         private void OnSessionPlayerLeft(string playerId)
@@ -1434,6 +1969,9 @@ namespace SumoMultiplayer
                 localEquipment = string.Empty;
                 leftInputType = InputType.UI;
                 rightInputType = InputType.UI;
+                inputSelectionOpen = false;
+                ResetLobbyState();
+                ResetInitialStartState();
                 ResetRematchState();
                 GameManager.Instance.RestoreLocalProfiles();
                 leaving = false;
@@ -1509,19 +2047,58 @@ namespace SumoMultiplayer
         private const string AutoOnlineArgument = "-auto-online";
         private const string AutoCreateRoomArgument = "-auto-create-room";
         private const string AutoJoinRoomArgument = "-auto-join-room";
+        private static string cachedProfileName;
+        private static FileStream instanceProfileLock;
 
         public static string GetProfileName()
         {
+            if (!string.IsNullOrEmpty(cachedProfileName))
+                return cachedProfileName;
+
             string requested = GetArgument(ProfileArgument);
             if (string.IsNullOrWhiteSpace(requested))
-                requested = Application.isEditor ? "sumobot_editor" : "sumobot_default";
+                requested = Application.isEditor ? "sumobot_editor" : AcquireLocalInstanceProfile();
 
             char[] sanitized = requested
                 .Where(character => char.IsLetterOrDigit(character) || character is '-' or '_')
                 .Take(30)
                 .ToArray();
             string profile = new(sanitized);
-            return string.IsNullOrEmpty(profile) ? "sumobot_default" : profile;
+            cachedProfileName = string.IsNullOrEmpty(profile) ? "sumobot_local_1" : profile;
+            return cachedProfileName;
+        }
+
+        private static string AcquireLocalInstanceProfile()
+        {
+            try
+            {
+                string directory = Path.Combine(Application.persistentDataPath, "InstanceProfiles");
+                Directory.CreateDirectory(directory);
+                for (int slot = 1; slot <= 8; slot++)
+                {
+                    string path = Path.Combine(directory, $"slot-{slot}.lock");
+                    try
+                    {
+                        instanceProfileLock = new FileStream(
+                            path,
+                            FileMode.OpenOrCreate,
+                            FileAccess.ReadWrite,
+                            FileShare.None);
+                        return $"sumobot_local_{slot}";
+                    }
+                    catch (IOException)
+                    {
+                        // Another live game process owns this stable profile slot.
+                    }
+                }
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                Logger.Warning($"[Online] Could not reserve a persistent instance profile: {ex.Message}");
+            }
+
+            // Extremely unlikely fallback when all stable slots are occupied.
+            return $"sumobot_process_{System.Diagnostics.Process.GetCurrentProcess().Id}";
         }
 
         public static string GetEnvironmentName() => GetArgument(EnvironmentArgument);

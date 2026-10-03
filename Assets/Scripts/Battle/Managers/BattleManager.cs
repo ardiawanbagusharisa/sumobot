@@ -87,6 +87,7 @@ namespace SumoManager
         // broadcasts); reset when a new battle/rematch is prepared.
         private bool leaderboardRecorded = false;
         private bool remoteInputsInitialized = false;
+        private bool remoteBattlePrepared = false;
 
         /// <summary>Rating changes of the match just recorded (null when nothing was recorded).</summary>
         public LeaderboardOutcome? LastLeaderboardOutcome { get; private set; }
@@ -176,7 +177,8 @@ namespace SumoManager
                     right.OnUpdate();
 
                     // Tick pacing handlers
-                    PacingManager?.Tick();
+                    if (PacingManager != null && PacingManager.isActiveAndEnabled)
+                        PacingManager.Tick();
                 }
             }
         }
@@ -186,10 +188,14 @@ namespace SumoManager
         #region API methods
         public void Battle_Start()
         {
-            // Only the authoritative host can begin or rematch an online battle.
-            // This also neutralizes serialized scene buttons on the client.
-            if (OnlineBattleSession.IsClient)
+            // Scene buttons must not bypass the online peer-ready gate. Only
+            // OnlineBattleSession may authorize the actual host transition.
+            if (OnlineBattleSession.IsActive &&
+                !OnlineBattleSession.IsHostStartAuthorized)
+            {
+                OnlineBattleSession.RequestStartFromSceneButton();
                 return;
+            }
 
             if (RequireExternalStartConfirmation && !CampaignStartConfirmed)
                 return;
@@ -507,16 +513,25 @@ namespace SumoManager
                 return;
 
             bool stateChanged = CurrentState != state;
+            // Snapshots are intentionally unreliable. If the one brief
+            // Battle_Preparing snapshot is missed, the next countdown/ongoing
+            // snapshot must still open and initialize the battle UI.
+            bool synthesizePreparation = stateChanged && !remoteBattlePrepared &&
+                state > BattleState.Battle_Preparing &&
+                state <= BattleState.PostBattle_ShowResult &&
+                (CurrentState == BattleState.PreBatle_Preparing ||
+                 CurrentState == BattleState.PostBattle_ShowResult);
             ElapsedTime = Mathf.Max(0f, elapsedTime);
             CountdownRemaining = Mathf.Max(0f, countdownRemaining);
 
-            if (state == BattleState.Battle_Preparing && stateChanged)
+            if ((state == BattleState.Battle_Preparing && stateChanged) ||
+                synthesizePreparation)
             {
                 leaderboardRecorded = false;
                 LastLeaderboardOutcome = null;
                 Battle.ClearWinner();
                 Battle.CurrentRound = new Round(Mathf.Max(1, roundNumber), Mathf.CeilToInt(BattleTime));
-
+                remoteBattlePrepared = true;
             }
             else if (roundNumber > 0 &&
                      (Battle.CurrentRound == null || Battle.CurrentRound.RoundNumber != roundNumber))
@@ -526,6 +541,14 @@ namespace SumoManager
 
             Battle.LeftWinCount = Mathf.Max(0, leftWins);
             Battle.RightWinCount = Mathf.Max(0, rightWins);
+
+            if (synthesizePreparation)
+            {
+                Logger.Info($"[Online] Client recovered missed Battle_Preparing snapshot before {state}.");
+                CurrentState = BattleState.Battle_Preparing;
+                Events[OnBattleChanged].Invoke(
+                    new EventParameter(battleStateParam: BattleState.Battle_Preparing));
+            }
 
             if (Battle.CurrentRound != null &&
                 state >= BattleState.Battle_End &&
@@ -555,12 +578,17 @@ namespace SumoManager
 
             if (stateChanged)
             {
+                if (OnlineBattleSession.IsClient)
+                    Logger.Info($"[Online] Client battle state: {state}.");
                 EventParameter stateParameter = new(battleStateParam: state);
                 if (state == BattleState.Battle_End)
                     stateParameter.Winner = roundWinner;
                 Events[OnBattleChanged].Invoke(stateParameter);
                 OnlineBattleSession.RefreshBattleInputVisibility();
             }
+
+            if (state == BattleState.PostBattle_ShowResult)
+                remoteBattlePrepared = false;
         }
 
         public bool PrepareRemoteClient()

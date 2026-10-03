@@ -36,17 +36,24 @@ namespace SumoMultiplayer
         private TMP_Text statusText;
         private TMP_Text inputModeText;
         private TMP_Text closeButtonText;
+        private TMP_Text lobbyStatusText;
+        private TMP_Text readyButtonText;
+        private TMP_Text roomsTitle;
         private Button inputModeButton;
         private Button createButton;
         private Button refreshButton;
         private Button closeButton;
+        private Button readyButton;
         private readonly List<Button> roomButtons = new();
         private readonly List<TMP_Text> roomLabels = new();
+        private readonly List<RoomEntry> displayedRooms = new();
         private Action createRequested;
         private Action refreshRequested;
         private Action closeRequested;
+        private Action readyRequested;
         private Action<string> joinRequested;
         private InputType selectedInputType = InputType.UI;
+        private bool waiting;
 
         public bool IsVisible => gameObject.activeSelf;
         public InputType SelectedInputType => selectedInputType;
@@ -57,6 +64,7 @@ namespace SumoMultiplayer
             Action createRequested,
             Action refreshRequested,
             Action closeRequested,
+            Action readyRequested,
             Action<string> joinRequested)
         {
             var overlay = new GameObject(
@@ -78,6 +86,7 @@ namespace SumoMultiplayer
             panel.createRequested = createRequested;
             panel.refreshRequested = refreshRequested;
             panel.closeRequested = closeRequested;
+            panel.readyRequested = readyRequested;
             panel.joinRequested = joinRequested;
             panel.Build();
             overlay.SetActive(false);
@@ -113,31 +122,59 @@ namespace SumoMultiplayer
 
         public void SetWaiting(bool waiting)
         {
+            this.waiting = waiting;
+            if (readyButton != null) readyButton.gameObject.SetActive(waiting);
+            if (lobbyStatusText != null) lobbyStatusText.gameObject.SetActive(waiting);
+            if (roomsTitle != null) roomsTitle.gameObject.SetActive(!waiting);
+            if (createButton != null) createButton.gameObject.SetActive(!waiting);
+            if (refreshButton != null) refreshButton.gameObject.SetActive(!waiting);
+            for (int index = 0; index < roomButtons.Count; index++)
+                roomButtons[index].gameObject.SetActive(!waiting && index < displayedRooms.Count);
             SetBusy(waiting);
             if (closeButtonText != null)
                 closeButtonText.SetText(waiting ? "Leave room" : "Close");
+            if (waiting)
+                SetLobbyState(false, false, 0, false);
+        }
+
+        public void SetLobbyState(bool localReady, bool opponentReady, int seconds, bool opponentConnected)
+        {
+            if (!waiting)
+                return;
+
+            if (readyButton != null)
+                readyButton.interactable = opponentConnected && !localReady;
+            if (readyButtonText != null)
+                readyButtonText.SetText(localReady ? "Ready ✓" : "Ready now");
+            if (lobbyStatusText != null)
+                lobbyStatusText.SetText(opponentConnected
+                    ? $"You: {(localReady ? "ready" : "not ready")}     Opponent: {(opponentReady ? "ready" : "not ready")}\nBattle loads in {seconds}s, or sooner when both are ready."
+                    : "Waiting for an opponent to join...");
         }
 
         public void SetRooms(IReadOnlyList<RoomEntry> rooms)
         {
-            int count = Mathf.Min(rooms?.Count ?? 0, MaxVisibleRooms);
+            displayedRooms.Clear();
+            if (rooms != null)
+                displayedRooms.AddRange(rooms);
+            int count = Mathf.Min(displayedRooms.Count, MaxVisibleRooms);
             for (int index = 0; index < roomButtons.Count; index++)
             {
-                bool visible = index < count;
+                bool visible = !waiting && index < count;
                 Button button = roomButtons[index];
                 button.gameObject.SetActive(visible);
                 button.onClick.RemoveAllListeners();
-                if (!visible)
+                if (index >= count)
                     continue;
 
-                RoomEntry entry = rooms[index];
+                RoomEntry entry = displayedRooms[index];
                 roomLabels[index].SetText(
                     $"{entry.Name}    {entry.PlayerCount}/{entry.MaxPlayers}    JOIN");
                 string roomId = entry.Id;
                 button.onClick.AddListener(() => joinRequested?.Invoke(roomId));
             }
 
-            if (count == 0)
+            if (count == 0 && !waiting)
                 SetStatus("No open rooms. Create one or refresh.");
         }
 
@@ -163,7 +200,13 @@ namespace SumoMultiplayer
             closeButtonText = closeButton.GetComponentInChildren<TMP_Text>();
             closeButtonText.SetText("Close");
 
-            AddText(card.transform, "OPEN ROOMS", new Vector2(0f, 20f), new Vector2(640f, 30f), 20f, FontStyles.Bold);
+            readyButton = AddButton(card.transform, "Ready", new Vector2(-95f, 68f), new Vector2(220f, 44f), () => readyRequested?.Invoke());
+            readyButtonText = readyButton.GetComponentInChildren<TMP_Text>();
+            readyButton.gameObject.SetActive(false);
+            lobbyStatusText = AddText(card.transform, "Waiting for an opponent...", new Vector2(0f, -70f), new Vector2(650f, 150f), 23f);
+            lobbyStatusText.gameObject.SetActive(false);
+
+            roomsTitle = AddText(card.transform, "OPEN ROOMS", new Vector2(0f, 20f), new Vector2(640f, 30f), 20f, FontStyles.Bold);
             for (int index = 0; index < MaxVisibleRooms; index++)
             {
                 Button room = AddButton(

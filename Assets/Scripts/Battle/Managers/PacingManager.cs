@@ -57,9 +57,19 @@ namespace SumoManager
 
 		void OnDestroy()
 		{
-			// Cleanup handlers
+			DisposeHandlers();
+			if (Instance == this)
+				Instance = null;
+		}
+
+		void OnDisable() => DisposeHandlers();
+
+		private void DisposeHandlers()
+		{
 			LeftPacingHandler?.Dispose();
 			RightPacingHandler?.Dispose();
+			LeftPacingHandler = null;
+			RightPacingHandler = null;
 		}
 
 		void Update()
@@ -108,6 +118,7 @@ namespace SumoManager
 					LeftCollisionWindowSize,
 					leftPacingHistory
 				);
+				LeftPacingHandler.EnableActionFiltering = LeftEnableActionFiltering;
 
 				// Initialize
 				LeftPacingHandler.Init();
@@ -132,6 +143,7 @@ namespace SumoManager
 					RightCollisionWindowSize,
 					rightPacingHistory
 				);
+				RightPacingHandler.EnableActionFiltering = RightEnableActionFiltering;
 
 				// Initialize
 				RightPacingHandler.Init();

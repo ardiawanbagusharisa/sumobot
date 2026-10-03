@@ -36,7 +36,16 @@ public class BGMManager : MonoBehaviour
 
     void Awake()
     {
-        if (Instance != null && Instance != this) { Destroy(gameObject); return; }
+        if (Instance != null && Instance != this)
+        {
+            // Every battle/menu scene contains this object. The original lives
+            // across loads; a new scene copy must never start its own playlist.
+            enabled = false;
+            foreach (AudioSource source in GetComponents<AudioSource>())
+                source.Stop();
+            Destroy(gameObject);
+            return;
+        }
         Instance = this;
         if (dontDestroyOnLoad) DontDestroyOnLoad(gameObject);
 
@@ -56,7 +65,19 @@ public class BGMManager : MonoBehaviour
 
     void Start()
     {
-        if (playOnStart && tracks.Count > 0) Play();
+        if (Instance == this && playOnStart && tracks.Count > 0) Play();
+    }
+
+    void OnDestroy()
+    {
+        if (Instance != this)
+            return;
+
+        StopAllCoroutines();
+        if (sources != null)
+            foreach (AudioSource source in sources)
+                if (source != null) source.Stop();
+        Instance = null;
     }
 
     void OnValidate()
@@ -249,7 +270,12 @@ public class BGMManager : MonoBehaviour
 
     private IEnumerator FadeRoutine(AudioSource s, float from, float to, float dur)
     {
-        if (dur <= 0f) { s.volume = Mathf.Clamp01(to); yield break; }
+        if (dur <= 0f)
+        {
+            s.volume = Mathf.Clamp01(to);
+            if (to <= 0f) s.Stop();
+            yield break;
+        }
         float t = 0f;
         s.volume = Mathf.Clamp01(from);
         while (t < dur)
@@ -260,6 +286,8 @@ public class BGMManager : MonoBehaviour
             yield return null;
         }
         s.volume = Mathf.Clamp01(to);
+        if (to <= 0f)
+            s.Stop();
     }
 
     private IEnumerator FadeRoutineBlocking(AudioSource s, float from, float to, float dur)
