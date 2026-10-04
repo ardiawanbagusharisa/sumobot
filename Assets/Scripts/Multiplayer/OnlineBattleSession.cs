@@ -2,8 +2,11 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
 using SumoCore;
 using SumoInput;
 using SumoManager;
@@ -35,7 +38,7 @@ namespace SumoMultiplayer
     [DefaultExecutionOrder(-1000)]
     public sealed class OnlineBattleSession : MonoBehaviour
     {
-        private const string MatchType = "sumobot-online-v2";
+        private const string MatchType = "sumobot-online-v3";
         private const string MatchModeProperty = "mode";
         private const string DisplayNameProperty = "displayName";
         private const string ReadyMessage = "sumobot/ready/v1";
@@ -47,6 +50,7 @@ namespace SumoMultiplayer
         private const string InputMessage = "sumobot/input/v1";
         private const string SnapshotMessage = "sumobot/snapshot/v2";
         private const string VfxMessage = "sumobot/vfx/v1";
+        private const string ReplayDataMessage = "sumobot/replay-data/v1";
         private const string RematchRequestMessage = "sumobot/rematch/v1";
         private const float SnapshotInterval = 1f / 20f;
         private const float ContinuousInputInterval = 0.075f;
@@ -54,6 +58,9 @@ namespace SumoMultiplayer
         private const float LobbyReadySeconds = 30f;
         private const float BattlePreparationSeconds = 10f;
         private const int OnlineDisconnectTimeoutMs = 5000;
+        private const int ReplayChunkBytes = 4096;
+        private const int MaxReplayBytes = 16 * 1024 * 1024;
+        private const float DisconnectNoticeSeconds = 5f;
         private const byte DashVfx = 1;
         private const byte CollisionVfx = 2;
         private const byte AcceleratingFlag = 1;
@@ -66,7 +73,7 @@ namespace SumoMultiplayer
         public static bool IsActive => Instance != null && Instance.onlineMatchActive;
         public static bool IsHost => IsActive && Instance.session != null && Instance.session.IsHost;
         public static bool IsClient => IsActive && !IsHost;
-        public static PlayerSide LocalSide => IsHost ? PlayerSide.Left : PlayerSide.Right;
+        public static PlayerSide LocalSide => Instance != null ? Instance.originalSide : PlayerSide.Left;
         public static string ProfileName => Instance != null ? Instance.profileName : OnlineLaunchOptions.GetProfileName();
         public static string LeftDisplayName => Instance != null ? Instance.leftDisplayName : "Player 1";
         public static string RightDisplayName => Instance != null ? Instance.rightDisplayName : "Player 2";
@@ -74,6 +81,7 @@ namespace SumoMultiplayer
         private NetworkManager networkManager;
         private UnityTransport transport;
         private ISession session;
+        private PlayerSide originalSide = PlayerSide.Left;
         private Button onlineButton;
         private TMP_Text onlineStatus;
         private OnlineRoomPanel roomPanel;
@@ -82,6 +90,16 @@ namespace SumoMultiplayer
         private TMP_Text rematchLabel;
         private Button startBattleButton;
         private TMP_Text startBattleLabel;
+        private GameObject noticeCanvas;
+        private TMP_Text noticeLabel;
+        private int replayTransferId;
+        private int lastReplaySentGameIndex = -1;
+        private int incomingReplayTransferId = -1;
+        private byte[] incomingReplayBytes;
+        private bool[] incomingReplayChunks;
+        private int incomingReplayChunkCount;
+        private bool replayReady;
+        private bool replayOpenRequested;
 
         private readonly Dictionary<ActionType, float> lastInputSentAt = new();
         private SnapshotTarget leftTarget;
@@ -187,9 +205,9 @@ namespace SumoMultiplayer
             networkManager.NetworkConfig = new NetworkConfig();
             networkManager.NetworkConfig.NetworkTransport = transport;
             networkManager.NetworkConfig.EnableSceneManagement = true;
-            // Snapshot v2 includes client-only presentation state. Refuse older
-            // builds instead of decoding their shorter snapshot payload.
-            networkManager.NetworkConfig.ProtocolVersion = 2;
+            // Replay transfer requires both peers to run this build. Refuse
+            // older clients rather than letting one miss replay data.
+            networkManager.NetworkConfig.ProtocolVersion = 3;
 
             SceneManager.sceneLoaded += OnSceneLoaded;
             networkManager.OnClientConnectedCallback += OnClientConnected;
@@ -305,9 +323,16 @@ namespace SumoMultiplayer
             if (scene.name == "MainMenu")
             {
                 UnbindBattleManager();
+                roomPanel = null;
                 BindOnlineButton();
                 return;
             }
+
+            // MainMenu UI objects are destroyed by a single-scene load. Clear
+            // their managed references before later network callbacks arrive.
+            roomPanel = null;
+            onlineButton = null;
+            onlineStatus = null;
 
             if (scene.name == "Battle" && onlineMatchActive)
             {
@@ -352,6 +377,12 @@ namespace SumoMultiplayer
 
         private void OnOnlineButtonPressed()
         {
+            if (leaving || connectionLossHandled)
+            {
+                SetStatus("Finishing previous online session...");
+                return;
+            }
+
             if (onlineMatchActive)
             {
                 if (SceneManager.GetActiveScene().name == "MainMenu")
@@ -588,6 +619,7 @@ namespace SumoMultiplayer
         private void AdoptSession(ISession joinedSession)
         {
             session = joinedSession ?? throw new InvalidOperationException("UGS returned no session.");
+            originalSide = session.IsHost ? PlayerSide.Left : PlayerSide.Right;
             onlineMatchActive = true;
             connectionLossHandled = false;
             if (session.IsHost)
@@ -730,6 +762,7 @@ namespace SumoMultiplayer
             networkManager.CustomMessagingManager.RegisterNamedMessageHandler(InputMessage, OnInputMessage);
             networkManager.CustomMessagingManager.RegisterNamedMessageHandler(SnapshotMessage, OnSnapshotMessage);
             networkManager.CustomMessagingManager.RegisterNamedMessageHandler(VfxMessage, OnVfxMessage);
+            networkManager.CustomMessagingManager.RegisterNamedMessageHandler(ReplayDataMessage, OnReplayDataMessage);
             networkManager.CustomMessagingManager.RegisterNamedMessageHandler(RematchRequestMessage, OnRematchRequestMessage);
             messagesRegistered = true;
         }
@@ -764,6 +797,7 @@ namespace SumoMultiplayer
             networkManager.CustomMessagingManager.UnregisterNamedMessageHandler(InputMessage);
             networkManager.CustomMessagingManager.UnregisterNamedMessageHandler(SnapshotMessage);
             networkManager.CustomMessagingManager.UnregisterNamedMessageHandler(VfxMessage);
+            networkManager.CustomMessagingManager.UnregisterNamedMessageHandler(ReplayDataMessage);
             networkManager.CustomMessagingManager.UnregisterNamedMessageHandler(RematchRequestMessage);
             messagesRegistered = false;
         }
@@ -1288,22 +1322,184 @@ namespace SumoMultiplayer
         {
             if (boundBattleManager != null)
             {
-                if (boundBattleManager.CurrentState == BattleState.PostBattle_ShowResult && IsHost)
+                if (boundBattleManager.CurrentState == BattleState.PostBattle_ShowResult && IsHost &&
+                    LogManager.Log != null &&
+                    lastReplaySentGameIndex != LogManager.CurrentGameIndex)
                 {
+                    lastReplaySentGameIndex = LogManager.CurrentGameIndex;
                     rematchWindowActive = true;
                     leftRematchRequested = false;
                     rightRematchRequested = false;
                     rematchDeadline = Time.unscaledTime + RematchWindowSeconds;
+                    StartCoroutine(SendReplayData());
                 }
                 else if (boundBattleManager.CurrentState == BattleState.Battle_Preparing)
                 {
                     ResetRematchState();
+                    replayReady = false;
+                    replayOpenRequested = false;
                 }
             }
 
             RefreshBattleInputVisibility();
             ApplyOnlineNames();
             RefreshRematchUI();
+        }
+
+        public static bool TryOpenReplay()
+        {
+            if (!IsClient)
+                return false;
+
+            if (Instance.connectionLossHandled)
+                return true;
+
+            if (Instance.replayReady)
+            {
+                GameManager.Instance.Battle_ShowReplay();
+            }
+            else
+            {
+                Instance.replayOpenRequested = true;
+                Instance.ShowNotice("Preparing replay from host...");
+            }
+            return true;
+        }
+
+        private IEnumerator SendReplayData()
+        {
+            if (!IsHost || LogManager.Log?.Games == null || LogManager.Log.Games.Count == 0)
+                yield break;
+
+            byte[] compressed;
+            try
+            {
+                var bundle = new ReplayBundle
+                {
+                    Metadata = LogManager.Log,
+                    Games = LogManager.Log.Games
+                };
+                string json = JsonConvert.SerializeObject(bundle);
+                using var output = new MemoryStream();
+                using (var gzip = new GZipStream(output, System.IO.Compression.CompressionLevel.Fastest, true))
+                using (var textWriter = new StreamWriter(gzip, new UTF8Encoding(false)))
+                    textWriter.Write(json);
+                compressed = output.ToArray();
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"[Online] Could not prepare replay: {ex.Message}");
+                yield break;
+            }
+
+            if (compressed.Length == 0 || compressed.Length > MaxReplayBytes)
+            {
+                Logger.Warning($"[Online] Replay size {compressed.Length} exceeds transfer limit.");
+                yield break;
+            }
+
+            int transferId = ++replayTransferId;
+            for (int offset = 0; offset < compressed.Length; offset += ReplayChunkBytes)
+            {
+                if (!IsHost || networkManager == null || !networkManager.IsListening ||
+                    networkManager.ConnectedClientsIds.Count < 2)
+                    yield break;
+
+                int count = Math.Min(ReplayChunkBytes, compressed.Length - offset);
+                using (var writer = new FastBufferWriter(ReplayChunkBytes + 32, Allocator.Temp))
+                {
+                    writer.WriteValueSafe(transferId);
+                    writer.WriteValueSafe(compressed.Length);
+                    writer.WriteValueSafe(offset);
+                    writer.WriteValueSafe(count);
+                    writer.WriteBytesSafe(compressed, count, offset);
+                    foreach (ulong clientId in networkManager.ConnectedClientsIds)
+                    {
+                        if (clientId != networkManager.LocalClientId)
+                            networkManager.CustomMessagingManager.SendNamedMessage(
+                                ReplayDataMessage, clientId, writer,
+                                NetworkDelivery.ReliableFragmentedSequenced);
+                    }
+                }
+                yield return null;
+            }
+
+            Logger.Info($"[Online] Sent replay {transferId} ({compressed.Length} compressed bytes).");
+        }
+
+        private void OnReplayDataMessage(ulong senderClientId, FastBufferReader reader)
+        {
+            if (!IsClient || senderClientId != NetworkManager.ServerClientId)
+                return;
+
+            reader.ReadValueSafe(out int transferId);
+            reader.ReadValueSafe(out int totalBytes);
+            reader.ReadValueSafe(out int offset);
+            reader.ReadValueSafe(out int count);
+            if (totalBytes <= 0 || totalBytes > MaxReplayBytes ||
+                offset < 0 || offset >= totalBytes || offset % ReplayChunkBytes != 0 ||
+                count <= 0 || count > ReplayChunkBytes ||
+                count != Math.Min(ReplayChunkBytes, totalBytes - offset) ||
+                transferId < incomingReplayTransferId)
+                return;
+
+            if (replayReady && transferId == incomingReplayTransferId)
+                return;
+
+            if (transferId > incomingReplayTransferId || incomingReplayBytes == null)
+            {
+                incomingReplayTransferId = transferId;
+                incomingReplayBytes = new byte[totalBytes];
+                incomingReplayChunks = new bool[(totalBytes + ReplayChunkBytes - 1) / ReplayChunkBytes];
+                incomingReplayChunkCount = 0;
+                replayReady = false;
+            }
+            if (incomingReplayBytes.Length != totalBytes)
+                return;
+
+            byte[] chunk = new byte[count];
+            reader.ReadBytesSafe(ref chunk, count);
+            int chunkIndex = offset / ReplayChunkBytes;
+            if (incomingReplayChunks[chunkIndex])
+                return;
+
+            Buffer.BlockCopy(chunk, 0, incomingReplayBytes, offset, count);
+            incomingReplayChunks[chunkIndex] = true;
+            if (++incomingReplayChunkCount != incomingReplayChunks.Length)
+                return;
+
+            try
+            {
+                using var input = new MemoryStream(incomingReplayBytes);
+                using var gzip = new GZipStream(input, CompressionMode.Decompress);
+                using var textReader = new StreamReader(gzip, Encoding.UTF8);
+                ReplayBundle bundle = JsonConvert.DeserializeObject<ReplayBundle>(textReader.ReadToEnd());
+                if (bundle?.Metadata == null || bundle.Games == null || bundle.Games.Count == 0)
+                    throw new InvalidDataException("Replay has no games.");
+
+                bundle.Metadata.Games = bundle.Games;
+                LogManager.Log = bundle.Metadata;
+                replayReady = true;
+                Logger.Info($"[Online] Received replay {transferId} ({bundle.Games.Count} games).");
+                if (replayOpenRequested && !connectionLossHandled &&
+                    SceneManager.GetActiveScene().name == "Battle")
+                {
+                    replayOpenRequested = false;
+                    HideNotice();
+                    GameManager.Instance.Battle_ShowReplay();
+                }
+            }
+            catch (Exception ex)
+            {
+                replayOpenRequested = false;
+                Logger.Error($"[Online] Could not load transferred replay: {ex.Message}");
+                ShowNotice("Replay transfer failed. Please try another match.");
+            }
+            finally
+            {
+                incomingReplayBytes = null;
+                incomingReplayChunks = null;
+            }
         }
 
         private void BindRematchButton()
@@ -1970,19 +2166,19 @@ namespace SumoMultiplayer
         private void OnSessionPlayerLeft(string playerId)
         {
             if (!leaving && onlineMatchActive)
-                _ = HandleConnectionLostAsync($"Player {playerId} left the match.");
+                StartCoroutine(HandleConnectionLost("The opponent left the match."));
         }
 
         private void OnRemovedFromSession()
         {
             if (!leaving && onlineMatchActive)
-                _ = HandleConnectionLostAsync("You were removed from the session.");
+                StartCoroutine(HandleConnectionLost("You were removed from the session."));
         }
 
         private void OnSessionDeleted()
         {
             if (!leaving && onlineMatchActive)
-                _ = HandleConnectionLostAsync("The online session ended.");
+                StartCoroutine(HandleConnectionLost("The online session ended."));
         }
 
         private void OnClientDisconnected(ulong clientId)
@@ -1993,19 +2189,20 @@ namespace SumoMultiplayer
             if (IsHost && clientId == networkManager.LocalClientId)
                 return;
 
-            _ = HandleConnectionLostAsync("The opponent disconnected.");
+            StartCoroutine(HandleConnectionLost("The opponent disconnected."));
         }
 
-        private async Task HandleConnectionLostAsync(string reason)
+        private IEnumerator HandleConnectionLost(string reason)
         {
             if (connectionLossHandled || leaving || !onlineMatchActive)
-                return;
+                yield break;
 
             connectionLossHandled = true;
             Logger.Warning($"[Online] {reason}");
+            float returnAt = Time.unscaledTime + DisconnectNoticeSeconds;
+            ShowNotice($"{reason}\nReturning to main menu in 5s");
             bool battleSceneLoaded = SceneManager.GetActiveScene().name == "Battle";
             PlayerSide localWinner = LocalSide;
-            bool forfeitShown = false;
             if (battleSceneLoaded)
             {
                 // A disconnect can arrive in the frame where the network scene
@@ -2013,27 +2210,84 @@ namespace SumoMultiplayer
                 // Give BattleManager a short, frame-based chance to initialize.
                 int framesRemaining = 60;
                 while (BattleManager.Instance == null && framesRemaining-- > 0)
-                    await Task.Yield();
+                    yield return null;
 
                 rematchWindowActive = false;
                 RefreshRematchUI();
                 BattleManager manager = boundBattleManager ?? BattleManager.Instance;
-                forfeitShown = manager != null && manager.FinishOnlineByForfeit(localWinner);
+                manager?.FinishOnlineByForfeit(localWinner);
             }
 
-            await LeaveSessionAsync(false);
-            if (!forfeitShown)
+            // The visible transition is independent of UGS/Relay cleanup.
+            onlineMatchActive = false;
+            while (Time.unscaledTime < returnAt)
             {
-                if (SceneManager.GetActiveScene().name != "MainMenu")
-                    SceneManager.LoadScene("MainMenu");
-                else
-                {
-                    EnsureRoomPanel();
-                    roomPanel.Show(localInputType);
-                    roomPanel.SetWaiting(false);
-                    roomPanel.SetStatus($"Opponent left: {reason}");
-                }
+                int remaining = Mathf.CeilToInt(returnAt - Time.unscaledTime);
+                if (noticeLabel != null)
+                    noticeLabel.SetText($"{reason}\nReturning to main menu in {remaining}s");
+                yield return null;
             }
+
+            Time.timeScale = 1f;
+            GameManager.Instance.ShowReplay = false;
+            GameManager.Instance.RestoreLocalProfiles();
+            if (roomPanel != null)
+                roomPanel.Hide();
+            SceneManager.LoadScene("MainMenu");
+            HideNotice();
+            Logger.Info("[Online] Returned to MainMenu after disconnect notice.");
+            // Run cleanup after the scene transition, so an SDK call cannot
+            // delay the promised five-second return.
+            yield return null;
+            _ = LeaveSessionAsync(false);
+        }
+
+        private void ShowNotice(string message)
+        {
+            if (noticeCanvas == null)
+            {
+                noticeCanvas = new GameObject("Online Notice Canvas",
+                    typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler));
+                noticeCanvas.transform.SetParent(transform, false);
+                Canvas canvas = noticeCanvas.GetComponent<Canvas>();
+                canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+                canvas.sortingOrder = 1000;
+                CanvasScaler scaler = noticeCanvas.GetComponent<CanvasScaler>();
+                scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+                scaler.referenceResolution = new Vector2(1920, 1080);
+
+                var panel = new GameObject("Notice Background",
+                    typeof(RectTransform), typeof(Image));
+                panel.transform.SetParent(noticeCanvas.transform, false);
+                RectTransform panelRect = panel.GetComponent<RectTransform>();
+                panelRect.anchorMin = new Vector2(0.15f, 0.85f);
+                panelRect.anchorMax = new Vector2(0.85f, 0.98f);
+                panelRect.offsetMin = Vector2.zero;
+                panelRect.offsetMax = Vector2.zero;
+                panel.GetComponent<Image>().color = new Color(0.08f, 0.1f, 0.2f, 0.9f);
+
+                var label = new GameObject("Notice Text",
+                    typeof(RectTransform), typeof(TextMeshProUGUI));
+                label.transform.SetParent(panel.transform, false);
+                RectTransform labelRect = label.GetComponent<RectTransform>();
+                labelRect.anchorMin = Vector2.zero;
+                labelRect.anchorMax = Vector2.one;
+                labelRect.offsetMin = new Vector2(20f, 8f);
+                labelRect.offsetMax = new Vector2(-20f, -8f);
+                noticeLabel = label.GetComponent<TextMeshProUGUI>();
+                noticeLabel.alignment = TextAlignmentOptions.Center;
+                noticeLabel.fontSize = 28f;
+                noticeLabel.color = Color.white;
+            }
+
+            noticeCanvas.SetActive(true);
+            noticeLabel.SetText(message);
+        }
+
+        private void HideNotice()
+        {
+            if (noticeCanvas != null)
+                noticeCanvas.SetActive(false);
         }
 
         public static void LeaveAndReturnToMainMenu()
@@ -2050,6 +2304,7 @@ namespace SumoMultiplayer
         private async Task LeaveSessionAndReturnAsync()
         {
             await LeaveSessionAsync(true);
+            HideNotice();
             SceneManager.LoadScene("MainMenu");
         }
 
@@ -2067,7 +2322,13 @@ namespace SumoMultiplayer
                 UnsubscribeSessionEvents();
 
                 if (session != null && session.IsMember)
-                    await session.LeaveAsync();
+                {
+                    Task leaveTask = session.LeaveAsync();
+                    if (await Task.WhenAny(leaveTask, Task.Delay(3000)) == leaveTask)
+                        await leaveTask;
+                    else
+                        Logger.Warning("[Online] Session leave timed out; stopping the local network anyway.");
+                }
             }
             catch (Exception ex)
             {
@@ -2077,6 +2338,7 @@ namespace SumoMultiplayer
             {
                 await EnsureNetworkManagerStoppedAsync();
                 session = null;
+                originalSide = PlayerSide.Left;
                 matchmaking = false;
                 onlineMatchActive = false;
                 battleSceneRequested = false;
@@ -2085,6 +2347,13 @@ namespace SumoMultiplayer
                 lastInputSentAt.Clear();
                 leftTarget = default;
                 rightTarget = default;
+                incomingReplayBytes = null;
+                incomingReplayChunks = null;
+                incomingReplayTransferId = -1;
+                incomingReplayChunkCount = 0;
+                lastReplaySentGameIndex = -1;
+                replayReady = false;
+                replayOpenRequested = false;
                 leftDisplayName = "Player 1";
                 rightDisplayName = "Player 2";
                 leftAccountId = "player:left";
@@ -2102,6 +2371,7 @@ namespace SumoMultiplayer
                 ResetRematchState();
                 GameManager.Instance.RestoreLocalProfiles();
                 leaving = false;
+                connectionLossHandled = false;
 
                 if (userRequested)
                     Logger.Info("[Online] Player left the online session.");
@@ -2174,6 +2444,12 @@ namespace SumoMultiplayer
                 DashCooldown = dashCooldown;
                 Valid = valid;
             }
+        }
+
+        private sealed class ReplayBundle
+        {
+            public LogManager.BattleLog Metadata;
+            public List<LogManager.GameLog> Games;
         }
     }
 

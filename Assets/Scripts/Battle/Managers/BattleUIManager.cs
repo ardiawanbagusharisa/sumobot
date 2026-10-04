@@ -723,6 +723,8 @@ In online play, each focused game window uses the left-player keys (W/A/D/E/Q).
 		public void ShowReplay()
         {
             SFXManager.Instance.Play2D("ui_accept");
+            if (OnlineBattleSession.TryOpenReplay())
+                return;
             GameManager.Instance.Battle_ShowReplay();
         }
 
