@@ -378,6 +378,10 @@ public class VFXManager : MonoBehaviour
 
             case VFXParentMode.SumoController:
             default:
+                // Collision sparks are world-space effects and have no robot
+                // transform. They must not try to create a child on null.
+                if (sumo == null)
+                    return null;
                 var child = sumo.Find(vfxRootName);
                 if (child == null)
                 {

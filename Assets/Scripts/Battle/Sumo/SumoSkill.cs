@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using SumoMultiplayer;
 using SumoManager;
 using UnityEngine;
 
@@ -123,6 +124,10 @@ namespace SumoCore
                     ActivateStone();
                     break;
             }
+
+            Vector2 facing = controller.transform.up;
+            VFXManager.Instance?.PlayDash(controller.transform, facing);
+            OnlineBattleSession.BroadcastDashVfx(controller.Side);
 
             DurationRoutine = controller.StartCoroutine(OnAfterDuration());
             CooldownRoutine = controller.StartCoroutine(OnAfterCooldown());

@@ -49,7 +49,7 @@ The installed Multiplayer Play Mode package can start an additional local instan
 
 - The session host is the left player and owns battle state and 2D physics.
 - The joining client is the right player and sends validated input commands to the host.
-- The host sends battle metadata and transform snapshots at 20 Hz.
+- The host sends battle metadata, transforms, action-trail flags, skill selection, and dash/skill HUD state at 20 Hz. Dash and collision bursts use reliable visual-event messages, so both windows render those effects without running client-side physics. Individual particle patterns may differ.
 - A host departure ends the match; host migration is not part of this prototype.
 - If either player leaves or disconnects after the Battle scene loads, the connected opponent is immediately shown as the winner and the result is recorded. A network failure can only prove that the remote peer disappeared; production ranked play should validate forfeits on a trusted server.
 - Online matches are human-vs-human. The scene's `BattleSimulator` and both predefined AI bots are disabled while an online session is active so they cannot compete with network player input.
