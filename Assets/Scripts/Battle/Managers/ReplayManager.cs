@@ -10,6 +10,7 @@ using System;
 using System.Collections;
 using UnityEngine.UI;
 using SumoCore;
+using SumoMultiplayer;
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -1027,6 +1028,14 @@ public class ReplayManager : MonoBehaviour
     public void BackToBattle()
     {
         SFXManager.Instance?.Play2D("ui_accept");
+        if (OnlineBattleSession.IsActive)
+        {
+            // The live Battle scene was unloaded to show this local replay.
+            // Reloading it would create an unsynchronized second online match.
+            GameManager.Instance.ShowReplay = false;
+            OnlineBattleSession.LeaveAndReturnToMainMenu();
+            return;
+        }
         GameManager.Instance?.Replay_BackToBattle();
     }
 
