@@ -35,7 +35,7 @@ namespace SumoMultiplayer
     [DefaultExecutionOrder(-1000)]
     public sealed class OnlineBattleSession : MonoBehaviour
     {
-        private const string MatchType = "sumobot-online-v1";
+        private const string MatchType = "sumobot-online-v2";
         private const string MatchModeProperty = "mode";
         private const string DisplayNameProperty = "displayName";
         private const string ReadyMessage = "sumobot/ready/v1";
@@ -45,7 +45,8 @@ namespace SumoMultiplayer
         private const string MatchInfoMessage = "sumobot/match-info/v1";
         private const string InputSelectionMessage = "sumobot/input-selection/v1";
         private const string InputMessage = "sumobot/input/v1";
-        private const string SnapshotMessage = "sumobot/snapshot/v1";
+        private const string SnapshotMessage = "sumobot/snapshot/v2";
+        private const string VfxMessage = "sumobot/vfx/v1";
         private const string RematchRequestMessage = "sumobot/rematch/v1";
         private const float SnapshotInterval = 1f / 20f;
         private const float ContinuousInputInterval = 0.075f;
@@ -53,6 +54,13 @@ namespace SumoMultiplayer
         private const float LobbyReadySeconds = 30f;
         private const float BattlePreparationSeconds = 10f;
         private const int OnlineDisconnectTimeoutMs = 5000;
+        private const byte DashVfx = 1;
+        private const byte CollisionVfx = 2;
+        private const byte AcceleratingFlag = 1;
+        private const byte TurnLeftFlag = 2;
+        private const byte TurnRightFlag = 4;
+        private const byte DashActiveFlag = 8;
+        private const byte SkillActiveFlag = 16;
 
         public static OnlineBattleSession Instance { get; private set; }
         public static bool IsActive => Instance != null && Instance.onlineMatchActive;
@@ -179,7 +187,9 @@ namespace SumoMultiplayer
             networkManager.NetworkConfig = new NetworkConfig();
             networkManager.NetworkConfig.NetworkTransport = transport;
             networkManager.NetworkConfig.EnableSceneManagement = true;
-            networkManager.NetworkConfig.ProtocolVersion = 1;
+            // Snapshot v2 includes client-only presentation state. Refuse older
+            // builds instead of decoding their shorter snapshot payload.
+            networkManager.NetworkConfig.ProtocolVersion = 2;
 
             SceneManager.sceneLoaded += OnSceneLoaded;
             networkManager.OnClientConnectedCallback += OnClientConnected;
@@ -719,6 +729,7 @@ namespace SumoMultiplayer
             networkManager.CustomMessagingManager.RegisterNamedMessageHandler(InputSelectionMessage, OnInputSelectionMessage);
             networkManager.CustomMessagingManager.RegisterNamedMessageHandler(InputMessage, OnInputMessage);
             networkManager.CustomMessagingManager.RegisterNamedMessageHandler(SnapshotMessage, OnSnapshotMessage);
+            networkManager.CustomMessagingManager.RegisterNamedMessageHandler(VfxMessage, OnVfxMessage);
             networkManager.CustomMessagingManager.RegisterNamedMessageHandler(RematchRequestMessage, OnRematchRequestMessage);
             messagesRegistered = true;
         }
@@ -752,6 +763,7 @@ namespace SumoMultiplayer
             networkManager.CustomMessagingManager.UnregisterNamedMessageHandler(InputSelectionMessage);
             networkManager.CustomMessagingManager.UnregisterNamedMessageHandler(InputMessage);
             networkManager.CustomMessagingManager.UnregisterNamedMessageHandler(SnapshotMessage);
+            networkManager.CustomMessagingManager.UnregisterNamedMessageHandler(VfxMessage);
             networkManager.CustomMessagingManager.UnregisterNamedMessageHandler(RematchRequestMessage);
             messagesRegistered = false;
         }
@@ -1663,6 +1675,64 @@ namespace SumoMultiplayer
             };
         }
 
+        public static void BroadcastDashVfx(PlayerSide side)
+        {
+            if (IsHost)
+                Instance.SendVfx(DashVfx, side, Vector2.zero, 0f);
+        }
+
+        public static void BroadcastCollisionVfx(Vector2 position, float speed)
+        {
+            if (IsHost)
+                Instance.SendVfx(CollisionVfx, PlayerSide.Left, position, speed);
+        }
+
+        private void SendVfx(byte kind, PlayerSide side, Vector2 position, float speed)
+        {
+            if (networkManager == null || !networkManager.IsListening ||
+                networkManager.ConnectedClientsIds.Count < 2)
+                return;
+
+            using var writer = new FastBufferWriter(32, Allocator.Temp);
+            writer.WriteValueSafe(kind);
+            writer.WriteValueSafe((byte)side);
+            writer.WriteValueSafe(position.x);
+            writer.WriteValueSafe(position.y);
+            writer.WriteValueSafe(speed);
+            foreach (ulong clientId in networkManager.ConnectedClientsIds)
+            {
+                if (clientId != networkManager.LocalClientId)
+                    networkManager.CustomMessagingManager.SendNamedMessage(
+                        VfxMessage, clientId, writer, NetworkDelivery.ReliableSequenced);
+            }
+        }
+
+        private void OnVfxMessage(ulong senderClientId, FastBufferReader reader)
+        {
+            if (!IsClient || senderClientId != NetworkManager.ServerClientId ||
+                VFXManager.Instance == null)
+                return;
+
+            reader.ReadValueSafe(out byte kind);
+            reader.ReadValueSafe(out byte sideValue);
+            reader.ReadValueSafe(out float x);
+            reader.ReadValueSafe(out float y);
+            reader.ReadValueSafe(out float speed);
+
+            if (kind == CollisionVfx)
+            {
+                VFXManager.Instance.PlayCollisionSpark(new Vector2(x, y), speed);
+            }
+            else if (kind == DashVfx && sideValue <= (byte)PlayerSide.Right)
+            {
+                BattleManager battleManager = BattleManager.Instance;
+                SumoController controller = sideValue == (byte)PlayerSide.Left
+                    ? battleManager?.Battle?.LeftPlayer : battleManager?.Battle?.RightPlayer;
+                if (controller != null)
+                    VFXManager.Instance.PlayDash(controller.transform, controller.transform.up);
+            }
+        }
+
         private void SendBattleSnapshot()
         {
             if (!IsHost || !networkManager.IsListening || networkManager.ConnectedClientsIds.Count < 2)
@@ -1719,6 +1789,17 @@ namespace SumoMultiplayer
             writer.WriteValueSafe(body != null ? body.linearVelocity.x : 0f);
             writer.WriteValueSafe(body != null ? body.linearVelocity.y : 0f);
             writer.WriteValueSafe(body != null ? body.angularVelocity : 0f);
+            byte visualFlags = 0;
+            if (controller.IsAcceleratingVisual) visualFlags |= AcceleratingFlag;
+            if (controller.TurnVisualDirection > 0) visualFlags |= TurnLeftFlag;
+            if (controller.TurnVisualDirection < 0) visualFlags |= TurnRightFlag;
+            if (controller.IsDashActive) visualFlags |= DashActiveFlag;
+            if (controller.Skill != null && controller.Skill.IsActive) visualFlags |= SkillActiveFlag;
+            writer.WriteValueSafe(visualFlags);
+            writer.WriteValueSafe((byte)(controller.Skill?.Type ?? SkillType.Boost));
+            writer.WriteValueSafe(controller.Skill != null ?
+                Mathf.Clamp01(controller.Skill.CooldownNormalized) : 0f);
+            writer.WriteValueSafe(Mathf.Clamp01(controller.DashCooldownNormalized));
         }
 
         private void OnSnapshotMessage(ulong senderClientId, FastBufferReader reader)
@@ -1750,6 +1831,13 @@ namespace SumoMultiplayer
             leftTarget = ReadControllerSnapshot(reader);
             rightTarget = ReadControllerSnapshot(reader);
 
+            BattleManager battleManager = BattleManager.Instance;
+            if (battleManager?.Battle?.LeftPlayer != null && battleManager.Battle.RightPlayer != null)
+            {
+                ApplyControllerPresentation(battleManager.Battle.LeftPlayer, leftTarget);
+                ApplyControllerPresentation(battleManager.Battle.RightPlayer, rightTarget);
+            }
+
             if (!Enum.IsDefined(typeof(BattleState), stateValue) ||
                 !Enum.IsDefined(typeof(BattleWinner), winnerValue))
             {
@@ -1780,12 +1868,33 @@ namespace SumoMultiplayer
             reader.ReadValueSafe(out float velocityX);
             reader.ReadValueSafe(out float velocityY);
             reader.ReadValueSafe(out float angularVelocity);
+            reader.ReadValueSafe(out byte visualFlags);
+            reader.ReadValueSafe(out byte skillType);
+            reader.ReadValueSafe(out float skillCooldown);
+            reader.ReadValueSafe(out float dashCooldown);
             return new SnapshotTarget(
                 new Vector2(x, y),
                 rotation,
                 new Vector2(velocityX, velocityY),
                 angularVelocity,
+                visualFlags,
+                skillType,
+                skillCooldown,
+                dashCooldown,
                 true);
+        }
+
+        private static void ApplyControllerPresentation(SumoController controller, SnapshotTarget target)
+        {
+            if (!target.Valid || controller == null)
+                return;
+
+            SkillType skillType = Enum.IsDefined(typeof(SkillType), (int)target.SkillType)
+                ? (SkillType)target.SkillType : SkillType.Boost;
+            controller.ApplyRemotePresentation(skillType, target.SkillCooldown,
+                target.DashCooldown,
+                (target.VisualFlags & SkillActiveFlag) != 0,
+                (target.VisualFlags & DashActiveFlag) != 0);
         }
 
         private void InterpolateClientView()
@@ -1796,6 +1905,24 @@ namespace SumoMultiplayer
 
             ApplyControllerTarget(battleManager.Battle.LeftPlayer, leftTarget);
             ApplyControllerTarget(battleManager.Battle.RightPlayer, rightTarget);
+            if (battleManager.CurrentState == BattleState.Battle_Ongoing && VFXManager.Instance != null)
+            {
+                PlayContinuousVfx(battleManager.Battle.LeftPlayer, leftTarget);
+                PlayContinuousVfx(battleManager.Battle.RightPlayer, rightTarget);
+            }
+        }
+
+        private static void PlayContinuousVfx(SumoController controller, SnapshotTarget target)
+        {
+            if (!target.Valid || controller == null)
+                return;
+
+            Vector2 facing = controller.transform.up;
+            if ((target.VisualFlags & AcceleratingFlag) != 0)
+                VFXManager.Instance.PlayAccelerationTrail(controller.transform, facing);
+            if ((target.VisualFlags & (TurnLeftFlag | TurnRightFlag)) != 0)
+                VFXManager.Instance.PlayTurnTrail(controller.transform, facing,
+                    (target.VisualFlags & TurnLeftFlag) != 0 ? 1 : -1);
         }
 
         private static void ApplyControllerTarget(SumoController controller, SnapshotTarget target)
@@ -2020,6 +2147,10 @@ namespace SumoMultiplayer
             public readonly float Rotation;
             public readonly Vector2 Velocity;
             public readonly float AngularVelocity;
+            public readonly byte VisualFlags;
+            public readonly byte SkillType;
+            public readonly float SkillCooldown;
+            public readonly float DashCooldown;
             public readonly bool Valid;
 
             public SnapshotTarget(
@@ -2027,12 +2158,20 @@ namespace SumoMultiplayer
                 float rotation,
                 Vector2 velocity,
                 float angularVelocity,
+                byte visualFlags,
+                byte skillType,
+                float skillCooldown,
+                float dashCooldown,
                 bool valid)
             {
                 Position = position;
                 Rotation = rotation;
                 Velocity = velocity;
                 AngularVelocity = angularVelocity;
+                VisualFlags = visualFlags;
+                SkillType = skillType;
+                SkillCooldown = skillCooldown;
+                DashCooldown = dashCooldown;
                 Valid = valid;
             }
         }

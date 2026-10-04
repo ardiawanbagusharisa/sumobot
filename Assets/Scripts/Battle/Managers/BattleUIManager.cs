@@ -229,10 +229,11 @@ In online play, each focused game window uses the left-player keys (W/A/D/E/Q).
                 UpdateActionUI(LeftSkillUI, LeftDashUI, leftPlayer);
                 UpdateActionUI(RightSkillUI, RightDashUI, rightPlayer);
 
-                LeftDashBuff.SetActive(leftPlayer.IsDashActive);
-                LeftSkillBuff.SetActive(leftPlayer.Skill.IsActive);
-                RightDashBuff.SetActive(rightPlayer.IsDashActive);
-                RightSkillBuff.SetActive(rightPlayer.Skill.IsActive);
+                bool remote = OnlineBattleSession.IsClient;
+                LeftDashBuff.SetActive(remote ? leftPlayer.RemoteDashActive : leftPlayer.IsDashActive);
+                LeftSkillBuff.SetActive(remote ? leftPlayer.RemoteSkillActive : leftPlayer.Skill.IsActive);
+                RightDashBuff.SetActive(remote ? rightPlayer.RemoteDashActive : rightPlayer.IsDashActive);
+                RightSkillBuff.SetActive(remote ? rightPlayer.RemoteSkillActive : rightPlayer.Skill.IsActive);
             }
             else
             {
@@ -516,8 +517,10 @@ In online play, each focused game window uses the left-player keys (W/A/D/E/Q).
         {
             InputType inputType = player.InputProvider.InputType;
 
-            skill.SetCooldown(player.Skill.CooldownNormalized, inputType);
-            dash.SetCooldown(player.DashCooldownNormalized, inputType);
+            skill.SetCooldown(OnlineBattleSession.IsClient
+                ? player.RemoteSkillCooldownNormalized : player.Skill.CooldownNormalized, inputType);
+            dash.SetCooldown(OnlineBattleSession.IsClient
+                ? player.RemoteDashCooldownNormalized : player.DashCooldownNormalized, inputType);
         }
 
         private void ResetActionUI(CooldownUIGroupSet skill, CooldownUIGroupSet dash, SumoController player)
