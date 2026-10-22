@@ -43,6 +43,11 @@ mono_crash**.json
 # JetBrains Rider
 /*.sln.DotSettings.user
 
+# Tools / AI assistants
+.cursor/
+.backlog/
+CLAUDE.md
+
 # Auto-generated
 *.apk
 *.aab

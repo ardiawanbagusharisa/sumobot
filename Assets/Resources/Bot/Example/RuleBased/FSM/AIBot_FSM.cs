@@ -71,9 +71,11 @@ namespace SumoBot
             switch (currentState)
             {
                 case BotState.Searching:
-                    HandleSearching(myRobot, enemyRobot);
+					// [Fix Bug] Uncomment the code below
+					HandleSearching(myRobot, enemyRobot);
                     break;
                 case BotState.Approaching:
+                    // [Fix Bug] Uncomment the code below
                     HandleApproaching(myRobot, enemyRobot);
                     break;
                 case BotState.Attacking:
@@ -83,8 +85,9 @@ namespace SumoBot
                     HandleDodging(myRobot, enemyRobot);
                     break;
                 case BotState.Recovering:
-                    HandleRecovering(myRobot, enemyRobot);
-                    break;
+					// [Fix Bug] Uncomment the code below
+					HandleRecovering(myRobot, enemyRobot);
+					break;
                 case BotState.Idle:
                     HandleIdle(myRobot, enemyRobot);
                     break;

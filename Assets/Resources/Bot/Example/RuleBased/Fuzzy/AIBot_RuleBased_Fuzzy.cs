@@ -245,7 +245,7 @@ public static class FuzzySugenoExtension
                     {
                         { "enemy_position", "back_left" },
                     },
-                    Action = new TurnAction(InputType.Script, ActionType.TurnLeft, 065f),
+                    Action = new TurnAction(InputType.Script, ActionType.TurnLeft, 07f),
                     CrispOutput = 0.9f
                 },
                 new() {

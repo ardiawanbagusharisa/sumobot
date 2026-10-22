@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using SumoCore;
 using SumoManager;
@@ -15,6 +16,8 @@ namespace SumoInput
         public CustomHandlerListener Dash;
         public CustomHandlerListener Skill;
         private InputProvider inputProvider;
+        private BattleManager subscribedBattleManager;
+        private Coroutine waitForBattleManager;
         #endregion
 
         #region Runtime properties
@@ -60,11 +63,20 @@ namespace SumoInput
             Dash.Events[CustomHandlerListener.OnPressDown].Subscribe(inputProvider.OnDashButtonPressed);
             Skill.Events[CustomHandlerListener.OnPressDown].Subscribe(inputProvider.OnSkillButtonPressed);
 
-            BattleManager.Instance.Events[BattleManager.OnBattleChanged].Subscribe(OnBattleChanged);
+            // Scene component enable order is not guaranteed. In campaign
+            // scenes this handler may enable before BattleManager.Awake.
+            if (!TrySubscribeToBattleManager())
+                waitForBattleManager = StartCoroutine(SubscribeWhenReady());
         }
 
         void OnDisable()
         {
+            if (waitForBattleManager != null)
+            {
+                StopCoroutine(waitForBattleManager);
+                waitForBattleManager = null;
+            }
+
             Accelerate.Events[CustomHandlerListener.OnHold].Unsubscribe(inputProvider.OnAccelerateButtonPressed);
             TurnLeft.Events[CustomHandlerListener.OnHold].Unsubscribe(inputProvider.OnTurnLeftButtonPressed);
             TurnRight.Events[CustomHandlerListener.OnHold].Unsubscribe(inputProvider.OnTurnRightButtonPressed);
@@ -72,11 +84,36 @@ namespace SumoInput
             Dash.Events[CustomHandlerListener.OnPressDown].Unsubscribe(inputProvider.OnDashButtonPressed);
             Skill.Events[CustomHandlerListener.OnPressDown].Unsubscribe(inputProvider.OnSkillButtonPressed);
 
-            BattleManager.Instance.Events[BattleManager.OnBattleChanged].Unsubscribe(OnBattleChanged);
+            if (subscribedBattleManager != null)
+            {
+                subscribedBattleManager.Events[BattleManager.OnBattleChanged].Unsubscribe(OnBattleChanged);
+                subscribedBattleManager = null;
+            }
+        }
+
+        private bool TrySubscribeToBattleManager()
+        {
+            BattleManager manager = BattleManager.Instance;
+            if (manager == null)
+                return false;
+
+            manager.Events[BattleManager.OnBattleChanged].Subscribe(OnBattleChanged);
+            subscribedBattleManager = manager;
+            return true;
+        }
+
+        private IEnumerator SubscribeWhenReady()
+        {
+            while (isActiveAndEnabled && !TrySubscribeToBattleManager())
+                yield return null;
+            waitForBattleManager = null;
         }
 
         void Update()
         {
+            if (BattleManager.Instance == null)
+                return;
+
             foreach (var item in actionLastUsedMap)
             {
                 if (item.Value != null)
