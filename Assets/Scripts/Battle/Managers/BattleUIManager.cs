@@ -8,6 +8,7 @@ using System.Collections;
 using UnityEngine.SceneManagement;
 using SumoInput;
 using SumoBot;
+using SumoMultiplayer;
 
 namespace SumoManager
 {
@@ -45,6 +46,7 @@ namespace SumoManager
         public GameObject LeftCrown;
         public TMP_Text LeftScore;
         public TMP_Text LeftFinalScore;
+        [HideInInspector] public TMP_Text LeftEloChange;
         public CooldownUIGroupSet LeftSkillUI;
         public CooldownUIGroupSet LeftDashUI;
 
@@ -61,6 +63,7 @@ namespace SumoManager
         public GameObject RightCrown;
         public TMP_Text RightScore;
         public TMP_Text RightFinalScore;
+        [HideInInspector] public TMP_Text RightEloChange;
         public CooldownUIGroupSet RightSkillUI;
         public CooldownUIGroupSet RightDashUI;
 
@@ -125,8 +128,10 @@ If you found a bug or vioaltion, report to us to make this game better.
 Forward		W			O
 Turn Left		A			K
 Turn Right		D			;
-Dash			L. Shift			R. Shift 
-Skill			C			M 
+Dash			E			R. Shift
+Skill			Q			M
+
+In online play, each focused game window uses the left-player keys (W/A/D/E/Q).
 
 2. Control - Live Commands
 - Type ""help"" to show all commands. 
@@ -163,7 +168,10 @@ Skill			C			M
                 return;
             }
             Instance = this;
-
+            // Campaign scenes serialize dedicated Elo labels. Keep this fallback
+            // only for older scenes that have not yet been migrated.
+            LeftEloChange ??= CreateEloChangeText(LeftFinalScore, "LeftEloChange");
+            RightEloChange ??= CreateEloChangeText(RightFinalScore, "RightEloChange");
         }
 
         private void OnEnable()
@@ -222,10 +230,11 @@ Skill			C			M
                 UpdateActionUI(LeftSkillUI, LeftDashUI, leftPlayer);
                 UpdateActionUI(RightSkillUI, RightDashUI, rightPlayer);
 
-                LeftDashBuff.SetActive(leftPlayer.IsDashActive);
-                LeftSkillBuff.SetActive(leftPlayer.Skill.IsActive);
-                RightDashBuff.SetActive(rightPlayer.IsDashActive);
-                RightSkillBuff.SetActive(rightPlayer.Skill.IsActive);
+                bool remote = OnlineBattleSession.IsClient;
+                LeftDashBuff.SetActive(remote ? leftPlayer.RemoteDashActive : leftPlayer.IsDashActive);
+                LeftSkillBuff.SetActive(remote ? leftPlayer.RemoteSkillActive : leftPlayer.Skill.IsActive);
+                RightDashBuff.SetActive(remote ? rightPlayer.RemoteDashActive : rightPlayer.IsDashActive);
+                RightSkillBuff.SetActive(remote ? rightPlayer.RemoteSkillActive : rightPlayer.Skill.IsActive);
             }
             else
             {
@@ -275,6 +284,11 @@ Skill			C			M
                     RightSkill.value = (int)rightPlayer.Skill.Type;
                     LeftFinalScore.SetText("");
                     RightFinalScore.SetText("");
+                    LeftEloChange?.SetText("");
+                    RightEloChange?.SetText("");
+
+                    if (LeftBotName != null) LeftBotName.text = BattleManager.Instance.LeftInputType == InputType.Script && BattleManager.Instance.BotManager.Left != null ? BattleManager.Instance.BotManager.Left.ID : defaultLeftName;
+                    if (RightBotName != null) RightBotName.text = BattleManager.Instance.RightInputType == InputType.Script && BattleManager.Instance.BotManager.Right != null ? BattleManager.Instance.BotManager.Right.ID : defaultRightName;
 
                     if (LeftBotName != null) LeftBotName.text = BattleManager.Instance.LeftInputType == InputType.Script && BattleManager.Instance.BotManager.Left != null ? BattleManager.Instance.BotManager.Left.ID : defaultLeftName;
                     if (RightBotName != null) RightBotName.text = BattleManager.Instance.RightInputType == InputType.Script && BattleManager.Instance.BotManager.Right != null ? BattleManager.Instance.BotManager.Right.ID : defaultRightName;
@@ -355,9 +369,27 @@ Skill			C			M
                     BattlePanels.Find((o) => o.CompareTag("BattleState/Ongoing")).SetActive(false);
                     BattlePanels.Find((o) => o.CompareTag("BattleState/Pre")).SetActive(false);
 
+                    // Keep the round score and Elo change in separate text objects.
                     LeftFinalScore.SetText(battle.LeftWinCount.ToString());
                     RightFinalScore.SetText(battle.RightWinCount.ToString());
+                    if (BattleManager.Instance.LastLeaderboardOutcome is SumoLeaderboard.LeaderboardOutcome ratingOutcome)
+                    {
+                        LeftEloChange?.SetText(FormatRatingDelta(ratingOutcome.LeftDelta));
+                        RightEloChange?.SetText(FormatRatingDelta(ratingOutcome.RightDelta));
+                    }
+                    else
+                    {
+                        LeftEloChange?.SetText("");
+                        RightEloChange?.SetText("");
+                    }
                     break;
+            }
+
+            if (OnlineBattleSession.IsActive)
+            {
+                SetOnlinePlayerNames(
+                    OnlineBattleSession.LeftDisplayName,
+                    OnlineBattleSession.RightDisplayName);
             }
 
             PlayerHUD.ForEach((costume) =>
@@ -369,6 +401,99 @@ Skill			C			M
                    });
 
             UpdateScore(battle);
+        }
+
+        public void SetOnlinePlayerNames(string leftName, string rightName)
+        {
+            if (LeftBotName != null)
+                LeftBotName.SetText(string.IsNullOrWhiteSpace(leftName) ? defaultLeftName : leftName);
+            if (RightBotName != null)
+                RightBotName.SetText(string.IsNullOrWhiteSpace(rightName) ? defaultRightName : rightName);
+        }
+
+        public void UpdateOnlineInputSelection(
+            InputType leftType,
+            InputType rightType,
+            PlayerSide localSide,
+            int secondsRemaining)
+        {
+            ConfigureOnlineInputOptions(LeftInputType);
+            ConfigureOnlineInputOptions(RightInputType);
+            if (LeftInputType != null)
+            {
+                LeftInputType.SetValueWithoutNotify(leftType.ToBattleInputType());
+                LeftInputType.interactable = localSide == PlayerSide.Left;
+            }
+            if (RightInputType != null)
+            {
+                RightInputType.SetValueWithoutNotify(rightType.ToBattleInputType());
+                RightInputType.interactable = localSide == PlayerSide.Right;
+            }
+            if (LeftScript != null)
+                LeftScript.gameObject.SetActive(false);
+            if (RightScript != null)
+                RightScript.gameObject.SetActive(false);
+
+            if (secondsRemaining > 0 && BattleStateUI != null)
+                BattleStateUI.SetText($"Choose control ({secondsRemaining}s)");
+        }
+
+        public void LockOnlineInputSelection(InputType leftType, InputType rightType)
+        {
+            UpdateOnlineInputSelection(leftType, rightType, PlayerSide.Left, -1);
+            if (LeftInputType != null)
+                LeftInputType.interactable = false;
+            if (RightInputType != null)
+                RightInputType.interactable = false;
+            if (BattleStateUI != null)
+                BattleStateUI.SetText("Controls locked. Waiting for host...");
+        }
+
+        public void SetOnlinePreparationCountdown(int secondsRemaining)
+        {
+            if (BattleStateUI != null)
+                BattleStateUI.SetText($"Get ready! Battle starts in {Mathf.Max(0, secondsRemaining)}s");
+        }
+
+        private static void ConfigureOnlineInputOptions(TMP_Dropdown dropdown)
+        {
+            if (dropdown == null)
+                return;
+
+            bool alreadyConfigured = dropdown.options.Count == 2 &&
+                dropdown.options[0].text == "Buttons + WASD" &&
+                dropdown.options[1].text == "Live Commands";
+            if (alreadyConfigured)
+                return;
+
+            dropdown.ClearOptions();
+            dropdown.AddOptions(new List<string>
+            {
+                "Buttons + WASD",
+                "Live Commands"
+            });
+        }
+
+        private static TMP_Text CreateEloChangeText(TMP_Text scoreText, string objectName)
+        {
+            if (scoreText == null)
+                return null;
+
+            TMP_Text eloText = Instantiate(scoreText, scoreText.transform.parent);
+            eloText.name = objectName;
+            eloText.text = string.Empty;
+            RectTransform rect = eloText.rectTransform;
+            rect.anchoredPosition += new Vector2(0f, -42f);
+            rect.SetAsLastSibling();
+            return eloText;
+        }
+
+        // "+16" green, "-16" red, "+0" grey — shown in its own text object.
+        private static string FormatRatingDelta(int delta)
+        {
+            string color = delta > 0 ? "#3FA34D" : delta < 0 ? "#C0392B" : "#7F8C8D";
+            string sign = delta >= 0 ? "+" : string.Empty;
+            return $"<size=55%><color={color}>{sign}{delta}</color></size>";
         }
 
         private void OnCountdownChanged(EventParameter param)
@@ -397,8 +522,10 @@ Skill			C			M
         {
             InputType inputType = player.InputProvider.InputType;
 
-            skill.SetCooldown(player.Skill.CooldownNormalized, inputType);
-            dash.SetCooldown(player.DashCooldownNormalized, inputType);
+            skill.SetCooldown(OnlineBattleSession.IsClient
+                ? player.RemoteSkillCooldownNormalized : player.Skill.CooldownNormalized, inputType);
+            dash.SetCooldown(OnlineBattleSession.IsClient
+                ? player.RemoteDashCooldownNormalized : player.DashCooldownNormalized, inputType);
         }
 
         private void ResetActionUI(CooldownUIGroupSet skill, CooldownUIGroupSet dash, SumoController player)
@@ -446,6 +573,12 @@ Skill			C			M
 
         public void SetInputMode(PlayerSide side, int type)
         {
+            if (OnlineBattleSession.TrySelectOnlineInput(side, type))
+            {
+                SFXManager.Instance.Play2D("ui_accept");
+                return;
+            }
+
             SFXManager.Instance.Play2D("ui_accept");
             InputType changedType;
             switch (type)
@@ -585,12 +718,18 @@ Skill			C			M
 		public void GoToMainMenu() {
 			SFXManager.Instance.Play2D("ui_accept");
 			Time.timeScale = 1;
+			if (OnlineBattleSession.IsActive) {
+				OnlineBattleSession.LeaveAndReturnToMainMenu();
+				return;
+			}
 			SceneManager.LoadScene("MainMenu");
 		}
 
 		public void ShowReplay()
         {
             SFXManager.Instance.Play2D("ui_accept");
+            if (OnlineBattleSession.TryOpenReplay())
+                return;
             GameManager.Instance.Battle_ShowReplay();
         }
 

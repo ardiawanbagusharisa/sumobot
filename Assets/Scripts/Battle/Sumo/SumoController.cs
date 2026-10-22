@@ -4,6 +4,7 @@ using SumoHelper;
 using SumoInput;
 using SumoLog;
 using SumoManager;
+using SumoMultiplayer;
 using UnityEngine;
 
 namespace SumoCore
@@ -93,6 +94,12 @@ namespace SumoCore
         public bool IsDashOnCooldown => DashCooldownTimer >= 0f;
         public bool IsMovementDisabled => (BattleManager.Instance != null && BattleManager.Instance.CurrentState != BattleState.Battle_Ongoing) || moveLockTime > 0f;
         public float LastDashTime = 0;
+        // A joining client does not execute actions or physics. These values are
+        // presentation-only copies of the host state for its cooldown HUD.
+        public float RemoteDashCooldownNormalized { get; private set; }
+        public float RemoteSkillCooldownNormalized { get; private set; }
+        public bool RemoteDashActive { get; private set; }
+        public bool RemoteSkillActive { get; private set; }
 
         // Events
         public EventRegistry Events = new();
@@ -121,6 +128,9 @@ namespace SumoCore
         private bool isTurning = false;
         private ISumoAction lastTurnAction;
         private float lastRotation;
+        public bool IsAcceleratingVisual => accelerateTimeRemaining > 0f &&
+            lastAccelerateAction?.Type == ActionType.Accelerate && !IsMovementDisabled;
+        public int TurnVisualDirection => isTurning && lastTurnAction != null && !IsMovementDisabled ? rotationDirection : 0;
 
         // SFX
         private (AudioSource src, float vol, float pitch) accelerateSource;
@@ -139,6 +149,16 @@ namespace SumoCore
 
         void Update()
         {
+            if (OnlineBattleSession.IsClient)
+            {
+                if (Side == OnlineBattleSession.LocalSide &&
+                    BattleManager.Instance.CurrentState == BattleState.Battle_Ongoing)
+                {
+                    InputProvider?.ReadKeyboardInput();
+                }
+                return;
+            }
+
             if (BattleManager.Instance.CurrentState == BattleState.Battle_Ongoing)
             {
                 InputProvider?.ReadKeyboardInput();
@@ -160,6 +180,9 @@ namespace SumoCore
 
         void FixedUpdate()
         {
+            if (OnlineBattleSession.IsClient)
+                return;
+
             CachedVelocity = RigidBody.linearVelocity;
             CachedPosition = transform.position;
             CachedRotation = transform.eulerAngles.z;
@@ -179,11 +202,17 @@ namespace SumoCore
 
         void OnCollisionEnter2D(Collision2D collision)
         {
+            if (OnlineBattleSession.IsClient)
+                return;
+
             BounceRule(collision);
         }
 
         void OnTriggerExit2D(Collider2D collision)
         {
+            if (OnlineBattleSession.IsClient)
+                return;
+
             if (collision.CompareTag("Arena/Floor") && !IsOutOfArena)
             {
                 SFXManager.Instance.Play2D("collision_big");
@@ -259,6 +288,17 @@ namespace SumoCore
             Events[OnSkillAssigned].Invoke(new(skillType: type, sideParam: Side));
         }
 
+        public void ApplyRemotePresentation(SkillType skillType, float skillCooldown,
+            float dashCooldown, bool skillActive, bool dashActive)
+        {
+            if (Skill == null || Skill.Type != skillType)
+                AssignSkill(skillType);
+            RemoteSkillCooldownNormalized = Mathf.Clamp01(skillCooldown);
+            RemoteDashCooldownNormalized = Mathf.Clamp01(dashCooldown);
+            RemoteSkillActive = skillActive;
+            RemoteDashActive = dashActive;
+        }
+
         public void Reset()
         {
             Skill.Reset();
@@ -271,6 +311,10 @@ namespace SumoCore
             RigidBody.angularVelocity = 0;
             RigidBody.angularDamping = 0;
             LastDashTime = 0;
+            RemoteDashCooldownNormalized = 0f;
+            RemoteSkillCooldownNormalized = 0f;
+            RemoteDashActive = false;
+            RemoteSkillActive = false;
             lastRotation = transform.eulerAngles.y;
             turningSource = SFXManager.Instance.GetAudioSource("actions_turn");
             accelerateSource = SFXManager.Instance.GetAudioSource("actions_accelerate");
@@ -325,6 +369,9 @@ namespace SumoCore
                 action.Duration = DashDuration;
                 speed = DashSpeed;
                 LastDashTime = time;
+                Vector2 dashFacing = Quaternion.Euler(0, 0, RigidBody.rotation) * Vector2.up;
+                VFXManager.Instance?.PlayDash(transform, dashFacing);
+                OnlineBattleSession.BroadcastDashVfx(Side);
             }
 
             lastAccelerateAction = action;
@@ -525,6 +572,8 @@ namespace SumoCore
                 SFXManager.Instance.Play2D("collision_big");
                 VFXManager.Instance.PlayCollisionSpark(collision.contacts[0].point, actorVelocity);
             }
+            OnlineBattleSession.BroadcastCollisionVfx(collision.contacts[0].point,
+                iAmTheActor ? enemyVelocity : actorVelocity);
 
             EventLogger actorEventLog = EventLogger.CreateCollisionLog(actorBot, targetBot);
             EventLogger targetEventLog = EventLogger.CreateCollisionLog(targetBot, actorBot);
@@ -659,21 +708,17 @@ namespace SumoCore
                 if (action is DashAction)
                 {
                     action.Duration = DashDuration;
-                    Vector2 facing = Quaternion.Euler(0, 0, RigidBody.rotation) * Vector2.up;
-                    VFXManager.Instance.PlayDash(transform, facing);
                 }
                 else if (action is SkillAction)
                 {
                     action.Type = Skill.Type.ToActionType();
                     action.Duration = Skill.TotalDuration;
-                    Vector2 facing = Quaternion.Euler(0, 0, RigidBody.rotation) * Vector2.up;
-                    VFXManager.Instance.PlayDash(transform, facing);
                 }
 
                 tempActions.Add(action);
             }
 
-            if (PacingManager.Instance.enabled)
+            if (PacingManager.Instance != null && PacingManager.Instance.enabled)
             {
                 // Fire event allowing pacing system to filter actions before queueing
                 var eventParam = new EventParameter(sideParam: Side, actionListParam: tempActions);

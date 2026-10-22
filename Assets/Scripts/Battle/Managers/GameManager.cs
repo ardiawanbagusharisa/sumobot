@@ -3,7 +3,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using SumoCore;
+using SumoServices;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -46,11 +48,109 @@ public class GameManager : MonoBehaviour
         DontDestroyOnLoad(gameObject);
     }
 
+    // Kept off Awake so scene startup never blocks on (future) network I/O.
+    public async Task<ServiceResult<PlayerAccount>> StartSessionAsync()
+    {
+        var result = await GameServices.StartSessionAsync();
+        if (!result.Success)
+            Logger.Error($"[GameManager] Session start failed: {result.Error}");
+        else
+            ApplyCurrentEquipment();
+        return result;
+    }
+
     void OnEnable()
     {
-        // Dummy
-        Left = PlayerProfile.CreateProfile("Player1");
-        Right = PlayerProfile.CreateProfile("Player2");
+        // Persistent local profiles so leaderboard identity survives restarts.
+        Left = PlayerProfile.LoadOrCreate("Sumobot.Profile.Left", "Player1");
+        Right = PlayerProfile.LoadOrCreate("Sumobot.Profile.Right", "Player2");
+    }
+
+    /// <summary>
+    /// Call this once after a successful login. It switches the local player's
+    /// identity from the anonymous device GUID to the server account, persists
+    /// it, and carries any anonymous leaderboard ratings over to the account.
+    /// </summary>
+    public void ApplyAccount(string accountId, string accountName)
+    {
+        if (string.IsNullOrWhiteSpace(accountId))
+            return;
+        if (accountId.StartsWith("bot:"))
+        {
+            Logger.Error("[GameManager] Account IDs must not use the reserved 'bot:' prefix.");
+            return;
+        }
+
+        string oldId = Left.ID;
+        Left.ID = accountId;
+        if (!string.IsNullOrWhiteSpace(accountName))
+            Left.Name = accountName.Trim();
+
+        PlayerPrefs.SetString("Sumobot.Profile.Left.ID", Left.ID);
+        PlayerPrefs.SetString("Sumobot.Profile.Left.Name", Left.Name);
+        PlayerPrefs.Save();
+
+        if (oldId != accountId)
+            GameServices.Leaderboard.ReassignProfile(oldId, accountId, Left.Name);
+    }
+
+    public void ApplyCurrentEquipment()
+    {
+        if (Left == null || GameServices.PlayerData?.Current == null)
+            return;
+
+        ApplyEquipment(Left, GameServices.PlayerData.Current.EquippedBySlot);
+        if (Left.CurrentCostume != null)
+            Left.SetCostume(Left.CurrentCostume);
+    }
+
+    public void ApplyOnlinePlayers(
+        string leftId,
+        string leftName,
+        IReadOnlyDictionary<string, string> leftEquipment,
+        string rightId,
+        string rightName,
+        IReadOnlyDictionary<string, string> rightEquipment)
+    {
+        Left = PlayerProfile.CreateTransient(leftId, leftName);
+        Right = PlayerProfile.CreateTransient(rightId, rightName);
+        ApplyEquipment(Left, leftEquipment);
+        ApplyEquipment(Right, rightEquipment);
+    }
+
+    public void RestoreLocalProfiles()
+    {
+        Left = PlayerProfile.LoadOrCreate("Sumobot.Profile.Left", "Player1");
+        Right = PlayerProfile.LoadOrCreate("Sumobot.Profile.Right", "Player2");
+        ApplyCurrentEquipment();
+    }
+
+    private static void ApplyEquipment(
+        PlayerProfile profile,
+        IReadOnlyDictionary<string, string> equipment)
+    {
+        if (profile == null || equipment == null || GameServices.Catalog == null)
+            return;
+
+        foreach (var pair in equipment)
+        {
+            CatalogItem item = GameServices.Catalog.GetById(pair.Value);
+            if (item == null || string.IsNullOrEmpty(item.IconResourcePath))
+                continue;
+
+            if (!Enum.TryParse(pair.Key, true, out SumoPart part) || part == SumoPart.FaceSide)
+                continue;
+
+            Sprite sprite = Resources.Load<Sprite>(item.BotSpriteResourcePath);
+            if (sprite == null)
+                continue;
+
+            profile.Parts[part] = sprite;
+            profile.PartColors[part] = !string.IsNullOrEmpty(item.IconColor) &&
+                ColorUtility.TryParseHtmlString(item.IconColor, out Color tint)
+                    ? tint
+                    : Color.white;
+        }
     }
 
     public void Battle_LoadCostumeScene(string id)
@@ -98,6 +198,14 @@ public class PlayerProfile
             {SumoPart.Wheel, null},
             {SumoPart.Eye, null},
             {SumoPart.Accessory, null},
+            {SumoPart.Body, null},
+        };
+    public Dictionary<SumoPart, Color> PartColors = new()
+        {
+            {SumoPart.Wheel, Color.white},
+            {SumoPart.Eye, Color.white},
+            {SumoPart.Accessory, Color.white},
+            {SumoPart.Body, Color.white},
         };
 
     public SumoCostume CurrentCostume;
@@ -113,18 +221,70 @@ public class PlayerProfile
         return profile;
     }
 
+    public static PlayerProfile CreateTransient(string id, string name)
+    {
+        PlayerProfile profile = new()
+        {
+            ID = string.IsNullOrWhiteSpace(id) ? Guid.NewGuid().ToString() : id,
+            Name = string.IsNullOrWhiteSpace(name) ? "Player" : name
+        };
+        profile.PrepareParts();
+        return profile;
+    }
+
+    /// <summary>
+    /// Loads a profile persisted in PlayerPrefs under <paramref name="prefsKey"/>,
+    /// creating (and saving) a new one on first run. Keeps the profile ID stable
+    /// across sessions, which the leaderboard relies on.
+    /// </summary>
+    public static PlayerProfile LoadOrCreate(string prefsKey, string defaultName)
+    {
+        string idKey = $"{prefsKey}.ID";
+        string nameKey = $"{prefsKey}.Name";
+
+        string id = PlayerPrefs.GetString(idKey, string.Empty);
+        string name = PlayerPrefs.GetString(nameKey, defaultName);
+
+        if (string.IsNullOrEmpty(id))
+        {
+            id = Guid.NewGuid().ToString();
+            PlayerPrefs.SetString(idKey, id);
+            PlayerPrefs.SetString(nameKey, name);
+            PlayerPrefs.Save();
+        }
+
+        PlayerProfile profile = new()
+        {
+            Name = name,
+            ID = id
+        };
+        profile.PrepareParts();
+        return profile;
+    }
+
+    /// <summary>Renames the profile and persists the new name.</summary>
+    public void Rename(string prefsKey, string newName)
+    {
+        if (string.IsNullOrWhiteSpace(newName))
+            return;
+        Name = newName.Trim();
+        PlayerPrefs.SetString($"{prefsKey}.Name", Name);
+        PlayerPrefs.Save();
+    }
+
     public void SetCostume(SumoCostume objectCostume)
     {
         CurrentCostume = objectCostume;
         CurrentCostume.UpdateSideColor();
         CurrentCostume.AttachObject(Parts);
+        CurrentCostume.AttachColors(PartColors);
     }
 
     public void PrepareParts()
     {
         Parts.ToList().ForEach((e) =>
         {
-            Parts[e.Key] = LoadSprite($"{e.Key}_1");
+            Parts[e.Key] = LoadSprite(e.Key == SumoPart.Body ? "Body" : $"{e.Key}_1");
         });
     }
 

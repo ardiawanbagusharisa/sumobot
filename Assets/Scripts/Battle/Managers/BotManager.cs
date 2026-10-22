@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using SumoCore;
 using SumoInput;
 using SumoManager;
+using SumoMultiplayer;
 using UnityEngine;
 
 namespace SumoBot
@@ -22,13 +23,29 @@ namespace SumoBot
         [HideInInspector] public int leftBotIndex = 0;
         [HideInInspector] public int rightBotIndex = 0;
 
+        // Zero preserves the normal update-on-every-battle-tick behaviour.
+        // Campaign levels can slow one bot without slowing player controls.
+        [HideInInspector] public float LeftActionInterval = 0f;
+        [HideInInspector] public float RightActionInterval = 0f;
+
         public bool BotEnabled => LeftEnabled || RightEnabled;
 
         private BotHandler leftHandler;
         private BotHandler rightHandler;
+        private float leftActionElapsed;
+        private float rightActionElapsed;
 
         private void OnEnable()
         {
+            // Online PvP is human-vs-human. The BattleSimulator/BotManager pair
+            // is an offline AI test harness and must not compete for controls on
+            // either the authoritative host or the snapshot-rendering client.
+            if (OnlineBattleSession.IsActive)
+            {
+                enabled = false;
+                return;
+            }
+
             BattleManager.Instance.Events[BattleManager.OnBattleChanged].Subscribe(OnBattleStateChanged);
         }
 
@@ -59,7 +76,7 @@ namespace SumoBot
             if (!BotEnabled || !enabled)
                 return;
 
-            if (LeftEnabled && Left != null)
+            if (LeftEnabled && Left != null && CanUpdateBot(ref leftActionElapsed, LeftActionInterval))
             {
                 leftHandler.IsOnUpdate = true;
 
@@ -74,7 +91,7 @@ namespace SumoBot
 
             }
 
-            if (RightEnabled && Right != null)
+            if (RightEnabled && Right != null && CanUpdateBot(ref rightActionElapsed, RightActionInterval))
             {
                 rightHandler.IsOnUpdate = true;
 
@@ -89,6 +106,23 @@ namespace SumoBot
             }
 
 
+        }
+
+        private static bool CanUpdateBot(ref float elapsed, float interval)
+        {
+            if (interval <= 0f)
+                return true;
+
+            // OnUpdate is called by BattleManager only once per action tick,
+            // so accumulate that tick duration rather than one render frame.
+            elapsed += BattleManager.Instance != null
+                ? BattleManager.Instance.ActionInterval
+                : Time.deltaTime;
+            if (elapsed < interval)
+                return false;
+
+            elapsed = 0f;
+            return true;
         }
 
         public void OnBattleStateChanged(EventParameter param)

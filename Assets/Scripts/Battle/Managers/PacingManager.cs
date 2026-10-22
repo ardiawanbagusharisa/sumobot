@@ -92,13 +92,22 @@ namespace SumoManager
 		void OnDisable()
 		{
 			BattleManager.Instance.Events[BattleManager.OnBattleChanged].Unsubscribe(OnBattleChanged);
+			DisposeHandlers();
 		}
 
 		void OnDestroy()
 		{
-			// Cleanup handlers
+			DisposeHandlers();
+			if (Instance == this)
+				Instance = null;
+		}
+
+		private void DisposeHandlers()
+		{
 			LeftPacingHandler?.Dispose();
 			RightPacingHandler?.Dispose();
+			LeftPacingHandler = null;
+			RightPacingHandler = null;
 
 			// Save PacingBrain models before destruction (NN only - heuristic doesn't save)
 			leftPacingBrainHeuristic?.SaveModelToDisk();  // No-op
@@ -166,6 +175,7 @@ namespace SumoManager
 					LeftSimConstraintPath,
 					EnableRunEvalDiagnostics
 				);
+				LeftPacingHandler.EnableActionFiltering = LeftActionFiltering;
 
 				// Set the direct reference on controller for action filtering
 				controller.PacingHandler = LeftPacingHandler;
@@ -208,6 +218,7 @@ namespace SumoManager
 					RightSimConstraintPath,
 					EnableRunEvalDiagnostics
 				);
+				RightPacingHandler.EnableActionFiltering = RightActionFiltering;
 
 				// Set the direct reference on controller for action filtering
 				controller.PacingHandler = RightPacingHandler;

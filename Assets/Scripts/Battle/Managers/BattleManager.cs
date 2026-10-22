@@ -5,6 +5,8 @@ using SumoBot;
 using SumoCore;
 using SumoHelper;
 using SumoInput;
+using SumoLeaderboard;
+using SumoMultiplayer;
 using Unity.VisualScripting;
 using UnityEngine;
 
@@ -55,11 +57,14 @@ namespace SumoManager
         public GameObject RightPlayerObject;
         public GameObject Arena;
         public float ArenaRadius;
+        [HideInInspector] public bool RequireExternalStartConfirmation;
+        [HideInInspector] public bool CampaignStartConfirmed;
         #endregion
 
         #region Runtime (readonly) properties 
         public BattleState CurrentState = BattleState.PreBatle_Preparing;
         public float ElapsedTime = 0;
+        public float CountdownRemaining { get; private set; }
         public float TimeLeft => BattleTime - ElapsedTime;
 
         public Battle Battle;
@@ -77,6 +82,15 @@ namespace SumoManager
         private Coroutine battleTimerCoroutine;
         private Coroutine countdownCoroutine;
         private float elapsedActionTime = 0f;
+
+        // Guards against double-recording the same match (e.g. repeated state
+        // broadcasts); reset when a new battle/rematch is prepared.
+        private bool leaderboardRecorded = false;
+        private bool remoteInputsInitialized = false;
+        private bool remoteBattlePrepared = false;
+
+        /// <summary>Rating changes of the match just recorded (null when nothing was recorded).</summary>
+        public LeaderboardOutcome? LastLeaderboardOutcome { get; private set; }
         #endregion
 
         #region Unity methods 
@@ -99,6 +113,11 @@ namespace SumoManager
             simulator = GetComponent<BattleSimulator>();
             BotManager = GetComponent<BotManager>();
             PacingManager = GetComponent<PacingManager>();
+
+            // The scene simulator is an offline AI-vs-AI test harness. Online
+            // PvP is driven by one human on each peer and simulated by the host.
+            if (OnlineBattleSession.IsActive && simulator != null)
+                simulator.enabled = false;
 
             if (simulator.enabled)
             {
@@ -133,6 +152,11 @@ namespace SumoManager
 
         void Update()
         {
+            // In an online client the host owns simulation and battle state. The
+            // client only renders snapshots applied by OnlineBattleSession.
+            if (OnlineBattleSession.IsClient)
+                return;
+
             if (Battle.CurrentRound != null && CurrentState == BattleState.Battle_Ongoing)
             {
                 ElapsedTime += Time.deltaTime;
@@ -154,7 +178,8 @@ namespace SumoManager
                     right.OnUpdate();
 
                     // Tick pacing handlers
-                    PacingManager?.Tick();
+                    if (PacingManager != null && PacingManager.isActiveAndEnabled)
+                        PacingManager.Tick();
                 }
             }
         }
@@ -164,6 +189,18 @@ namespace SumoManager
         #region API methods
         public void Battle_Start()
         {
+            // Scene buttons must not bypass the online peer-ready gate. Only
+            // OnlineBattleSession may authorize the actual host transition.
+            if (OnlineBattleSession.IsActive &&
+                !OnlineBattleSession.IsHostStartAuthorized)
+            {
+                OnlineBattleSession.RequestStartFromSceneButton();
+                return;
+            }
+
+            if (RequireExternalStartConfirmation && !CampaignStartConfirmed)
+                return;
+
             if (CurrentState == BattleState.Battle_Preparing ||
                 CurrentState == BattleState.Battle_Countdown ||
                 CurrentState == BattleState.Battle_Ongoing)
@@ -174,6 +211,13 @@ namespace SumoManager
             if (Battle.LeftPlayer == null && Battle.RightPlayer == null)
                 return;
             TransitionToState(BattleState.Battle_Preparing);
+        }
+
+        /// <summary>Used by campaign instruction popups to release the start gate.</summary>
+        public void ConfirmCampaignStart()
+        {
+            CampaignStartConfirmed = true;
+            Battle_Start();
         }
         #endregion
 
@@ -224,13 +268,16 @@ namespace SumoManager
             yield return new WaitForSeconds(1f);
 
             float timer = CountdownTime;
+            CountdownRemaining = timer;
             while (timer > 0 && CurrentState == BattleState.Battle_Countdown)
             {
+                CountdownRemaining = timer;
                 SFXManager.Instance.Play2D("ui_accept_small");
                 Events[OnCountdownChanged].Invoke(new EventParameter(floatParam: timer));
                 yield return new WaitForSeconds(1f);
                 timer -= 1f;
             }
+            CountdownRemaining = 0f;
             TransitionToState(BattleState.Battle_Ongoing);
         }
 
@@ -332,6 +379,9 @@ namespace SumoManager
 
                 // Battle
                 case BattleState.Battle_Preparing:
+                    leaderboardRecorded = false;
+                    remoteInputsInitialized = false;
+                    LastLeaderboardOutcome = null;
                     SFXManager.Instance.Play2D("ui_accept");
                     LogManager.SetPlayerBots(BotManager.Left, BotManager.Right);
                     LogManager.UpdateMetadata(logTakenAction: false);
@@ -401,10 +451,32 @@ namespace SumoManager
                 // Post Battle
                 case BattleState.PostBattle_ShowResult:
                     LogManager.SortAndSave();
+                    RecordLeaderboardResult();
                     break;
             }
 
             BroadcastBattleData();
+        }
+
+        // Commits the finished match to the local leaderboards exactly once.
+        // Batch simulations are excluded: they are analysis runs, not ladder play.
+        private void RecordLeaderboardResult()
+        {
+            if (leaderboardRecorded)
+                return;
+            if (simulator != null && simulator.enabled)
+                return;
+            leaderboardRecorded = true;
+
+            try
+            {
+                LastLeaderboardOutcome =
+                    LeaderboardService.Instance.RecordBattle(LeaderboardRecordFactory.FromBattle(this));
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"[BattleManager] Failed to record leaderboard result: {ex.Message}");
+            }
         }
 
         // Call this when we need to trigger OnBattleChanged immediately
@@ -417,6 +489,177 @@ namespace SumoManager
                 stateParam.Winner = Battle.GetRoundWinner();
 
             Events[OnBattleChanged].Invoke(stateParam);
+        }
+
+        /// <summary>
+        /// Applies host-authored battle metadata on a joining client without
+        /// executing the local state machine or physics side effects.
+        /// </summary>
+        public void ApplyRemoteSnapshot(
+            BattleState state,
+            float elapsedTime,
+            float countdownRemaining,
+            int roundNumber,
+            int leftWins,
+            int rightWins,
+            BattleWinner roundWinner)
+        {
+            if (!OnlineBattleSession.IsClient || Battle == null)
+                return;
+
+            // Scene messages can arrive before Start() has initialized the two
+            // local controller objects. Do not notify UI listeners until both
+            // controllers and their input providers are ready.
+            if (!PrepareRemoteClient())
+                return;
+
+            bool stateChanged = CurrentState != state;
+            // Snapshots are intentionally unreliable. If the one brief
+            // Battle_Preparing snapshot is missed, the next countdown/ongoing
+            // snapshot must still open and initialize the battle UI.
+            bool synthesizePreparation = stateChanged && !remoteBattlePrepared &&
+                state > BattleState.Battle_Preparing &&
+                state <= BattleState.PostBattle_ShowResult &&
+                (CurrentState == BattleState.PreBatle_Preparing ||
+                 CurrentState == BattleState.PostBattle_ShowResult);
+            ElapsedTime = Mathf.Max(0f, elapsedTime);
+            CountdownRemaining = Mathf.Max(0f, countdownRemaining);
+
+            if ((state == BattleState.Battle_Preparing && stateChanged) ||
+                synthesizePreparation)
+            {
+                leaderboardRecorded = false;
+                LastLeaderboardOutcome = null;
+                Battle.ClearWinner();
+                Battle.CurrentRound = new Round(Mathf.Max(1, roundNumber), Mathf.CeilToInt(BattleTime));
+                remoteBattlePrepared = true;
+            }
+            else if (roundNumber > 0 &&
+                     (Battle.CurrentRound == null || Battle.CurrentRound.RoundNumber != roundNumber))
+            {
+                Battle.CurrentRound = new Round(roundNumber, Mathf.CeilToInt(BattleTime));
+            }
+
+            Battle.LeftWinCount = Mathf.Max(0, leftWins);
+            Battle.RightWinCount = Mathf.Max(0, rightWins);
+
+            if (synthesizePreparation)
+            {
+                Logger.Info($"[Online] Client recovered missed Battle_Preparing snapshot before {state}.");
+                CurrentState = BattleState.Battle_Preparing;
+                Events[OnBattleChanged].Invoke(
+                    new EventParameter(battleStateParam: BattleState.Battle_Preparing));
+            }
+
+            if (Battle.CurrentRound != null &&
+                state >= BattleState.Battle_End &&
+                state <= BattleState.PostBattle_ShowResult)
+            {
+                SumoController winnerController = roundWinner switch
+                {
+                    BattleWinner.Left => Battle.LeftPlayer,
+                    BattleWinner.Right => Battle.RightPlayer,
+                    _ => null
+                };
+
+                Battle.CurrentRound.RoundWinner = winnerController;
+                Battle.Winners[Battle.CurrentRound.RoundNumber] = winnerController;
+            }
+
+            CurrentState = state;
+
+            if (state == BattleState.PostBattle_ShowResult && stateChanged)
+                RecordLeaderboardResult();
+
+            if (state == BattleState.Battle_Countdown)
+            {
+                Events[OnCountdownChanged].Invoke(
+                    new EventParameter(floatParam: Mathf.Ceil(CountdownRemaining)));
+            }
+
+            if (stateChanged)
+            {
+                if (OnlineBattleSession.IsClient)
+                    Logger.Info($"[Online] Client battle state: {state}.");
+                EventParameter stateParameter = new(battleStateParam: state);
+                if (state == BattleState.Battle_End)
+                    stateParameter.Winner = roundWinner;
+                Events[OnBattleChanged].Invoke(stateParameter);
+                OnlineBattleSession.RefreshBattleInputVisibility();
+            }
+
+            if (state == BattleState.PostBattle_ShowResult)
+                remoteBattlePrepared = false;
+        }
+
+        public bool PrepareRemoteClient()
+        {
+            if (!OnlineBattleSession.IsClient || Battle == null ||
+                Battle.LeftPlayer == null || Battle.RightPlayer == null ||
+                InputManager.Instance == null)
+            {
+                return false;
+            }
+
+            if (!remoteInputsInitialized ||
+                Battle.LeftPlayer.InputProvider == null || Battle.RightPlayer.InputProvider == null)
+            {
+                InputManager.Instance.InitializeInput(
+                    Battle.LeftPlayer,
+                    LeftInputType,
+                    initializeSimulationSystems: false);
+                InputManager.Instance.InitializeInput(
+                    Battle.RightPlayer,
+                    RightInputType,
+                    initializeSimulationSystems: false);
+                remoteInputsInitialized = true;
+            }
+
+            return Battle.LeftPlayer.InputProvider != null && Battle.RightPlayer.InputProvider != null;
+        }
+
+        /// <summary>
+        /// Ends an online match immediately when the remote player leaves. This
+        /// bypasses the normal round-reset delay and records the remaining player
+        /// as the match winner on both peers.
+        /// </summary>
+        public bool FinishOnlineByForfeit(PlayerSide winnerSide)
+        {
+            if (!OnlineBattleSession.IsActive || Battle == null ||
+                Battle.LeftPlayer == null || Battle.RightPlayer == null ||
+                CurrentState == BattleState.PostBattle_ShowResult)
+            {
+                return false;
+            }
+
+            StopAllCoroutines();
+            Battle.LeftPlayer.SetSkillEnabled(false);
+            Battle.RightPlayer.SetSkillEnabled(false);
+            Battle.LeftPlayer.ClearInput();
+            Battle.RightPlayer.ClearInput();
+
+            if (Battle.CurrentRound == null || Battle.CurrentRound.RoundNumber <= 0)
+                Battle.CurrentRound = new Round(1, Mathf.CeilToInt(BattleTime));
+
+            int winningThreshold = ((int)Battle.RoundSystem / 2) + 1;
+            SumoController winner = winnerSide == PlayerSide.Left
+                ? Battle.LeftPlayer
+                : Battle.RightPlayer;
+            Battle.ClearWinner();
+            Battle.LeftWinCount = winnerSide == PlayerSide.Left ? winningThreshold : 0;
+            Battle.RightWinCount = winnerSide == PlayerSide.Right ? winningThreshold : 0;
+            Battle.CurrentRound.RoundWinner = winner;
+            Battle.Winners[Battle.CurrentRound.RoundNumber] = winner;
+
+            leaderboardRecorded = false;
+            LastLeaderboardOutcome = null;
+            CurrentState = BattleState.PostBattle_ShowResult;
+            RecordLeaderboardResult();
+            Events[OnBattleChanged].Invoke(
+                new EventParameter(battleStateParam: BattleState.PostBattle_ShowResult));
+            OnlineBattleSession.RefreshBattleInputVisibility();
+            Logger.Info($"[Online] {winnerSide} wins by opponent forfeit.");
+            return true;
         }
         #endregion
     }
