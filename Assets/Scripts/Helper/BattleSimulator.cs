@@ -48,8 +48,8 @@ namespace SumoHelper
         [HideInInspector] public string[] FocusBotIDs = new string[] { };
         [Tooltip("When enabled, also generates matchups between two Focus bots (in addition to Focus-vs-Rest), each one taking a turn as the pacing-filtered side against the other. Requires at least 2 Focus bots selected.")]
         public bool IncludeFocusMatchups = false;
-        [Tooltip("Resources-relative folder of pacing TARGET curves to sweep (only ThreatTargets/TempoTargets are used from these files).")]
-        public string SimTargetsFolder = "Pacing/Sim_Targets/60s";
+        [Tooltip("Resources-relative folder of pacing TARGET curves to sweep (only ThreatTargets/TempoTargets are used from these files). Sim_Targets data is gitignored, so place the target files locally before running.")]
+        public string SimTargetsFolder = "Pacing/Sim_Targets/Experiments_real";
         [Tooltip("Resources-relative folder of pacing CONSTRAINT sets to sweep (only GlobalConstraints is used from these files).")]
         public string SimConstraintsFolder = "Pacing/Sim_Constraints";
         public int PacingSegmentDuration = 1;

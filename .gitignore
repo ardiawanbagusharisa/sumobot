@@ -69,3 +69,16 @@ CLAUDE.md
 Simulation/*.txt
 sumobot.wiki
 *.lscache
+# Pacing experiment data: generated locally, not shared (json/csv + their Unity metas)
+Assets/Resources/Pacing/Experiment*/**/*.json
+Assets/Resources/Pacing/Experiment*/**/*.csv
+Assets/Resources/Pacing/Experiment*/**/*.meta
+Assets/Resources/Pacing/Experiment*.meta
+Assets/Resources/Pacing/Experiment*.zip
+Assets/Resources/Pacing/Sim_Targets/**/*.json
+Assets/Resources/Pacing/Sim_Targets/**/*.csv
+Assets/Resources/Pacing/Sim_Targets/**/*.meta
+Assets/Resources/Pacing/Sim_Targets.meta
+
+# ML training logs (appended by bots while training in the Editor)
+Assets/Resources/ML/Models/NN/NN_LearningLog.csv*
