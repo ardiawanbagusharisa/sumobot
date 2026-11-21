@@ -38,7 +38,7 @@ For an unattended connection test:
 .\Tools\LaunchMultiplayerTest.ps1 -AutoOnline
 ```
 
-You can also double-click `Sumobot.exe` twice. Builds launched without `-ugs-profile` automatically reserve stable `sumobot_local_1`, `sumobot_local_2`, etc. profiles, so UGS sees each live instance as a different player. An explicit `-ugs-profile` still overrides this behavior. Unity cannot safely open the exact same project in two normal Editor processes because the project is locked. Use one Editor plus a build, two builds, or Unity Multiplayer Play Mode/additional instances instead. See [Docs/Multiplayer.md](Docs/Multiplayer.md) for service setup, protocol details, and troubleshooting.
+You can also double-click `Sumobot.exe` twice. Builds launched without `-ugs-profile` automatically reserve stable `sumobot_local_1`, `sumobot_local_2`, etc. profiles, so UGS sees each live instance as a different player. An explicit `-ugs-profile` still overrides this behavior. Unity cannot safely open the exact same project in two normal Editor processes because the project is locked. Use one Editor plus a build, two builds, or Unity Multiplayer Play Mode/additional instances instead. See [Wiki/Multiplayer.md](Wiki/Multiplayer.md) for service setup, protocol details, and troubleshooting.
 
 To test Bot Creator skins, buy **Amber Body**, **Violet Body**, **Eyes Style 2**, **Eyes Style 3**, or **Cyan Eyes** in the Market (20 coins each). Open Bot Creator for the same signed-in player and use the separate Body and Eye arrows. Default Body and Eyes are free and remain available.
 

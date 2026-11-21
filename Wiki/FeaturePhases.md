@@ -30,7 +30,7 @@ Items without an equipment slot (AI scripts, modules, and the deferred visual-sc
 - Unity Authentication profiles, Multiplayer Services matchmaking, Relay over DTLS, Unity Transport, and Netcode for GameObjects.
 - Host-authoritative battle simulation with synchronized player input, names, loadouts, match state, and rematch consent.
 
-See `Docs/Multiplayer.md` for build and two-instance testing.
+See `Wiki/Multiplayer.md` for build and two-instance testing.
 
 ## Phase 5 — leaderboard
 
