@@ -7,6 +7,20 @@ using SumoManager;
 using Unity.VisualScripting;
 using UnityEngine;
 
+/// <summary>
+/// Verbose pacing logs for per-tick / per-segment debugging. These calls are compiled out
+/// (arguments are not even evaluated) unless the SUMOBOT_PACING_DEBUG scripting define
+/// symbol is set in Project Settings > Player > Scripting Define Symbols.
+/// </summary>
+public static class PacingDebug
+{
+	[System.Diagnostics.Conditional("SUMOBOT_PACING_DEBUG")]
+	public static void Verbose(string message)
+	{
+		Debug.Log(message);
+	}
+}
+
 [Serializable]
 public class PacingEvaluation
 {
@@ -222,7 +236,7 @@ public class CollisionWindowData
 	{
 		WindowCollisions.Clear();
 
-		Debug.Log($"[CollisionWindowData] CalculateWindow called: currentSecond={currentSecond}, windowDurationSeconds={windowDurationSeconds}s");
+		PacingDebug.Verbose($"[CollisionWindowData] CalculateWindow called: currentSecond={currentSecond}, windowDurationSeconds={windowDurationSeconds}s");
 
 		if (windowDurationSeconds == 0)
 		{
@@ -232,7 +246,7 @@ public class CollisionWindowData
 				WindowCollisions.AddRange(collisionHistory[currentSecond]);
 			}
 			WindowSize = 0;
-			Debug.Log($"  Mode: Current second only, WindowCollisions.Count={WindowCollisions.Count}");
+			PacingDebug.Verbose($"  Mode: Current second only, WindowCollisions.Count={WindowCollisions.Count}");
 		}
 		else if (windowDurationSeconds < 0)
 		{
@@ -242,7 +256,7 @@ public class CollisionWindowData
 				WindowCollisions.AddRange(kvp.Value);
 			}
 			WindowSize = -1;
-			Debug.Log($"  Mode: All history, WindowCollisions.Count={WindowCollisions.Count}");
+			PacingDebug.Verbose($"  Mode: All history, WindowCollisions.Count={WindowCollisions.Count}");
 		}
 		else
 		{
@@ -251,7 +265,7 @@ public class CollisionWindowData
 			int startSecond = Mathf.Max(0, currentSecond - windowSeconds + 1);
 			WindowSize = windowSeconds;
 
-			Debug.Log($"  Mode: Time-based window, windowSeconds={windowSeconds}, looking back from second {startSecond} to {currentSecond}");
+			PacingDebug.Verbose($"  Mode: Time-based window, windowSeconds={windowSeconds}, looking back from second {startSecond} to {currentSecond}");
 
 			for (int second = startSecond; second <= currentSecond; second++)
 			{
@@ -259,12 +273,12 @@ public class CollisionWindowData
 				{
 					int secondCollisions = collisionHistory[second].Count;
 					WindowCollisions.AddRange(collisionHistory[second]);
-					Debug.Log($"    Second {second}: added {secondCollisions} collisions, total now={WindowCollisions.Count}");
+					PacingDebug.Verbose($"    Second {second}: added {secondCollisions} collisions, total now={WindowCollisions.Count}");
 				}
 			}
 
 		}
-		Debug.Log($"  Final: WindowSize={WindowSize}, WindowCollisions.Count={WindowCollisions.Count}");
+		PacingDebug.Verbose($"  Final: WindowSize={WindowSize}, WindowCollisions.Count={WindowCollisions.Count}");
 	}
 }
 
@@ -525,18 +539,18 @@ public class Factor
 		float totalHitCollisions = windowCollisions.Count(c => c == CollisionType.Hit);
 		float totalStruckCollisions = windowCollisions.Count(c => c == CollisionType.Struck);
 
-		Debug.Log($"[HitCollision] WindowSize={data.CollisionData.WindowSize}, Window Total={windowCollisions.Count}, Hits={totalHitCollisions}, Strucks={totalStruckCollisions}");
+		PacingDebug.Verbose($"[HitCollision] WindowSize={data.CollisionData.WindowSize}, Window Total={windowCollisions.Count}, Hits={totalHitCollisions}, Strucks={totalStruckCollisions}");
 
 		if (totalHitCollisions + totalStruckCollisions == 0f)
 		{
 			// No collisions in window
-			Debug.Log($"  No collisions in window, returning normalized 0");
+			PacingDebug.Verbose($"  No collisions in window, returning normalized 0");
 			return constraints.CollisionRatio.Normalize(0f);
 		}
 
 		float hitCollisionRatio = totalHitCollisions / (totalHitCollisions + totalStruckCollisions);
 		float normalized = constraints.CollisionRatio.Normalize(hitCollisionRatio);
-		Debug.Log($"  Collision Ratio={hitCollisionRatio:F3}, Normalized={normalized:F3}");
+		PacingDebug.Verbose($"  Collision Ratio={hitCollisionRatio:F3}, Normalized={normalized:F3}");
 		return normalized;
 	}
 

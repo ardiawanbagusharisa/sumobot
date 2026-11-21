@@ -366,8 +366,6 @@ namespace PacingFramework
 					loadedConfigPath = path;
 
 					Debug.Log($"[PacingViewer] Loaded config from {path}");
-					Debug.Log($"[PacingViewer] ThreatTargets count: {targetConfig?.ThreatTargets?.Count ?? -1}");
-					Debug.Log($"[PacingViewer] TempoTargets count: {targetConfig?.TempoTargets?.Count ?? -1}");
 				}
 			}
 

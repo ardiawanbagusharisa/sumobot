@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using NUnit.Framework.Internal;
 using SumoBot;
 using SumoBot.EA.MCTS;
 using SumoCore;
@@ -272,7 +271,7 @@ namespace PacingFramework
 			{
 				currentSecond++;
 				ticksInCurrentSecond = 0;
-				Debug.Log($"[{controller.Side}] Second advanced to {currentSecond} (ticksPerSecond={ticksPerSecond}, actionInterval={actionInterval})");
+				PacingDebug.Verbose($"[{controller.Side}] Second advanced to {currentSecond} (ticksPerSecond={ticksPerSecond}, actionInterval={actionInterval})");
 			}
 
 			if (tickCount * api.BattleInfo.ActionInterval >= segmentDuration)
@@ -493,18 +492,18 @@ namespace PacingFramework
 
 		private void DebugPacing(SegmentPacing pacing)
 		{
-			Debug.Log($"===== SEGMENT {segmentIndex} FINALIZED =====");
+			PacingDebug.Verbose($"===== SEGMENT {segmentIndex} FINALIZED =====");
 
 			float overallRaw = pacing.GetOverallPacing();
 			float overallPercentile = pacing.GetPercentilePacing(MinPacing, MaxPacing);
 
-			Debug.Log($"PACING (RAW) --> Threat: {pacing.Threat.Value:F3}, Tempo: {pacing.Tempo.Value:F3}, Overall: {overallRaw:F3}");
-			Debug.Log($"PACING (PERCENTILE) --> Overall: {overallPercentile:F1}th percentile in range [{MinPacing:F3}, {MaxPacing:F3}]");
+			PacingDebug.Verbose($"PACING (RAW) --> Threat: {pacing.Threat.Value:F3}, Tempo: {pacing.Tempo.Value:F3}, Overall: {overallRaw:F3}");
+			PacingDebug.Verbose($"PACING (PERCENTILE) --> Overall: {overallPercentile:F1}th percentile in range [{MinPacing:F3}, {MaxPacing:F3}]");
 		}
 
 		private void DebugSegmentData(SegmentData data)
 		{
-			Debug.Log("SEGMENT DATA [Counts] --> " + "Collisions: " + data.Collisions.Count + "; Angles: " + data.Angles.Count +
+			PacingDebug.Verbose("SEGMENT DATA [Counts] --> " + "Collisions: " + data.Collisions.Count + "; Angles: " + data.Angles.Count +
 				"; SafeDistances: " + data.SafeDistances.Count + "; Actions: " + data.Actions.Count +
 				"; BotsDistances: " + data.BotsDistances.Count + "; Velocities: " + data.Velocities.Count);
 		}
@@ -924,7 +923,7 @@ namespace PacingFramework
 			if (useNNCandidates && originalBotNN != null)
 			{
 				var nnCandidates = GetNNCandidateActions(currentPos);
-				Debug.Log($"[PacingHandler] Candidate pool: {candidates.Count} total (BaseActionPool + MCTS + NN)\nNN: {string.Join(", ", nnCandidates)}\nBaseActionPool+MCTS: {string.Join(", ", candidates)}");
+				PacingDebug.Verbose($"[PacingHandler] Candidate pool: {candidates.Count} total (BaseActionPool + MCTS + NN)\nNN: {string.Join(", ", nnCandidates)}\nBaseActionPool+MCTS: {string.Join(", ", candidates)}");
 
 				foreach (var nnAction in nnCandidates)
 				{

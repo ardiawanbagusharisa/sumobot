@@ -292,8 +292,6 @@ namespace SumoManager
 
             logFolderPath = Path.Combine(combinedPaths.ToArray());
 
-            Debug.Log($"PATH {logFolderPath}");
-
             Directory.CreateDirectory(logFolderPath);
         }
 

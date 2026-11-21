@@ -130,7 +130,6 @@ namespace SumoHelper
                     yield return null; // wait frame
                 }
 
-                // Time.timeScale = 1;
                 yield return new WaitForSeconds(1);
                 yield return new WaitForEndOfFrame(); // Delay if needed
             }
