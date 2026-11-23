@@ -31,6 +31,9 @@ namespace SumoServices
         /// <summary>Currently equipped costume item ids, keyed by slot name (e.g. "Wheel", "Eye").</summary>
         public Dictionary<string, string> EquippedBySlot = new();
 
+        /// <summary>Campaign levels won at least once by this account.</summary>
+        public List<string> CompletedCampaignLevels = new();
+
         public bool Owns(string itemId) => OwnedItemIds.Contains(itemId);
 
         public static PlayerData CreateDefault(string playerId)
@@ -40,7 +43,8 @@ namespace SumoServices
                 PlayerId = playerId,
                 Coins = StartingCoins,
                 OwnedItemIds = new List<string>(),
-                EquippedBySlot = new Dictionary<string, string>()
+                EquippedBySlot = new Dictionary<string, string>(),
+                CompletedCampaignLevels = new List<string>()
             };
         }
     }

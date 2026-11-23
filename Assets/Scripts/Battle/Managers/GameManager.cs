@@ -49,9 +49,12 @@ public class GameManager : MonoBehaviour
     }
 
     // Kept off Awake so scene startup never blocks on (future) network I/O.
-    public async Task<ServiceResult<PlayerAccount>> StartSessionAsync()
+    public async Task<ServiceResult<PlayerAccount>> StartSessionAsync(
+        AccountLoginMode mode = AccountLoginMode.Guest,
+        string username = null,
+        string password = null)
     {
-        var result = await GameServices.StartSessionAsync();
+        var result = await GameServices.StartSessionAsync(mode, username, password);
         if (!result.Success)
             Logger.Error($"[GameManager] Session start failed: {result.Error}");
         else

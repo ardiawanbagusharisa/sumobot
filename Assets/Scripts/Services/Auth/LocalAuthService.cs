@@ -65,6 +65,15 @@ namespace SumoServices
             return Task.FromResult(ServiceResult<PlayerAccount>.Ok(Current));
         }
 
+        public Task<ServiceResult<PlayerAccount>> SignUpAsync(string username, string password) =>
+            Task.FromResult(ServiceResult<PlayerAccount>.Fail("Credential accounts require Unity Authentication."));
+
+        public Task<ServiceResult<PlayerAccount>> SignInAsync(string username, string password) =>
+            Task.FromResult(ServiceResult<PlayerAccount>.Fail("Credential accounts require Unity Authentication."));
+
+        public Task<ServiceResult<PlayerAccount>> LinkUsernamePasswordAsync(string username, string password) =>
+            Task.FromResult(ServiceResult<PlayerAccount>.Fail("Credential accounts require Unity Authentication."));
+
         public Task<ServiceResult> SetDisplayNameAsync(string displayName)
         {
             if (!IsSignedIn)

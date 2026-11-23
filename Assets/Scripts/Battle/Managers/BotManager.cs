@@ -56,14 +56,14 @@ namespace SumoBot
 
             var allBotInstances = BotUtility.GetAllBotInstances();
 
-            if (LeftEnabled && leftBotIndex >= 0 && leftBotIndex < allBotInstances.Count)
+            if (LeftEnabled && Left == null && leftBotIndex >= 0 && leftBotIndex < allBotInstances.Count)
             {
                 // Create a separate instance for left player to avoid shared state
                 Left = Instantiate(allBotInstances[leftBotIndex]);
                 Left.name = $"{allBotInstances[leftBotIndex].name}_Left";
             }
 
-            if (RightEnabled && rightBotIndex >= 0 && rightBotIndex < allBotInstances.Count)
+            if (RightEnabled && Right == null && rightBotIndex >= 0 && rightBotIndex < allBotInstances.Count)
             {
                 // Create a separate instance for right player to avoid shared state
                 Right = Instantiate(allBotInstances[rightBotIndex]);
@@ -195,7 +195,7 @@ namespace SumoBot
                 {
                     InputProvider = controller.InputProvider,
                     Actions = new(),
-                    SkillType = skillType ?? Left.DefaultSkillType
+                    SkillType = skillType ?? Right.DefaultSkillType
                 };
                 controller.AssignSkill(rightHandler.SkillType);
                 controller.Events[SumoController.OnBounce].Subscribe(OnRightBounce);

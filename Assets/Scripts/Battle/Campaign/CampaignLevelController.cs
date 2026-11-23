@@ -40,8 +40,22 @@ namespace SumoCampaign
         private BotManager botManager;
         private bool rewardGranted;
 
+        private CampaignCatalog.Level selectedLevel;
+
         private void Awake()
         {
+            selectedLevel = CampaignCatalog.Selected;
+            if (selectedLevel != null)
+            {
+                LevelId = selectedLevel.Id;
+                Instructions = selectedLevel.Instructions;
+                PlayerInput = selectedLevel.Input;
+                PlayerBotId = selectedLevel.PlayerBot;
+                OpponentBotId = selectedLevel.OpponentBot;
+                OpponentActionInterval = selectedLevel.OpponentInterval;
+                RoundSystem = selectedLevel.Rounds;
+                BattleTime = selectedLevel.BattleSeconds;
+            }
             battleManager = GetComponent<BattleManager>();
             if (battleManager != null)
             {
@@ -82,6 +96,7 @@ namespace SumoCampaign
             battleManager.LeftInputType = PlayerInput;
             battleManager.RightInputType = InputType.Script;
             battleManager.RoundSystem = RoundSystem;
+            battleManager.Battle.RoundSystem = RoundSystem;
             battleManager.BattleTime = BattleTime;
             battleManager.CountdownTime = CountdownTime;
 
@@ -109,7 +124,7 @@ namespace SumoCampaign
 
         private void HideOpponentUi()
         {
-            // These three campaign scenes reuse the two-player Battle canvas.
+            // The campaign templates reuse the two-player Battle canvas.
             // Keep the right robot and its AI in the arena, but remove the
             // second player's controls and HUD from the tutorial presentation.
             GameObject ui = FindSceneObject("UI");
@@ -162,10 +177,7 @@ namespace SumoCampaign
 
             GameObject missionPanel = FindSceneObject("PanelMission");
             if (missionPanel != null)
-            {
-                missionPanel.SetActive(true);
-                return;
-            }
+                missionPanel.SetActive(false);
 
             Canvas canvas = FindFirstObjectByType<Canvas>();
             if (canvas == null)
@@ -195,7 +207,7 @@ namespace SumoCampaign
             layout.childControlHeight = true;
             layout.childForceExpandHeight = false;
 
-            AddText(panel.transform, $"CAMPAIGN {LevelId}", 38, FontStyles.Bold);
+            AddText(panel.transform, $"CAMPAIGN {LevelId}  {selectedLevel?.Title}", 38, FontStyles.Bold);
             AddText(panel.transform, Instructions, 24, FontStyles.Normal);
 
             GameObject start = new("Start Battle", typeof(RectTransform), typeof(Image), typeof(Button), typeof(LayoutElement));
@@ -226,24 +238,35 @@ namespace SumoCampaign
                 return;
 
             rewardGranted = true;
-            int reward = 10;
             if (battleManager.Battle.GetBattleWinner() == BattleWinner.Left)
-                reward += 20;
-
-            _ = GrantBattleRewardAsync(reward);
+                _ = RecordVictoryAsync();
         }
 
-        private async System.Threading.Tasks.Task GrantBattleRewardAsync(int reward)
+        private async System.Threading.Tasks.Task RecordVictoryAsync()
         {
             if (GameServices.PlayerData == null || GameServices.PlayerData.Current == null)
             {
-                Debug.LogWarning($"Campaign {LevelId} reward skipped because no player data is loaded.", this);
+                Debug.LogWarning($"Campaign {LevelId} progress skipped because no player data is loaded.", this);
                 return;
             }
 
-            ServiceResult result = await GameServices.PlayerData.AddCoinsAsync(reward);
+            var data = GameServices.PlayerData.Current;
+            if (data.CompletedCampaignLevels.Contains(LevelId))
+                return;
+
+            data.CompletedCampaignLevels.Add(LevelId);
+            ServiceResult result = await GameServices.PlayerData.SaveAsync();
             if (!result.Success)
-                Debug.LogError($"Campaign {LevelId} could not grant {reward} gold: {result.Error}", this);
+            {
+                data.CompletedCampaignLevels.Remove(LevelId);
+                Debug.LogError($"Campaign {LevelId} could not save completion: {result.Error}", this);
+                return;
+            }
+
+            int coins = selectedLevel?.FirstWinCoins ?? 30;
+            result = await GameServices.PlayerData.AddCoinsAsync(coins);
+            if (!result.Success)
+                Debug.LogError($"Campaign {LevelId} could not grant {coins} gold: {result.Error}", this);
         }
 
         private static GameObject FindSceneObject(string objectName)

@@ -24,13 +24,15 @@ Go to [developers page](https://github.com/ardiawanbagusharisa/sumobot/wiki/Deve
 
 ## Test online multiplayer on one machine
 
+Configure Unity Authentication's **Username & Password** provider in the linked Unity Dashboard before testing credential login. The login screen also offers a guest account. See [local account and campaign testing](Docs/AccountsAndCampaign.md) for setup, legacy-save migration, and the 15 campaign levels.
+
 The Windows test build supports multiple simultaneous instances. In Unity, use `Sumobot > Multiplayer > Build Windows Test Client`; this creates `Builds/Windows/Sumobot.exe` with single-instance locking disabled and background execution enabled. Then run:
 
 ```powershell
 .\Tools\LaunchMultiplayerTest.ps1
 ```
 
-The launcher opens the same build twice at 960×540 with different Unity Authentication profiles (`sumobot_p1` and `sumobot_p2`) and separate logs. Complete the dummy login in both windows. In player 1, choose **Multiplayer > Online**, select an input mode, and create a room. In player 2, select an input mode and join that room. Once both players are connected, each can click **Ready now**; otherwise the room moves to Battle automatically after 30 seconds. Battle then shows a synchronized 10-second preparation countdown before play starts. Both online windows use `W` (forward), `A`/`D` (turn), `E` (dash), and `Q` (skill); `S` is unused because the sumo movement model has no reverse action.
+The launcher opens the same build twice at 960×540 with different Unity Authentication profiles (`sumobot_p1` and `sumobot_p2`) and separate logs. Sign in with two different player accounts, or continue as a guest in both windows. In player 1, choose **Multiplayer > Online**, select an input mode, and create a room. In player 2, select an input mode and join that room. Once both players are connected, each can click **Ready now**; otherwise the room moves to Battle automatically after 30 seconds. Battle then shows a synchronized 10-second preparation countdown before play starts. Both online windows use `W` (forward), `A`/`D` (turn), `E` (dash), and `Q` (skill); `S` is unused because the sumo movement model has no reverse action.
 
 For an unattended connection test:
 

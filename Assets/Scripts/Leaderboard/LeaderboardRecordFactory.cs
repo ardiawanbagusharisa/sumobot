@@ -1,6 +1,7 @@
 using SumoBot;
 using SumoInput;
 using SumoManager;
+using SumoCampaign;
 
 namespace SumoLeaderboard
 {
@@ -19,20 +20,19 @@ namespace SumoLeaderboard
         {
             InputType leftType = battleManager.LeftInputType;
             InputType rightType = battleManager.RightInputType;
+            bool campaign = battleManager.GetComponent<CampaignLevelController>() != null;
 
             Bot leftBot = battleManager.BotManager != null ? battleManager.BotManager.Left : null;
             Bot rightBot = battleManager.BotManager != null ? battleManager.BotManager.Right : null;
 
             (string leftId, string leftName, string leftBotName) =
-                SideIdentity(leftType, leftBot, GameManager.Instance.Left);
+                SideIdentity(leftType, leftBot, GameManager.Instance.Left, campaign);
             (string rightId, string rightName, string rightBotName) =
                 SideIdentity(rightType, rightBot, GameManager.Instance.Right);
 
             return new BattleResultRecord
             {
-                // The Battle scene is offline multiplayer today. When campaign
-                // mode ships, tag its matches GameMode.Campaign here.
-                GameMode = GameMode.Multiplayer,
+                GameMode = campaign ? GameMode.Campaign : GameMode.Multiplayer,
                 Mode = LeaderboardMapping.DerivePlayerMode(leftType, rightType),
                 LeftControl = leftType.ToControlCategory(),
                 RightControl = rightType.ToControlCategory(),
@@ -50,8 +50,11 @@ namespace SumoLeaderboard
         }
 
         private static (string id, string name, string bot) SideIdentity(
-            InputType type, Bot bot, PlayerProfile profile)
+            InputType type, Bot bot, PlayerProfile profile, bool accountControlledScript = false)
         {
+            if (accountControlledScript && profile != null)
+                return (profile.ID, profile.Name, bot != null ? bot.ID : HumanBotPlaceholder);
+
             if (type.IsAI() && bot != null)
                 return (BotProfilePrefix + bot.ID, bot.ID, bot.ID);
 

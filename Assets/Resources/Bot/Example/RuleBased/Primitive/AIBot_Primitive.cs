@@ -27,7 +27,8 @@ namespace SumoBot.RuleBased.Primitive
 			Logger.Info($"Angle To Enemy {angleToEnemy}");
 			Logger.Info($"Angle To Enemy Norm {api.Angle(normalized: true)}");
 			SumoBotAPI myState = api.MyRobot;
-			float angleInDur = Mathf.Abs(angleToEnemy) / myState.RotateSpeed;
+			float angleInDur = Mathf.Max(ISumoAction.MinDuration,
+				Mathf.Abs(angleToEnemy) / myState.RotateSpeed);
 
 			// When angle is quite enough facing the enemy, run dash, skill, accelerate action
 			if (Mathf.Abs(angleToEnemy) < 20) {

@@ -28,6 +28,44 @@ namespace SumoServices
             dir = Path.Combine(rootPath ?? Application.persistentDataPath, "PlayerData");
         }
 
+        public void Unload()
+        {
+            Current = null;
+            CoinsChanged?.Invoke();
+            InventoryChanged?.Invoke();
+            EquipmentChanged?.Invoke();
+        }
+
+        /// <summary>Copies a legacy dummy save once; never replaces account data.</summary>
+        public bool ImportLegacySave(string legacyPlayerId, string accountPlayerId)
+        {
+            if (string.IsNullOrWhiteSpace(legacyPlayerId) ||
+                string.IsNullOrWhiteSpace(accountPlayerId) ||
+                legacyPlayerId == accountPlayerId)
+                return true;
+
+            try
+            {
+                string source = PathFor(legacyPlayerId);
+                string destination = PathFor(accountPlayerId);
+                if (!File.Exists(source) || File.Exists(destination))
+                    return true;
+
+                PlayerData imported = JsonConvert.DeserializeObject<PlayerData>(File.ReadAllText(source));
+                if (imported == null) return false;
+                imported.PlayerId = accountPlayerId;
+                Directory.CreateDirectory(dir);
+                File.WriteAllText(destination, JsonConvert.SerializeObject(imported, Formatting.Indented));
+                Logger.Info($"[PlayerData] Imported local save into Unity account {accountPlayerId}.");
+                return true;
+            }
+            catch (Exception error)
+            {
+                Logger.Error($"[PlayerData] Legacy import failed: {error.Message}");
+                return false;
+            }
+        }
+
         private string PathFor(string playerId) => Path.Combine(dir, $"{playerId}.json");
 
         public Task<ServiceResult<PlayerData>> LoadAsync(string playerId)
@@ -52,6 +90,7 @@ namespace SumoServices
                 Current.PlayerId = playerId;
                 Current.OwnedItemIds ??= new();
                 Current.EquippedBySlot ??= new();
+                Current.CompletedCampaignLevels ??= new();
 
                 // A freshly loaded save is a full state change: let any already-live view
                 // (a coin counter, the inventory list) refresh to the loaded values.

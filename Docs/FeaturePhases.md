@@ -1,14 +1,14 @@
 # Feature phase status
 
-The current branch provides a complete local implementation that can be tested without paid services. Visual Scripting remains intentionally deferred.
+The current branch provides local save data and Unity Authentication accounts. Visual Scripting remains intentionally deferred.
 
-## Phase 1 — dummy login
+## Phase 1 — account login
 
-- Automatic anonymous local login with an editable display name.
-- Stable player ID and JSON save data across restarts.
-- Launch profiles (`sumobot_p1`, `sumobot_p2`) use separate dummy accounts, inventories, and names on the same machine.
+- Unity Authentication username/password sign-up, sign-in, and guest access with an editable display name.
+- Existing guest Unity IDs can be linked to credentials; legacy local saves are imported once.
+- Launch profiles (`sumobot_p1`, `sumobot_p2`) keep separate account sessions on one machine.
 
-No additional account is required. The Unity ID and linked Unity Cloud project used by online matchmaking are sufficient.
+Enable the Username & Password identity provider in the linked Unity Cloud project. Inventory remains local to this machine for now.
 
 ## Phase 2 — inventory and equipment
 

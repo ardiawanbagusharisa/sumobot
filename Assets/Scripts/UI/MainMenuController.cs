@@ -3,6 +3,8 @@ using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using TMPro;
 using System.Collections.Generic;
+using SumoCampaign;
+using SumoServices;
 
 public class MainMenuController : MonoBehaviour
 {
@@ -30,6 +32,7 @@ public class MainMenuController : MonoBehaviour
 	public MenuMapping[] menus;
 
 	public void Start() {
+		CampaignCatalog.ClearSelection();
 		SwitchMenu(MenuState.Login);
 	}
 
@@ -41,28 +44,29 @@ public class MainMenuController : MonoBehaviour
 		Transform content = scrollView != null ? FindDeep(scrollView, "Content") : null;
 		if (content == null) return;
 
-		string[] levelIds = { "1-1", "2-1", "3-1" };
-		string[] scenes = { "Campaign_1_1", "Campaign_2_1", "Campaign_3_1" };
-		string[] labels = {
-			"LEVEL 1-1  •  BUTTON CONTROLS",
-			"LEVEL 2-1  •  LIVE COMMANDS",
-			"LEVEL 3-1  •  FSM BOT"
-		};
-
 		List<Button> campaignButtons = new();
 		foreach (Transform child in content) {
 			if (child.name.StartsWith("ButtonCampaign") && child.TryGetComponent(out Button button))
 				campaignButtons.Add(button);
 		}
 
-		for (int i = 0; i < levelIds.Length && i < campaignButtons.Count; i++) {
+		if (campaignButtons.Count == 0) return;
+		while (campaignButtons.Count < CampaignCatalog.Levels.Count) {
+			GameObject card = Instantiate(campaignButtons[campaignButtons.Count - 1].gameObject, content);
+			campaignButtons.Add(card.GetComponent<Button>());
+		}
+
+		for (int i = 0; i < CampaignCatalog.Levels.Count; i++) {
+			CampaignCatalog.Level level = CampaignCatalog.Levels[i];
 			Button button = campaignButtons[i];
-			button.gameObject.name = $"ButtonCampaign {levelIds[i]}";
+			button.gameObject.name = $"ButtonCampaign {level.Id}";
 			TMP_Text label = button.GetComponentInChildren<TMP_Text>(true);
-			if (label != null) label.text = labels[i];
+			bool completed = GameServices.PlayerData?.Current?.CompletedCampaignLevels?.Contains(level.Id) ?? false;
+			if (label != null)
+				label.text = $"LEVEL {level.Id}  •  {level.Title.ToUpperInvariant()}" +
+					(completed ? "  ✓" : "");
 			button.onClick = new Button.ButtonClickedEvent();
-			string sceneName = scenes[i];
-			button.onClick.AddListener(() => SceneManager.LoadScene(sceneName));
+			button.onClick.AddListener(() => CampaignCatalog.Launch(level));
 		}
 	}
 
@@ -98,7 +102,10 @@ public class MainMenuController : MonoBehaviour
 
 	public void ShowMainMenu() => SwitchMenu(MenuState.MainMenu);
 	public void ShowGameModes() => SwitchMenu(MenuState.GameModes);
-	public void ShowCampaign() => SwitchMenu(MenuState.Campaign);
+	public void ShowCampaign() {
+		SwitchMenu(MenuState.Campaign);
+		BuildCampaignButtons();
+	}
 	public void ShowMultiplayer() => SwitchMenu(MenuState.Multiplayer);
 	public void ShowMultiplayerLocal() => SwitchMenu(MenuState.MultiplayerLocal);
 	public void ShowLeaderboards() => SwitchMenu(MenuState.Leaderboards);

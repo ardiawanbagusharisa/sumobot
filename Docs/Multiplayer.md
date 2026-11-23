@@ -1,6 +1,6 @@
 # Sumobot online multiplayer
 
-The online prototype is a two-player, client-hosted match built with Unity Authentication, Multiplayer Services sessions/lobby queries, Relay using DTLS, Unity Transport, and Netcode for GameObjects.
+The online prototype is a two-player, client-hosted match built with Unity Authentication (credential or guest accounts), Multiplayer Services sessions/lobby queries, Relay using DTLS, Unity Transport, and Netcode for GameObjects.
 
 ## Required account and Unity Dashboard setup
 
@@ -8,7 +8,7 @@ Create or use one Unity ID with Owner or Manager access to a Unity Cloud organiz
 
 This repository contains the previous cloud project ID `b9ca5334-4f50-46eb-8fd3-14bcbc1933f9`, but a command-line build reported the Editor connection as unbound. If that project does not appear in Project Settings, either ask its owner to add your Unity ID or create and link a new Unity Cloud project. Do not paste service keys into the repository.
 
-Anonymous Authentication is sufficient for this phase, so you do not need to create two player email accounts. Each launch profile creates and caches a distinct anonymous Unity player ID. For production-grade recoverable inventory and leaderboard identity, configure Unity Player Accounts (or another supported identity provider) later and let players link their anonymous account.
+The game now offers Unity Authentication Username & Password sign-up/sign-in alongside anonymous guest entry. Enable that provider under **Authentication > Player Authentication** in the linked Unity Dashboard. Each launch profile caches a distinct guest ID; for credential tests, sign in with two different player accounts. See [AccountsAndCampaign.md](AccountsAndCampaign.md) for the local save migration and account testing flow.
 
 The game uses the default UGS environment unless `-ugs-environment=<name>` is supplied. Create a `development` environment before launching with `-ugs-environment=development`.
 
@@ -16,7 +16,7 @@ The game uses the default UGS environment unless `-ugs-environment=<name>` is su
 
 1. Open `Sumobot > Multiplayer > Build Windows Test Client` in the Unity Editor. The development build is written to `Builds/Windows/Sumobot.exe`.
 2. Run `Tools/LaunchMultiplayerTest.ps1`. It opens the same build twice with isolated UGS profiles `sumobot_p1` and `sumobot_p2`, separate log files, and a shared one-run matchmaking pool. The pool prevents either client from joining a stale session left by an earlier local test.
-3. Complete the local dummy login in each window.
+3. Sign in with two different player accounts, or continue as a guest in each window.
 4. In the first window, open Multiplayer > Online, choose **Buttons / Keyboard** or **Live Commands**, then select **Create room**.
 5. In the second window, choose its input mode and join the first player's room. The list refreshes automatically every five seconds and also has a manual Refresh button.
 6. Once both players are connected, a host-authoritative 30-second ready timer appears in the room panel. Each player may click **Ready now**; both ready clicks load Battle immediately, or the room loads Battle when the timer expires. The selected input modes are locked on arrival. Both scene peers then see the synchronized 10-second preparation countdown before the host starts the battle. Battle will not start before the joining client's scene and controllers are ready.

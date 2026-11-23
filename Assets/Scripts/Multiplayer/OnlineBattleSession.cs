@@ -28,7 +28,7 @@ namespace SumoMultiplayer
 {
     /// <summary>
     /// Owns the complete online-match lifecycle for the two-player prototype:
-    /// UGS anonymous authentication, selectable session rooms, Relay/DTLS, NGO scene
+    /// UGS authentication, selectable session rooms, Relay/DTLS, NGO scene
     /// loading, host-authoritative input, and client battle snapshots.
     ///
     /// This component is created before the first scene, so no scene YAML needs
