@@ -10,12 +10,12 @@ To keep an existing guest's Unity ID, choose **Link Guest Account** on the ready
 
 ## Fifteen campaign levels
 
-The Campaign menu exposes all 15 levels for local testing. They are grouped into five **Buttons**, five **Live Commands**, and five **FSM Bot** challenges. Each has authored instructions, an opponent algorithm and action interval, a round target, and a time limit. The existing three campaign scenes are templates selected by control mode; `CampaignCatalog` supplies the level configuration at runtime. Wins are recorded per player ID and shown in the menu. The first win in each level grants its listed coin reward; replaying it does not grant that reward again.
+The Campaign menu exposes all 15 levels for local testing. They are grouped into five **Buttons**, five **Live Commands**, and five **FSM Bot** challenges. Each level has its own ScriptableObject in `Assets/Resources/Campaign/`; the three campaign scenes remain reusable templates. Each asset sets the opponent, time limit, arena radius, spawn positions, task, instructions, and first-completion reward. When a task is fulfilled, a Mission Complete sticker appears immediately. The battle stays visible for five seconds before the result panel opens. Only levels 1-5 and 2-5 require a ring-out; the other levels do not require winning the match. A failed task can be retried. Existing saved level IDs and first-completion rewards remain valid.
 
-| Levels | Player input | Opponents | Final challenge |
-| --- | --- | --- | --- |
-| 1-1 to 1-5 | On-screen buttons | Primitive, FSM, behavior tree | Best of 3 against the behavior tree |
-| 2-1 to 2-5 | Live commands | Primitive, FSM, behavior tree, utility | Best of 3 against utility |
-| 3-1 to 3-5 | Predefined FSM bot | Primitive, FSM, behavior tree, utility | Best of 3 against the behavior tree |
+| Levels | Player input | Tasks |
+| --- | --- | --- |
+| 1-1 to 1-5 | On-screen buttons or W/A/D/E/Q keyboard controls | Move, turn and approach, aligned dash, edge recovery, ring-out |
+| 2-1 to 2-5 | Live commands | Command movement, sequence, aligned dash, edge recovery, ring-out |
+| 3-1 to 3-5 | Predefined FSM bot | Observe Approaching, Attacking, Dodging, Recovering, then the engagement sequence; answer a question after each observation |
 
-Open Campaign from the main menu, scroll right through the cards, and choose any level. Each match displays its own instructions before the start button. Victory records completion and the first-win reward in `Application.persistentDataPath/PlayerData/<UnityPlayerId>.json`.
+Open Campaign from the main menu, scroll through the 15 authored cards, and choose any level. The mission panel shows instructions before battle and progress during play. Completing a task records progress and the one-time coin reward in `Application.persistentDataPath/PlayerData/<UnityPlayerId>.json`. Circular arena radii are 8, 10, or 12 world units; both spawn positions follow the chosen radius. FSM questions appear only after their target state or state sequence has been observed.

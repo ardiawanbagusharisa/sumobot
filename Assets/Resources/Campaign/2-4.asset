@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fecfef7cccceefe4eaa57229beb70b6b, type: 3}
+  m_Name: 2-4
+  m_EditorClassIdentifier: Assembly-CSharp::SumoCampaign.CampaignLevelDefinition
+  Id: 2-4
+  Title: Edge Recovery
+  Scene: Campaign_2_1
+  Input: 2
+  PlayerBot: 
+  OpponentBot: AIBot_BT
+  OpponentInterval: 2.2
+  BattleSeconds: 70
+  Rounds: 1
+  FirstWinCoins: 50
+  Instructions: Reach the outer 20%, then use a turn command and accelerate(d) to
+    return inside the inner 50%.
+  ArenaRadius: 8
+  SpawnFraction: 0.35
+  OpponentSpawnFraction: 0.35
+  Task: 8
+  Question: 
+  Answers: []
+  CorrectAnswer: 0

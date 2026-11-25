@@ -1,0 +1,38 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fecfef7cccceefe4eaa57229beb70b6b, type: 3}
+  m_Name: 3-5
+  m_EditorClassIdentifier: Assembly-CSharp::SumoCampaign.CampaignLevelDefinition
+  Id: 3-5
+  Title: Read the Sequence
+  Scene: Campaign_3_1
+  Input: 3
+  PlayerBot: AlBot_FSM
+  OpponentBot: AIBot_BT
+  OpponentInterval: 0.4
+  BattleSeconds: 75
+  Rounds: 3
+  FirstWinCoins: 65
+  Instructions: "In this level, your bot is controlled by AI script - FSM. \nYou
+    don't need to press any button nor write commands. \nObserve Searching, Approaching,
+    then Attacking."
+  ArenaRadius: 8
+  SpawnFraction: 0.2
+  OpponentSpawnFraction: 0.2
+  Task: 14
+  Question: What is the normal engagement sequence?
+  Answers:
+  - "Searching \u2192 Approaching \u2192 Attacking"
+  - "Dodging \u2192 Idle \u2192 Searching"
+  - "Attacking \u2192 Recovering \u2192 Idle"
+  - "Approaching \u2192 Searching \u2192 Dodging"
+  CorrectAnswer: 0

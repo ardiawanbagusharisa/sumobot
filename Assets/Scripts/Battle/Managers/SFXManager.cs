@@ -105,6 +105,25 @@ public class SFXManager : MonoBehaviour
         return (src, vol, pitch);
     }
 
+    // Continuous bot sounds belong to the bot, so unloading a battle scene
+    // destroys them instead of leaving a looping source in the persistent pool.
+    public (AudioSource, float vol, float pitch) GetAttachedAudioSource(string key, GameObject owner)
+    {
+        if (!isActive || owner == null) return (null, -1, -1);
+        var (clip, vol, pitch) = Pick(key);
+        if (clip == null) return (null, -1, -1);
+
+        var src = owner.AddComponent<AudioSource>();
+        src.playOnAwake = false;
+        src.loop = false;
+        src.spatialBlend = 0f;
+        src.dopplerLevel = 0f;
+        src.clip = clip;
+        src.volume = vol;
+        src.pitch = pitch;
+        return (src, vol, pitch);
+    }
+
     /// <summary>Play a random clip from a bank at a position (3D).</summary>
     public void Play3D(string key, Vector3 position, float spatialBlend = 1f, float maxDistance = 25f, float minDistance = 1f)
     {

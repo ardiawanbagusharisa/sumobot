@@ -10,6 +10,7 @@ namespace SumoMultiplayer.Editor
     public static class MultiplayerBuild
     {
         private const string OutputPath = "Builds/Windows/Sumobot.exe";
+        private const string AndroidOutputPath = "Builds/Android/Sumobot.apk";
 
         [MenuItem("Sumobot/Multiplayer/Build Windows Test Client")]
         public static void BuildWindowsTestClient()
@@ -67,6 +68,43 @@ namespace SumoMultiplayer.Editor
                 PlayerSettings.fullScreenMode = oldFullscreenMode;
                 PlayerSettings.defaultScreenWidth = oldWidth;
                 PlayerSettings.defaultScreenHeight = oldHeight;
+                AssetDatabase.SaveAssets();
+            }
+        }
+
+        [MenuItem("Sumobot/Multiplayer/Build Android Test Client")]
+        public static void BuildAndroidTestClient()
+        {
+            string[] scenes = EditorBuildSettings.scenes
+                .Where(scene => scene.enabled)
+                .Select(scene => scene.path)
+                .ToArray();
+            if (scenes.Length == 0)
+                throw new InvalidOperationException("No enabled scenes are configured in Build Settings.");
+
+            Directory.CreateDirectory(Path.GetDirectoryName(AndroidOutputPath));
+            bool oldBuildAppBundle = EditorUserBuildSettings.buildAppBundle;
+            try
+            {
+                EditorUserBuildSettings.buildAppBundle = false;
+                BuildReport report = BuildPipeline.BuildPlayer(new BuildPlayerOptions
+                {
+                    scenes = scenes,
+                    locationPathName = AndroidOutputPath,
+                    target = BuildTarget.Android,
+                    options = BuildOptions.Development
+                });
+                if (report.summary.result != BuildResult.Succeeded)
+                    throw new InvalidOperationException(
+                        $"Android test build failed: {report.summary.result} " +
+                        $"({report.summary.totalErrors} errors).");
+
+                Debug.Log($"[Online] Android test client built at " +
+                    $"{Path.GetFullPath(AndroidOutputPath)} ({report.summary.totalSize} bytes).");
+            }
+            finally
+            {
+                EditorUserBuildSettings.buildAppBundle = oldBuildAppBundle;
                 AssetDatabase.SaveAssets();
             }
         }

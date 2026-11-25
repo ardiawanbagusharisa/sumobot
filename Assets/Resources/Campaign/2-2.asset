@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fecfef7cccceefe4eaa57229beb70b6b, type: 3}
+  m_Name: 2-2
+  m_EditorClassIdentifier: Assembly-CSharp::SumoCampaign.CampaignLevelDefinition
+  Id: 2-2
+  Title: Command Sequence
+  Scene: Campaign_2_1
+  Input: 2
+  PlayerBot: 
+  OpponentBot: AIBot_Primitive
+  OpponentInterval: 2.4
+  BattleSeconds: 65
+  Rounds: 1
+  FirstWinCoins: 40
+  Instructions: Submit turnleft(d) or turnright(d), then accelerate(d), and get within
+    3 units.
+  ArenaRadius: 12
+  SpawnFraction: 0.35
+  OpponentSpawnFraction: 0.35
+  Task: 6
+  Question: 
+  Answers: []
+  CorrectAnswer: 0

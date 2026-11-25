@@ -3,6 +3,7 @@ using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using TMPro;
 using System.Collections.Generic;
+using System.Linq;
 using SumoCampaign;
 using SumoServices;
 
@@ -21,6 +22,9 @@ public class MainMenuController : MonoBehaviour
 	}
 
 	private MenuState currentState = MenuState.MainMenu;
+	// Scene changes destroy this controller. Keep the last visible menu only
+	// for this running game session, then consume it on the next menu load.
+	private static MenuState? pendingReturnMenu;
 
 	// Map each menu state to its GameObject
 	[System.Serializable]
@@ -33,15 +37,33 @@ public class MainMenuController : MonoBehaviour
 
 	public void Start() {
 		CampaignCatalog.ClearSelection();
-		SwitchMenu(MenuState.Login);
+		if (GameServices.Auth?.IsSignedIn == true && pendingReturnMenu.HasValue)
+			ShowReturnMenuOrMainMenu();
+		else
+			SwitchMenu(MenuState.Login);
+	}
+
+	private void OnDestroy() {
+		if (currentState != MenuState.Login)
+			pendingReturnMenu = currentState;
+	}
+
+	public void ShowReturnMenuOrMainMenu() {
+		MenuState destination = pendingReturnMenu ?? MenuState.MainMenu;
+		pendingReturnMenu = null;
+		if (destination == MenuState.Campaign)
+			ShowCampaign();
+		else
+			SwitchMenu(destination == MenuState.Login ? MenuState.MainMenu : destination);
 	}
 
 	private void BuildCampaignButtons() {
 		Transform campaignMenu = FindSceneObject("MenuCampaign");
 		if (campaignMenu == null) return;
 
-		Transform scrollView = FindDeep(campaignMenu, "Scroll View");
-		Transform content = scrollView != null ? FindDeep(scrollView, "Content") : null;
+		Transform content = campaignMenu.GetComponentsInChildren<Transform>(true)
+			.FirstOrDefault(candidate => candidate.Cast<Transform>()
+				.Any(child => child.name.StartsWith("ButtonCampaign")));
 		if (content == null) return;
 
 		List<Button> campaignButtons = new();
@@ -51,20 +73,20 @@ public class MainMenuController : MonoBehaviour
 		}
 
 		if (campaignButtons.Count == 0) return;
-		while (campaignButtons.Count < CampaignCatalog.Levels.Count) {
-			GameObject card = Instantiate(campaignButtons[campaignButtons.Count - 1].gameObject, content);
-			campaignButtons.Add(card.GetComponent<Button>());
+		if (campaignButtons.Count != CampaignCatalog.Levels.Count) {
+			Debug.LogError($"Expected {CampaignCatalog.Levels.Count} authored campaign buttons, found {campaignButtons.Count}.");
+			return;
 		}
 
 		for (int i = 0; i < CampaignCatalog.Levels.Count; i++) {
-			CampaignCatalog.Level level = CampaignCatalog.Levels[i];
+			CampaignLevelDefinition level = CampaignCatalog.Levels[i];
 			Button button = campaignButtons[i];
+			button.interactable = true;
 			button.gameObject.name = $"ButtonCampaign {level.Id}";
 			TMP_Text label = button.GetComponentInChildren<TMP_Text>(true);
 			bool completed = GameServices.PlayerData?.Current?.CompletedCampaignLevels?.Contains(level.Id) ?? false;
 			if (label != null)
-				label.text = $"LEVEL {level.Id}  •  {level.Title.ToUpperInvariant()}" +
-					(completed ? "  ✓" : "");
+				label.text = $"Lv {level.Id} {(completed ? "(Cleared)" : "")} \n{level.Title}"; //level.Title.ToUpperInvariant()
 			button.onClick = new Button.ButtonClickedEvent();
 			button.onClick.AddListener(() => CampaignCatalog.Launch(level));
 		}

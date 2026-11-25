@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fecfef7cccceefe4eaa57229beb70b6b, type: 3}
+  m_Name: 2-1
+  m_EditorClassIdentifier: Assembly-CSharp::SumoCampaign.CampaignLevelDefinition
+  Id: 2-1
+  Title: First Command
+  Scene: Campaign_2_1
+  Input: 2
+  PlayerBot: 
+  OpponentBot: AIBot_Primitive
+  OpponentInterval: 2.5
+  BattleSeconds: 65
+  Rounds: 1
+  FirstWinCoins: 35
+  Instructions: Submit accelerate(0.8) and travel 2 units.
+  ArenaRadius: 10
+  SpawnFraction: 0.35
+  OpponentSpawnFraction: 0.35
+  Task: 5
+  Question: 
+  Answers: []
+  CorrectAnswer: 0

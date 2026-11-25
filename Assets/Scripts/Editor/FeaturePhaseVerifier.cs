@@ -74,9 +74,9 @@ namespace SumoFeatures.Editor
                 migrated.Current.CompletedCampaignLevels.Contains("1-1"),
                 "Legacy account import lost inventory or campaign progress.");
 
-            Require(CampaignCatalog.Levels.Count >= 15, "Campaign has fewer than 15 levels.");
+            Require(CampaignCatalog.Levels.Count == 15, "Campaign must have exactly 15 levels.");
             var ids = new HashSet<string>();
-            foreach (CampaignCatalog.Level level in CampaignCatalog.Levels)
+            foreach (CampaignLevelDefinition level in CampaignCatalog.Levels)
             {
                 Require(ids.Add(level.Id), $"Duplicate campaign ID: {level.Id}.");
                 Require(EditorBuildSettings.scenes.Any(scene => scene.enabled &&
@@ -84,6 +84,16 @@ namespace SumoFeatures.Editor
                     $"Campaign scene is missing from Build Settings: {level.Scene}.");
                 Require(level.FirstWinCoins > 0 && level.BattleSeconds > 0,
                     $"Invalid campaign reward or time: {level.Id}.");
+                Require(level.ArenaRadius == 8f || level.ArenaRadius == 10f || level.ArenaRadius == 12f,
+                    $"Invalid campaign arena radius: {level.Id}.");
+                Require(Mathf.Abs(level.SpawnFraction) < .85f &&
+                    Mathf.Abs(level.OpponentSpawnFraction) < .85f,
+                    $"Campaign spawn is outside the arena: {level.Id}.");
+                if (level.Input == InputType.Script)
+                    Require(level.Answers != null && level.Answers.Length == 4 &&
+                        level.CorrectAnswer >= 0 && level.CorrectAnswer < level.Answers.Length &&
+                        !string.IsNullOrWhiteSpace(level.Question),
+                        $"FSM campaign question is incomplete: {level.Id}.");
                 Require(level.Input != InputType.Script || !string.IsNullOrEmpty(level.PlayerBot),
                     $"Script campaign {level.Id} has no player bot.");
                 Require(BotUtility.GetAllBotInstances().Exists(bot =>

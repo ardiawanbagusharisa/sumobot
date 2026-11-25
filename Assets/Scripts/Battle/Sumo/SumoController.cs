@@ -144,6 +144,12 @@ namespace SumoCore
             reserverdBounceResistance = BounceResistance;
         }
 
+        private void OnDisable()
+        {
+            if (accelerateSource.src != null) accelerateSource.src.Stop();
+            if (turningSource.src != null) turningSource.src.Stop();
+        }
+
         void Update()
         {
             if (OnlineBattleSession.IsClient)
@@ -313,8 +319,10 @@ namespace SumoCore
             RemoteDashActive = false;
             RemoteSkillActive = false;
             lastRotation = transform.eulerAngles.y;
-            turningSource = SFXManager.Instance.GetAudioSource("actions_turn");
-            accelerateSource = SFXManager.Instance.GetAudioSource("actions_accelerate");
+            if (turningSource.src == null)
+                turningSource = SFXManager.Instance.GetAttachedAudioSource("actions_turn", gameObject);
+            if (accelerateSource.src == null)
+                accelerateSource = SFXManager.Instance.GetAttachedAudioSource("actions_accelerate", gameObject);
         }
         #endregion
 

@@ -50,6 +50,12 @@ namespace SumoBot
         private SumoAPI api;
         private PlayerSide mySide;
         private BotState currentState = BotState.Searching;
+        public BotState CurrentState => currentState;
+        public event System.Action<BotState> StateChanged;
+        public bool DodgeOnAnyImpact;
+
+        // Campaign 3-4 starts a controlled edge-recovery demonstration.
+        public void BeginEdgeRecoveryDemonstration() => TransitionToState(BotState.Dodging);
         private float stateTimer = 0f;
         #endregion
 
@@ -98,7 +104,7 @@ namespace SumoBot
 
         public override void OnBotCollision(BounceEvent param)
         {
-            if (!param.MyInfo.IsActor)
+            if (DodgeOnAnyImpact || !param.MyInfo.IsActor)
             {
                 ClearCommands();
                 BotState newState = currentState == BotState.Attacking ? BotState.Attacking : BotState.Dodging;
@@ -124,6 +130,7 @@ namespace SumoBot
             if (currentState == newState) return;
             Logger.Info($"Transitioning from {currentState} to {newState}");
             currentState = newState;
+            StateChanged?.Invoke(newState);
             stateTimer = 0f;
             ClearCommands();
         }

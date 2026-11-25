@@ -308,8 +308,10 @@ In online play, each focused game window uses the left-player keys (W/A/D/E/Q).
                     BattlePanels.Find((o) => o.CompareTag("BattleState/Pre")).SetActive(false);
                     BattlePanels.Find((o) => o.CompareTag("BattleState/Post")).SetActive(false);
                     
-                    LeftBotName.SetText(BattleManager.Instance.BotManager.Left != null ? BattleManager.Instance.BotManager.Left.ID : defaultLeftName);
-					RightBotName.SetText(BattleManager.Instance.BotManager.Right != null ? BattleManager.Instance.BotManager.Right.ID : defaultRightName);
+                    if (LeftBotName != null)
+                        LeftBotName.SetText(BattleManager.Instance.BotManager.Left != null ? BattleManager.Instance.BotManager.Left.ID : defaultLeftName);
+					if (RightBotName != null)
+						RightBotName.SetText(BattleManager.Instance.BotManager.Right != null ? BattleManager.Instance.BotManager.Right.ID : defaultRightName);
 
 					break;
                 case BattleState.Battle_Countdown:

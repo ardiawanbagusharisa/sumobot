@@ -11,7 +11,7 @@ public class MarketManager : MonoBehaviour
     public GameObject PanelInventory;
     public GameObject buttonUnfoldChat;
     public GameObject buttonUnfoldInventory;
-
+    public GameObject backgroundTransparent;
     private MarketChatController chatController;
 
     private void Awake()
@@ -22,6 +22,7 @@ public class MarketManager : MonoBehaviour
 	public void ToggleChat() {
         SFXManager.Instance.Play2D("ui_accept");
 		bool isActive = PanelChat.activeSelf;
+		backgroundTransparent.SetActive(!isActive);
         PanelChat.SetActive(!isActive);
         buttonUnfoldChat.SetActive(isActive);
 		if (!isActive)
@@ -61,6 +62,7 @@ public class MarketManager : MonoBehaviour
     public void ToggleInventory() {
         SFXManager.Instance.Play2D("ui_accept");
 		bool isActive = PanelInventory.activeSelf;
+		backgroundTransparent.SetActive(!isActive);
 		PanelInventory.SetActive(!isActive);
 		buttonUnfoldInventory.SetActive(isActive);
 	}
